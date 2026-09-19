@@ -3,18 +3,16 @@ import { applySceneGraphToEditor, type SceneGraph } from '@pascal-app/editor'
 import { applyEcoSite } from './apply-site'
 import type { EcoMsg, EcoSite } from './bridge-types'
 import { siteToWorldXz } from './coords'
-import {
-  restoreEcoAssetsFromScene,
-  serializeEcoAssetsForScene,
-  totalAssetBytes,
-} from './eco-assets-store'
 import { ecoDebug, ecoDebugWarn } from './eco-debug'
+import {
+  exportEcoScenePayload,
+  restoreEcoSceneExtras,
+} from './eco-scene'
 import { getEcoSiteState } from './eco-site-store'
 import { arrayBufferToBase64, downloadBytes, exportEcoGlb } from './export-glb'
 
 const PROTOCOL = 'eco/1' as const
 const HELLO_TIMEOUT_MS = 3000
-const MAX_SCENE_ASSET_BYTES = 20 * 1024 * 1024
 
 /** Capabilities advertised in eco:ready. */
 export const CAPS = ['site', 'scene', 'assets', 'glb'] as const
@@ -52,31 +50,15 @@ function postToHost(msg: EcoMsg): void {
   window.parent.postMessage(msg, hostOrigin)
 }
 
-function currentSceneGraph(): SceneGraph {
-  const { nodes, rootNodeIds, collections, materials, installedPlugins } = useScene.getState()
-  return {
-    nodes,
-    rootNodeIds,
-    collections,
-    materials,
-    installedPlugins,
-  } as SceneGraph
-}
-
 function exportScenePayload(): unknown {
-  const graph = currentSceneGraph()
-  const eco = serializeEcoAssetsForScene()
-  if (totalAssetBytes() > MAX_SCENE_ASSET_BYTES) {
-    postToHost({
-      t: 'eco:error',
-      message: 'Embedded assets exceed 20 MB — export as GLB instead.',
-    })
-    return {
-      ...graph,
-      ecoAssets: { assets: [], placements: eco.placements },
-    }
-  }
-  return { ...graph, ecoAssets: eco }
+  return exportEcoScenePayload({
+    onAssetsTooLarge: () => {
+      postToHost({
+        t: 'eco:error',
+        message: 'Embedded assets exceed 20 MB — export as GLB instead.',
+      })
+    },
+  })
 }
 
 function handleLoadSite(site: EcoSite): void {
@@ -102,7 +84,7 @@ function handleLoadScene(scene: unknown): void {
   handlers.onLoadScene?.(scene)
   if (isRecord(scene) && isRecord(scene.nodes) && Array.isArray(scene.rootNodeIds)) {
     applySceneGraphToEditor(scene as SceneGraph)
-    if ('ecoAssets' in scene) restoreEcoAssetsFromScene(scene.ecoAssets)
+    restoreEcoSceneExtras(scene)
     emitDirty(false)
   }
 }

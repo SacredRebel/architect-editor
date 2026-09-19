@@ -145,8 +145,8 @@ export function serializeEcoAssetsForScene(): {
   placements: EcoPlacement[]
 } {
   return {
-    assets: state.assets.map((a) => ({ ...a })),
-    placements: state.placements.map((p) => ({ ...p })),
+    assets: state.assets.map((a) => ({ ...a })).sort((a, b) => a.id.localeCompare(b.id)),
+    placements: state.placements.map((p) => ({ ...p })).sort((a, b) => a.id.localeCompare(b.id)),
   }
 }
 
@@ -155,8 +155,8 @@ export function restoreEcoAssetsFromScene(payload: unknown): void {
   const data = payload as { assets?: EcoAsset[]; placements?: EcoPlacement[] }
   if (!Array.isArray(data.assets) || !Array.isArray(data.placements)) return
   state = {
-    assets: data.assets,
-    placements: data.placements,
+    assets: [...data.assets].sort((a, b) => a.id.localeCompare(b.id)),
+    placements: [...data.placements].sort((a, b) => a.id.localeCompare(b.id)),
     selectedPlacementId: null,
   }
   persistMeta()

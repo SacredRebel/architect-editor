@@ -41,3 +41,10 @@ export {
 export { ecoAssetsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
 export { exportEcoGlb, stampWalkExtras } from './export-glb'
 export { buildEcoWalk } from './export-walk'
+export {
+  exportEcoScenePayload,
+  restoreEcoSceneExtras,
+  roundTripEcoScenePayload,
+  stableStringifyEcoScene,
+} from './eco-scene'
+export type { EcoScenePayload } from './eco-scene'
