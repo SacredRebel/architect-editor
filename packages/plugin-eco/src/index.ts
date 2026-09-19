@@ -32,4 +32,4 @@ export {
   setShowGhost,
   subscribeEcoSite,
 } from './eco-site-store'
-export { ecoHostPanel, ecoPresentation } from './eco-ui'
+export { ecoAssetsHostPanel, ecoHostPanel, ecoPresentation } from './eco-ui'

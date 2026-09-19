@@ -3,12 +3,18 @@ import { applySceneGraphToEditor, type SceneGraph } from '@pascal-app/editor'
 import { applyEcoSite } from './apply-site'
 import type { EcoMsg, EcoSite } from './bridge-types'
 import { siteToWorldXz } from './coords'
+import {
+  restoreEcoAssetsFromScene,
+  serializeEcoAssetsForScene,
+  totalAssetBytes,
+} from './eco-assets-store'
 
 const PROTOCOL = 'eco/1' as const
 const HELLO_TIMEOUT_MS = 3000
+const MAX_SCENE_ASSET_BYTES = 20 * 1024 * 1024
 
 /** Capabilities advertised in eco:ready — grow as later phases land. */
-const E2_CAPS = ['site', 'scene'] as const
+const E2_CAPS = ['site', 'scene', 'assets'] as const
 
 type BridgeHandlers = {
   onLoadSite?: (site: EcoSite) => void
@@ -54,6 +60,22 @@ function currentSceneGraph(): SceneGraph {
   } as SceneGraph
 }
 
+function exportScenePayload(): unknown {
+  const graph = currentSceneGraph()
+  const eco = serializeEcoAssetsForScene()
+  if (totalAssetBytes() > MAX_SCENE_ASSET_BYTES) {
+    postToHost({
+      t: 'eco:error',
+      message: 'Embedded assets exceed 20 MB — export as GLB instead.',
+    })
+    return {
+      ...graph,
+      ecoAssets: { assets: [], placements: eco.placements },
+    }
+  }
+  return { ...graph, ecoAssets: eco }
+}
+
 function handleLoadSite(site: EcoSite): void {
   try {
     applyEcoSite(site)
@@ -77,6 +99,7 @@ function handleLoadScene(scene: unknown): void {
   handlers.onLoadScene?.(scene)
   if (isRecord(scene) && isRecord(scene.nodes) && Array.isArray(scene.rootNodeIds)) {
     applySceneGraphToEditor(scene as SceneGraph)
+    if ('ecoAssets' in scene) restoreEcoAssetsFromScene(scene.ecoAssets)
     emitDirty(false)
   }
 }
@@ -87,7 +110,7 @@ function handleRequestExport(what: 'scene' | 'glb'): void {
     handlers.onRequestGlb?.()
     return
   }
-  postToHost({ t: 'eco:scene', scene: currentSceneGraph() })
+  postToHost({ t: 'eco:scene', scene: exportScenePayload() })
 }
 
 function onMessage(event: MessageEvent): void {

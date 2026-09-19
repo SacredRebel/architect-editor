@@ -101,8 +101,9 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
     const { ecoPlugin } = await import('@eco/plugin-eco')
     return [ecoPlugin]
   })
-  void import('@eco/plugin-eco').then(({ ecoHostPanel, ecoPresentation }) => {
+  void import('@eco/plugin-eco').then(({ ecoAssetsHostPanel, ecoHostPanel, ecoPresentation }) => {
     registerEditorHostPanel(ecoHostPanel)
+    registerEditorHostPanel(ecoAssetsHostPanel)
     registerViewerPresentation(ecoPresentation)
   })
 }
