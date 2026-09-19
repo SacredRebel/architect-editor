@@ -62,6 +62,8 @@ console.log('running check-export.mjs…')
 await import('./check-export.mjs')
 console.log('running check-curved-wall.mjs…')
 await import('./check-curved-wall.mjs')
+console.log('running check-shell.mjs…')
+await import('./check-shell.mjs')
 console.log('running check-roundtrip.mjs…')
 await import('./check-roundtrip.mjs')
 

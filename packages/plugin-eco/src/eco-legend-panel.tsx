@@ -3,6 +3,13 @@
 import { useState, useSyncExternalStore } from 'react'
 import { isEcoBridgeReady, requestEcoGlbExport } from './bridge'
 import {
+  addEcoShell,
+  getEcoShellsState,
+  makeDefaultLeafShell,
+  removeEcoShell,
+  subscribeEcoShells,
+} from './eco-shell-store'
+import {
   getEcoSiteState,
   setGuideVisible,
   setShowCompass,
@@ -19,12 +26,17 @@ function useWalkStore() {
   return useSyncExternalStore(subscribeEcoWalk, getEcoWalkState, getEcoWalkState)
 }
 
+function useShells() {
+  return useSyncExternalStore(subscribeEcoShells, getEcoShellsState, getEcoShellsState)
+}
+
 /**
  * Legend + visibility toggles for Eco site overlays, Walk, and world export.
  */
 export default function EcoLegendPanel() {
   const { site, guideVisibility, showGhost, showCompass } = useEcoSiteStore()
   const { enabled: walkEnabled, firstPerson } = useWalkStore()
+  const { shells } = useShells()
   const [exporting, setExporting] = useState(false)
 
   const onExport = () => {
@@ -47,6 +59,24 @@ export default function EcoLegendPanel() {
         />
         Walk mode (WASD · Shift run · Space jump · C {firstPerson ? 'first' : 'third'}-person)
       </label>
+
+      <div style={{ fontWeight: 600 }}>Shell roofs</div>
+      <button
+        onClick={() => addEcoShell(makeDefaultLeafShell())}
+        style={{ padding: '6px 10px', cursor: 'pointer', textAlign: 'left' }}
+        type="button"
+      >
+        Add leaf shell (26×13 demo)
+      </button>
+      {shells.map((s) => (
+        <label key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ flex: 1 }}>{s.name}</span>
+          <button onClick={() => removeEcoShell(s.id)} type="button">
+            Remove
+          </button>
+        </label>
+      ))}
+      <div style={{ opacity: 0.65 }}>Shells export in the GLB only — no walk solids.</div>
 
       <div style={{ fontWeight: 600 }}>Export</div>
       <button

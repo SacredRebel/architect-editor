@@ -4,6 +4,8 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { EcoWalk } from './bridge-types'
 import { base64ToBytes, getEcoAssetsState } from './eco-assets-store'
+import { buildShellObject3D } from './eco-shell-geometry'
+import { getEcoShellsState } from './eco-shell-store'
 import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
 import { levelWorldY } from './level-y'
 
@@ -120,7 +122,8 @@ function slabMesh(
 
 /**
  * Build a design-only group in editor frame (exclude terrain/guides/ghost).
- * Walls + slabs as boxes; optional placed eco assets.
+ * Walls + slabs as boxes; eco shells; optional placed eco assets.
+ * Shells contribute geometry only — never walk solids.
  */
 export function buildDesignGroup(nodes: NodeMap): THREE.Group {
   const group = new THREE.Group()
@@ -136,6 +139,10 @@ export function buildDesignGroup(nodes: NodeMap): THREE.Group {
       const mesh = slabMesh(nodes, node as never)
       if (mesh) group.add(mesh)
     }
+  }
+
+  for (const shell of getEcoShellsState().shells) {
+    group.add(buildShellObject3D(shell))
   }
 
   return group
