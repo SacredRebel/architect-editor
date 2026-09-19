@@ -40,6 +40,9 @@ export {
 } from './eco-site-store'
 export { ecoAssetsHostPanel, ecoDrawingsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
 export { exportEcoGlb, stampWalkExtras } from './export-glb'
+export { assertHardGlbAudit, auditGlb } from './glb-audit'
+export { optimiseGlb } from './glb-optimise'
+export type { OptimiseProfile } from './glb-optimise'
 export { buildEcoWalk } from './export-walk'
 export {
   exportEcoScenePayload,

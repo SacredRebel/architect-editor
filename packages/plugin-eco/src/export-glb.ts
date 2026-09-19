@@ -15,6 +15,8 @@ import {
 } from './eco-materials'
 import { buildShellObject3D } from './eco-shell-geometry'
 import { getEcoShellsState } from './eco-shell-store'
+import { assertHardGlbAudit, auditGlb } from './glb-audit'
+import { optimiseGlb, type OptimiseProfile } from './glb-optimise'
 import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
 import { levelWorldY } from './level-y'
 
@@ -24,6 +26,12 @@ export type EcoGlbExportResult = {
   buffer: ArrayBuffer
   walk: EcoWalk
   originLL: [number, number]
+  /** Present after H1 optimise + hard audit. */
+  optimise?: {
+    beforeBytes: number
+    afterBytes: number
+    profile: OptimiseProfile
+  }
 }
 
 /** Ensure FileReader exists (Bun / Node lack it; GLTFExporter needs it). */
@@ -252,6 +260,10 @@ export async function exportEcoGlb(options: {
   nodes: NodeMap
   originLL?: [number, number]
   includePlacedAssets?: boolean
+  /** `compat` for world eco:glb (default); `web` for architects download / phone. */
+  optimiseProfile?: OptimiseProfile
+  /** Soften size gate for tiny test houses (default 500 KiB). */
+  maxBytes?: number
 }): Promise<EcoGlbExportResult> {
   ensureFileReaderPolyfill()
 
@@ -283,30 +295,37 @@ export async function exportEcoGlb(options: {
       (err) => reject(err),
       {
         binary: true,
-        // Force extras onto the glTF JSON before binary pack via onBeforeParse isn't available;
-        // stamp via a custom plugin-less path: mutate after parse by re-export with embed.
       },
     )
   })
 
-  // GLTFExporter puts Object3D.userData into node extras; scene.userData → scene extras.
-  // Re-parse and patch extras.walk into both scene + root node if missing.
-  const patched = await stampWalkExtras(result, walk)
+  // Optimise first (gltf-transform), then stamp walk extras so they survive.
+  const profile = options.optimiseProfile ?? 'compat'
+  const optimised = await optimiseGlb(result, profile)
+  const stamped = await stampWalkExtras(optimised.buffer, walk)
+  const report = await auditGlb(stamped)
+  assertHardGlbAudit(report, { maxBytes: options.maxBytes ?? 500 * 1024 })
 
   return {
-    buffer: patched,
+    buffer: stamped,
     walk,
     originLL: options.originLL ?? [0, 0],
+    optimise: {
+      beforeBytes: optimised.beforeBytes,
+      afterBytes: stamped.byteLength,
+      profile,
+    },
   }
 }
 
 /** Patch glTF JSON chunk inside a GLB so scene + nodes[0] carry extras.walk. */
 export async function stampWalkExtras(glb: ArrayBuffer, walk: EcoWalk): Promise<ArrayBuffer> {
-  const bytes = new Uint8Array(glb)
   const dataView = new DataView(glb)
   if (dataView.getUint32(0, true) !== 0x46546c67) {
     throw new Error('Not a GLB')
   }
+  const totalFromHeader = dataView.getUint32(8, true)
+  const bytes = new Uint8Array(glb, 0, Math.min(totalFromHeader, glb.byteLength))
   // header 12 + chunk0 length + chunk0 type
   const jsonChunkLen = dataView.getUint32(12, true)
   const jsonChunkType = dataView.getUint32(16, true)
@@ -333,6 +352,8 @@ export async function stampWalkExtras(glb: ArrayBuffer, walk: EcoWalk): Promise<
   const pad = (4 - (jsonAligned.length % 4)) % 4
   const jsonPadded = new Uint8Array(jsonAligned.length + pad)
   jsonPadded.set(jsonAligned)
+  // glTF JSON chunk MUST be padded with spaces (0x20), not nulls.
+  for (let i = 0; i < pad; i++) jsonPadded[jsonAligned.length + i] = 0x20
 
   const binChunkStart = jsonStart + jsonChunkLen
   const rest = bytes.subarray(binChunkStart)
