@@ -6,12 +6,17 @@ const appDirectory = path.dirname(fileURLToPath(import.meta.url))
 const portableBuild = process.env.PASCAL_PORTABLE_BUILD === '1'
 const ecoStatic = process.env.ECO_STATIC === '1'
 const ecoBasePath = process.env.ECO_BASE_PATH || '/builder'
+// SacredRebel fork: Eco bridge is the product. Default on unless explicitly disabled.
+const ecoPublic = process.env.NEXT_PUBLIC_ECO ?? '1'
 
 if (ecoStatic && portableBuild) {
   throw new Error('ECO_STATIC and PASCAL_PORTABLE_BUILD cannot both be set')
 }
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_ECO: ecoPublic,
+  },
   ...(ecoStatic
     ? {
         output: 'export' as const,

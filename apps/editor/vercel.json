@@ -4,5 +4,10 @@
   "installCommand": "cd ../.. && (npx -y bun@1.3.13 install --frozen-lockfile || (sleep 20 && npx -y bun@1.3.13 install --frozen-lockfile) || (sleep 60 && npx -y bun@1.3.13 install --frozen-lockfile))",
   "outputDirectory": ".next",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/builder", "destination": "/" },
+    { "source": "/builder/", "destination": "/" },
+    { "source": "/builder/:path*", "destination": "/:path*" }
+  ]
 }
