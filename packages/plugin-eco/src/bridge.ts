@@ -8,6 +8,7 @@ import {
   serializeEcoAssetsForScene,
   totalAssetBytes,
 } from './eco-assets-store'
+import { ecoDebug, ecoDebugWarn } from './eco-debug'
 import { getEcoSiteState } from './eco-site-store'
 import { arrayBufferToBase64, downloadBytes, exportEcoGlb } from './export-glb'
 
@@ -15,8 +16,8 @@ const PROTOCOL = 'eco/1' as const
 const HELLO_TIMEOUT_MS = 3000
 const MAX_SCENE_ASSET_BYTES = 20 * 1024 * 1024
 
-/** Capabilities advertised in eco:ready — grow as later phases land. */
-const E2_CAPS = ['site', 'scene', 'assets', 'glb'] as const
+/** Capabilities advertised in eco:ready. */
+export const CAPS = ['site', 'scene', 'assets', 'glb'] as const
 
 type BridgeHandlers = {
   onLoadSite?: (site: EcoSite) => void
@@ -83,11 +84,11 @@ function handleLoadSite(site: EcoSite): void {
     applyEcoSite(site)
     if (site.guides[0]?.pts[0]) {
       const [x, zSouth] = siteToWorldXz(site.guides[0].pts[0])
-      console.info(
-        `[eco:bridge] load-site applied originLL=${site.originLL.join(',')} guide0→world xz=(${x}, ${zSouth})`,
+      ecoDebug(
+        `load-site applied originLL=${site.originLL.join(',')} guide0→world xz=(${x}, ${zSouth})`,
       )
     } else {
-      console.info('[eco:bridge] load-site applied', site.originLL)
+      ecoDebug('load-site applied', site.originLL)
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'load-site failed'
@@ -97,7 +98,7 @@ function handleLoadSite(site: EcoSite): void {
 }
 
 function handleLoadScene(scene: unknown): void {
-  console.info('[eco:bridge] load-scene')
+  ecoDebug('load-scene')
   handlers.onLoadScene?.(scene)
   if (isRecord(scene) && isRecord(scene.nodes) && Array.isArray(scene.rootNodeIds)) {
     applySceneGraphToEditor(scene as SceneGraph)
@@ -155,7 +156,7 @@ function onMessage(event: MessageEvent): void {
       clearTimeout(helloTimer)
       helloTimer = null
     }
-    postToHost({ t: 'eco:ready', v: PROTOCOL, caps: [...E2_CAPS] })
+    postToHost({ t: 'eco:ready', v: PROTOCOL, caps: [...CAPS] })
     emitDirty(readDirty())
     return
   }
@@ -174,7 +175,7 @@ function onMessage(event: MessageEvent): void {
       handleRequestExport(event.data.what)
       break
     case 'eco:error':
-      console.warn('[eco:bridge] host error:', event.data.message)
+      ecoDebugWarn('host error:', event.data.message)
       break
     default:
       break
@@ -203,7 +204,7 @@ function watchDirty(): void {
       emitDirty(readDirty())
     })
   } catch (err) {
-    console.warn('[eco:bridge] temporal subscribe failed', err)
+    ecoDebugWarn('temporal subscribe failed', err)
   }
 }
 
@@ -228,7 +229,7 @@ export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
     helloTimer = setTimeout(() => {
       helloTimer = null
       if (!hostOrigin) {
-        console.info('[eco:bridge] no eco:hello within 3s — standalone embed mode')
+        ecoDebug('no eco:hello within 3s — standalone embed mode')
       }
     }, HELLO_TIMEOUT_MS)
   }

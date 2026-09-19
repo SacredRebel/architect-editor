@@ -19,8 +19,14 @@ if (typeof window !== 'undefined') {
   })
 }
 
-export { applyEcoSite } from './apply-site'
-export { installEcoBridge, isEcoBridgeReady, requestEcoClose, requestEcoGlbExport } from './bridge'
+export { applyEcoSite, terrainFieldFromEcoSite } from './apply-site'
+export {
+  CAPS,
+  installEcoBridge,
+  isEcoBridgeReady,
+  requestEcoClose,
+  requestEcoGlbExport,
+} from './bridge'
 export type { EcoMsg, EcoSite, EcoWalk } from './bridge-types'
 export { roundTripSiteXz, siteToWorldXz, worldToSiteXz } from './coords'
 export { EcoExitButton } from './eco-exit-button'

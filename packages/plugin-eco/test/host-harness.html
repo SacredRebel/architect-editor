@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>eco host harness (F0) — world stand-in</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0e1116;
+        --panel: #161b22;
+        --line: #30363d;
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --accent: #3fb950;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        height: 100vh;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+      header .hint {
+        color: var(--muted);
+        font-size: 12px;
+        flex: 1 1 240px;
+      }
+      button {
+        background: #21262d;
+        color: var(--fg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: #8b949e;
+      }
+      button.primary {
+        background: #238636;
+        border-color: #2ea043;
+      }
+      #meta {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 0;
+        border-bottom: 1px solid var(--line);
+        min-height: 200px;
+        max-height: 32vh;
+      }
+      #log {
+        overflow: auto;
+        padding: 8px 12px;
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        background: #010409;
+        border-right: 1px solid var(--line);
+      }
+      #stats {
+        padding: 8px 12px;
+        background: var(--panel);
+        overflow: auto;
+      }
+      #stats h3 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      #walkSvg {
+        width: 100%;
+        height: 160px;
+        background: #010409;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #000;
+        min-height: 0;
+      }
+      .ok {
+        color: var(--accent);
+      }
+      .bad {
+        color: #f85149;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>F0 host harness</strong>
+      <span class="hint">
+        World stand-in: hello every 500ms ≤20×, realistic 97×97 site, GLB export + walk SVG.
+        Serve static out: <code>cd apps/editor && bun run build:static && npx serve out</code>
+        → open <code>/eco-host-harness.html</code>
+      </span>
+      <button id="btnExport" class="primary" type="button" disabled>Request eco:glb</button>
+      <button id="btnReload" type="button">Reload iframe</button>
+    </header>
+    <div id="meta">
+      <div id="log"></div>
+      <div id="stats">
+        <h3>Status</h3>
+        <div id="status">waiting…</div>
+        <h3 style="margin-top: 10px">Last eco:glb</h3>
+        <div id="glbStats">—</div>
+        <h3 style="margin-top: 10px">Walk rings (plan, z-south)</h3>
+        <svg id="walkSvg" viewBox="-80 -80 160 160"></svg>
+      </div>
+    </div>
+    <iframe id="editor" title="eco-embed"></iframe>
+    <script type="module">
+      import { buildRealisticSite } from './realistic-site.mjs'
+
+      const logEl = document.getElementById('log')
+      const statusEl = document.getElementById('status')
+      const glbStatsEl = document.getElementById('glbStats')
+      const walkSvg = document.getElementById('walkSvg')
+      const iframe = document.getElementById('editor')
+      const btnExport = document.getElementById('btnExport')
+      const params = new URLSearchParams(location.search)
+      const embedUrl = new URL(
+        params.get('embed') || '/builder/embed/',
+        location.origin,
+      ).href
+      const embedOrigin = new URL(embedUrl).origin
+
+      let helloTimer = null
+      let helloCount = 0
+      let ready = false
+      let lastCaps = []
+      const t0 = performance.now()
+
+      function ts() {
+        return ((performance.now() - t0) / 1000).toFixed(3) + 's'
+      }
+
+      function log(dir, payload) {
+        const preview =
+          typeof payload === 'string'
+            ? payload
+            : payload?.t === 'eco:glb'
+              ? `eco:glb bytes≈${Math.round(((payload.glb || '').length * 3) / 4)} floors=${payload.walk?.floors?.length ?? '?'} solids=${payload.walk?.solids?.length ?? '?'}`
+              : payload?.t === 'eco:load-site'
+                ? `eco:load-site terrain=${payload.site?.terrain?.w}×${payload.site?.terrain?.h} guides=${payload.site?.guides?.length}`
+                : JSON.stringify(payload).slice(0, 280)
+        logEl.textContent += `[${ts()}] ${dir} ${preview}\n`
+        logEl.scrollTop = logEl.scrollHeight
+        console.log(`[eco-host ${ts()}]`, dir, payload)
+      }
+
+      function setStatus(html) {
+        statusEl.innerHTML = html
+      }
+
+      function stopHello() {
+        if (helloTimer) {
+          clearInterval(helloTimer)
+          helloTimer = null
+        }
+      }
+
+      function sendHello() {
+        if (ready || helloCount >= 20) {
+          stopHello()
+          if (!ready && helloCount >= 20) {
+            setStatus('<span class="bad">no eco:ready within 20 knocks</span>')
+            log('!', 'knock budget exhausted')
+          }
+          return
+        }
+        helloCount += 1
+        const msg = { t: 'eco:hello', v: 'eco/1' }
+        iframe.contentWindow?.postMessage(msg, embedOrigin)
+        log('→', `${msg.t} (#${helloCount})`)
+      }
+
+      function startKnocking() {
+        stopHello()
+        helloCount = 0
+        ready = false
+        btnExport.disabled = true
+        setStatus('knocking eco:hello…')
+        sendHello()
+        helloTimer = setInterval(sendHello, 500)
+      }
+
+      async function glbToBase64(url) {
+        const res = await fetch(url)
+        if (!res.ok) return null
+        const buf = await res.arrayBuffer()
+        const bytes = new Uint8Array(buf)
+        let binary = ''
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+        return btoa(binary)
+      }
+
+      async function sendSite() {
+        const refGlb = await glbToBase64(new URL('fixture.glb', location.href).href)
+        const site = buildRealisticSite(refGlb || undefined)
+        const msg = { t: 'eco:load-site', site }
+        iframe.contentWindow.postMessage(msg, embedOrigin)
+        log('→', msg)
+        setStatus(
+          `<span class="ok">ready</span> · caps=[${lastCaps.join(', ')}] · site ${site.terrain.w}×${site.terrain.h} @ ${site.terrain.stepM}m` +
+            (refGlb ? ' · refGlb' : ' · no refGlb'),
+        )
+      }
+
+      function drawWalk(walk) {
+        while (walkSvg.firstChild) walkSvg.removeChild(walkSvg.firstChild)
+        if (!walk) return
+        const all = [...(walk.floors || []), ...(walk.solids || [])]
+        let minX = Infinity
+        let maxX = -Infinity
+        let minZ = Infinity
+        let maxZ = -Infinity
+        for (const item of all) {
+          for (const [x, z] of item.ring || []) {
+            minX = Math.min(minX, x)
+            maxX = Math.max(maxX, x)
+            minZ = Math.min(minZ, z)
+            maxZ = Math.max(maxZ, z)
+          }
+        }
+        if (!Number.isFinite(minX)) return
+        const pad = 4
+        const w = Math.max(maxX - minX, 1) + pad * 2
+        const h = Math.max(maxZ - minZ, 1) + pad * 2
+        walkSvg.setAttribute('viewBox', `${minX - pad} ${minZ - pad} ${w} ${h}`)
+
+        for (const floor of walk.floors || []) {
+          const pts = floor.ring.map(([x, z]) => `${x},${z}`).join(' ')
+          const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
+          poly.setAttribute('points', pts)
+          poly.setAttribute('fill', 'rgba(63,185,80,0.25)')
+          poly.setAttribute('stroke', '#3fb950')
+          poly.setAttribute('stroke-width', '0.15')
+          walkSvg.appendChild(poly)
+        }
+        for (const solid of walk.solids || []) {
+          const pts = solid.ring.map(([x, z]) => `${x},${z}`).join(' ')
+          const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
+          poly.setAttribute('points', pts)
+          poly.setAttribute('fill', 'rgba(248,81,73,0.35)')
+          poly.setAttribute('stroke', '#f85149')
+          poly.setAttribute('stroke-width', '0.12')
+          walkSvg.appendChild(poly)
+        }
+      }
+
+      function onGlb(msg) {
+        const byteLen = Math.round(((msg.glb || '').length * 3) / 4)
+        const floors = msg.walk?.floors?.length ?? 0
+        const solids = msg.walk?.solids?.length ?? 0
+        glbStatsEl.innerHTML = `bytes ≈ <b>${byteLen}</b><br/>floors <b>${floors}</b> · solids <b>${solids}</b><br/>originLL ${JSON.stringify(msg.originLL)}`
+        drawWalk(msg.walk)
+      }
+
+      window.addEventListener('message', (event) => {
+        if (!event.data || typeof event.data.t !== 'string') return
+        if (!String(event.data.t).startsWith('eco:')) return
+        log('←', event.data)
+
+        if (event.data.t === 'eco:ready') {
+          ready = true
+          stopHello()
+          lastCaps = event.data.caps || []
+          btnExport.disabled = false
+          void sendSite()
+        }
+        if (event.data.t === 'eco:glb') onGlb(event.data)
+        if (event.data.t === 'eco:error') {
+          setStatus(`<span class="bad">eco:error</span> ${event.data.message}`)
+        }
+      })
+
+      btnExport.addEventListener('click', () => {
+        const msg = { t: 'eco:request-export', what: 'glb' }
+        iframe.contentWindow.postMessage(msg, embedOrigin)
+        log('→', msg)
+      })
+
+      document.getElementById('btnReload').addEventListener('click', () => {
+        log('!', 'reload iframe')
+        iframe.src = embedUrl
+      })
+
+      iframe.addEventListener('load', () => {
+        log('!', 'iframe load → ' + embedUrl)
+        startKnocking()
+      })
+
+      iframe.src = embedUrl
+    </script>
+  </body>
+</html>

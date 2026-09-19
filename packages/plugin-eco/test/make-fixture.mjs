@@ -51,15 +51,15 @@ if (!(result instanceof ArrayBuffer)) {
 }
 
 const bytes = Buffer.from(result)
-const b64 = bytes.toString('base64')
 writeFileSync(path.join(dir, 'fixture.glb'), bytes)
-writeFileSync(path.join(dir, 'fixture.glb.b64.txt'), b64)
-console.log(`wrote fixture.glb (${bytes.length} bytes) and fixture.glb.b64.txt`)
+console.log(`wrote fixture.glb (${bytes.length} bytes) — base64 generated at test/serve time`)
 if (bytes.length > 200_000) {
   console.warn('WARNING: fixture exceeds 200KB commit limit')
 }
 
-// E6: also run the house export acceptance (walk extras + z-south).
+// E6 + F0 acceptance scripts
 console.log('running check-export.mjs…')
 await import('./check-export.mjs')
+console.log('running check-roundtrip.mjs…')
+await import('./check-roundtrip.mjs')
 
