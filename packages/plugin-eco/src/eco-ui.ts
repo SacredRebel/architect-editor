@@ -35,3 +35,13 @@ export const ecoMaterialsHostPanel: EditorHostPanel = {
   component: () => import('./eco-materials-panel'),
   defaultInstalled: true,
 }
+
+export const ecoDrawingsHostPanel: EditorHostPanel = {
+  id: 'eco:plugin-eco:drawings',
+  label: 'Drawings',
+  icon: { kind: 'url', src: '/icons/mesh.webp' },
+  description: 'Orthographic plan, section, and elevation PNGs at true scale',
+  pluginId: 'eco:plugin-eco',
+  component: () => import('./eco-drawings-panel'),
+  defaultInstalled: true,
+}

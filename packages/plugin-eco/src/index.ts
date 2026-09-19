@@ -38,7 +38,7 @@ export {
   setShowGhost,
   subscribeEcoSite,
 } from './eco-site-store'
-export { ecoAssetsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
+export { ecoAssetsHostPanel, ecoDrawingsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
 export { exportEcoGlb, stampWalkExtras } from './export-glb'
 export { buildEcoWalk } from './export-walk'
 export {

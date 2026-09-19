@@ -102,10 +102,17 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
     return [ecoPlugin]
   })
   void import('@eco/plugin-eco').then(
-    ({ ecoAssetsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation }) => {
+    ({
+      ecoAssetsHostPanel,
+      ecoDrawingsHostPanel,
+      ecoHostPanel,
+      ecoMaterialsHostPanel,
+      ecoPresentation,
+    }) => {
       registerEditorHostPanel(ecoHostPanel)
       registerEditorHostPanel(ecoAssetsHostPanel)
       registerEditorHostPanel(ecoMaterialsHostPanel)
+      registerEditorHostPanel(ecoDrawingsHostPanel)
       registerViewerPresentation(ecoPresentation)
     },
   )
