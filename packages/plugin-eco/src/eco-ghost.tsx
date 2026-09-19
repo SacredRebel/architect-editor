@@ -1,10 +1,12 @@
 'use client'
 
 import { useLoader } from '@react-three/fiber'
-import { useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { DoubleSide, type Group, Mesh, MeshBasicMaterial, type Object3D } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { ensureEcoPlanSnapInstalled, setEcoGhostMeshSnap } from './eco-ghost-snap'
 import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
+import { extractGhostPlanSnap } from './extract-ghost-plan-edges'
 
 function useEcoSiteStore() {
   return useSyncExternalStore(subscribeEcoSite, getEcoSiteState, getEcoSiteState)
@@ -32,17 +34,24 @@ function GhostModel({ url }: { url: string }) {
     root.traverse((obj: Object3D) => {
       if (obj instanceof Mesh) {
         obj.material = mat
+        // Keep non-interactive for selection; plan snap uses extracted edges.
         obj.raycast = () => {}
       }
     })
     return root as Group
   }, [gltf])
 
+  useEffect(() => {
+    setEcoGhostMeshSnap(extractGhostPlanSnap(ghost))
+    return () => setEcoGhostMeshSnap(null)
+  }, [ghost])
+
   return <primitive object={ghost} />
 }
 
 /**
- * Optional reference massing as a non-interactive translucent ghost at origin.
+ * Optional reference massing as a translucent ghost at origin.
+ * When shown, its plan silhouette (and site guides) feed wall/slab snap.
  */
 export function EcoGhost() {
   const { site, showGhost } = useEcoSiteStore()
@@ -50,6 +59,14 @@ export function EcoGhost() {
     if (!site?.refGlb || !showGhost) return null
     return base64ToObjectUrl(site.refGlb)
   }, [site?.refGlb, showGhost])
+
+  useEffect(() => {
+    ensureEcoPlanSnapInstalled()
+  }, [])
+
+  useEffect(() => {
+    if (!showGhost || !site?.refGlb) setEcoGhostMeshSnap(null)
+  }, [showGhost, site?.refGlb])
 
   if (!url) return null
   return (

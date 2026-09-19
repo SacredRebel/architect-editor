@@ -72,6 +72,12 @@ export default function EcoLegendPanel() {
         </div>
       ) : (
         <>
+          <div style={{ fontWeight: 600 }}>Snap</div>
+          <div style={{ opacity: 0.75, lineHeight: 1.35 }}>
+            With the ghost on, wall/slab drafting snaps to the massing outline (and GLB silhouette).
+            Hold <kbd>Alt</kbd> to suspend.
+          </div>
+
           <div style={{ fontWeight: 600 }}>Site overlays</div>
           <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input

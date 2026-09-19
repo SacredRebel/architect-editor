@@ -13,6 +13,7 @@ import {
   resolveAlignment,
   resolveBuildingForLevel,
   sceneRegistry,
+  snapToPlanContributions,
   useScene,
   type WallMiterData,
   type WallNode,
@@ -660,19 +661,26 @@ export const WallTool: React.FC = () => {
         magnetic: isMagneticSnapActive(),
       })
       gridPosition = alignPoint(snapResult.point, { applySnap: !angleLocked })
+      const planSnap = snapToPlanContributions(gridPosition, {
+        suspended: Boolean(event.nativeEvent?.altKey),
+        radius: 0.55,
+      })
+      if (planSnap.snapped) gridPosition = planSnap.point
       // Stand the magnetic beacon at the endpoint when it locked onto an
       // existing wall corner / wall point; clear it for plain grid/angle moves.
-      useWallSnapIndicator
-        .getState()
-        .set(
-          snapResult.snap
-            ? { x: gridPosition[0], z: gridPosition[1], kind: snapResult.snap }
-            : null,
-        )
+      useWallSnapIndicator.getState().set(
+        snapResult.snap || planSnap.snapped
+          ? {
+              x: gridPosition[0],
+              z: gridPosition[1],
+              kind: snapResult.snap ?? 'wall',
+            }
+          : null,
+      )
 
       if (buildingState.current === 1) {
         const snappedLocal = gridPosition
-        const draftY = constructionPlane.current?.localY ?? event.localPosition[1]
+        const draftY = planSnap.y ?? constructionPlane.current?.localY ?? event.localPosition[1]
         endingPoint.current.set(snappedLocal[0], draftY, snappedLocal[1])
         const draftPreview = useFloorplanDraftPreview.getState()
         draftPreview.setWallDraftStart([startingPoint.current.x, startingPoint.current.z])
@@ -748,14 +756,22 @@ export const WallTool: React.FC = () => {
           walls: snapWalls,
           magnetic: isMagneticSnapActive(),
         })
-        const snappedStart = alignPoint(snapResult.point)
+        let snappedStart = alignPoint(snapResult.point)
+        const planSnap = snapToPlanContributions(snappedStart, {
+          suspended: Boolean(event.nativeEvent?.altKey),
+          radius: 0.55,
+        })
+        if (planSnap.snapped) snappedStart = planSnap.point
         const resolvedPlane =
           (pointed?.sourceNodeId
             ? resolveEventConstructionPlane(event, pointed)
             : pointMatches(snappedStart, snapResult.point)
               ? snappedWallConstructionPlane(snapResult.targetWallIds, walls)
               : null) ?? resolveEventConstructionPlane(event, pointed)
-        const plane = resampleTerrainConstructionPlane(resolvedPlane, snappedStart)
+        let plane = resampleTerrainConstructionPlane(resolvedPlane, snappedStart)
+        if (planSnap.y != null) {
+          plane = { ...plane, localY: planSnap.y }
+        }
         constructionPlane.current = plane
         flatConstructionBase.current = pointed?.sourceNodeId != null
         publishHorizontalConstructionPlane(event, plane)
@@ -780,7 +796,7 @@ export const WallTool: React.FC = () => {
         setDraftMeasurement(null)
       } else if (buildingState.current === 1) {
         const angleLocked = isAngleSnapActive()
-        const snappedEnd = alignPoint(
+        let snappedEnd = alignPoint(
           snapWallDraftPointDetailed({
             point: localClick,
             walls: snapWalls,
@@ -790,6 +806,11 @@ export const WallTool: React.FC = () => {
           }).point,
           { applySnap: !angleLocked },
         )
+        const planSnap = snapToPlanContributions(snappedEnd, {
+          suspended: Boolean(event.nativeEvent?.altKey),
+          radius: 0.55,
+        })
+        if (planSnap.snapped) snappedEnd = planSnap.point
         const dx = snappedEnd[0] - startingPoint.current.x
         const dz = snappedEnd[1] - startingPoint.current.z
         if (dx * dx + dz * dz < 0.01 * 0.01) return

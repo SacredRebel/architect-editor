@@ -8,6 +8,7 @@ import {
   resolveSlabPlacementElevation,
   snapPointAlongAngleRay,
   snapPointToGrid,
+  snapToPlanContributions,
   useScene,
 } from '@pascal-app/core'
 import {
@@ -169,18 +170,24 @@ export const SlabTool: React.FC = () => {
         isAngleSnapActive() && lastPoint
           ? [...snapPointAlongAngleRay(lastPoint, rawPoint, DEFAULT_ANGLE_STEP, gridStep)]
           : gridPosition
-      const displayPoint = resolveSlabPlanPointSnap({
+      const displaySnap = resolveSlabPlanPointSnap({
         rawPoint,
         fallbackPoint: orthoPoint,
         levelId: currentLevelId,
-      }).point
+      })
+      let displayPoint = displaySnap.point
+      const planSnap = snapToPlanContributions(displayPoint, {
+        suspended: Boolean(event.nativeEvent?.altKey),
+        radius: 0.55,
+      })
+      if (planSnap.snapped) displayPoint = planSnap.point
       const hoverPlane =
         plane ??
         resampleTerrainConstructionPlane(
           resolveEventConstructionPlane(event, pointed),
           displayPoint,
         )
-      setLevelY(hoverPlane.localY)
+      setLevelY(planSnap.y ?? hoverPlane.localY)
       useFloorplanDraftPreview.getState().setCursorPoint(displayPoint)
       setSnappedCursorPosition(displayPoint)
       if (
