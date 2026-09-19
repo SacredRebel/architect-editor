@@ -5,8 +5,9 @@ import { EcoCompass } from './eco-compass'
 import { EcoGhost } from './eco-ghost'
 import { EcoGuides } from './eco-guides'
 import { EcoPlacedAssets } from './eco-placed-assets'
+import { EcoWalk } from './eco-walk'
 
-/** Viewer presentation root — guides, ghost massing, compass, user assets. */
+/** Viewer presentation root — guides, ghost massing, compass, user assets, walk. */
 export default function EcoPresentation() {
   return (
     <group name="eco-presentation">
@@ -16,6 +17,7 @@ export default function EcoPresentation() {
       </Suspense>
       <EcoPlacedAssets />
       <EcoCompass />
+      <EcoWalk />
     </group>
   )
 }
