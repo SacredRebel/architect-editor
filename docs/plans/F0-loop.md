@@ -1,52 +1,52 @@
 # F0.3 / H0 — against the real world (loop log)
 
-## Status (2026-09-19, H0)
+## Hosts (corrected 2026-09-19)
 
-**Deployment Protection:** appears **off** — `https://architect-editor.vercel.app/` loads the editor (no login wall).
-
-**New blocker found while probing for H0:**
-
-| URL | Result |
+| Role | URL |
 |---|---|
-| `https://architect-editor.vercel.app/` | 200 — editor shell (“No buildings yet”) |
-| `https://architect-editor.vercel.app/api/health` | 200 |
-| `https://architect-editor.vercel.app/privacy` | 200 |
-| `https://architect-editor.vercel.app/embed` | **404** |
-| `https://architect-editor.vercel.app/builder/embed/` | **404** (308 → `/builder/embed` → 404) |
-| `https://architect-editor.vercel.app/scenes` | **404** |
-| `https://architect-editor.vercel.app/import` | **404** |
+| World | `https://spatial-map.vercel.app/` |
+| Editor (production) | `https://architect-editor-snowy.vercel.app/` — **not** `architect-editor.vercel.app` |
+| H0 override (until world ships permanent fix) | `?role=builder&builder=https://architect-editor-snowy.vercel.app/embed` |
 
-The world iframes **`/builder/embed/`**. That path is not on the live deploy, so the `eco/1` handshake cannot start even with Protection off. Routes exist on `origin/main` (`apps/editor/app/embed` since E1) — production looks like an incomplete or stale build / wrong project root, not a Protection issue.
+Note: `/embed` on snowy returns **200** with `x-matched-path: /embed`. Earlier 404 conclusions from the wrong host were incorrect (RSC payload contains a not-found string on every page).
 
-**Also needed from owner:** the **world** production URL (`?role=builder` → house → 🏗 studio). It is not in this repo; probes of `eco-atlas` / `lemurialife` / `eco-village` were unrelated products.
+## Checklist
 
-## Checklist (run when embed is live + world URL known)
+1. Open world with `?role=builder` (+ builder override) — **done**
+2. Walk to house, press **🏗 studio** — **done** (iframe `architect-editor-snowy.vercel.app/embed`)
+3. Confirm site arrives — **partially verified** (see Results)
+4. Draw two rooms + door + one curved wall — **blocked in automation** (cross-origin iframe; needs human or world-side driver)
+5. Send to world → walk in / through door / into wall / on floor — **not yet**
 
-1. Open the world with `?role=builder`, walk to the house, press **🏗 studio**
-2. Confirm the site arrives — 97 × 97, survey boundary, Oak Leaf as ghost
-3. Draw two rooms with one door (**one wall curved** — F1 through the real bridge)
-4. **Send to world**
-5. **Walk into it. Go through the door. Walk into a wall. Stand on the floor.**
+## Results
 
-## Local stand-in (available now)
+| Path | Status |
+|---|---|
+| Wrong host `architect-editor.vercel.app` | Misleading — do not use for Eco |
+| `architect-editor-snowy.vercel.app/embed` | 200, `X-Matched-Path: /embed` |
+| Live URL used | `https://spatial-map.vercel.app/?role=builder&builder=https://architect-editor-snowy.vercel.app/embed` |
+| Studio opens | Yes — “the studio · Sulphur Mountain”, wall tool available |
+| `eco:ready` | Yes — caps `site`, `scene`, `assets`, `glb` from snowy origin |
+| Site sent | Yes — `world.studio.siteSent` = **97×97**, **9 guides** |
+| Oak Leaf `refGlb` | Not confirmed in remaining `opts.site` (cleared after send); canvas looked empty of ghost — **needs visual confirm** |
+| Draw → send → walk | **Not completed** — iframe is cross-origin; browser automation cannot drive walls/doors inside the embed |
+
+### What looked right
+
+- Builder role banner, studio overlay, correct embed URL via `?builder=`
+- Handshake: `eco:ready` with full caps
+- World records site send at 97×97 with 9 guides (survey-scale heightfield)
+
+### What looked wrong / incomplete
+
+- Studio canvas appeared empty (no obvious terrain guides / Oak Leaf ghost in the first screenshot after open). Possible camera/level issue or site apply not painting overlays — **verify before H1**.
+- Full draw / export / walk-through still needs a human pass (or a world-side scripted driver).
+
+## Local stand-in (still valid)
 
 ```bash
 cd apps/editor && bun run build:static && npx serve out
 # open http://localhost:3000/eco-host-harness.html
 ```
 
-Headless: `bun packages/plugin-eco/test/check-roundtrip.mjs`.
-
-## Results so far
-
-| Path | Status |
-|---|---|
-| `check-roundtrip.mjs` | Pass (2026-09-19) |
-| Host harness (manual) | Ready after static build |
-| World studio live | **Blocked** — `/builder/embed` 404 on `architect-editor.vercel.app`; world URL TBD |
-
-### Live probe notes (H0 attempt)
-
-- Protection no longer shows a login wall on the editor origin.
-- Cannot complete studio → draw → send → walk until `/builder/embed` (or a rewrite to a working `/embed`) is served and the world host URL is known.
-- No walk-through of door/wall/floor yet — iframe never mounts.
+`bun packages/plugin-eco/test/check-roundtrip.mjs` — pass.

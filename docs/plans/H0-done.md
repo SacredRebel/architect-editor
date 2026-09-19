@@ -1,26 +1,46 @@
-# H0 done (partial) — live loop probe
+# H0 status — live loop (in progress)
 
 ## Repo drawn on
 
-None (operational phase). Follows `docs/plans/F0-loop.md`.
+None (ops). Notion: **Map & Editor — Assets & Tools** (`collection://30011dde-35d4-4dbd-a520-e910b31c8c9f`).
 
-## What happened
+## Correction
 
-1. Confirmed Deployment Protection is no longer presenting a login wall on `architect-editor.vercel.app`.
-2. Probed the embed paths the world needs: **`/builder/embed/` and `/embed` both 404** on production, while `/` and `/api/health` work. Local `bun run build --filter=editor` lists `○ /embed` — production looks stale or mis-rooted relative to `origin/main`.
-3. World host URL (`?role=builder`) is not in this repo; candidate Vercel apps checked were unrelated.
+Production editor is **`architect-editor-snowy.vercel.app`**, not `architect-editor.vercel.app`. Deploy of `c63bcae0` is live. Check `x-matched-path`, not page HTML for 404s.
 
-## Fixes shipped toward unblocking
+## Verified live (2026-09-19)
 
-- `apps/editor/vercel.json` — rewrite `/builder/:path*` → `/:path*` so the world's `/builder/embed` URL hits `/embed` once that route is actually deployed.
-- `apps/editor/next.config.ts` — default `NEXT_PUBLIC_ECO=1` so the Eco plugin registers without a dashboard env var.
-- `docs/plans/F0-loop.md` — Results table updated with the live probe.
+URL:
+`https://spatial-map.vercel.app/?role=builder&builder=https://architect-editor-snowy.vercel.app/embed`
 
-## Still blocked on
+| Check | Result |
+|---|---|
+| World loads, builder banner | OK |
+| 🏗 studio opens snowy `/embed` | OK |
+| `eco:ready` + caps `site,scene,assets,glb` | OK |
+| Site sent 97×97, 9 guides | OK (`world.studio.siteSent`) |
+| Visual guides / Oak Leaf ghost in studio | Unclear — canvas looked empty |
+| Draw two rooms + curved wall + door | Not done (cross-origin iframe) |
+| Send to world + walk door/wall/floor | Not done |
 
-- A **fresh Vercel deploy** of `origin/main` that actually serves `/embed` (and thus `/builder/embed` via rewrite).
-- The **world production URL** from Sacred Rebel so the studio → draw → send → walk checklist can be completed and the Results table filled with a real walk-through.
+## Notion Planned + High (DEVPLAN-04 set)
 
-## Acceptance
+Queried Status=Planned, Usefulness=High:
 
-Not met yet — no live door/wall/floor walk-through. Do not start H1 until this passes.
+| Name | Maps to |
+|---|---|
+| pascalorg/skills (glb-web-export) | H1 |
+| pascalorg/plugin-trees | H2 |
+| ggooonn/Diffusion-Masterplanning | H9 |
+| Mojang/ore-ui (@react-facet) | H4 |
+| pascalorg/plugin-boots | H7 |
+| aedifex | H5 |
+| majidmanzarpour/threejs-game-skills | H8 |
+| ecctrl | already E5; still Planned in DB |
+| monolith-terrain, jt-gelflow | Track B/C (world / shop) |
+
+Bones / articraft rows not in that Planned+High slice (different Status) — still named in DEVPLAN-04 as H3 / H6.
+
+## Next
+
+Human (or world-side automation): in the open studio, draw two rooms + one door + one curved wall → Eco panel **Send to world** → walk the building. Then fill the remaining Results rows and mark H0 accepted before H1.
