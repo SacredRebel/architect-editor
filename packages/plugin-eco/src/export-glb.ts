@@ -2,8 +2,17 @@ import { isCurvedWall, sampleWallCenterline } from '@pascal-app/core'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { EcoWalk } from './bridge-types'
 import { base64ToBytes, getEcoAssetsState } from './eco-assets-store'
+import {
+  createEcoThreeMaterial,
+  elementKeyForShell,
+  elementKeyForSlab,
+  elementKeyForWall,
+  type EcoMaterialId,
+  resolveEcoMaterialId,
+} from './eco-materials'
 import { buildShellObject3D } from './eco-shell-geometry'
 import { getEcoShellsState } from './eco-shell-store'
 import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
@@ -37,6 +46,15 @@ export function ensureFileReaderPolyfill(): void {
   }
 }
 
+function tagMesh(mesh: THREE.Object3D, materialId: EcoMaterialId): void {
+  mesh.userData.ecoMaterialId = materialId
+  mesh.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      child.userData.ecoMaterialId = materialId
+    }
+  })
+}
+
 function wallMesh(
   nodes: NodeMap,
   wall: {
@@ -52,7 +70,8 @@ function wallMesh(
   const thickness = wall.thickness ?? 0.1
   const height = wall.height ?? 2.7
   const levelY = wall.parentId ? levelWorldY(nodes as never, wall.parentId) : 0
-  const mat = new THREE.MeshStandardMaterial({ color: 0xc4b5a0 })
+  const materialId = resolveEcoMaterialId(elementKeyForWall(wall.id), 'wall')
+  const mat = createEcoThreeMaterial(materialId)
 
   if (isCurvedWall(wall)) {
     const chord = Math.hypot(wall.end[0] - wall.start[0], wall.end[1] - wall.start[1])
@@ -72,7 +91,9 @@ function wallMesh(
       mesh.rotation.y = Math.atan2(dx, dz)
       group.add(mesh)
     }
-    return group.children.length ? group : null
+    if (!group.children.length) return null
+    tagMesh(group, materialId)
+    return group
   }
 
   const [x0, z0] = wall.start
@@ -83,6 +104,7 @@ function wallMesh(
   mesh.name = `wall:${wall.id}`
   mesh.position.set((x0 + x1) / 2, levelY + height / 2, (z0 + z1) / 2)
   mesh.rotation.y = Math.atan2(x1 - x0, z1 - z0)
+  tagMesh(mesh, materialId)
   return mesh
 }
 
@@ -113,17 +135,63 @@ function slabMesh(
   const w = Math.max(maxX - minX, 0.1)
   const d = Math.max(maxZ - minZ, 0.1)
   const geom = new THREE.BoxGeometry(w, thickness, d)
-  const mat = new THREE.MeshStandardMaterial({ color: 0x8b9a7d })
+  const materialId = resolveEcoMaterialId(elementKeyForSlab(slab.id), 'slab')
+  const mat = createEcoThreeMaterial(materialId)
   const mesh = new THREE.Mesh(geom, mat)
   mesh.name = `slab:${slab.id}`
   mesh.position.set((minX + maxX) / 2, levelY + elevation - thickness / 2, (minZ + maxZ) / 2)
+  tagMesh(mesh, materialId)
   return mesh
+}
+
+/**
+ * Collapse tagged design meshes into one Mesh per Eco material id.
+ * Keeps the GLB small the way the massing script does.
+ */
+export function consolidateByEcoMaterial(source: THREE.Group): THREE.Group {
+  source.updateMatrixWorld(true)
+  const buckets = new Map<EcoMaterialId, THREE.BufferGeometry[]>()
+
+  source.traverse((obj) => {
+    const mesh = obj as THREE.Mesh
+    if (!mesh.isMesh) return
+    const id = mesh.userData.ecoMaterialId as EcoMaterialId | undefined
+    if (!id) return
+    const geo = mesh.geometry.clone()
+    geo.applyMatrix4(mesh.matrixWorld)
+    // BoxGeometry has uvs; shell BufferGeometry does not — strip so mergeGeometries accepts both.
+    geo.deleteAttribute('uv')
+    geo.deleteAttribute('uv1')
+    geo.deleteAttribute('uv2')
+    geo.deleteAttribute('uv3')
+    const list = buckets.get(id) ?? []
+    list.push(geo)
+    buckets.set(id, list)
+  })
+
+  const out = new THREE.Group()
+  out.name = source.name
+  for (const [id, geos] of buckets) {
+    const merged = mergeGeometries(geos, false)
+    for (const g of geos) g.dispose()
+    if (!merged) {
+      console.warn(`[eco:export] mergeGeometries failed for material ${id} (${geos.length} parts)`)
+      continue
+    }
+    const mat = createEcoThreeMaterial(id, { doubleSide: id === 'living-roof' || id === 'glass' })
+    const mesh = new THREE.Mesh(merged, mat)
+    mesh.name = `mat:${id}`
+    mesh.userData.ecoMaterialId = id
+    out.add(mesh)
+  }
+  return out
 }
 
 /**
  * Build a design-only group in editor frame (exclude terrain/guides/ghost).
  * Walls + slabs as boxes; eco shells; optional placed eco assets.
  * Shells contribute geometry only — never walk solids.
+ * Meshes are tagged with ecoMaterialId; call consolidateByEcoMaterial before export.
  */
 export function buildDesignGroup(nodes: NodeMap): THREE.Group {
   const group = new THREE.Group()
@@ -142,7 +210,9 @@ export function buildDesignGroup(nodes: NodeMap): THREE.Group {
   }
 
   for (const shell of getEcoShellsState().shells) {
-    group.add(buildShellObject3D(shell))
+    const materialId = resolveEcoMaterialId(elementKeyForShell(shell.id), 'shell')
+    const mat = createEcoThreeMaterial(materialId, { doubleSide: true })
+    group.add(buildShellObject3D(shell, mat, materialId))
   }
 
   return group
@@ -186,7 +256,8 @@ export async function exportEcoGlb(options: {
   ensureFileReaderPolyfill()
 
   const walk = buildEcoWalk(options.nodes)
-  const design = buildDesignGroup(options.nodes)
+  const raw = buildDesignGroup(options.nodes)
+  const design = consolidateByEcoMaterial(raw)
   if (options.includePlacedAssets !== false) {
     await addPlacedAssets(design)
   }

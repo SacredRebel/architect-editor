@@ -25,3 +25,13 @@ export const ecoAssetsHostPanel: EditorHostPanel = {
   component: () => import('./eco-assets-panel'),
   defaultInstalled: true,
 }
+
+export const ecoMaterialsHostPanel: EditorHostPanel = {
+  id: 'eco:plugin-eco:materials',
+  label: 'Materials',
+  icon: { kind: 'url', src: '/icons/mesh.webp' },
+  description: 'Eco material palette for walls, slabs, and shells',
+  pluginId: 'eco:plugin-eco',
+  component: () => import('./eco-materials-panel'),
+  defaultInstalled: true,
+}

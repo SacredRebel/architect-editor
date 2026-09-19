@@ -50,6 +50,11 @@ export function removeEcoShell(id: string): void {
   emit()
 }
 
+export function clearEcoShells(): void {
+  state = { shells: [] }
+  emit()
+}
+
 /** Default Oak-Leaf-ish leaf for F2 acceptance / panel “Add leaf”. */
 export function makeDefaultLeafShell(id = `shell-${Date.now()}`): EcoShell {
   const length = 26

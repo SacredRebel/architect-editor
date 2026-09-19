@@ -86,8 +86,13 @@ export function shellHeightAt(shell: EcoShell, x: number, z: number): number {
 
 /**
  * Build a two-sided shell mesh (top + bottom) plus optional ribs.
+ * All parts share `material` and `userData.ecoMaterialId` so export can merge by material.
  */
-export function buildShellObject3D(shell: EcoShell): THREE.Group {
+export function buildShellObject3D(
+  shell: EcoShell,
+  material?: THREE.MeshStandardMaterial,
+  ecoMaterialId?: string,
+): THREE.Group {
   const group = new THREE.Group()
   group.name = `eco-shell:${shell.id}`
 
@@ -150,14 +155,17 @@ export function buildShellObject3D(shell: EcoShell): THREE.Group {
   topGeo.setIndex(indices)
   topGeo.computeVertexNormals()
 
-  const topMat = new THREE.MeshStandardMaterial({
-    color: 0x6b8f71,
-    side: THREE.DoubleSide,
-    roughness: 0.85,
-    metalness: 0.05,
-  })
+  const topMat =
+    material ??
+    new THREE.MeshStandardMaterial({
+      color: 0x6b8f71,
+      side: THREE.DoubleSide,
+      roughness: 0.85,
+      metalness: 0.05,
+    })
   const topMesh = new THREE.Mesh(topGeo, topMat)
   topMesh.name = `eco-shell-top:${shell.id}`
+  if (ecoMaterialId) topMesh.userData.ecoMaterialId = ecoMaterialId
   group.add(topMesh)
 
   // Bottom = top lowered by thickness
@@ -171,21 +179,27 @@ export function buildShellObject3D(shell: EcoShell): THREE.Group {
   const botIndex = indices.slice().reverse()
   botGeo.setIndex(botIndex)
   botGeo.computeVertexNormals()
-  const botMesh = new THREE.Mesh(botGeo, topMat.clone())
+  const botMesh = new THREE.Mesh(botGeo, material ?? topMat.clone())
   botMesh.name = `eco-shell-bot:${shell.id}`
+  if (ecoMaterialId) botMesh.userData.ecoMaterialId = ecoMaterialId
   group.add(botMesh)
 
   if (shell.ribSpacing > 0.2) {
-    addRibs(group, shell, outline)
+    addRibs(group, shell, outline, material ?? topMat, ecoMaterialId)
   }
 
   return group
 }
 
-function addRibs(group: THREE.Group, shell: EcoShell, outline: [number, number][]) {
+function addRibs(
+  group: THREE.Group,
+  shell: EcoShell,
+  outline: [number, number][],
+  mat: THREE.Material,
+  ecoMaterialId?: string,
+) {
   const total = polylineLength(shell.ridge)
   const n = Math.max(1, Math.floor(total / shell.ribSpacing))
-  const mat = new THREE.MeshStandardMaterial({ color: 0x4a5d4e, roughness: 0.7 })
   for (let i = 1; i < n; i++) {
     const t = i / n
     const p = pointAlongPolyline(shell.ridge, t)
@@ -199,6 +213,7 @@ function addRibs(group: THREE.Group, shell: EcoShell, outline: [number, number][
     const rib = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, len), mat)
     rib.position.set((left.x + right.x) / 2, (yL + yR) / 2 - 0.05, (left.z + right.z) / 2)
     rib.rotation.y = Math.atan2(right.x - left.x, right.z - left.z)
+    if (ecoMaterialId) rib.userData.ecoMaterialId = ecoMaterialId
     group.add(rib)
   }
 }
