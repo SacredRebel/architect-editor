@@ -45,6 +45,19 @@ export { optimiseGlb } from './glb-optimise'
 export type { OptimiseProfile } from './glb-optimise'
 export { buildEcoWalk } from './export-walk'
 export {
+  ECO_TREE_VARIANT_IDS,
+  ECO_TREE_VARIANTS,
+  addEcoTree,
+  clearEcoTrees,
+  getEcoTreesState,
+  makeEcoTreePlacement,
+  removeEcoTree,
+  setEcoTrees,
+  subscribeEcoTrees,
+} from './eco-trees-store'
+export type { EcoTreePlacement, EcoTreeVariantId } from './eco-trees-store'
+export { ECO_TREE_IMPOSTOR_DISTANCE_M, EcoTrees } from './eco-trees'
+export {
   exportEcoScenePayload,
   restoreEcoSceneExtras,
   roundTripEcoScenePayload,

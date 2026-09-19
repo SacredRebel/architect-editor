@@ -20,6 +20,12 @@ import {
   setEcoMaterialDefaults,
 } from './eco-materials'
 import { getEcoShellsState, setEcoShells, type EcoShell } from './eco-shell-store'
+import {
+  getEcoTreesState,
+  isEcoTreeVariantId,
+  setEcoTrees,
+  type EcoTreePlacement,
+} from './eco-trees-store'
 
 const MAX_SCENE_ASSET_BYTES = 20 * 1024 * 1024
 
@@ -34,6 +40,7 @@ export type EcoScenePayload = SceneGraph & {
   ecoAssets?: { assets: EcoAsset[]; placements: EcoPlacement[] }
   ecoShells?: EcoShell[]
   ecoMaterials?: EcoMaterialsSceneBlob
+  ecoTrees?: EcoTreePlacement[]
 }
 
 export function serializeEcoShellsForScene(): EcoShell[] {
@@ -106,6 +113,41 @@ export function restoreEcoMaterialsFromScene(payload: unknown): void {
   }
 }
 
+export function serializeEcoTreesForScene(): EcoTreePlacement[] {
+  return getEcoTreesState()
+    .trees.map((t) => ({
+      ...t,
+      position: [...t.position] as [number, number, number],
+      rotation: [...t.rotation] as [number, number, number],
+      scale: [...t.scale] as [number, number, number],
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+export function restoreEcoTreesFromScene(payload: unknown): void {
+  if (!Array.isArray(payload)) {
+    setEcoTrees([])
+    return
+  }
+  const trees: EcoTreePlacement[] = []
+  for (const raw of payload) {
+    if (!raw || typeof raw !== 'object') continue
+    const t = raw as Partial<EcoTreePlacement>
+    if (typeof t.id !== 'string' || !isEcoTreeVariantId(t.variant)) continue
+    if (!Array.isArray(t.position) || !Array.isArray(t.rotation) || !Array.isArray(t.scale)) continue
+    trees.push({
+      id: t.id,
+      variant: t.variant,
+      seed: typeof t.seed === 'number' ? t.seed : 1,
+      position: t.position as [number, number, number],
+      rotation: t.rotation as [number, number, number],
+      scale: t.scale as [number, number, number],
+    })
+  }
+  trees.sort((a, b) => a.id.localeCompare(b.id))
+  setEcoTrees(trees)
+}
+
 function currentSceneGraph(): SceneGraph {
   const { nodes, rootNodeIds, collections, materials, installedPlugins } = useScene.getState()
   return {
@@ -141,6 +183,7 @@ export function exportEcoScenePayload(options?: {
     ecoAssets,
     ecoShells: serializeEcoShellsForScene(),
     ecoMaterials: serializeEcoMaterialsForScene(),
+    ecoTrees: serializeEcoTreesForScene(),
   }
 }
 
@@ -154,6 +197,7 @@ export function restoreEcoSceneExtras(scene: unknown): void {
   restoreEcoShellsFromScene(s.ecoShells ?? [])
   restoreEcoMaterialsFromScene(s.ecoMaterials)
   if ('ecoAssets' in s) restoreEcoAssetsFromScene(s.ecoAssets)
+  restoreEcoTreesFromScene(s.ecoTrees ?? [])
 }
 
 /**
@@ -165,6 +209,7 @@ export function roundTripEcoScenePayload(scene: EcoScenePayload): EcoScenePayloa
   restoreEcoMaterialsFromScene(scene.ecoMaterials)
   if ('ecoAssets' in scene) restoreEcoAssetsFromScene(scene.ecoAssets)
   else restoreEcoAssetsFromScene({ assets: [], placements: [] })
+  restoreEcoTreesFromScene(scene.ecoTrees ?? [])
 
   return {
     nodes: structuredClone(scene.nodes),
@@ -175,6 +220,7 @@ export function roundTripEcoScenePayload(scene: EcoScenePayload): EcoScenePayloa
     ecoAssets: serializeEcoAssetsForScene(),
     ecoShells: serializeEcoShellsForScene(),
     ecoMaterials: serializeEcoMaterialsForScene(),
+    ecoTrees: serializeEcoTreesForScene(),
   }
 }
 

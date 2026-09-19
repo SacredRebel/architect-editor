@@ -15,6 +15,8 @@ import {
 } from './eco-materials'
 import { buildShellObject3D } from './eco-shell-geometry'
 import { getEcoShellsState } from './eco-shell-store'
+import { buildEcoTreeObject3D } from './eco-tree-mesh'
+import { getEcoTreesState } from './eco-trees-store'
 import { assertHardGlbAudit, auditGlb } from './glb-audit'
 import { optimiseGlb, type OptimiseProfile } from './glb-optimise'
 import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
@@ -252,6 +254,16 @@ async function addPlacedAssets(group: THREE.Group): Promise<void> {
   }
 }
 
+async function addEcoTrees(group: THREE.Group): Promise<void> {
+  for (const t of getEcoTreesState().trees) {
+    try {
+      group.add(await buildEcoTreeObject3D(t))
+    } catch {
+      // skip broken tree
+    }
+  }
+}
+
 /**
  * Export design GLB in world frame (x east, y up, z south) with walk extras
  * on both the glTF scene and root node.
@@ -273,6 +285,7 @@ export async function exportEcoGlb(options: {
   if (options.includePlacedAssets !== false) {
     await addPlacedAssets(design)
   }
+  await addEcoTrees(design)
 
   // Editor +z north → world +z south
   design.scale.z = -1

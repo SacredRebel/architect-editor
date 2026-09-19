@@ -1,8 +1,8 @@
 # STATUS — Agent A
 updated: 2026-09-19
-phase: H1
+phase: H2
 state: done
-commit: f1864047
-checks: check-glb-h1 OK (house export; corrupt/empty/scale hard-fail; Oak Leaf stand-in 1 964 540→87 860 B); check-export OK; check-roundtrip OK
+commit: pending-push
+checks: check-trees OK (6 variants; ecoTrees round-trip; export bake 6776>2276 B; 3000 inst → 12 draws vs 3000 blobs; impostor 120 m); check-export OK; check-roundtrip OK
 blocked-by: none
-notes: H1 shipped from pascalorg/skills glb-web-export (MIT). exportEcoGlb now optimises then hard-audits (throw on fail). compat profile for world eco:glb; web/meshopt for architects download under 500 KB. H0 Results still open for human draw-send-walk. Next H2 (ez-tree); H3 remains highest-value for costUSD takeoff — will flag the moment numbers exist.
+notes: H2 shipped — ez-tree oak/chamise placeables, InstancedMesh viewport, baked into eco:glb. H0 Results still open for human pass. Next H3 (plugin-bones takeoff CSV) — highest value for registry costUSD; will flag the moment numbers exist.

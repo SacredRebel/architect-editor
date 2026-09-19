@@ -11,6 +11,7 @@ import {
   removeEcoAsset,
   subscribeEcoAssets,
 } from './eco-assets-store'
+import EcoTreesPanel from './eco-trees-panel'
 
 const MAX_BYTES = 8 * 1024 * 1024
 
@@ -162,6 +163,9 @@ export default function EcoAssetsPanel() {
             </button>
           </div>
         ))}
+      </div>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', margin: '8px -12px 0' }}>
+        <EcoTreesPanel />
       </div>
     </div>
   )

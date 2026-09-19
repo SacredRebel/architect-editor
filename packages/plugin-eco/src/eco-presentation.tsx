@@ -7,9 +7,10 @@ import { ensureEcoPlanSnapInstalled } from './eco-ghost-snap'
 import { EcoGuides } from './eco-guides'
 import { EcoPlacedAssets } from './eco-placed-assets'
 import { EcoShells } from './eco-shells'
+import { EcoTrees } from './eco-trees'
 import { EcoWalk } from './eco-walk'
 
-/** Viewer presentation root — guides, ghost massing, compass, user assets, walk. */
+/** Viewer presentation root — guides, ghost massing, compass, user assets, trees, walk. */
 export default function EcoPresentation() {
   useEffect(() => {
     ensureEcoPlanSnapInstalled()
@@ -23,6 +24,7 @@ export default function EcoPresentation() {
       </Suspense>
       <EcoShells />
       <EcoPlacedAssets />
+      <EcoTrees />
       <EcoCompass />
       <EcoWalk />
     </group>

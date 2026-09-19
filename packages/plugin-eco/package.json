@@ -27,7 +27,8 @@
     "test": "bun test src",
     "check:glb": "bun test/check-glb-h1.mjs",
     "check:export": "bun test/check-export.mjs",
-    "check:roundtrip": "bun test/check-roundtrip.mjs"
+    "check:roundtrip": "bun test/check-roundtrip.mjs",
+    "check:trees": "bun test/check-trees.mjs"
   },
   "peerDependencies": {
     "@pascal-app/core": "^1.0.1",
@@ -56,6 +57,7 @@
     "directory": "packages/plugin-eco"
   },
   "dependencies": {
+    "@dgreenheck/ez-tree": "^1.1.0",
     "@gltf-transform/core": "^4.5.0",
     "@gltf-transform/extensions": "^4.5.0",
     "@gltf-transform/functions": "^4.5.0",
