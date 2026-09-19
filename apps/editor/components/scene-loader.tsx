@@ -14,7 +14,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isSceneServerAvailable } from '@/lib/eco-mode'
 import { countGraphNodes, isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
+import { saveLocalScene } from '@/lib/local-scene-store'
 import { type PersistedSceneGraph, sceneGraphSignature } from '@/lib/scene-signature'
 import { cn } from '@/lib/utils'
 import { BuildTab } from './build-tab'
@@ -150,6 +152,18 @@ export function SceneLoader({ initialScene, meta }: SceneLoaderProps) {
       }
 
       try {
+        if (!isSceneServerAvailable()) {
+          const next = saveLocalScene(meta.id, meta.name, graph, versionRef.current)
+          if ('conflict' in next) {
+            setConflict(true)
+            return
+          }
+          versionRef.current = next.version
+          serverNodeCountRef.current = next.nodeCount
+          setSaveError(null)
+          return
+        }
+
         const response = await fetch(`/api/scenes/${meta.id}`, {
           method: 'PUT',
           headers: {
@@ -196,6 +210,8 @@ export function SceneLoader({ initialScene, meta }: SceneLoaderProps) {
   )
 
   useEffect(() => {
+    if (!isSceneServerAvailable()) return
+
     const source = new EventSource(`/api/scenes/${meta.id}/events`)
 
     source.addEventListener('scene', (event) => {
@@ -228,6 +244,7 @@ export function SceneLoader({ initialScene, meta }: SceneLoaderProps) {
 
   const handleThumb = useCallback(
     async (_blob: Blob) => {
+      if (!isSceneServerAvailable()) return
       // TODO(phase7): upload thumbnail via POST /api/scenes/[id]/thumbnail.
       // Stub endpoint is not yet implemented in v0.1 — skip upload for now.
       await fetch(`/api/scenes/${meta.id}/thumbnail`, {

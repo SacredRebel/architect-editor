@@ -3,7 +3,9 @@
 import { type ValidateBuildJsonResult, validateBuildJson } from '@pascal-app/core'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isSceneServerAvailable } from '@/lib/eco-mode'
 import { MAX_IMPORT_BYTES, parseImportSrc } from '@/lib/import-src'
+import { createLocalScene } from '@/lib/local-scene-store'
 
 type Phase =
   | { kind: 'fetching' }
@@ -105,6 +107,19 @@ export function ImportClient({ src, name }: { src: string | null; name: string |
     const review = phase.result
     setPhase({ kind: 'creating', result: review })
     try {
+      if (!isSceneServerAvailable()) {
+        if (!phase.result.parsed) {
+          setPhase({
+            kind: 'review',
+            result: review,
+            createError: 'Nothing to import.',
+          })
+          return
+        }
+        const meta = createLocalScene(sceneName || 'Imported scene', phase.result.parsed, 'local')
+        router.push(`/scene/${meta.id}`)
+        return
+      }
       const response = await fetch('/api/scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

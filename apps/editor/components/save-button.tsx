@@ -3,6 +3,8 @@
 import type { SceneGraph } from '@pascal-app/editor'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
+import { isSceneServerAvailable } from '@/lib/eco-mode'
+import { createLocalScene, saveLocalScene } from '@/lib/local-scene-store'
 
 const EMPTY_GRAPH: SceneGraph = {
   nodes: {},
@@ -28,6 +30,13 @@ export function CreateSceneButton({ label = 'Create new scene' }: { label?: stri
     setIsCreating(true)
     setError(null)
     try {
+      if (!isSceneServerAvailable()) {
+        // Static export only pre-renders `/scene/local` — keep the working
+        // copy on that shell id so navigation always resolves.
+        const meta = createLocalScene('Untitled scene', EMPTY_GRAPH, 'local')
+        router.push(`/scene/${meta.id}`)
+        return
+      }
       const response = await fetch('/api/scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,6 +89,15 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
     setIsSaving(true)
     setStatus(null)
     try {
+      if (!isSceneServerAvailable()) {
+        const next = saveLocalScene(sceneId, name, graph, version)
+        if ('conflict' in next) {
+          setStatus('Conflict — reload to continue')
+          return
+        }
+        setStatus('Saved locally')
+        return
+      }
       const response = await fetch(`/api/scenes/${sceneId}`, {
         method: 'PUT',
         headers: {
@@ -115,6 +133,11 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
     setIsSaving(true)
     setStatus(null)
     try {
+      if (!isSceneServerAvailable()) {
+        createLocalScene(newName, graph, 'local')
+        router.push('/embed')
+        return
+      }
       const response = await fetch('/api/scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

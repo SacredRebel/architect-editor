@@ -1,20 +1,14 @@
+'use client'
+
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import { ImportClient } from './import-client'
 
-export const dynamic = 'force-dynamic'
-
-/**
- * `/import?src=<https-url>[&name=<scene name>]` — the hand-off point for
- * scanning apps and other external tools: they host a build JSON at a
- * URL (CORS-enabled) and open this page; the visitor reviews what the
- * file contains and imports it as a new scene of their own.
- */
-export default async function ImportPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ src?: string; name?: string }>
-}) {
-  const params = await searchParams
+function ImportBody() {
+  const searchParams = useSearchParams()
+  const src = searchParams.get('src')
+  const name = searchParams.get('name')
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,10 +32,26 @@ export default async function ImportPage({
         <p className="mb-8 text-muted-foreground text-sm">
           Review the file before it becomes a scene. Nothing is created until you confirm.
         </p>
-        {/* Keyed by src: a new file is a new flow — state (scene name,
-            phase) must never leak from the previous one. */}
-        <ImportClient key={params.src} name={params.name ?? null} src={params.src ?? null} />
+        <ImportClient key={src ?? 'none'} name={name} src={src} />
       </main>
     </div>
+  )
+}
+
+/**
+ * `/import?src=<https-url>[&name=<scene name>]` — client page so static export
+ * can ship it without `force-dynamic` / server `searchParams`.
+ */
+export default function ImportPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-muted-foreground text-sm">
+          Loading…
+        </div>
+      }
+    >
+      <ImportBody />
+    </Suspense>
   )
 }

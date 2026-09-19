@@ -4,11 +4,24 @@ import type { NextConfig } from 'next'
 
 const appDirectory = path.dirname(fileURLToPath(import.meta.url))
 const portableBuild = process.env.PASCAL_PORTABLE_BUILD === '1'
+const ecoStatic = process.env.ECO_STATIC === '1'
+const ecoBasePath = process.env.ECO_BASE_PATH || '/builder'
+
+if (ecoStatic && portableBuild) {
+  throw new Error('ECO_STATIC and PASCAL_PORTABLE_BUILD cannot both be set')
+}
 
 const nextConfig: NextConfig = {
-  ...(portableBuild
-    ? { output: 'standalone' as const, outputFileTracingRoot: path.join(appDirectory, '../..') }
-    : {}),
+  ...(ecoStatic
+    ? {
+        output: 'export' as const,
+        basePath: ecoBasePath,
+        assetPrefix: ecoBasePath,
+        trailingSlash: true,
+      }
+    : portableBuild
+      ? { output: 'standalone' as const, outputFileTracingRoot: path.join(appDirectory, '../..') }
+      : {}),
   logging: {
     browserToTerminal: true,
   },
@@ -17,15 +30,20 @@ const nextConfig: NextConfig = {
   },
   // MCP / package metadata returns `/editor/<id>` (hosted route). This open-source
   // app serves saved scenes at `/scene/<id>` — redirect so links and bookmarks work.
-  async redirects() {
-    return [
-      {
-        source: '/editor/:id',
-        destination: '/scene/:id',
-        permanent: false,
-      },
-    ]
-  },
+  // Static export cannot use async redirects(); skip them for ECO_STATIC.
+  ...(ecoStatic
+    ? {}
+    : {
+        async redirects() {
+          return [
+            {
+              source: '/editor/:id',
+              destination: '/scene/:id',
+              permanent: false,
+            },
+          ]
+        },
+      }),
   transpilePackages: [
     'three',
     '@pascal-app/viewer',
@@ -56,6 +74,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     unoptimized:
+      ecoStatic ||
       portableBuild ||
       (process.env.NEXT_PUBLIC_ASSETS_CDN_URL?.startsWith('http://localhost') ?? false),
     remotePatterns: [

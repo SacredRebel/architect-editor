@@ -18,7 +18,11 @@
         "NEXT_PUBLIC_SUPABASE_ANON_KEY",
         "SUPABASE_SERVICE_ROLE_KEY",
         "PASCAL_PORTABLE_BUILD",
-        "NEXT_PUBLIC_ECO"
+        "NEXT_PUBLIC_ECO",
+        "NEXT_PUBLIC_ECO_STATIC",
+        "ECO_STATIC",
+        "ECO_BASE_PATH",
+        "NEXT_PUBLIC_ECO_BASE_PATH"
       ]
     },
     "lint": {
