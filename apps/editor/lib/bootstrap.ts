@@ -95,6 +95,13 @@ export async function loadExternalPlugins(): Promise<void> {
 // so it is registered separately from the core plugin manifest.
 extendPluginDiscovery(async () => [treesPlugin])
 registerEditorHostPanel(treesHostPanel)
+
+if (process.env.NEXT_PUBLIC_ECO === '1') {
+  extendPluginDiscovery(async () => {
+    const { ecoPlugin } = await import('@eco/plugin-eco')
+    return [ecoPlugin]
+  })
+}
 extendPluginDiscovery(async () => [environmentPlugin])
 registerEditorHostPanel(environmentHostPanel)
 registerViewerPresentation(environmentPresentation)

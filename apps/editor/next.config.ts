@@ -35,6 +35,7 @@ const nextConfig: NextConfig = {
     '@pascal-app/plugin-pool',
     '@pascal-app/plugin-streetscape',
     '@pascal-app/plugin-trees',
+    '@eco/plugin-eco',
     '@mint/pascal-plugin',
     '@pascal-app/plugin-bones',
     '@pascal-app/plugin-environment',

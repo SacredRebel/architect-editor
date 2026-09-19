@@ -28,6 +28,7 @@
       "name": "editor",
       "version": "0.1.0",
       "dependencies": {
+        "@eco/plugin-eco": "*",
         "@iconify/react": "^6.0.2",
         "@mint/pascal-plugin": "github:mintdotgg/mint-pascal-plugin#902c546dbaece6b31455c0dc394afe6b9cd136fe",
         "@number-flow/react": "^0.6.0",
@@ -292,6 +293,23 @@
         "zustand": "^5",
       },
     },
+    "packages/plugin-eco": {
+      "name": "@eco/plugin-eco",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@pascal-app/core": "^1.0.1",
+        "@pascal/typescript-config": "*",
+        "@types/bun": "^1.3.0",
+        "typescript": "6.0.3",
+      },
+      "peerDependencies": {
+        "@pascal-app/core": "^1.0.1",
+        "@pascal-app/editor": "^1.0.1",
+        "@pascal-app/viewer": "^1.0.1",
+        "react": "^18 || ^19",
+        "three": "^0.186",
+      },
+    },
     "packages/typescript-config": {
       "name": "@repo/typescript-config",
       "version": "0.0.0",
@@ -423,6 +441,8 @@
     "@dnd-kit/sortable": ["@dnd-kit/sortable@10.0.0", "", { "dependencies": { "@dnd-kit/utilities": "^3.2.2", "tslib": "^2.0.0" }, "peerDependencies": { "@dnd-kit/core": "^6.3.0", "react": ">=16.8.0" } }, "sha512-+xqhmIIzvAYMGfBYYnbKuNicfSsk4RksY2XdmJhT+HAC01nix6fHCztU68jooFiMUB01Ky3F0FyOvhG/BZrWkg=="],
 
     "@dnd-kit/utilities": ["@dnd-kit/utilities@3.2.2", "", { "dependencies": { "tslib": "^2.0.0" }, "peerDependencies": { "react": ">=16.8.0" } }, "sha512-+MKAJEOfaBe5SmV6t34p80MMKhjvUz0vRrvVJbPT0WElzaOJ/1xs+D+KDv+tD/NE5ujfrChEcshd4fLn0wpiqg=="],
+
+    "@eco/plugin-eco": ["@eco/plugin-eco@workspace:packages/plugin-eco"],
 
     "@effect/platform-node-shared": ["@effect/platform-node-shared@4.0.0-beta.70", "", { "dependencies": { "@types/ws": "^8.18.1", "ws": "^8.20.0" }, "peerDependencies": { "effect": "^4.0.0-beta.70" } }, "sha512-3VXuL63IDmq13We+ApRKn2JW3Rb9g5gj1YEmfb8u2b73norur1VsIJ/pRE4qjShevg19dQYi2JsLawSZ6gApug=="],
 

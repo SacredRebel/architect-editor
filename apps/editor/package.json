@@ -12,6 +12,7 @@
     "test": "bun test lib"
   },
   "dependencies": {
+    "@eco/plugin-eco": "*",
     "@iconify/react": "^6.0.2",
     "@mint/pascal-plugin": "github:mintdotgg/mint-pascal-plugin#902c546dbaece6b31455c0dc394afe6b9cd136fe",
     "@number-flow/react": "^0.6.0",

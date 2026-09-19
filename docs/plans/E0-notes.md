@@ -1,0 +1,7 @@
+# E0 notes — how this editor boots
+
+Scenes persist through Next API routes under `apps/editor/app/api/scenes`. Those routes call `getSceneStore()` / `getSceneOperations()` in `apps/editor/lib/scene-store-server.ts`, which builds `@pascal-app/mcp` SQLite storage. Default file is `~/.pascal/data/pascal.db`; `PASCAL_DATA_DIR` points at a directory containing `pascal.db`, or `PASCAL_DB_PATH` at an exact file. `/` mounts a blank `<Editor>`; `/scene/[id]` SSR-fetches the graph then `SceneLoader` hydrates via `applySceneGraphToEditor` and autosaves with `PUT /api/scenes/:id` plus SSE `/events`. That path needs a server.
+
+The R3F canvas is not in `apps/editor`. `<Editor>` from `@pascal-app/editor` mounts `<Viewer>` from `@pascal-app/viewer`, whose `packages/viewer/src/components/viewer/index.tsx` creates `<Canvas>` (WebGPU with WebGL fallback). Node meshes dispatch from the core registry.
+
+Plugins: `apps/editor/app/client-bootstrap.tsx` imports `lib/bootstrap.ts`, which registers `builtinPlugin` (`@pascal-app/nodes`) synchronously, then `extendPluginDiscovery` + `loadPlugin` for first-party packs. A plugin is `{ id, apiVersion: 1, nodes? }`. Host UI is separate: `registerEditorHostPanel` on `@pascal-app/editor` (lazy rail panel). Scene objects are node kinds with `renderer` / `geometry`. Site ground is a `site` node with `terrain` (`encodeTerrainField` in core); `ctx.levelBaseAt` / `FloorElevationSystem` sit buildings on it. Eco should prefer that path in E3.
