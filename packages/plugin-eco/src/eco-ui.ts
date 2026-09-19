@@ -10,7 +10,7 @@ export const ecoHostPanel: EditorHostPanel = {
   id: 'eco:plugin-eco:legend',
   label: 'Eco site',
   icon: { kind: 'url', src: '/icons/mesh.webp' },
-  description: 'Terrain guides, Walk mode, reference ghost, and north compass',
+  description: 'Terrain guides, Walk, export to world, reference ghost, and north compass',
   pluginId: 'eco:plugin-eco',
   component: () => import('./eco-legend-panel'),
   defaultInstalled: true,

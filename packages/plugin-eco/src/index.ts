@@ -20,7 +20,7 @@ if (typeof window !== 'undefined') {
 }
 
 export { applyEcoSite } from './apply-site'
-export { installEcoBridge, isEcoBridgeReady, requestEcoClose } from './bridge'
+export { installEcoBridge, isEcoBridgeReady, requestEcoClose, requestEcoGlbExport } from './bridge'
 export type { EcoMsg, EcoSite, EcoWalk } from './bridge-types'
 export { roundTripSiteXz, siteToWorldXz, worldToSiteXz } from './coords'
 export { EcoExitButton } from './eco-exit-button'
@@ -33,3 +33,5 @@ export {
   subscribeEcoSite,
 } from './eco-site-store'
 export { ecoAssetsHostPanel, ecoHostPanel, ecoPresentation } from './eco-ui'
+export { exportEcoGlb, stampWalkExtras } from './export-glb'
+export { buildEcoWalk } from './export-walk'

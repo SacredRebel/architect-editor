@@ -58,3 +58,8 @@ console.log(`wrote fixture.glb (${bytes.length} bytes) and fixture.glb.b64.txt`)
 if (bytes.length > 200_000) {
   console.warn('WARNING: fixture exceeds 200KB commit limit')
 }
+
+// E6: also run the house export acceptance (walk extras + z-south).
+console.log('running check-export.mjs…')
+await import('./check-export.mjs')
+

@@ -1,6 +1,7 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
+import { isEcoBridgeReady, requestEcoGlbExport } from './bridge'
 import {
   getEcoSiteState,
   setGuideVisible,
@@ -19,11 +20,21 @@ function useWalkStore() {
 }
 
 /**
- * Legend + visibility toggles for Eco site overlays, plus Walk mode.
+ * Legend + visibility toggles for Eco site overlays, Walk, and world export.
  */
 export default function EcoLegendPanel() {
   const { site, guideVisibility, showGhost, showCompass } = useEcoSiteStore()
   const { enabled: walkEnabled, firstPerson } = useWalkStore()
+  const [exporting, setExporting] = useState(false)
+
+  const onExport = () => {
+    setExporting(true)
+    try {
+      requestEcoGlbExport()
+    } finally {
+      setTimeout(() => setExporting(false), 800)
+    }
+  }
 
   return (
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
@@ -36,6 +47,24 @@ export default function EcoLegendPanel() {
         />
         Walk mode (WASD · Shift run · Space jump · C {firstPerson ? 'first' : 'third'}-person)
       </label>
+
+      <div style={{ fontWeight: 600 }}>Export</div>
+      <button
+        disabled={exporting}
+        onClick={onExport}
+        style={{
+          padding: '6px 10px',
+          cursor: exporting ? 'wait' : 'pointer',
+          textAlign: 'left',
+        }}
+        type="button"
+      >
+        {exporting
+          ? 'Exporting…'
+          : isEcoBridgeReady()
+            ? 'Send to world (eco:glb)'
+            : 'Download GLB + walk.json'}
+      </button>
 
       {!site ? (
         <div style={{ opacity: 0.7 }}>

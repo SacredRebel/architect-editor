@@ -2,6 +2,7 @@
 
 import { useScene } from '@pascal-app/core'
 import { useMemo } from 'react'
+import { levelWorldY } from './level-y'
 
 type HalfExtents = [number, number, number]
 
@@ -10,36 +11,6 @@ export type EcoColliderSpec = {
   position: [number, number, number]
   rotation: [number, number, number]
   args: HalfExtents
-}
-
-function levelWorldY(
-  nodes: Record<
-    string,
-    {
-      type?: string
-      parentId?: string | null
-      children?: string[]
-      height?: number
-      baseElevation?: number
-    }
-  >,
-  levelId: string,
-): number {
-  const level = nodes[levelId]
-  if (!level || level.type !== 'level') return 0
-  const buildingId = level.parentId
-  const building = buildingId ? nodes[buildingId] : null
-  if (!building || building.type !== 'building') {
-    return level.baseElevation ?? 0
-  }
-  const levelIds = (building.children ?? []).filter((id) => nodes[id]?.type === 'level')
-  let y = 0
-  for (const id of levelIds) {
-    if (id === levelId) return y + (level.baseElevation ?? 0)
-    const h = nodes[id]?.height ?? 2.7
-    y += h
-  }
-  return y + (level.baseElevation ?? 0)
 }
 
 /**

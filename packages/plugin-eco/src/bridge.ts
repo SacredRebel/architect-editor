@@ -8,13 +8,15 @@ import {
   serializeEcoAssetsForScene,
   totalAssetBytes,
 } from './eco-assets-store'
+import { getEcoSiteState } from './eco-site-store'
+import { arrayBufferToBase64, downloadBytes, exportEcoGlb } from './export-glb'
 
 const PROTOCOL = 'eco/1' as const
 const HELLO_TIMEOUT_MS = 3000
 const MAX_SCENE_ASSET_BYTES = 20 * 1024 * 1024
 
 /** Capabilities advertised in eco:ready — grow as later phases land. */
-const E2_CAPS = ['site', 'scene', 'assets'] as const
+const E2_CAPS = ['site', 'scene', 'assets', 'glb'] as const
 
 type BridgeHandlers = {
   onLoadSite?: (site: EcoSite) => void
@@ -104,9 +106,36 @@ function handleLoadScene(scene: unknown): void {
   }
 }
 
+async function runGlbExport(): Promise<void> {
+  try {
+    const { nodes } = useScene.getState()
+    const originLL = getEcoSiteState().site?.originLL ?? ([0, 0] as [number, number])
+    const { buffer, walk } = await exportEcoGlb({
+      nodes: nodes as never,
+      originLL,
+      includePlacedAssets: true,
+    })
+    if (hostOrigin && typeof window !== 'undefined' && window.parent !== window) {
+      postToHost({
+        t: 'eco:glb',
+        glb: arrayBufferToBase64(buffer),
+        walk,
+        originLL,
+      })
+    } else {
+      downloadBytes('eco-design.glb', buffer, 'model/gltf-binary')
+      downloadBytes('eco-design.walk.json', JSON.stringify(walk, null, 2), 'application/json')
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'GLB export failed'
+    if (hostOrigin) postToHost({ t: 'eco:error', message })
+    else console.error('[eco:bridge]', message)
+  }
+}
+
 function handleRequestExport(what: 'scene' | 'glb'): void {
   if (what === 'glb') {
-    postToHost({ t: 'eco:error', message: 'GLB export lands in E6' })
+    void runGlbExport()
     handlers.onRequestGlb?.()
     return
   }
@@ -207,6 +236,11 @@ export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
 
 export function requestEcoClose(): void {
   postToHost({ t: 'eco:close' })
+}
+
+/** Export design GLB + walk — posts eco:glb when embedded, else downloads. */
+export function requestEcoGlbExport(): void {
+  void runGlbExport()
 }
 
 export function getEcoHostOrigin(): string | null {
