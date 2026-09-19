@@ -1,0 +1,190 @@
+import { useScene } from '@pascal-app/core'
+import { applySceneGraphToEditor, type SceneGraph } from '@pascal-app/editor'
+import type { EcoMsg, EcoSite } from './bridge-types'
+import { siteToWorldXz } from './coords'
+
+const PROTOCOL = 'eco/1' as const
+const HELLO_TIMEOUT_MS = 3000
+
+/** Capabilities advertised in eco:ready — grow as later phases land. */
+const E2_CAPS = ['scene'] as const
+
+type BridgeHandlers = {
+  onLoadSite?: (site: EcoSite) => void
+  onLoadScene?: (scene: unknown) => void
+  onRequestGlb?: () => void
+}
+
+let installed = false
+let hostOrigin: string | null = null
+let helloTimer: ReturnType<typeof setTimeout> | null = null
+let lastDirty: boolean | null = null
+let unsubTemporal: (() => void) | null = null
+let handlers: BridgeHandlers = {}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isEcoMsg(data: unknown): data is EcoMsg {
+  if (!isRecord(data) || typeof data.t !== 'string') return false
+  if (data.t === 'eco:hello') return data.v === PROTOCOL
+  if (data.t === 'eco:load-site') return isRecord(data.site)
+  if (data.t === 'eco:load-scene') return 'scene' in data
+  if (data.t === 'eco:request-export') return data.what === 'scene' || data.what === 'glb'
+  if (data.t === 'eco:error') return typeof data.message === 'string'
+  return false
+}
+
+function postToHost(msg: EcoMsg): void {
+  if (typeof window === 'undefined' || !hostOrigin) return
+  if (window.parent === window) return
+  window.parent.postMessage(msg, hostOrigin)
+}
+
+function currentSceneGraph(): SceneGraph {
+  const { nodes, rootNodeIds, collections, materials, installedPlugins } = useScene.getState()
+  return {
+    nodes,
+    rootNodeIds,
+    collections,
+    materials,
+    installedPlugins,
+  } as SceneGraph
+}
+
+function handleLoadSite(site: EcoSite): void {
+  // Convert a sample point so the z-sign flip is exercised at the boundary
+  // even while E3 owns the real terrain mesh.
+  if (site.guides[0]?.pts[0]) {
+    const [x, zSouth] = siteToWorldXz(site.guides[0].pts[0])
+    console.info(
+      `[eco:bridge] load-site originLL=${site.originLL.join(',')} guide0→world xz=(${x}, ${zSouth})`,
+    )
+  } else {
+    console.info('[eco:bridge] load-site (no guides)', site.originLL)
+  }
+  handlers.onLoadSite?.(site)
+}
+
+function handleLoadScene(scene: unknown): void {
+  console.info('[eco:bridge] load-scene')
+  handlers.onLoadScene?.(scene)
+  if (isRecord(scene) && isRecord(scene.nodes) && Array.isArray(scene.rootNodeIds)) {
+    applySceneGraphToEditor(scene as SceneGraph)
+    emitDirty(false)
+  }
+}
+
+function handleRequestExport(what: 'scene' | 'glb'): void {
+  if (what === 'glb') {
+    postToHost({ t: 'eco:error', message: 'GLB export lands in E6' })
+    handlers.onRequestGlb?.()
+    return
+  }
+  postToHost({ t: 'eco:scene', scene: currentSceneGraph() })
+}
+
+function onMessage(event: MessageEvent): void {
+  if (!isEcoMsg(event.data)) return
+
+  if (event.data.t === 'eco:hello') {
+    if (hostOrigin && event.origin !== hostOrigin) {
+      postToHost({ t: 'eco:error', message: 'eco:hello from unexpected origin' })
+      return
+    }
+    hostOrigin = event.origin
+    if (helloTimer) {
+      clearTimeout(helloTimer)
+      helloTimer = null
+    }
+    postToHost({ t: 'eco:ready', v: PROTOCOL, caps: [...E2_CAPS] })
+    emitDirty(readDirty())
+    return
+  }
+
+  if (!hostOrigin) return
+  if (event.origin !== hostOrigin) return
+
+  switch (event.data.t) {
+    case 'eco:load-site':
+      handleLoadSite(event.data.site)
+      break
+    case 'eco:load-scene':
+      handleLoadScene(event.data.scene)
+      break
+    case 'eco:request-export':
+      handleRequestExport(event.data.what)
+      break
+    case 'eco:error':
+      console.warn('[eco:bridge] host error:', event.data.message)
+      break
+    default:
+      break
+  }
+}
+
+function readDirty(): boolean {
+  try {
+    const temporal = useScene.temporal.getState()
+    return temporal.pastStates.length > 0
+  } catch {
+    return false
+  }
+}
+
+function emitDirty(dirty: boolean): void {
+  if (lastDirty === dirty) return
+  lastDirty = dirty
+  postToHost({ t: 'eco:dirty', dirty })
+}
+
+function watchDirty(): void {
+  if (unsubTemporal) return
+  try {
+    unsubTemporal = useScene.temporal.subscribe(() => {
+      emitDirty(readDirty())
+    })
+  } catch (err) {
+    console.warn('[eco:bridge] temporal subscribe failed', err)
+  }
+}
+
+/**
+ * Install the eco/1 postMessage bridge once per page.
+ * Records the origin of the first valid `eco:hello` and answers only that origin.
+ * If no hello arrives within 3s while embedded, continues standalone (no error).
+ */
+export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
+  if (typeof window === 'undefined') return
+  handlers = { ...handlers, ...nextHandlers }
+  if (installed) return
+  installed = true
+
+  window.addEventListener('message', onMessage)
+  watchDirty()
+
+  const embedded = window.self !== window.top
+  ;(window as Window & { ecoEmbedded?: boolean }).ecoEmbedded = embedded
+
+  if (embedded) {
+    helloTimer = setTimeout(() => {
+      helloTimer = null
+      if (!hostOrigin) {
+        console.info('[eco:bridge] no eco:hello within 3s — standalone embed mode')
+      }
+    }, HELLO_TIMEOUT_MS)
+  }
+}
+
+export function requestEcoClose(): void {
+  postToHost({ t: 'eco:close' })
+}
+
+export function getEcoHostOrigin(): string | null {
+  return hostOrigin
+}
+
+export function isEcoBridgeReady(): boolean {
+  return hostOrigin !== null
+}

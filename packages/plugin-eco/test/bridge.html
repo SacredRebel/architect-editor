@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>eco bridge harness (E2)</title>
+    <style>
+      body {
+        margin: 0;
+        font: 14px/1.4 system-ui, sans-serif;
+        background: #111;
+        color: #eee;
+      }
+      #log {
+        height: 30vh;
+        overflow: auto;
+        padding: 8px 12px;
+        white-space: pre-wrap;
+        background: #1a1a1a;
+        border-bottom: 1px solid #333;
+      }
+      iframe {
+        width: 100%;
+        height: 70vh;
+        border: 0;
+        background: #000;
+      }
+      .hint {
+        padding: 8px 12px;
+        color: #aaa;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hint">
+      Serve the static build first:
+      <code>cd apps/editor && bun run build:static && npx serve out</code>
+      then open this file via the same origin (or set
+      <code>?embed=http://localhost:3000/builder/embed/</code>).
+    </div>
+    <div id="log"></div>
+    <iframe id="editor" title="eco-embed" allow="cross-origin-isolated"></iframe>
+    <script>
+      const logEl = document.getElementById('log')
+      const iframe = document.getElementById('editor')
+      const params = new URLSearchParams(location.search)
+      const embedUrl = new URL(
+        params.get('embed') || '/builder/embed/',
+        location.origin,
+      ).href
+      const embedOrigin = new URL(embedUrl).origin
+
+      function log(line) {
+        logEl.textContent += line + '\n'
+        logEl.scrollTop = logEl.scrollHeight
+        console.log(line)
+      }
+
+      /** Tiny flat 16×16 heightfield + one square footprint guide (z-north). */
+      function syntheticSite() {
+        const w = 16
+        const h = 16
+        const heights = Array.from({ length: w * h }, () => 100)
+        return {
+          v: 'eco/1',
+          originLL: [-122.4, 37.8],
+          originElevM: 100,
+          terrain: {
+            w,
+            h,
+            stepM: 1,
+            originOffsetM: [-8, -8],
+            heights,
+          },
+          guides: [
+            {
+              kind: 'footprint',
+              name: 'test-pad',
+              pts: [
+                [0, 0],
+                [4, 0],
+                [4, 4],
+                [0, 4],
+                [0, 0],
+              ],
+            },
+          ],
+          northDeg: 0,
+        }
+      }
+
+      iframe.src = embedUrl
+      log('iframe → ' + embedUrl)
+
+      window.addEventListener('message', (event) => {
+        if (!event.data || typeof event.data.t !== 'string') return
+        if (!String(event.data.t).startsWith('eco:')) return
+        log('← ' + JSON.stringify(event.data))
+
+        if (event.data.t === 'eco:ready') {
+          iframe.contentWindow.postMessage(
+            { t: 'eco:load-site', site: syntheticSite() },
+            embedOrigin,
+          )
+          setTimeout(() => {
+            iframe.contentWindow.postMessage(
+              { t: 'eco:request-export', what: 'scene' },
+              embedOrigin,
+            )
+          }, 300)
+        }
+
+        if (event.data.t === 'eco:scene') {
+          log('scene keys: ' + Object.keys(event.data.scene || {}).join(', '))
+          log('DONE — scene export received')
+        }
+      })
+
+      iframe.addEventListener('load', () => {
+        log('iframe load — sending eco:hello')
+        iframe.contentWindow.postMessage({ t: 'eco:hello', v: 'eco/1' }, embedOrigin)
+      })
+    </script>
+  </body>
+</html>

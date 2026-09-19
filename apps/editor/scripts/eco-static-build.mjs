@@ -8,7 +8,14 @@
  * `npx serve out` serves the editor at `/builder/embed`.
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+} from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -75,6 +82,12 @@ try {
   status = result.status ?? 1
   if (status === 0) {
     nestUnderBasePath(basePath)
+    const harnessSrc = path.resolve(appDir, '../../packages/plugin-eco/test/bridge.html')
+    const harnessDest = path.join(outDir, 'eco-bridge.html')
+    if (existsSync(harnessSrc)) {
+      copyFileSync(harnessSrc, harnessDest)
+      console.log('[eco-static] copied eco-bridge.html harness to out/')
+    }
   }
 } finally {
   try {

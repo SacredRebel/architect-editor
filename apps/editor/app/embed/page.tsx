@@ -1,5 +1,6 @@
 'use client'
 
+import { EcoExitButton } from '@eco/plugin-eco'
 import { Editor, ItemsPanel } from '@pascal-app/editor'
 import { Hammer, Layers, Package, Settings } from 'lucide-react'
 import Image from 'next/image'
@@ -94,6 +95,7 @@ export default function EmbedPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
+      <EcoExitButton />
       <Editor
         layoutVersion="v2"
         projectId="eco-embed"
