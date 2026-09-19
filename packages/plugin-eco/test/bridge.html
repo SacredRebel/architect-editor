@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>eco bridge harness (E2)</title>
+    <title>eco bridge harness (E3)</title>
     <style>
       body {
         margin: 0;
@@ -11,7 +11,7 @@
         color: #eee;
       }
       #log {
-        height: 30vh;
+        height: 28vh;
         overflow: auto;
         padding: 8px 12px;
         white-space: pre-wrap;
@@ -20,7 +20,7 @@
       }
       iframe {
         width: 100%;
-        height: 70vh;
+        height: 72vh;
         border: 0;
         background: #000;
       }
@@ -33,13 +33,12 @@
   </head>
   <body>
     <div class="hint">
-      Serve the static build first:
       <code>cd apps/editor && bun run build:static && npx serve out</code>
-      then open this file via the same origin (or set
-      <code>?embed=http://localhost:3000/builder/embed/</code>).
+      then open <code>/eco-bridge.html</code>. Optional
+      <code>?embed=http://localhost:3000/builder/embed/</code>.
     </div>
     <div id="log"></div>
-    <iframe id="editor" title="eco-embed" allow="cross-origin-isolated"></iframe>
+    <iframe id="editor" title="eco-embed"></iframe>
     <script>
       const logEl = document.getElementById('log')
       const iframe = document.getElementById('editor')
@@ -56,11 +55,19 @@
         console.log(line)
       }
 
-      /** Tiny flat 16×16 heightfield + one square footprint guide (z-north). */
-      function syntheticSite() {
-        const w = 16
-        const h = 16
-        const heights = Array.from({ length: w * h }, () => 100)
+      /** 64×64 synthetic hill + 3 guides; optional refGlb from fixture. */
+      async function syntheticSite(refGlb) {
+        const w = 64
+        const h = 64
+        const heights = []
+        for (let r = 0; r < h; r++) {
+          for (let c = 0; c < w; c++) {
+            const dx = (c - 32) / 32
+            const dz = (r - 32) / 32
+            const hill = Math.max(0, 1 - (dx * dx + dz * dz)) * 8
+            heights.push(100 + hill)
+          }
+        }
         return {
           v: 'eco/1',
           originLL: [-122.4, 37.8],
@@ -69,37 +76,76 @@
             w,
             h,
             stepM: 1,
-            originOffsetM: [-8, -8],
+            originOffsetM: [-32, 32],
             heights,
           },
           guides: [
             {
-              kind: 'footprint',
-              name: 'test-pad',
+              kind: 'boundary',
+              name: 'lot',
               pts: [
-                [0, 0],
-                [4, 0],
+                [-30, -30],
+                [30, -30],
+                [30, 30],
+                [-30, 30],
+                [-30, -30],
+              ],
+            },
+            {
+              kind: 'easement',
+              name: 'setback',
+              pts: [
+                [-20, -20],
+                [20, -20],
+                [20, 20],
+                [-20, 20],
+                [-20, -20],
+              ],
+            },
+            {
+              kind: 'footprint',
+              name: 'pad',
+              pts: [
+                [-4, -4],
+                [4, -4],
                 [4, 4],
-                [0, 4],
-                [0, 0],
+                [-4, 4],
+                [-4, -4],
               ],
             },
           ],
-          northDeg: 0,
+          refGlb: refGlb || undefined,
+          northDeg: 15,
+        }
+      }
+
+      async function loadRefGlb() {
+        try {
+          const res = await fetch(new URL('fixture.glb.b64.txt', location.href))
+          if (!res.ok) return null
+          return (await res.text()).trim()
+        } catch {
+          return null
         }
       }
 
       iframe.src = embedUrl
       log('iframe → ' + embedUrl)
 
-      window.addEventListener('message', (event) => {
+      window.addEventListener('message', async (event) => {
         if (!event.data || typeof event.data.t !== 'string') return
         if (!String(event.data.t).startsWith('eco:')) return
-        log('← ' + JSON.stringify(event.data))
+        const preview =
+          event.data.t === 'eco:scene'
+            ? `eco:scene keys=${Object.keys(event.data.scene || {}).join(',')}`
+            : JSON.stringify(event.data).slice(0, 240)
+        log('← ' + preview)
 
         if (event.data.t === 'eco:ready') {
+          const refGlb = await loadRefGlb()
+          log(refGlb ? 'loaded fixture refGlb' : 'no fixture refGlb')
           iframe.contentWindow.postMessage(
-            { t: 'eco:load-site', site: syntheticSite() },
+            { t: 'eco:load-site', site: await syntheticSite(refGlb) },
             embedOrigin,
           )
           setTimeout(() => {
@@ -107,12 +153,11 @@
               { t: 'eco:request-export', what: 'scene' },
               embedOrigin,
             )
-          }, 300)
+          }, 500)
         }
 
         if (event.data.t === 'eco:scene') {
-          log('scene keys: ' + Object.keys(event.data.scene || {}).join(', '))
-          log('DONE — scene export received')
+          log('DONE — scene export received (draw walls on the hill to screenshot)')
         }
       })
 

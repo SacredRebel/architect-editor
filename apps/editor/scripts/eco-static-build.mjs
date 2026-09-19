@@ -88,6 +88,13 @@ try {
       copyFileSync(harnessSrc, harnessDest)
       console.log('[eco-static] copied eco-bridge.html harness to out/')
     }
+    const fixtureDir = path.resolve(appDir, '../../packages/plugin-eco/test')
+    for (const name of ['fixture.glb', 'fixture.glb.b64.txt']) {
+      const src = path.join(fixtureDir, name)
+      if (existsSync(src)) {
+        copyFileSync(src, path.join(outDir, name))
+      }
+    }
   }
 } finally {
   try {

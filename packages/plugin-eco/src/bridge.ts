@@ -1,5 +1,6 @@
 import { useScene } from '@pascal-app/core'
 import { applySceneGraphToEditor, type SceneGraph } from '@pascal-app/editor'
+import { applyEcoSite } from './apply-site'
 import type { EcoMsg, EcoSite } from './bridge-types'
 import { siteToWorldXz } from './coords'
 
@@ -7,7 +8,7 @@ const PROTOCOL = 'eco/1' as const
 const HELLO_TIMEOUT_MS = 3000
 
 /** Capabilities advertised in eco:ready — grow as later phases land. */
-const E2_CAPS = ['scene'] as const
+const E2_CAPS = ['site', 'scene'] as const
 
 type BridgeHandlers = {
   onLoadSite?: (site: EcoSite) => void
@@ -54,15 +55,19 @@ function currentSceneGraph(): SceneGraph {
 }
 
 function handleLoadSite(site: EcoSite): void {
-  // Convert a sample point so the z-sign flip is exercised at the boundary
-  // even while E3 owns the real terrain mesh.
-  if (site.guides[0]?.pts[0]) {
-    const [x, zSouth] = siteToWorldXz(site.guides[0].pts[0])
-    console.info(
-      `[eco:bridge] load-site originLL=${site.originLL.join(',')} guide0→world xz=(${x}, ${zSouth})`,
-    )
-  } else {
-    console.info('[eco:bridge] load-site (no guides)', site.originLL)
+  try {
+    applyEcoSite(site)
+    if (site.guides[0]?.pts[0]) {
+      const [x, zSouth] = siteToWorldXz(site.guides[0].pts[0])
+      console.info(
+        `[eco:bridge] load-site applied originLL=${site.originLL.join(',')} guide0→world xz=(${x}, ${zSouth})`,
+      )
+    } else {
+      console.info('[eco:bridge] load-site applied', site.originLL)
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'load-site failed'
+    postToHost({ t: 'eco:error', message })
   }
   handlers.onLoadSite?.(site)
 }
