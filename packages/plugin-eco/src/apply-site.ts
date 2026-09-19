@@ -1,6 +1,7 @@
 import {
   commitTerrainField,
   createTerrainField,
+  emitter,
   quantize,
   type SiteNode,
   type TerrainField,
@@ -11,6 +12,68 @@ import { siteToWorldXz } from './coords'
 import { setEcoSite } from './eco-site-store'
 
 const MAX_DIM = 257
+
+type BoundsXZ = {
+  min: [number, number]
+  max: [number, number]
+  center: [number, number]
+  size: [number, number]
+}
+
+/** Prefer massing-outline; else guide pts that fall on the terrain patch; else terrain extents. */
+export function siteFrameBounds(site: EcoSite, terrainWorld: BoundsXZ): BoundsXZ {
+  const massing = site.guides.find((g) => g.kind === 'massing-outline')
+  const fromGuide = (pts: readonly (readonly [number, number])[]): BoundsXZ | null => {
+    if (!pts.length) return null
+    let minX = Infinity
+    let minZ = Infinity
+    let maxX = -Infinity
+    let maxZ = -Infinity
+    for (const pt of pts) {
+      const [x, z] = siteToWorldXz(pt)
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (z < minZ) minZ = z
+      if (z > maxZ) maxZ = z
+    }
+    if (!Number.isFinite(minX)) return null
+    return {
+      min: [minX, minZ],
+      max: [maxX, maxZ],
+      center: [(minX + maxX) / 2, (minZ + maxZ) / 2],
+      size: [Math.max(maxX - minX, 0.1), Math.max(maxZ - minZ, 0.1)],
+    }
+  }
+
+  if (massing?.pts?.length) {
+    const b = fromGuide(massing.pts)
+    if (b) return b
+  }
+
+  const onPatch: [number, number][] = []
+  const [tMinX, tMinZ] = terrainWorld.min
+  const [tMaxX, tMaxZ] = terrainWorld.max
+  for (const guide of site.guides) {
+    for (const pt of guide.pts) {
+      const [x, z] = siteToWorldXz(pt)
+      if (x >= tMinX && x <= tMaxX && z >= tMinZ && z <= tMaxZ) onPatch.push([pt[0], pt[1]])
+    }
+  }
+  const fromPatch = fromGuide(onPatch)
+  return fromPatch ?? terrainWorld
+}
+
+function emitSiteFrame(bounds: BoundsXZ): void {
+  const fire = () => emitter.emit('camera-controls:fit-scene', { bounds })
+  // Defer so CustomCameraControls has subscribed after the embed mounts.
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(fire)
+    })
+  } else {
+    fire()
+  }
+}
 
 /**
  * Build a Pascal TerrainField from an EcoSite heightfield (heights relative to
@@ -63,6 +126,10 @@ export function applyEcoSite(site: EcoSite): void {
   if (!siteId) {
     console.warn('[eco] applyEcoSite: no site root in scene')
     setEcoSite(site)
+    const massing = site.guides.find((g) => g.kind === 'massing-outline')
+    if (massing?.pts?.length) {
+      emitSiteFrame(siteFrameBounds(site, { min: [0, 0], max: [1, 1], center: [0.5, 0.5], size: [1, 1] }))
+    }
     return
   }
 
@@ -85,4 +152,12 @@ export function applyEcoSite(site: EcoSite): void {
   })
 
   setEcoSite(site)
+
+  const terrainBounds: BoundsXZ = {
+    min: [ox, oz],
+    max: [maxX, maxZ],
+    center: [(ox + maxX) / 2, (oz + maxZ) / 2],
+    size: [Math.max(maxX - ox, 0.1), Math.max(maxZ - oz, 0.1)],
+  }
+  emitSiteFrame(siteFrameBounds(site, terrainBounds))
 }

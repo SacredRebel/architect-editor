@@ -2,45 +2,38 @@
 
 ## Repo drawn on
 
-None (ops). Notion: **Map & Editor — Assets & Tools** (`collection://30011dde-35d4-4dbd-a520-e910b31c8c9f`).
+None (ops + camera frame). Notion inventory: `docs/plans/notion-assets-planned-high.md`  
+(`collection://30011dde-35d4-4dbd-a520-e910b31c8c9f`).
 
 ## Correction
 
-Production editor is **`architect-editor-snowy.vercel.app`**, not `architect-editor.vercel.app`. Deploy of `c63bcae0` is live. Check `x-matched-path`, not page HTML for 404s.
+Production editor is **`architect-editor-snowy.vercel.app`**, not `architect-editor.vercel.app`. Deploy of `c63bcae0`/`7ab58ac0` is live. Check `x-matched-path`, not page HTML for 404s.
+
+World default iframe still same-origin `/builder/embed/` — use until world ships permanent fix:
+
+`https://spatial-map.vercel.app/?role=builder&builder=https://architect-editor-snowy.vercel.app/embed`
 
 ## Verified live (2026-09-19)
-
-URL:
-`https://spatial-map.vercel.app/?role=builder&builder=https://architect-editor-snowy.vercel.app/embed`
 
 | Check | Result |
 |---|---|
 | World loads, builder banner | OK |
 | 🏗 studio opens snowy `/embed` | OK |
 | `eco:ready` + caps `site,scene,assets,glb` | OK |
-| Site sent 97×97, 9 guides | OK (`world.studio.siteSent`) |
-| Visual guides / Oak Leaf ghost in studio | Unclear — canvas looked empty |
+| Site sent 97×97, 9 guides, refGlb ~2.15 MB | OK (`opts.site()`) |
+| Massing on terrain patch | OK |
+| Visual guides / ghost in studio | Empty viewport — camera not framed (bug) |
+| Frame fix in plugin-eco | `applyEcoSite` → `camera-controls:fit-scene` on massing |
 | Draw two rooms + curved wall + door | Not done (cross-origin iframe) |
 | Send to world + walk door/wall/floor | Not done |
 
-## Notion Planned + High (DEVPLAN-04 set)
+## Notion Planned + High → phases
 
-Queried Status=Planned, Usefulness=High:
-
-| Name | Maps to |
-|---|---|
-| pascalorg/skills (glb-web-export) | H1 |
-| pascalorg/plugin-trees | H2 |
-| ggooonn/Diffusion-Masterplanning | H9 |
-| Mojang/ore-ui (@react-facet) | H4 |
-| pascalorg/plugin-boots | H7 |
-| aedifex | H5 |
-| majidmanzarpour/threejs-game-skills | H8 |
-| ecctrl | already E5; still Planned in DB |
-| monolith-terrain, jt-gelflow | Track B/C (world / shop) |
-
-Bones / articraft rows not in that Planned+High slice (different Status) — still named in DEVPLAN-04 as H3 / H6.
+See `notion-assets-planned-high.md`. Short path: H1 skills, H2 trees, H3 bones (bones is Evaluated/Medium in Notion but still H3).
 
 ## Next
 
-Human (or world-side automation): in the open studio, draw two rooms + one door + one curved wall → Eco panel **Send to world** → walk the building. Then fill the remaining Results rows and mark H0 accepted before H1.
+1. Deploy frame fix to snowy.
+2. Re-open studio — confirm guides + Oak Leaf ghost visible.
+3. Human: draw two rooms + door + one curved wall → **Send to world** → walk building.
+4. Fill remaining Results; accept H0 before H1.

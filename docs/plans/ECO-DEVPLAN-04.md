@@ -20,3 +20,7 @@ Short path if time runs out: **H0, H1, H2, H3**.
 | H8 | Visual regression + bot playtest | majidmanzarpour/threejs-game-skills |
 
 Constraints: `packages/plugin-eco/` only; no `packages/editor/**`; allowed new deps listed in the plan; `docs/plans/H<n>-done.md` names the repo drawn on; commits `eco(H<n>): …`.
+
+## Notion source of truth
+
+**Map & Editor — Assets & Tools** (Playground OS → 04 Assets). Filter Status=Planned + Usefulness=High → `docs/plans/notion-assets-planned-high.md`.

@@ -14,8 +14,8 @@ Note: `/embed` on snowy returns **200** with `x-matched-path: /embed`. Earlier 4
 
 1. Open world with `?role=builder` (+ builder override) — **done**
 2. Walk to house, press **🏗 studio** — **done** (iframe `architect-editor-snowy.vercel.app/embed`)
-3. Confirm site arrives — **partially verified** (see Results)
-4. Draw two rooms + door + one curved wall — **blocked in automation** (cross-origin iframe; needs human or world-side driver)
+3. Confirm site arrives — **done** (payload + handshake)
+4. Draw two rooms + door + one curved wall — **blocked in automation** (cross-origin iframe)
 5. Send to world → walk in / through door / into wall / on floor — **not yet**
 
 ## Results
@@ -27,20 +27,26 @@ Note: `/embed` on snowy returns **200** with `x-matched-path: /embed`. Earlier 4
 | Live URL used | `https://spatial-map.vercel.app/?role=builder&builder=https://architect-editor-snowy.vercel.app/embed` |
 | Studio opens | Yes — “the studio · Sulphur Mountain”, wall tool available |
 | `eco:ready` | Yes — caps `site`, `scene`, `assets`, `glb` from snowy origin |
-| Site sent | Yes — `world.studio.siteSent` = **97×97**, **9 guides** |
-| Oak Leaf `refGlb` | Not confirmed in remaining `opts.site` (cleared after send); canvas looked empty of ghost — **needs visual confirm** |
-| Draw → send → walk | **Not completed** — iframe is cross-origin; browser automation cannot drive walls/doors inside the embed |
+| Site sent | Yes — `world.studio.siteSent` = **97×97**, **9 guides**, step 1.5 m, `originOffsetM [-72,72]` |
+| Oak Leaf `refGlb` | Yes in live `opts.site()` — ~2.15 MB base64 |
+| Massing outline | World-local bbox ≈ x∈[-18,25] z∈[-15,26] (on terrain) |
+| Studio canvas | First pass looked empty — **camera not framed** on site (default pose at empty space). Fix: `applyEcoSite` emits `camera-controls:fit-scene` onto massing-outline |
+| Draw → send → walk | **Not completed** — needs human (or world-side driver) after frame fix deploys |
 
 ### What looked right
 
 - Builder role banner, studio overlay, correct embed URL via `?builder=`
 - Handshake: `eco:ready` with full caps
-- World records site send at 97×97 with 9 guides (survey-scale heightfield)
+- Live site payload: 9 guides (boundary, 2×easement, 3×footprint, 2×road, massing-outline) + refGlb
 
 ### What looked wrong / incomplete
 
-- Studio canvas appeared empty (no obvious terrain guides / Oak Leaf ghost in the first screenshot after open). Possible camera/level issue or site apply not painting overlays — **verify before H1**.
-- Full draw / export / walk-through still needs a human pass (or a world-side scripted driver).
+- Empty studio viewport until camera fit (fixed in plugin-eco; needs snowy redeploy)
+- Full draw / export / walk-through still needs a human pass
+
+## Notion (DEVPLAN-04 tool set)
+
+Filter **Status=Planned** + **Usefulness=High** on [Map & Editor — Assets & Tools](https://app.notion.com/p/0228b7fa879e474f89f5efdf9a955d0e) → see `docs/plans/notion-assets-planned-high.md` (10 rows). Bones/articraft sit outside that filter (Evaluated/Medium, Watch/Low) but remain H3/H6.
 
 ## Local stand-in (still valid)
 

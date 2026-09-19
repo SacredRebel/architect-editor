@@ -10,7 +10,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { heightAt } from '@pascal-app/core'
 import { CAPS } from '../src/bridge.ts'
-import { terrainFieldFromEcoSite } from '../src/apply-site.ts'
+import { siteFrameBounds, terrainFieldFromEcoSite } from '../src/apply-site.ts'
 import { siteToWorldXz } from '../src/coords.ts'
 import { buildEcoWalk } from '../src/export-walk.ts'
 import { exportEcoGlb } from '../src/export-glb.ts'
@@ -79,6 +79,28 @@ for (const [col, row] of samples) {
     Math.abs(got - expectedRel) <= 0.01,
     `terrain sample (${col},${row}): got ${got} expected ${expectedRel} (≤1cm)`,
   )
+}
+console.log('terrain relative heights OK')
+
+// --- frame bounds prefer massing-outline in world (z-south) ---
+{
+  const maxX = field.origin[0] + (field.cols - 1) * field.spacing
+  const maxZ = field.origin[1] + (field.rows - 1) * field.spacing
+  const terrainBounds = {
+    min: [field.origin[0], field.origin[1]],
+    max: [maxX, maxZ],
+    center: [(field.origin[0] + maxX) / 2, (field.origin[1] + maxZ) / 2],
+    size: [maxX - field.origin[0], maxZ - field.origin[1]],
+  }
+  const framed = siteFrameBounds(site, terrainBounds)
+  const massing = site.guides.find((g) => g.kind === 'massing-outline')
+  assert(massing, 'massing guide')
+  const worldPts = massing.pts.map((p) => siteToWorldXz(p))
+  const xs = worldPts.map((p) => p[0])
+  const zs = worldPts.map((p) => p[1])
+  assert(Math.abs(framed.min[0] - Math.min(...xs)) < 1e-6, 'frame minX')
+  assert(Math.abs(framed.max[1] - Math.max(...zs)) < 1e-6, 'frame maxZ')
+  console.log('siteFrameBounds → massing OK', framed.center)
 }
 console.log('terrain samples OK (±1 cm)')
 
