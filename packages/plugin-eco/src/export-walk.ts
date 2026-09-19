@@ -1,3 +1,4 @@
+import { getWallArcData, getWallChordFrame, getWallCurveFrameAt } from '@pascal-app/core'
 import type { EcoWalk } from './bridge-types'
 import { levelWorldY } from './level-y'
 
@@ -12,6 +13,7 @@ type WallLike = {
   end: [number, number]
   thickness?: number
   height?: number
+  curveOffset?: number
 }
 
 type SlabLike = {
@@ -32,25 +34,28 @@ type DoorLike = {
   height?: number
 }
 
+/** Sample step for curved wall rings — matches the world. */
+export const ECO_WALL_SAMPLE_STEP_M = 0.5
+
 /** Editor +z (north) → world +z (south). */
 function toWorldXz([x, z]: [number, number]): [number, number] {
   return [x, -z]
 }
 
 function asWall(node: Record<string, unknown> | undefined): WallLike | null {
-  if (!node || node.type !== 'wall') return null
+  if (node?.type !== 'wall') return null
   if (!Array.isArray(node.start) || !Array.isArray(node.end)) return null
   return node as unknown as WallLike
 }
 
 function asSlab(node: Record<string, unknown> | undefined): SlabLike | null {
-  if (!node || node.type !== 'slab') return null
+  if (node?.type !== 'slab') return null
   if (!Array.isArray(node.polygon)) return null
   return node as unknown as SlabLike
 }
 
 function asDoor(node: Record<string, unknown> | undefined): DoorLike | null {
-  if (!node || node.type !== 'door') return null
+  if (node?.type !== 'door') return null
   if (!Array.isArray(node.position) || typeof node.width !== 'number') return null
   return node as unknown as DoorLike
 }
@@ -68,19 +73,40 @@ function wallDoors(wall: WallLike, nodes: NodeMap): DoorLike[] {
   return out
 }
 
+/** Chord length (Pascal door localX domain). */
+function wallChordLength(wall: WallLike): number {
+  return getWallChordFrame(wall).length
+}
+
+/** Walking length along the wall (arc if curved, else chord). */
+export function wallRunLength(wall: WallLike): number {
+  const arc = getWallArcData(wall)
+  if (!arc) return wallChordLength(wall)
+  return Math.abs(arc.radius * arc.delta)
+}
+
+/**
+ * Convert Pascal door localX (0…chord) to metres along the run (arc if curved).
+ */
+function doorLocalXToRunMeters(wall: WallLike, localX: number): number {
+  const chord = wallChordLength(wall)
+  if (chord < 1e-6) return 0
+  const t = Math.max(0, Math.min(1, localX / chord))
+  return t * wallRunLength(wall)
+}
+
 function wallSegmentsWithDoorGaps(wall: WallLike, doors: DoorLike[]): { s0: number; s1: number }[] {
-  const [x0, z0] = wall.start
-  const [x1, z1] = wall.end
-  const len = Math.hypot(x1 - x0, z1 - z0)
-  if (len < 1e-4) return []
+  const run = wallRunLength(wall)
+  if (run < 1e-4) return []
 
   const gaps = doors
     .map((d) => {
+      const center = doorLocalXToRunMeters(wall, d.position[0])
       const half = d.width / 2
-      return { min: d.position[0] - half, max: d.position[0] + half }
+      return { min: center - half, max: center + half }
     })
-    .filter((g) => g.max > 0 && g.min < len)
-    .map((g) => ({ min: Math.max(0, g.min), max: Math.min(len, g.max) }))
+    .filter((g) => g.max > 0 && g.min < run)
+    .map((g) => ({ min: Math.max(0, g.min), max: Math.min(run, g.max) }))
     .sort((a, b) => a.min - b.min)
 
   const merged: { min: number; max: number }[] = []
@@ -96,36 +122,44 @@ function wallSegmentsWithDoorGaps(wall: WallLike, doors: DoorLike[]): { s0: numb
     if (g.min - cursor > 1e-3) segs.push({ s0: cursor, s1: g.min })
     cursor = g.max
   }
-  if (len - cursor > 1e-3) segs.push({ s0: cursor, s1: len })
+  if (run - cursor > 1e-3) segs.push({ s0: cursor, s1: run })
   return segs
 }
 
-/** Rectangle ring around a wall segment plan footprint (editor xz → world xz). */
-function wallSegmentRing(wall: WallLike, s0: number, s1: number): [number, number][] {
-  const [x0, z0] = wall.start
-  const [x1, z1] = wall.end
-  const len = Math.hypot(x1 - x0, z1 - z0)
-  const dx = (x1 - x0) / len
-  const dz = (z1 - z0) / len
-  const halfT = (wall.thickness ?? 0.1) / 2
-  const px = -dz
-  const pz = dx
+function frameAtRunMeters(wall: WallLike, s: number) {
+  const run = wallRunLength(wall)
+  const t = run < 1e-9 ? 0 : Math.max(0, Math.min(1, s / run))
+  return getWallCurveFrameAt(wall, t)
+}
 
-  const a: [number, number] = [x0 + dx * s0, z0 + dz * s0]
-  const b: [number, number] = [x0 + dx * s1, z0 + dz * s1]
-  const corners: [number, number][] = [
-    [a[0] + px * halfT, a[1] + pz * halfT],
-    [b[0] + px * halfT, b[1] + pz * halfT],
-    [b[0] - px * halfT, b[1] - pz * halfT],
-    [a[0] - px * halfT, a[1] - pz * halfT],
-  ]
-  // Open rings — world closes them; document: we emit open (first ≠ last).
-  return corners.map(toWorldXz)
+/**
+ * Thickened plan ring for a wall run segment [s0,s1] in run-metres.
+ * Curved walls: sample centerline every ECO_WALL_SAMPLE_STEP_M, offset by ±half thickness.
+ * One solid per continuous run (not per sample).
+ */
+export function wallSegmentRing(wall: WallLike, s0: number, s1: number): [number, number][] {
+  const halfT = (wall.thickness ?? 0.1) / 2
+  const span = Math.max(0, s1 - s0)
+  const samples = Math.max(1, Math.ceil(span / ECO_WALL_SAMPLE_STEP_M))
+  const left: [number, number][] = []
+  const right: [number, number][] = []
+
+  for (let i = 0; i <= samples; i++) {
+    const s = s0 + (span * i) / samples
+    const frame = frameAtRunMeters(wall, s)
+    left.push([frame.point.x + frame.normal.x * halfT, frame.point.y + frame.normal.y * halfT])
+    right.push([frame.point.x - frame.normal.x * halfT, frame.point.y - frame.normal.y * halfT])
+  }
+
+  // Open ring: left face along the run, then right face reverse.
+  const ring = [...left, ...right.reverse()]
+  return ring.map(([x, z]) => toWorldXz([x, z]))
 }
 
 /**
  * Derive EcoWalk from the scene graph (world frame: x east, y up, z south).
  * Rings are open (first point ≠ last); the host closes them.
+ * Curved walls export as one solid per door-split run with 0.5 m sampling.
  */
 export function buildEcoWalk(nodes: NodeMap): EcoWalk {
   const floors: EcoWalk['floors'] = []

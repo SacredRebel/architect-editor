@@ -60,6 +60,8 @@ if (bytes.length > 200_000) {
 // E6 + F0 acceptance scripts
 console.log('running check-export.mjs…')
 await import('./check-export.mjs')
+console.log('running check-curved-wall.mjs…')
+await import('./check-curved-wall.mjs')
 console.log('running check-roundtrip.mjs…')
 await import('./check-roundtrip.mjs')
 

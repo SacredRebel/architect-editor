@@ -1,9 +1,10 @@
+import { isCurvedWall, sampleWallCenterline } from '@pascal-app/core'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { EcoWalk } from './bridge-types'
 import { base64ToBytes, getEcoAssetsState } from './eco-assets-store'
-import { buildEcoWalk } from './export-walk'
+import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
 import { levelWorldY } from './level-y'
 
 type NodeMap = Record<string, Record<string, unknown> | undefined>
@@ -43,18 +44,40 @@ function wallMesh(
     end: [number, number]
     thickness?: number
     height?: number
+    curveOffset?: number
   },
-): THREE.Mesh | null {
+): THREE.Object3D | null {
+  const thickness = wall.thickness ?? 0.1
+  const height = wall.height ?? 2.7
+  const levelY = wall.parentId ? levelWorldY(nodes as never, wall.parentId) : 0
+  const mat = new THREE.MeshStandardMaterial({ color: 0xc4b5a0 })
+
+  if (isCurvedWall(wall)) {
+    const chord = Math.hypot(wall.end[0] - wall.start[0], wall.end[1] - wall.start[1])
+    const segments = Math.max(1, Math.ceil(chord / ECO_WALL_SAMPLE_STEP_M))
+    const pts = sampleWallCenterline(wall, segments)
+    const group = new THREE.Group()
+    group.name = `wall:${wall.id}`
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i]!
+      const b = pts[i + 1]!
+      const dx = b.x - a.x
+      const dz = b.y - a.y
+      const len = Math.hypot(dx, dz)
+      if (len < 1e-4) continue
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, len), mat)
+      mesh.position.set((a.x + b.x) / 2, levelY + height / 2, (a.y + b.y) / 2)
+      mesh.rotation.y = Math.atan2(dx, dz)
+      group.add(mesh)
+    }
+    return group.children.length ? group : null
+  }
+
   const [x0, z0] = wall.start
   const [x1, z1] = wall.end
   const len = Math.hypot(x1 - x0, z1 - z0)
   if (len < 1e-4) return null
-  const thickness = wall.thickness ?? 0.1
-  const height = wall.height ?? 2.7
-  const levelY = wall.parentId ? levelWorldY(nodes as never, wall.parentId) : 0
-  const geom = new THREE.BoxGeometry(thickness, height, len)
-  const mat = new THREE.MeshStandardMaterial({ color: 0xc4b5a0 })
-  const mesh = new THREE.Mesh(geom, mat)
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, len), mat)
   mesh.name = `wall:${wall.id}`
   mesh.position.set((x0 + x1) / 2, levelY + height / 2, (z0 + z1) / 2)
   mesh.rotation.y = Math.atan2(x1 - x0, z1 - z0)

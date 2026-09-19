@@ -1,7 +1,8 @@
 'use client'
 
-import { useScene } from '@pascal-app/core'
+import { isCurvedWall, sampleWallCenterline, useScene } from '@pascal-app/core'
 import { useMemo } from 'react'
+import { ECO_WALL_SAMPLE_STEP_M } from './export-walk'
 import { levelWorldY } from './level-y'
 
 type HalfExtents = [number, number, number]
@@ -14,8 +15,8 @@ export type EcoColliderSpec = {
 }
 
 /**
- * Approximate fixed cuboid colliders for walls and slabs from the scene graph.
- * Good enough for Walk v1; door openings are ignored here (handled in E6 walk export).
+ * Approximate fixed cuboid colliders for walls and slabs.
+ * Curved walls are sampled every 0.5 m into short cuboid runs (same step as walk export).
  */
 export function useEcoStructureColliders(): EcoColliderSpec[] {
   const nodes = useScene((s) => s.nodes)
@@ -32,26 +33,44 @@ export function useEcoStructureColliders(): EcoColliderSpec[] {
           end: [number, number]
           thickness?: number
           height?: number
+          curveOffset?: number
         }
         const levelY = wall.parentId ? levelWorldY(nodes as never, wall.parentId) : 0
-        const [x0, z0] = wall.start
-        const [x1, z1] = wall.end
-        const dx = x1 - x0
-        const dz = z1 - z0
-        const len = Math.hypot(dx, dz)
-        if (len < 1e-4) continue
         const thickness = wall.thickness ?? 0.1
         const height = wall.height ?? 2.7
-        const cx = (x0 + x1) / 2
-        const cz = (z0 + z1) / 2
-        // Angle so local +Z aligns with wall direction (length along Z).
-        const yaw = Math.atan2(dx, dz)
-        specs.push({
-          key: `wall:${wall.id}`,
-          position: [cx, levelY + height / 2, cz],
-          rotation: [0, yaw, 0],
-          args: [thickness / 2, height / 2, len / 2],
-        })
+
+        if (isCurvedWall(wall)) {
+          const chord = Math.hypot(wall.end[0] - wall.start[0], wall.end[1] - wall.start[1])
+          const segments = Math.max(1, Math.ceil(chord / ECO_WALL_SAMPLE_STEP_M))
+          const pts = sampleWallCenterline(wall, segments)
+          for (let i = 0; i < pts.length - 1; i++) {
+            const a = pts[i]!
+            const b = pts[i + 1]!
+            const dx = b.x - a.x
+            const dz = b.y - a.y
+            const len = Math.hypot(dx, dz)
+            if (len < 1e-4) continue
+            specs.push({
+              key: `wall:${wall.id}:${i}`,
+              position: [(a.x + b.x) / 2, levelY + height / 2, (a.y + b.y) / 2],
+              rotation: [0, Math.atan2(dx, dz), 0],
+              args: [thickness / 2, height / 2, len / 2],
+            })
+          }
+        } else {
+          const [x0, z0] = wall.start
+          const [x1, z1] = wall.end
+          const dx = x1 - x0
+          const dz = z1 - z0
+          const len = Math.hypot(dx, dz)
+          if (len < 1e-4) continue
+          specs.push({
+            key: `wall:${wall.id}`,
+            position: [(x0 + x1) / 2, levelY + height / 2, (z0 + z1) / 2],
+            rotation: [0, Math.atan2(dx, dz), 0],
+            args: [thickness / 2, height / 2, len / 2],
+          })
+        }
       }
       if (node.type === 'slab' && 'polygon' in node) {
         const slab = node as {

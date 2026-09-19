@@ -75,7 +75,8 @@ export default function EcoLegendPanel() {
           <div style={{ fontWeight: 600 }}>Snap</div>
           <div style={{ opacity: 0.75, lineHeight: 1.35 }}>
             With the ghost on, wall/slab drafting snaps to the massing outline (and GLB silhouette).
-            Hold <kbd>Alt</kbd> to suspend.
+            Hold <kbd>Alt</kbd> to suspend. Curved walls use the sagitta handle /
+            <code>curveOffset</code>; export samples arcs every 0.5&nbsp;m.
           </div>
 
           <div style={{ fontWeight: 600 }}>Site overlays</div>
