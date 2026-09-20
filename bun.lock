@@ -301,6 +301,7 @@
         "@gltf-transform/core": "^4.5.0",
         "@gltf-transform/extensions": "^4.5.0",
         "@gltf-transform/functions": "^4.5.0",
+        "@pascal-app/plugin-bones": "github:pascalorg/plugin-bones#5679260261ee1c733656ff6dfb99e30bb24b58a7",
         "@react-three/rapier": "^2.2.0",
         "draco3dgltf": "^1.5.7",
         "ecctrl": "^2.0.2",
@@ -316,6 +317,7 @@
         "@types/three": "^0.184.0",
         "three": "^0.186.0",
         "typescript": "6.0.3",
+        "zod": ">=4.5.4 <4.6",
       },
       "peerDependencies": {
         "@pascal-app/core": "^1.0.1",
@@ -326,6 +328,7 @@
         "react": "^18 || ^19",
         "react-dom": "^18 || ^19",
         "three": "^0.186",
+        "zod": ">=4.5.4 <4.6",
       },
     },
     "packages/typescript-config": {
@@ -2159,6 +2162,8 @@
     "deslop-js/minimatch": ["minimatch@10.2.5", "", { "dependencies": { "brace-expansion": "^5.0.5" } }, "sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg=="],
 
     "dotenv-expand/dotenv": ["dotenv@16.6.1", "", {}, "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow=="],
+
+    "editor/@pascal-app/plugin-bones": ["@pascal-app/plugin-bones@github:pascalorg/plugin-bones#5679260", { "peerDependencies": { "@pascal-app/core": ">=0.9.1 <1", "@pascal-app/editor": ">=0.9.1 <1", "@pascal-app/viewer": ">=0.9.1 <1", "@react-three/fiber": "^9", "react": "^18 || ^19", "three": "^0.185", "zod": "^4", "zustand": "^5" } }, "pascalorg-plugin-bones-5679260", "sha512-uQkyHHOl/VuYx2+d/MmcJui/KEAQZ2UUnO4ywp1XaopmD2YfN+Yx/fR/lS/VL2joEoyyZeBLC3KaXK1Sx5qEvg=="],
 
     "editor/typescript": ["typescript@7.0.2", "", { "optionalDependencies": { "@typescript/typescript-aix-ppc64": "7.0.2", "@typescript/typescript-darwin-arm64": "7.0.2", "@typescript/typescript-darwin-x64": "7.0.2", "@typescript/typescript-freebsd-arm64": "7.0.2", "@typescript/typescript-freebsd-x64": "7.0.2", "@typescript/typescript-linux-arm": "7.0.2", "@typescript/typescript-linux-arm64": "7.0.2", "@typescript/typescript-linux-loong64": "7.0.2", "@typescript/typescript-linux-mips64el": "7.0.2", "@typescript/typescript-linux-ppc64": "7.0.2", "@typescript/typescript-linux-riscv64": "7.0.2", "@typescript/typescript-linux-s390x": "7.0.2", "@typescript/typescript-linux-x64": "7.0.2", "@typescript/typescript-netbsd-arm64": "7.0.2", "@typescript/typescript-netbsd-x64": "7.0.2", "@typescript/typescript-openbsd-arm64": "7.0.2", "@typescript/typescript-openbsd-x64": "7.0.2", "@typescript/typescript-sunos-x64": "7.0.2", "@typescript/typescript-win32-arm64": "7.0.2", "@typescript/typescript-win32-x64": "7.0.2" }, "bin": { "tsc": "bin/tsc" } }, "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="],
 
