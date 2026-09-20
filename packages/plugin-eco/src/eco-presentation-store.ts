@@ -1,4 +1,8 @@
-/** Presentation / H12 view state — considered camera + clean frame. */
+/**
+ * Presentation / H12 view state — considered camera + clean frame.
+ * `timeOfDayHours` feeds the interim EcoSiteLighting stub only; final sun
+ * position / exposure come from the world lighting contract (not yet landed).
+ */
 
 type PresState = {
   /** Hide chrome overlays conceptually; lighting + framing switch. */

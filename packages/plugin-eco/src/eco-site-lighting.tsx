@@ -19,8 +19,13 @@ function usePres() {
 }
 
 /**
- * Hemisphere + directional sun at the site's lat/lon/time.
- * Matches the world's sky so editor and walk look like the same place.
+ * INTERIM STUB — not the final editor↔world lighting match.
+ *
+ * Placeholder mount so presentation still works: hemisphere (sky/IBL stand-in)
+ * + directional sun + ambient. Intensities / colours / exposure here are NOT
+ * the world lighting contract. When that contract lands, wire sun/sky/IBL/
+ * tone-mapping/exposure to it — do not reverse-engineer final numbers from
+ * these stubs (editor-pretty / walk-wrong is the failure mode to avoid).
  */
 export function EcoSiteLighting() {
   const { site } = useSite()
@@ -59,7 +64,7 @@ export function EcoSiteLighting() {
 }
 
 function dateAtLocalHours(hours: number): Date {
-  // Approximate Pacific daylight (UTC-7) for Ojai — good enough for presentation.
+  // INTERIM: approximate Pacific daylight (UTC-7) for Ojai — stub only.
   const h = ((hours % 24) + 24) % 24
   const utcH = h + 7
   return new Date(Date.UTC(2026, 5, 21, Math.floor(utcH), Math.round((utcH % 1) * 60), 0))

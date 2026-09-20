@@ -1,8 +1,9 @@
 /**
- * Site sun direction — matches world: azimuth from lat/lon/time, then
- * rotated by site northDeg into editor frame (+z = north).
+ * INTERIM STUB — site sun direction from lat/lon/time + northDeg.
  *
- * Used by H12 presentation lighting so the editor sun agrees with the world.
+ * Rough solar model for presentation only. NOT the world lighting contract
+ * (sun position model, sky/IBL, tone-mapping, exposure). Keep for wiring;
+ * replace / drive from the contract when it lands — do not polish further.
  */
 
 const DEG = Math.PI / 180

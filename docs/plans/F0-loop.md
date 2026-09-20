@@ -61,5 +61,9 @@ cd apps/editor && bun run build:static && npx serve out
 
 ## H12 (materials / presentation)
 
+**Done:** materials, real glass, one-mesh-per-material, baseline PNGs, presentation chrome.
+**Hold:** sun / sky / IBL / tone-mapping / exposure — interim stubs awaiting the **world lighting contract**; do not polish further. Harness fixed light is for regression PNGs only (≠ contract).
+
 Baseline PNGs: `docs/plans/h12-baseline/{before,after}.png`. See `H12-done.md`.
 Leaf shell compat **161 816 → 220 984** (still under 500 KB without meshopt).
+Next Track A phase: **H3** (material takeoff CSV) once a clear brief exists.

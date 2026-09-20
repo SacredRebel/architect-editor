@@ -12,8 +12,8 @@ H3 is still the construction-data phase — not demoted; it comes after the tool
 | H1 | GLB optimise + audit | pascalorg/skills `glb-web-export` |
 | H2 | Real trees (ez-tree) | pascalorg/plugin-trees |
 | **H10** | **Curved / organic geometry** | parametric loft/shell/vault in plugin-eco |
-| **H12** | Materials, real glass, sun at site latitude, presentation | **DONE** — see `H12-done.md` |
-| H3 | Material takeoff CSV | pascalorg/plugin-bones |
+| **H12** | Materials, real glass, presentation; sun/sky/tonemap **interim** | **DONE** (materials/glass/baseline) — lighting **blocked on world lighting contract**; see `H12-done.md` |
+| H3 | Material takeoff CSV | pascalorg/plugin-bones — next after H12; needs a written brief before start |
 | H9 | Grow paths (space colonization) | ggooonn/Diffusion-Masterplanning |
 | H4 | @react-facet live readouts | Mojang/ore-ui |
 | H7 | Phone touch + movement numbers | pascalorg/plugin-boots |

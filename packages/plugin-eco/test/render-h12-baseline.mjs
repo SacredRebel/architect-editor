@@ -6,7 +6,10 @@
  *   bun packages/plugin-eco/test/render-h12-baseline.mjs after
  *
  * "before" = grey plastic leaf (no presentation materials/lighting).
- * "after"  = full H12 materials + site sun + IBL-ish hemisphere.
+ * "after"  = full H12 materials + fixed harness sun/hemi (regression only).
+ *
+ * Harness light ≠ world lighting contract. Fixed shade/exposure here keeps
+ * before/after PNGs comparable; do not treat as editor or walk lighting truth.
  */
 import { deflateSync } from 'node:zlib'
 import { mkdirSync, writeFileSync } from 'node:fs'

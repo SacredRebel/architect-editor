@@ -82,6 +82,7 @@ export default function EcoPresentation() {
 
   return (
     <group name="eco-presentation">
+      {/* Interim lighting stub — keep mounted; wire to world contract later */}
       <EcoSiteLighting />
       <EcoPresentationFraming />
       {!presentation && <EcoGuides />}

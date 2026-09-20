@@ -1,9 +1,14 @@
 # H12 — materials, glass, site sun, presentation
 
+## STATUS
+
+- **Done:** materials library, real glass (transmission + `alphaMode: BLEND`), one mesh per material, compat under 500 KB, baseline PNGs, presentation chrome.
+- **Hold — do not finalise:** sun position, sky/IBL, tone-mapping, exposure. Current `EcoSiteLighting` / `eco-site-sun` / harness shade numbers are **interim stubs** awaiting the **world lighting contract**. Do not reverse-engineer final lighting from editor looks (editor-pretty / walk-wrong is the failure mode). When the contract lands, wire the sun to it.
+
 ## Repo drawn on
 
 `packages/plugin-eco` only — expands F5 materials into a full presentation palette,
-wires site sun from lat/lon/time, and adds a one-click presentation view.
+adds interim site-sun stubs from lat/lon/time, and a one-click presentation view.
 
 ## What shipped
 
@@ -13,9 +18,9 @@ wires site sun from lat/lon/time, and adds a one-click presentation view.
 | `createEcoThreeMaterial` | Glass → `MeshPhysicalMaterial` (transmission); others → `MeshStandardMaterial`; 32² procedural normals |
 | `eco-gltf-polyfill.ts` | Bun/Node `OffscreenCanvas` + `ImageData` so DataTexture normals export without `document` |
 | `consolidateByEcoMaterial` | **One mesh per material**; planar world-XZ UVs (not strip) so normals tile |
-| `eco-site-sun.ts` | `sunDirectionAt(lat, lon, time, northDeg)` — editor +z = north |
-| `eco-site-lighting.tsx` | Hemisphere (sky IBL stand-in) + directional sun + ambient; mounted in `EcoPresentation` |
-| `eco-presentation-store.ts` | Presentation toggle + time-of-day hours |
+| `eco-site-sun.ts` | **INTERIM STUB** — `sunDirectionAt(lat, lon, time, northDeg)`; not the world sun contract |
+| `eco-site-lighting.tsx` | **INTERIM STUB** — hemi + directional + ambient; keep mounted; wire to contract later |
+| `eco-presentation-store.ts` | Presentation toggle + time-of-day hours (feeds interim sun only) |
 | `EcoLegendPanel` | One-click presentation + time slider; hides guides / ghost / compass / walk chrome |
 
 ## Visual baseline (H12.0)
@@ -25,11 +30,11 @@ Fixed camera `(22,14,18)` → `(0,5,0)`, fov 45, seed `0xec0120`, Ojai lat/lon, 
 | | Path |
 |---|---|
 | Before (grey plastic) | [`docs/plans/h12-baseline/before.png`](./h12-baseline/before.png) |
-| After (living-roof + site sun) | [`docs/plans/h12-baseline/after.png`](./h12-baseline/after.png) |
+| After (living-roof + harness sun) | [`docs/plans/h12-baseline/after.png`](./h12-baseline/after.png) |
 
 Harness: `bun packages/plugin-eco/test/render-h12-baseline.mjs before|after`
 
-> **Note:** `after.png` was re-exposed for readability (software path converts linear→sRGB and applies ambient+sun fill so living-roof green reads clearly; camera/seed/time unchanged).
+> **Harness ≠ world contract.** Fixed light/exposure keeps regression PNGs comparable only. `after.png` was re-exposed for readability (software linear→sRGB + ambient/sun fill so living-roof green reads; camera/seed/time unchanged).
 
 ## Compat bytes (assert green, no meshopt)
 
