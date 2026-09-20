@@ -2,12 +2,18 @@
  * H3 — construction takeoff headless checks + hand-verified geometry + Bones path.
  * Usage: bun packages/plugin-eco/test/check-h3.mjs
  */
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   ecoConstructionCsv,
   polygonAreaM2,
   runEcoConstructionTakeoff,
 } from '../src/eco-construction.ts'
 import { loadBonesEngines } from '../src/eco-bones-engines.ts'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const ecoSrc = join(here, '../src')
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg)
@@ -137,44 +143,54 @@ assert(csv.includes('basis'), 'csv has basis column')
 assert(csv.includes('# jurisdiction,'), 'csv stamps jurisdiction')
 assert(csv.includes('takeoff'), 'csv has takeoff rows')
 
-// --- Bones path (when engines load) ---
+// --- Browser-safe ESM vendor path (panel is 'use client') ---
+const bridgeSrc = readFileSync(join(ecoSrc, 'eco-bones-engines.ts'), 'utf8')
+assert(!bridgeSrc.includes('createRequire'), 'eco-bones-engines must not use createRequire (breaks Vite client)')
+assert(
+  bridgeSrc.includes("from './bones-vendor/") || bridgeSrc.includes('from "./bones-vendor/'),
+  'eco-bones-engines must ESM-import bones-vendor',
+)
+assert(
+  existsSync(join(ecoSrc, 'bones-vendor/src/framing/compute.ts')),
+  'bones-vendor computeLevel missing',
+)
+assert(
+  existsSync(join(ecoSrc, 'bones-vendor/src/engines/takeoff.ts')),
+  'bones-vendor computeTakeoff missing',
+)
+assert(existsSync(join(ecoSrc, 'bones-vendor/ATTRIBUTION.md')), 'bones-vendor MIT attribution missing')
+
+// --- Bones path (vendored engines — always load) ---
 const bonesEngines = loadBonesEngines()
-if (bonesEngines) {
-  assert(result.bones.ok === true, `bones should run on wall+slab fixture: ${JSON.stringify(result.bones)}`)
-  if (result.bones.ok) {
-    assert(result.bones.memberCount > 0, 'bones members > 0')
-    assert(result.bones.takeoffRowCount > 0, 'bones takeoff rows > 0')
-    assert(result.bones.levelId === 'L0', 'bones level L0')
+assert(bonesEngines, 'vendored Bones engines must load')
+assert(result.bones.ok === true, `bones should run on wall+slab fixture: ${JSON.stringify(result.bones)}`)
+if (result.bones.ok) {
+  assert(result.bones.memberCount > 0, 'bones members > 0')
+  assert(result.bones.takeoffRowCount > 0, 'bones takeoff rows > 0')
+  assert(result.bones.levelId === 'L0', 'bones level L0')
+}
+
+const bonesLumber = result.rows.filter(
+  (r) => r.section.startsWith('Bones ·') && r.basis === 'takeoff' && r.unit === 'pcs',
+)
+assert(bonesLumber.length > 0, 'expected Bones member-counted pcs rows')
+
+// Massing LF÷o.c. stud estimate must NOT appear when Bones ran
+const massingStuds = result.rows.find((r) => r.item.startsWith('Studs (2x4'))
+assert(!massingStuds, 'massing stud estimate must be omitted when Bones takeoff ran')
+
+// LF÷o.c. language must never be labeled takeoff
+for (const row of result.rows) {
+  if (/LF ÷|o\.c\.|rule of thumb/i.test(row.detail) && /stud/i.test(row.item)) {
+    assert(row.basis !== 'takeoff', `stud rule-of-thumb labeled takeoff: ${row.item}`)
   }
+}
 
-  const bonesLumber = result.rows.filter(
-    (r) => r.section.startsWith('Bones ·') && r.basis === 'takeoff' && r.unit === 'pcs',
-  )
-  assert(bonesLumber.length > 0, 'expected Bones member-counted pcs rows')
-
-  // Massing LF÷o.c. stud estimate must NOT appear when Bones ran
-  const massingStuds = result.rows.find((r) => r.item.startsWith('Studs (2x4'))
-  assert(!massingStuds, 'massing stud estimate must be omitted when Bones takeoff ran')
-
-  // LF÷o.c. language must never be labeled takeoff
-  for (const row of result.rows) {
-    if (/LF ÷|o\.c\.|rule of thumb/i.test(row.detail) && /stud/i.test(row.item)) {
-      assert(row.basis !== 'takeoff', `stud rule-of-thumb labeled takeoff: ${row.item}`)
-    }
-  }
-
-  console.log('  bones path: OK')
-  console.log(`    members: ${result.bones.ok ? result.bones.memberCount : 0}`)
-  console.log(`    sample takeoff:`)
-  for (const row of bonesLumber.slice(0, 4)) {
-    console.log(`      [${row.basis}] ${row.section} / ${row.item}: ${row.quantity} ${row.unit}`)
-  }
-} else {
-  console.log('  bones engines unavailable — skipping member-takeoff proof (clone .cache/plugin-bones)')
-  // Massing fallback still honest
-  const studs = result.rows.find((r) => r.item.startsWith('Studs'))
-  assert(studs?.basis === 'estimate', 'studs are estimate when bones unavailable')
-  assert(result.bones.ok === false, 'bones status should be not-ok')
+console.log('  bones path: OK (ESM vendor)')
+console.log(`    members: ${result.bones.ok ? result.bones.memberCount : 0}`)
+console.log(`    sample takeoff:`)
+for (const row of bonesLumber.slice(0, 4)) {
+  console.log(`      [${row.basis}] ${row.section} / ${row.item}: ${row.quantity} ${row.unit}`)
 }
 
 // --- Curved-only: Bones must not fake; massing warning + estimate path ---

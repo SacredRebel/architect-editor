@@ -56,7 +56,7 @@ Takeoff sections: Wall framing · Floor · Roof · Foundation · Sheathing · El
 
 Eco scenes **are** Pascal `SceneGraph`s (`wall`/`slab`/`level` shapes match what `wall-model` expects). Parametric eco shells / lofts / vaults / trees are **extra** — Bones does not read them; they stay out of member takeoff (massing adapter + warning).
 
-Bones is registered in `apps/editor` (`defaultInstalled: false`). Public package exports still omit engines; Eco **deep-loads** them via `eco-bones-engines.ts` from `.cache/plugin-bones` or the installed package root (`computeLevel` / `computeTakeoff` / `FramingNode`).
+Bones is registered in `apps/editor` (`defaultInstalled: false`). Public package exports still omit engines; Eco **vendors** the pure engine closure into `packages/plugin-eco/src/bones-vendor/` and ESM-imports via `eco-bones-engines.ts` so the client panel can run `computeLevel` / `computeTakeoff` / `FramingNode` without Node `createRequire`.
 
 ## Adapter shape required for Eco H3
 
@@ -88,7 +88,7 @@ EcoScenePayload.nodes
 
 **Default to `estimate` for massing BOM.** Raise to `takeoff` only for earned geometry metrics or Bones member counts. Every figure shows basis **beside the number**.
 
-**Shipped:** H3.1 deep-import path in `eco-bones-engines.ts` + merge in `eco-construction.ts`. See `H3-done.md`.
+**Shipped:** H3.1 vendored ESM engines in `bones-vendor/` + `eco-bones-engines.ts` + merge in `eco-construction.ts`. See `H3-done.md`.
 
 ## Jurisdiction note (state vs county)
 

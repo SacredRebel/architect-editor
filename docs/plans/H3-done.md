@@ -2,7 +2,7 @@
 
 ## Repo drawn on
 
-- [pascalorg/plugin-bones](https://github.com/pascalorg/plugin-bones) (MIT) — engines deep-loaded from `.cache/plugin-bones` (or installed `@pascal-app/plugin-bones`)
+- [pascalorg/plugin-bones](https://github.com/pascalorg/plugin-bones) (MIT) — pure engines **vendored** into `packages/plugin-eco/src/bones-vendor/` at pin `5679260261ee1c733656ff6dfb99e30bb24b58a7` (ESM imports; no React/UI)
 - Local Ventura profile: `packages/plugin-eco/data/jurisdiction/ventura-county.json` + `src/eco-jurisdiction-ventura.ts` (no network)
 
 ## What shipped
@@ -10,13 +10,14 @@
 | Piece | Role |
 |---|---|
 | `H3-eval.md` | Inputs/outputs, headless vs UI, adapter shape, Bones wiring note |
-| `eco-bones-engines.ts` | Deep-load `computeLevel` / `computeTakeoff` / `FramingNode` |
+| `bones-vendor/` | MIT-attributed pure `computeLevel` / `computeTakeoff` / `FramingNode` + tables |
+| `eco-bones-engines.ts` | Browser-safe ESM imports from vendor (no `createRequire`) |
 | `eco-construction.ts` | Geometry takeoff + Bones member rows (or massing estimates) + CSV |
 | `eco-construction-panel.tsx` | Panel: jurisdiction, Bones status, basis beside every qty, Download CSV |
 | `eco-jurisdiction-ventura.ts` | Ventura County code edition + climate |
 | `ecoConstructionHostPanel` | Rail panel (bootstrap registers it) |
 
-When the scene has Pascal `wall`/`slab`/`level` nodes Bones can extract, Eco runs **`computeLevel` + `computeTakeoff` headless** and merges member-counted rows as basis **`takeoff`**. If Bones cannot run (no engines, no level, curved-only walls, 0 members), the massing adapter remains and a **Bones · Member takeoff** placeholder row states why — no fake member counts. Stud counts from LF÷o.c. stay **`estimate`** and are omitted when Bones takeoff ran.
+When the scene has Pascal `wall`/`slab`/`level` nodes Bones can extract, Eco runs **`computeLevel` + `computeTakeoff` headless** (works in the `'use client'` panel via vendored ESM) and merges member-counted rows as basis **`takeoff`**. If Bones cannot run (no level, curved-only walls, 0 members), the massing adapter remains and a **Bones · Member takeoff** placeholder row states why — no fake member counts. Stud counts from LF÷o.c. stay **`estimate`** and are omitted when Bones takeoff ran.
 
 ## Jurisdiction shown (Ventura County, CA)
 
@@ -47,7 +48,7 @@ Fixture: one slab `[0,0]→[20,0]→[20,10]→[0,10]`, four walls on the perimet
 - Hand: perimeter \(2\times(20+10) = 60\,\mathrm{m}\)
 - Tool: slab-probe exterior fallback → **60 m**, basis **`takeoff`**
 
-### 3. Bones member takeoff (when `.cache/plugin-bones` or package present)
+### 3. Bones member takeoff (vendored ESM — panel + headless)
 
 - `computeLevel` on `L0` → hundreds of members; `computeTakeoff` rows under `Bones · …` with basis **`takeoff`**
 - Sample: Wall framing 2x6 stock pcs, Foundation anchor bolts — member-counted, not LF÷o.c.
@@ -58,11 +59,12 @@ Fixture: one slab `[0,0]→[20,0]→[20,10]→[0,10]`, four walls on the perimet
 bun packages/plugin-eco/test/check-h3.mjs
 ```
 
-Expect: floor 200 m², exterior LF 60 m, Ventura id, every row has a basis; Bones path OK when engines load; curved-only fixture keeps placeholder + estimates.
+Expect: floor 200 m², exterior LF 60 m, Ventura id, every row has a basis; Bones ESM vendor present (no `createRequire`); member takeoff OK; curved-only fixture keeps placeholder + estimates.
 
 ## Paths
 
 - Eval: `docs/plans/H3-eval.md`
+- Bones vendor: `packages/plugin-eco/src/bones-vendor/` (+ `ATTRIBUTION.md`)
 - Bones bridge: `packages/plugin-eco/src/eco-bones-engines.ts`
 - Adapter: `packages/plugin-eco/src/eco-construction.ts`
 - Panel: `packages/plugin-eco/src/eco-construction-panel.tsx`
