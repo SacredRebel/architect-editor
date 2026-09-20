@@ -11,7 +11,7 @@
 |---|---|
 | `eco-trees-store.ts` | Six variants (3 oak + 3 chamise/bush); tiny placements (no GLB bytes) |
 | `eco-tree-mesh.ts` | Browser: ez-tree `loadPreset`+`generate`; Node: cone/sphere stand-in |
-| `eco-trees.tsx` | **InstancedMesh** bark+leaves per variant; impostor thinning past **120 m** |
+| `eco-trees.tsx` | **InstancedMesh** bark+leaves per variant; **distance gate at 120 m** (Y-scale flatten only — **not** true impostor cards; those land with the world pack) |
 | `eco-trees-panel` | Place UI inside My assets (no `packages/editor/**` / bootstrap change) |
 | `export-glb` | Bakes trees into `eco:glb` → arrive in the world |
 | `eco-scene` | `ecoTrees` serialize / restore / round-trip |
@@ -26,7 +26,7 @@
 - 6 variants; eco:scene round-trip  
 - Export with tree **6776 B** > bare **2276 B**  
 - 3000 instances → **12** draw calls vs **3000** blob draws (≪ 20%)  
-- Impostor distance constant **120 m**
+- Impostor distance constant **120 m** — **cards not implemented**; only a cheap silhouette scale past that range
 
 Also: check-export + check-roundtrip green.
 

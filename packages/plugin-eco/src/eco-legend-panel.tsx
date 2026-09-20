@@ -3,10 +3,29 @@
 import { useState, useSyncExternalStore } from 'react'
 import { isEcoBridgeReady, requestEcoGlbExport } from './bridge'
 import {
+  ECO_CURVE_WALK_TOLERANCE_M,
+  ECO_WALL_SAMPLE_STEP_M,
+} from './eco-curve-tolerance'
+import {
+  addEcoCatenary,
+  addEcoLoft,
+  addEcoVault,
+  getEcoOrganicState,
+  makeDefaultBarrelVault,
+  makeDefaultCatenary,
+  makeDefaultLeafLoft,
+  removeEcoCatenary,
+  removeEcoLoft,
+  removeEcoVault,
+  subscribeEcoOrganic,
+  updateEcoVault,
+} from './eco-organic-store'
+import {
   addEcoShell,
   getEcoShellsState,
   makeDefaultLeafShell,
   removeEcoShell,
+  setShellRise,
   subscribeEcoShells,
 } from './eco-shell-store'
 import {
@@ -30,6 +49,10 @@ function useShells() {
   return useSyncExternalStore(subscribeEcoShells, getEcoShellsState, getEcoShellsState)
 }
 
+function useOrganic() {
+  return useSyncExternalStore(subscribeEcoOrganic, getEcoOrganicState, getEcoOrganicState)
+}
+
 /**
  * Legend + visibility toggles for Eco site overlays, Walk, and world export.
  */
@@ -37,6 +60,7 @@ export default function EcoLegendPanel() {
   const { site, guideVisibility, showGhost, showCompass } = useEcoSiteStore()
   const { enabled: walkEnabled, firstPerson } = useWalkStore()
   const { shells } = useShells()
+  const organic = useOrganic()
   const [exporting, setExporting] = useState(false)
 
   const onExport = () => {
@@ -69,14 +93,89 @@ export default function EcoLegendPanel() {
         Add leaf shell (26×13 demo)
       </button>
       {shells.map((s) => (
-        <label key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ flex: 1 }}>{s.name}</span>
-          <button onClick={() => removeEcoShell(s.id)} type="button">
+        <div key={s.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ flex: 1 }}>{s.name}</span>
+            <button onClick={() => removeEcoShell(s.id)} type="button">
+              Remove
+            </button>
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            Rise
+            <input
+              max={2.5}
+              min={0.25}
+              onChange={(e) => setShellRise(s.id, Number(e.target.value))}
+              step={0.05}
+              type="range"
+              value={s.rise ?? 1}
+            />
+            <span style={{ width: 36, textAlign: 'right' }}>{(s.rise ?? 1).toFixed(2)}</span>
+          </label>
+        </div>
+      ))}
+      <div style={{ opacity: 0.65 }}>Shells export in the GLB only — no walk solids.</div>
+
+      <div style={{ fontWeight: 600 }}>Organic (H10)</div>
+      <button
+        onClick={() => addEcoLoft(makeDefaultLeafLoft())}
+        style={{ padding: '6px 10px', cursor: 'pointer', textAlign: 'left' }}
+        type="button"
+      >
+        Add lofted leaf surface
+      </button>
+      {organic.lofts.map((l) => (
+        <label key={l.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ flex: 1 }}>{l.name}</span>
+          <button onClick={() => removeEcoLoft(l.id)} type="button">
             Remove
           </button>
         </label>
       ))}
-      <div style={{ opacity: 0.65 }}>Shells export in the GLB only — no walk solids.</div>
+      <button
+        onClick={() => addEcoVault(makeDefaultBarrelVault())}
+        style={{ padding: '6px 10px', cursor: 'pointer', textAlign: 'left' }}
+        type="button"
+      >
+        Add barrel vault + ribs
+      </button>
+      {organic.vaults.map((v) => (
+        <div key={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ flex: 1 }}>{v.name}</span>
+            <button onClick={() => removeEcoVault(v.id)} type="button">
+              Remove
+            </button>
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            Rise
+            <input
+              max={8}
+              min={0.5}
+              onChange={(e) => updateEcoVault(v.id, { rise: Number(e.target.value) })}
+              step={0.1}
+              type="range"
+              value={v.rise}
+            />
+            <span style={{ width: 36, textAlign: 'right' }}>{v.rise.toFixed(1)}</span>
+          </label>
+        </div>
+      ))}
+      <button
+        onClick={() => addEcoCatenary(makeDefaultCatenary())}
+        style={{ padding: '6px 10px', cursor: 'pointer', textAlign: 'left' }}
+        type="button"
+      >
+        Add catenary arch
+      </button>
+      {organic.catenaries.map((c) => (
+        <label key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ flex: 1 }}>{c.name}</span>
+          <button onClick={() => removeEcoCatenary(c.id)} type="button">
+            Remove
+          </button>
+        </label>
+      ))}
 
       <div style={{ fontWeight: 600 }}>Export</div>
       <button
@@ -106,7 +205,8 @@ export default function EcoLegendPanel() {
           <div style={{ opacity: 0.75, lineHeight: 1.35 }}>
             With the ghost on, wall/slab drafting snaps to the massing outline (and GLB silhouette).
             Hold <kbd>Alt</kbd> to suspend. Curved walls use the sagitta handle /
-            <code>curveOffset</code>; export samples arcs every 0.5&nbsp;m.
+            <code>curveOffset</code>; walk rings are polylines with chord error ≤{' '}
+            {ECO_CURVE_WALK_TOLERANCE_M * 100}&nbsp;cm (max step {ECO_WALL_SAMPLE_STEP_M}&nbsp;m).
           </div>
 
           <div style={{ fontWeight: 600 }}>Site overlays</div>

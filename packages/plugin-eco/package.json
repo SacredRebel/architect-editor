@@ -28,7 +28,8 @@
     "check:glb": "bun test/check-glb-h1.mjs",
     "check:export": "bun test/check-export.mjs",
     "check:roundtrip": "bun test/check-roundtrip.mjs",
-    "check:trees": "bun test/check-trees.mjs"
+    "check:trees": "bun test/check-trees.mjs",
+    "check:h10": "bun test/check-h10.mjs"
   },
   "peerDependencies": {
     "@pascal-app/core": "^1.0.1",

@@ -13,20 +13,30 @@ Adapted: measure → decide → apply → verify. Used `@gltf-transform/*`, `mes
 | `src/glb-audit.ts` | Audit report + **`assertHardGlbAudit`** — throws, does not warn |
 | `src/glb-optimise.ts` | `compat` (quantize, world eco:glb) · `web` (meshopt + quantize, architects download) |
 | `exportEcoGlb` | Always optimises → stamps walk → **hard-audits** before return |
-| `test/check-glb-h1.mjs` | House export passes; corrupt / empty / 5 km box **fail**; large stand-in → &lt;500 KB |
+| `test/check-glb-h1.mjs` | House export passes; corrupt / empty / 5 km box **fail**; **real Oak Leaf** → &lt;500 KB |
 
 Also fixed `stampWalkExtras` JSON chunk padding: spaces (`0x20`) per glTF spec (nulls broke `@gltf-transform` parse).
 
-## Numbers
+## Numbers — real Oak Leaf (acceptance)
+
+Source: [`oak-leaf-massing.glb`](https://raw.githubusercontent.com/SacredRebel/sulphur-mountain-world/main/models/oak-leaf-massing.glb)
+
+| | Before | After (`web`) |
+|---|---|---|
+| Bytes | **2 154 696** | **439 112** (20.4%) |
+| Triangles | 51 348 | 51 348 (unchanged) |
+| Textures | 0 | 0 |
+| Extent (m) | 55.45 × 14.8 × 49.9 | same |
+| Extensions | — | `EXT_meshopt_compression`, `KHR_mesh_quantization` |
+
+Hard audit passes at `maxBytes: 500 KB`. Fixture: `packages/plugin-eco/test/oak-leaf.glb` → `oak-leaf.web.glb`.
+
+### Pipeline proof (stand-in, not the budget)
 
 | Asset | Before | After | Notes |
 |---|---|---|---|
-| Parametric house (`compat`) | 8 664 B raw export | 12 612 B stamped | Walk extras grow JSON; under 500 KB; check-export / roundtrip green |
-| Oak Leaf **stand-in** (1.96 MB high-poly massing, Oak Leaf scale ~51×12×28 m) | **1 964 540 B** | **87 860 B** (4.5%) | `web` profile; triangles unchanged 83 456; requires `EXT_meshopt_compression` + `KHR_mesh_quantization` |
-
-Live Oak Leaf `refGlb` from spatial-map is ~2.15 MB base64 (~2.1 MB binary). Same pipeline applies:  
-`bun packages/plugin-eco/test/check-glb-h1.mjs path/to/oak-leaf.glb`  
-(Browser sandbox could not POST the live payload to localhost; stand-in proves the gate.)
+| Parametric house (`compat`) | 8 664 B raw | 12 612 B stamped | Walk extras grow JSON |
+| High-poly stand-in (different topology) | 1 964 540 B | 87 860 B | Proves the gate only — **not** the Oak Leaf number |
 
 ## Hard audit failures (deliberate)
 
@@ -40,9 +50,9 @@ Live Oak Leaf `refGlb` from spatial-map is ~2.15 MB base64 (~2.1 MB binary). Sam
 
 ## Checks
 
-- `bun packages/plugin-eco/test/check-glb-h1.mjs test/oak-leaf-standin.glb` — OK  
-- `bun packages/plugin-eco/test/check-export.mjs` — OK (13 152 B)  
-- `bun packages/plugin-eco/test/check-roundtrip.mjs` — OK (18 252 B)
+- `bun packages/plugin-eco/test/check-glb-h1.mjs test/oak-leaf.glb` — OK (real Oak Leaf)
+- `bun packages/plugin-eco/test/check-export.mjs` — OK
+- `bun packages/plugin-eco/test/check-roundtrip.mjs` — OK
 
 ## Commit
 

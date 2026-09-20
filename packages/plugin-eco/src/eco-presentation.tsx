@@ -7,6 +7,7 @@ import { ensureEcoPlanSnapInstalled } from './eco-ghost-snap'
 import { EcoGuides } from './eco-guides'
 import { EcoPlacedAssets } from './eco-placed-assets'
 import { EcoShells } from './eco-shells'
+import { EcoOrganics } from './eco-organics'
 import { EcoTrees } from './eco-trees'
 import { EcoWalk } from './eco-walk'
 
@@ -23,6 +24,7 @@ export default function EcoPresentation() {
         <EcoGhost />
       </Suspense>
       <EcoShells />
+      <EcoOrganics />
       <EcoPlacedAssets />
       <EcoTrees />
       <EcoCompass />

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
-import type { EcoShell } from './eco-shell-store'
+import { effectiveRidgeHeights, type EcoShell } from './eco-shell-store'
+import { ECO_CURVE_WALK_TOLERANCE_M } from './eco-curve-tolerance'
 
 function dist2(ax: number, az: number, bx: number, bz: number) {
   const dx = bx - ax
@@ -38,7 +39,7 @@ function closestOnPolyline(
 
 function ridgeHeightAt(shell: EcoShell, tAlong: number): number {
   const poly = shell.ridge
-  const hs = shell.ridgeHeights
+  const hs = effectiveRidgeHeights(shell)
   if (poly.length === 0) return shell.eaveHeight
   let walked = 0
   const lengths: number[] = []
@@ -100,24 +101,37 @@ export function buildShellObject3D(
   const positions: number[] = []
   const indices: number[] = []
 
-  // Fan from ridge samples to outline: strips along ridge
-  const ridgeN = Math.max(2, shell.ridge.length)
-  const across = 10
+  // Adaptive strips along ridge — always include control vertices so parametric
+  // ridgeHeights peaks are exact (not undersampled by uniform t).
+  const ridgeLen = polylineLength(shell.ridge)
+  const minSegs = Math.max(
+    2,
+    shell.ridge.length - 1,
+    Math.ceil(ridgeLen / Math.max(ECO_CURVE_WALK_TOLERANCE_M * 20, 0.35)),
+  )
+  const tSet = new Set<number>([0, 1])
+  {
+    let walked = 0
+    const total = ridgeLen || 1
+    tSet.add(0)
+    for (let i = 0; i < shell.ridge.length - 1; i++) {
+      walked += Math.hypot(
+        shell.ridge[i + 1]![0] - shell.ridge[i]![0],
+        shell.ridge[i + 1]![1] - shell.ridge[i]![1],
+      )
+      tSet.add(walked / total)
+    }
+    for (let i = 0; i <= minSegs; i++) tSet.add(i / minSegs)
+  }
+  const ridgeTs = [...tSet].sort((a, b) => a - b)
+  const across = Math.max(8, Math.ceil(10 * Math.sqrt(shell.rise > 0 ? shell.rise : 1)))
   const grid: { x: number; y: number; z: number }[][] = []
 
-  for (let i = 0; i < ridgeN; i++) {
-    const t = i / (ridgeN - 1)
+  for (const t of ridgeTs) {
     const ridgePt = pointAlongPolyline(shell.ridge, t)
     const row: { x: number; y: number; z: number }[] = []
-    // Cast a normal in plan from ridge tangent toward +perp and −perp to outline
     const tangent = ridgeTangent(shell.ridge, t)
     const perp = { x: -tangent.z, z: tangent.x }
-    for (let j = 0; j <= across; j++) {
-      const u = j / across // 0 ridge → 1 eave (one side); we'll do both sides
-      // Sample both sides: j goes 0..across for left, then we build right separately
-      void u
-    }
-    // Build left (perp) and right (-perp) in one row: across left, ridge, across right
     const leftEdge = rayToOutline(ridgePt.x, ridgePt.z, perp.x, perp.z, outline)
     const rightEdge = rayToOutline(ridgePt.x, ridgePt.z, -perp.x, -perp.z, outline)
     for (let j = across; j >= 0; j--) {
@@ -207,14 +221,31 @@ function addRibs(
     const perp = { x: -tangent.z, z: tangent.x }
     const left = rayToOutline(p.x, p.z, perp.x, perp.z, outline)
     const right = rayToOutline(p.x, p.z, -perp.x, -perp.z, outline)
-    const yL = shellHeightAt(shell, left.x, left.z)
-    const yR = shellHeightAt(shell, right.x, right.z)
-    const len = Math.hypot(right.x - left.x, right.z - left.z)
-    const rib = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, len), mat)
-    rib.position.set((left.x + right.x) / 2, (yL + yR) / 2 - 0.05, (left.z + right.z) / 2)
-    rib.rotation.y = Math.atan2(right.x - left.x, right.z - left.z)
-    if (ecoMaterialId) rib.userData.ecoMaterialId = ecoMaterialId
-    group.add(rib)
+    // Gridshell rib: segment along the tessellated surface, not a chord under the bulge
+    const segs = Math.max(
+      4,
+      Math.ceil(Math.hypot(right.x - left.x, right.z - left.z) / 0.4),
+    )
+    for (let s = 0; s < segs; s++) {
+      const u0 = s / segs
+      const u1 = (s + 1) / segs
+      const x0 = left.x + (right.x - left.x) * u0
+      const z0 = left.z + (right.z - left.z) * u0
+      const x1 = left.x + (right.x - left.x) * u1
+      const z1 = left.z + (right.z - left.z) * u1
+      const y0 = shellHeightAt(shell, x0, z0) - 0.05
+      const y1 = shellHeightAt(shell, x1, z1) - 0.05
+      const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0)
+      if (len < 1e-4) continue
+      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 6), mat)
+      rib.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)
+      rib.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3((x1 - x0) / len, (y1 - y0) / len, (z1 - z0) / len),
+      )
+      if (ecoMaterialId) rib.userData.ecoMaterialId = ecoMaterialId
+      group.add(rib)
+    }
   }
 }
 

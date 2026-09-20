@@ -15,6 +15,13 @@ import {
 } from './eco-materials'
 import { buildShellObject3D } from './eco-shell-geometry'
 import { getEcoShellsState } from './eco-shell-store'
+import {
+  buildCatenaryObject3D,
+  buildLoftObject3D,
+  buildMinimalObject3D,
+  buildVaultObject3D,
+} from './eco-organic-geometry'
+import { getEcoOrganicState } from './eco-organic-store'
 import { buildEcoTreeObject3D } from './eco-tree-mesh'
 import { getEcoTreesState } from './eco-trees-store'
 import { assertHardGlbAudit, auditGlb } from './glb-audit'
@@ -223,6 +230,28 @@ export function buildDesignGroup(nodes: NodeMap): THREE.Group {
     const materialId = resolveEcoMaterialId(elementKeyForShell(shell.id), 'shell')
     const mat = createEcoThreeMaterial(materialId, { doubleSide: true })
     group.add(buildShellObject3D(shell, mat, materialId))
+  }
+
+  const organic = getEcoOrganicState()
+  for (const loft of organic.lofts) {
+    const materialId = resolveEcoMaterialId(`loft:${loft.id}`, 'shell')
+    const mat = createEcoThreeMaterial(materialId, { doubleSide: true })
+    group.add(buildLoftObject3D(loft, mat, materialId))
+  }
+  for (const vault of organic.vaults) {
+    const materialId = resolveEcoMaterialId(`vault:${vault.id}`, 'shell')
+    const mat = createEcoThreeMaterial(materialId, { doubleSide: true })
+    group.add(buildVaultObject3D(vault, mat, materialId))
+  }
+  for (const cat of organic.catenaries) {
+    const materialId = resolveEcoMaterialId(`cat:${cat.id}`, 'shell')
+    const mat = createEcoThreeMaterial(materialId)
+    group.add(buildCatenaryObject3D(cat, mat, materialId))
+  }
+  for (const patch of organic.minimal) {
+    const materialId = resolveEcoMaterialId(`min:${patch.id}`, 'shell')
+    const mat = createEcoThreeMaterial(materialId, { doubleSide: true })
+    group.add(buildMinimalObject3D(patch, mat, materialId))
   }
 
   return group

@@ -43,7 +43,35 @@ export { exportEcoGlb, stampWalkExtras } from './export-glb'
 export { assertHardGlbAudit, auditGlb } from './glb-audit'
 export { optimiseGlb } from './glb-optimise'
 export type { OptimiseProfile } from './glb-optimise'
-export { buildEcoWalk } from './export-walk'
+export { buildEcoWalk, ECO_CURVE_WALK_TOLERANCE_M, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
+export {
+  addEcoShell,
+  clearEcoShells,
+  getEcoShellsState,
+  makeDefaultLeafShell,
+  removeEcoShell,
+  setEcoShells,
+  setShellRise,
+  subscribeEcoShells,
+  updateEcoShell,
+} from './eco-shell-store'
+export type { EcoShell } from './eco-shell-store'
+export {
+  addEcoCatenary,
+  addEcoLoft,
+  addEcoVault,
+  clearEcoOrganic,
+  getEcoOrganicState,
+  makeDefaultBarrelVault,
+  makeDefaultCatenary,
+  makeDefaultLeafLoft,
+  subscribeEcoOrganic,
+} from './eco-organic-store'
+export { tessellateLoft } from './eco-loft'
+export type { EcoLoft } from './eco-loft'
+export { tessellateVault } from './eco-vault'
+export type { EcoVault } from './eco-vault'
+export { ECO_TREE_IMPOSTOR_DISTANCE_M, EcoTrees } from './eco-trees'
 export {
   ECO_TREE_VARIANT_IDS,
   ECO_TREE_VARIANTS,
@@ -56,7 +84,6 @@ export {
   subscribeEcoTrees,
 } from './eco-trees-store'
 export type { EcoTreePlacement, EcoTreeVariantId } from './eco-trees-store'
-export { ECO_TREE_IMPOSTOR_DISTANCE_M, EcoTrees } from './eco-trees'
 export {
   exportEcoScenePayload,
   restoreEcoSceneExtras,

@@ -1,6 +1,13 @@
 import { getWallArcData, getWallChordFrame, getWallCurveFrameAt } from '@pascal-app/core'
 import type { EcoWalk } from './bridge-types'
+import {
+  adaptiveArcSampleStepM,
+  ECO_CURVE_WALK_TOLERANCE_M,
+  ECO_WALL_SAMPLE_STEP_M,
+} from './eco-curve-tolerance'
 import { levelWorldY } from './level-y'
+
+export { ECO_CURVE_WALK_TOLERANCE_M, ECO_WALL_SAMPLE_STEP_M }
 
 type NodeMap = Record<string, Record<string, unknown> | undefined>
 
@@ -33,9 +40,6 @@ type DoorLike = {
   width: number
   height?: number
 }
-
-/** Sample step for curved wall rings — matches the world. */
-export const ECO_WALL_SAMPLE_STEP_M = 0.5
 
 /** Editor +z (north) → world +z (south). */
 function toWorldXz([x, z]: [number, number]): [number, number] {
@@ -134,13 +138,16 @@ function frameAtRunMeters(wall: WallLike, s: number) {
 
 /**
  * Thickened plan ring for a wall run segment [s0,s1] in run-metres.
- * Curved walls: sample centerline every ECO_WALL_SAMPLE_STEP_M, offset by ±half thickness.
- * One solid per continuous run (not per sample).
+ * Curved walls: sample centerline every adaptive step (≤ ECO_WALL_SAMPLE_STEP_M,
+ * chord error ≤ ECO_CURVE_WALK_TOLERANCE_M), offset by ±half thickness.
+ * One solid per continuous run (not per sample). Ring is a polyline, never a chord.
  */
 export function wallSegmentRing(wall: WallLike, s0: number, s1: number): [number, number][] {
   const halfT = (wall.thickness ?? 0.1) / 2
   const span = Math.max(0, s1 - s0)
-  const samples = Math.max(1, Math.ceil(span / ECO_WALL_SAMPLE_STEP_M))
+  const arc = getWallArcData(wall)
+  const step = arc ? adaptiveArcSampleStepM(arc.radius) : ECO_WALL_SAMPLE_STEP_M
+  const samples = Math.max(1, Math.ceil(span / step))
   const left: [number, number][] = []
   const right: [number, number][] = []
 
@@ -156,10 +163,17 @@ export function wallSegmentRing(wall: WallLike, s0: number, s1: number): [number
   return ring.map(([x, z]) => toWorldXz([x, z]))
 }
 
+/** Step used for a wall (for tests / docs). */
+export function wallSampleStepM(wall: WallLike): number {
+  const arc = getWallArcData(wall)
+  return arc ? adaptiveArcSampleStepM(arc.radius) : ECO_WALL_SAMPLE_STEP_M
+}
+
 /**
  * Derive EcoWalk from the scene graph (world frame: x east, y up, z south).
  * Rings are open (first point ≠ last); the host closes them.
- * Curved walls export as one solid per door-split run with 0.5 m sampling.
+ * Curved walls export as one solid per door-split run with adaptive sampling
+ * (chord error ≤ ECO_CURVE_WALK_TOLERANCE_M).
  */
 export function buildEcoWalk(nodes: NodeMap): EcoWalk {
   const floors: EcoWalk['floors'] = []

@@ -21,6 +21,14 @@ import {
 } from './eco-materials'
 import { getEcoShellsState, setEcoShells, type EcoShell } from './eco-shell-store'
 import {
+  getEcoOrganicState,
+  setEcoOrganicState,
+  type EcoOrganicState,
+} from './eco-organic-store'
+import type { EcoLoft } from './eco-loft'
+import type { EcoVault } from './eco-vault'
+import type { EcoCatenary, EcoMinimalPatch } from './eco-catenary'
+import {
   getEcoTreesState,
   isEcoTreeVariantId,
   setEcoTrees,
@@ -39,6 +47,7 @@ export type EcoMaterialsSceneBlob = {
 export type EcoScenePayload = SceneGraph & {
   ecoAssets?: { assets: EcoAsset[]; placements: EcoPlacement[] }
   ecoShells?: EcoShell[]
+  ecoOrganic?: EcoOrganicState
   ecoMaterials?: EcoMaterialsSceneBlob
   ecoTrees?: EcoTreePlacement[]
 }
@@ -50,6 +59,7 @@ export function serializeEcoShellsForScene(): EcoShell[] {
       outline: s.outline.map(([x, z]) => [x, z] as [number, number]),
       ridge: s.ridge.map(([x, z]) => [x, z] as [number, number]),
       ridgeHeights: [...s.ridgeHeights],
+      rise: s.rise > 0 ? s.rise : 1,
     }))
     .sort((a, b) => a.id.localeCompare(b.id))
 }
@@ -73,11 +83,35 @@ export function restoreEcoShellsFromScene(payload: unknown): void {
       eaveHeight: typeof s.eaveHeight === 'number' ? s.eaveHeight : 3,
       thickness: typeof s.thickness === 'number' ? s.thickness : 0.12,
       ribSpacing: typeof s.ribSpacing === 'number' ? s.ribSpacing : 0,
+      rise: typeof s.rise === 'number' && s.rise > 0 ? s.rise : 1,
     })
   }
   // Stable order for byte-identical re-export
   shells.sort((a, b) => a.id.localeCompare(b.id))
   setEcoShells(shells)
+}
+
+export function serializeEcoOrganicForScene(): EcoOrganicState {
+  const s = getEcoOrganicState()
+  return {
+    lofts: [...s.lofts].sort((a, b) => a.id.localeCompare(b.id)),
+    vaults: [...s.vaults].sort((a, b) => a.id.localeCompare(b.id)),
+    catenaries: [...s.catenaries].sort((a, b) => a.id.localeCompare(b.id)),
+    minimal: [...s.minimal].sort((a, b) => a.id.localeCompare(b.id)),
+  }
+}
+
+export function restoreEcoOrganicFromScene(payload: unknown): void {
+  if (!payload || typeof payload !== 'object') {
+    setEcoOrganicState({ lofts: [], vaults: [], catenaries: [], minimal: [] })
+    return
+  }
+  const raw = payload as Partial<EcoOrganicState>
+  const lofts = Array.isArray(raw.lofts) ? (raw.lofts as EcoLoft[]) : []
+  const vaults = Array.isArray(raw.vaults) ? (raw.vaults as EcoVault[]) : []
+  const catenaries = Array.isArray(raw.catenaries) ? (raw.catenaries as EcoCatenary[]) : []
+  const minimal = Array.isArray(raw.minimal) ? (raw.minimal as EcoMinimalPatch[]) : []
+  setEcoOrganicState({ lofts, vaults, catenaries, minimal })
 }
 
 export function serializeEcoMaterialsForScene(): EcoMaterialsSceneBlob {
@@ -182,6 +216,7 @@ export function exportEcoScenePayload(options?: {
     installedPlugins: graph.installedPlugins ? [...graph.installedPlugins] : [],
     ecoAssets,
     ecoShells: serializeEcoShellsForScene(),
+    ecoOrganic: serializeEcoOrganicForScene(),
     ecoMaterials: serializeEcoMaterialsForScene(),
     ecoTrees: serializeEcoTreesForScene(),
   }
@@ -195,6 +230,7 @@ export function restoreEcoSceneExtras(scene: unknown): void {
   if (!scene || typeof scene !== 'object') return
   const s = scene as EcoScenePayload
   restoreEcoShellsFromScene(s.ecoShells ?? [])
+  restoreEcoOrganicFromScene(s.ecoOrganic)
   restoreEcoMaterialsFromScene(s.ecoMaterials)
   if ('ecoAssets' in s) restoreEcoAssetsFromScene(s.ecoAssets)
   restoreEcoTreesFromScene(s.ecoTrees ?? [])
@@ -206,6 +242,7 @@ export function restoreEcoSceneExtras(scene: unknown): void {
  */
 export function roundTripEcoScenePayload(scene: EcoScenePayload): EcoScenePayload {
   restoreEcoShellsFromScene(scene.ecoShells ?? [])
+  restoreEcoOrganicFromScene(scene.ecoOrganic)
   restoreEcoMaterialsFromScene(scene.ecoMaterials)
   if ('ecoAssets' in scene) restoreEcoAssetsFromScene(scene.ecoAssets)
   else restoreEcoAssetsFromScene({ assets: [], placements: [] })
@@ -219,6 +256,7 @@ export function roundTripEcoScenePayload(scene: EcoScenePayload): EcoScenePayloa
     installedPlugins: scene.installedPlugins ? [...scene.installedPlugins] : [],
     ecoAssets: serializeEcoAssetsForScene(),
     ecoShells: serializeEcoShellsForScene(),
+    ecoOrganic: serializeEcoOrganicForScene(),
     ecoMaterials: serializeEcoMaterialsForScene(),
     ecoTrees: serializeEcoTreesForScene(),
   }

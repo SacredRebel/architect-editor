@@ -13,6 +13,11 @@ export type EcoShell = {
   thickness: number
   /** Optional rib spacing along the ridge (m); 0 = none. */
   ribSpacing: number
+  /**
+   * Parametric rise multiplier on (ridgeHeight − eave). Default 1.
+   * Changing rise regenerates tessellation — never baked at creation.
+   */
+  rise: number
 }
 
 type ShellState = {
@@ -55,7 +60,25 @@ export function clearEcoShells(): void {
   emit()
 }
 
-/** Default Oak-Leaf-ish leaf for F2 acceptance / panel “Add leaf”. */
+export function updateEcoShell(id: string, patch: Partial<EcoShell>): void {
+  state = {
+    shells: state.shells.map((s) => (s.id === id ? { ...s, ...patch, id: s.id } : s)),
+  }
+  emit()
+}
+
+/** Scale ridge rise above eave; eave stays put. Tessellation follows on next build. */
+export function setShellRise(id: string, rise: number): void {
+  updateEcoShell(id, { rise: Math.max(0.05, rise) })
+}
+
+/** Effective ridge heights after applying parametric `rise`. */
+export function effectiveRidgeHeights(shell: EcoShell): number[] {
+  const rise = shell.rise > 0 ? shell.rise : 1
+  return shell.ridgeHeights.map((h) => shell.eaveHeight + (h - shell.eaveHeight) * rise)
+}
+
+/** Default Oak-Leaf-ish leaf for F2 / H10 acceptance / panel “Add leaf”. */
 export function makeDefaultLeafShell(id = `shell-${Date.now()}`): EcoShell {
   const length = 26
   const width = 13
@@ -84,5 +107,6 @@ export function makeDefaultLeafShell(id = `shell-${Date.now()}`): EcoShell {
     eaveHeight: 3,
     thickness: 0.12,
     ribSpacing: 2.5,
+    rise: 1,
   }
 }
