@@ -13,7 +13,7 @@ H3 is still the construction-data phase — not demoted; it comes after the tool
 | H2 | Real trees (ez-tree) | pascalorg/plugin-trees |
 | **H10** | **Curved / organic geometry** | parametric loft/shell/vault in plugin-eco |
 | **H12** | Materials, real glass, presentation; sun/sky/tonemap **interim** | **DONE** (materials/glass/baseline) — lighting **blocked on world lighting contract**; see `H12-done.md` |
-| H3 | Material takeoff CSV | pascalorg/plugin-bones — next after H12; needs a written brief before start |
+| H3 | Material takeoff CSV | **DONE** — see `H3-done.md` / `H3-eval.md` (Ventura County; basis labels; Bones read, honest adapter) |
 | H9 | Grow paths (space colonization) | ggooonn/Diffusion-Masterplanning |
 | H4 | @react-facet live readouts | Mojang/ore-ui |
 | H7 | Phone touch + movement numbers | pascalorg/plugin-boots |

@@ -104,6 +104,7 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
   void import('@eco/plugin-eco').then(
     ({
       ecoAssetsHostPanel,
+      ecoConstructionHostPanel,
       ecoDrawingsHostPanel,
       ecoHostPanel,
       ecoMaterialsHostPanel,
@@ -113,6 +114,7 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
       registerEditorHostPanel(ecoAssetsHostPanel)
       registerEditorHostPanel(ecoMaterialsHostPanel)
       registerEditorHostPanel(ecoDrawingsHostPanel)
+      registerEditorHostPanel(ecoConstructionHostPanel)
       registerViewerPresentation(ecoPresentation)
     },
   )

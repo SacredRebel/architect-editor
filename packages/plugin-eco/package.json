@@ -18,6 +18,7 @@
   },
   "files": [
     "src",
+    "data",
     "test",
     "README.md"
   ],
@@ -31,6 +32,7 @@
     "check:trees": "bun test/check-trees.mjs",
     "check:h10": "bun test/check-h10.mjs",
     "check:h12": "bun test/check-h12.mjs",
+    "check:h3": "bun test/check-h3.mjs",
     "render:h12": "bun test/render-h12-baseline.mjs"
   },
   "peerDependencies": {

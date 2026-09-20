@@ -38,7 +38,7 @@ export {
   setShowGhost,
   subscribeEcoSite,
 } from './eco-site-store'
-export { ecoAssetsHostPanel, ecoDrawingsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
+export { ecoAssetsHostPanel, ecoConstructionHostPanel, ecoDrawingsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
 export { exportEcoGlb, stampWalkExtras } from './export-glb'
 export {
   assertHardGlbAudit,
@@ -161,3 +161,16 @@ export {
   stableStringifyEcoScene,
 } from './eco-scene'
 export type { EcoScenePayload } from './eco-scene'
+export {
+  ecoConstructionCsv,
+  getEcoJurisdiction,
+  polygonAreaM2,
+  runEcoConstructionTakeoff,
+} from './eco-construction'
+export type {
+  EcoConstructionResult,
+  EcoConstructionRow,
+  EcoJurisdictionProfile,
+  TakeoffBasis,
+} from './eco-construction'
+export { VENTURA_COUNTY_JURISDICTION } from './eco-jurisdiction-ventura'

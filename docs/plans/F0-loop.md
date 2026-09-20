@@ -70,4 +70,4 @@ cd apps/editor && bun run build:static && npx serve out
 
 Baseline PNGs: `docs/plans/h12-baseline/{before,after}.png`. See `H12-done.md`.
 Leaf shell compat **161 816 → 220 984** (still under 500 KB without meshopt).
-Next Track A phase: **H3** (material takeoff CSV) once a clear brief exists.
+Next Track A phase: **H9** (grow paths) once a clear brief exists — H3 construction takeoff is done (`H3-done.md`).

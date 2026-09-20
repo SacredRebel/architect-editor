@@ -45,3 +45,13 @@ export const ecoDrawingsHostPanel: EditorHostPanel = {
   component: () => import('./eco-drawings-panel'),
   defaultInstalled: true,
 }
+
+export const ecoConstructionHostPanel: EditorHostPanel = {
+  id: 'eco:plugin-eco:construction',
+  label: 'Construction',
+  icon: { kind: 'url', src: '/icons/mesh.webp' },
+  description: 'Ventura County material takeoff CSV with basis labels on every quantity',
+  pluginId: 'eco:plugin-eco',
+  component: () => import('./eco-construction-panel'),
+  defaultInstalled: true,
+}
