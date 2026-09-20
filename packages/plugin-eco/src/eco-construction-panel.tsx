@@ -42,8 +42,30 @@ export default function EcoConstructionPanel() {
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
       <div style={{ fontWeight: 600 }}>Construction takeoff</div>
       <div style={{ opacity: 0.7, lineHeight: 1.4 }}>
-        Massing quantities with an honest <code>basis</code> on every row. Member-counted Bones
-        takeoff is not claimed here — see <code>docs/plans/H3-eval.md</code>.
+        Geometry metrics plus Bones <code>computeLevel</code>/<code>computeTakeoff</code> when
+        Pascal wall/slab/level nodes are present. Every row carries an honest <code>basis</code>{' '}
+        — member counts are <code>takeoff</code>; massing rules of thumb stay <code>estimate</code>.
+      </div>
+
+      <div
+        style={{
+          border: '1px solid rgba(255,255,255,0.14)',
+          borderRadius: 6,
+          padding: 8,
+          background: result.bones.ok ? 'rgba(107,203,119,0.08)' : 'rgba(255,217,61,0.08)',
+          lineHeight: 1.4,
+        }}
+      >
+        {result.bones.ok ? (
+          <>
+            Bones engines: <strong>{result.bones.memberCount}</strong> members on{' '}
+            <code>{result.bones.levelId}</code> → {result.bones.takeoffRowCount} takeoff rows
+          </>
+        ) : (
+          <>
+            Bones engines not run — {result.bones.reason}. Massing estimates kept.
+          </>
+        )}
       </div>
 
       <div

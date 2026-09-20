@@ -54,47 +54,42 @@ Takeoff sections: Wall framing · Floor · Roof · Foundation · Sheathing · El
 
 ## Fit against Eco / Pascal scenes
 
-Eco scenes **are** Pascal `SceneGraph`s (`wall`/`slab`/`level` shapes match what `wall-model` expects). Parametric eco shells / lofts / vaults / trees are **extra** — Bones does not read them; they would need a separate adapter path or stay out of member takeoff.
+Eco scenes **are** Pascal `SceneGraph`s (`wall`/`slab`/`level` shapes match what `wall-model` expects). Parametric eco shells / lofts / vaults / trees are **extra** — Bones does not read them; they stay out of member takeoff (massing adapter + warning).
 
-Bones is already registered in `apps/editor` (`defaultInstalled: false`). Its **public package exports do not include** `computeLevel` / `computeTakeoff`, so Eco cannot call engines via the published entry without deep imports or a vendored copy.
+Bones is registered in `apps/editor` (`defaultInstalled: false`). Public package exports still omit engines; Eco **deep-loads** them via `eco-bones-engines.ts` from `.cache/plugin-bones` or the installed package root (`computeLevel` / `computeTakeoff` / `FramingNode`).
 
 ## Adapter shape required for Eco H3
-
-Do **not** pretend massing CSV rows are Bones member takeoffs.
 
 ```
 EcoScenePayload.nodes
         │
-        ▼
-┌───────────────────┐
-│ extractGeometry   │  walls (LF, exterior?), slabs (polygon area), openings
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│ jurisdiction      │  Ventura County profile — data IN REPO (no fetch)
-│ (code + climate)  │  shown on-screen next to numbers
-└─────────┬─────────┘
-          │
-          ├─ geometry metrics ──► basis: takeoff   (only where geometry earns it)
-          ├─ rule-of-thumb BOM ─► basis: estimate  (DEFAULT for assembly counts)
-          └─ unknown / N/A ─────► basis: placeholder
-          │
-          ▼
-   BasisLabeledRow[]  →  panel + CSV
-   { section, item, quantity, unit, basis, detail, citation? }
+        ├─ extractGeometry ──► floor area / exterior LF ──► basis: takeoff
+        │
+        ├─ IF straight wall(+slab) on a level AND engines load:
+        │     FramingNode(parentId=level, jurisdiction=US-CA)
+        │           │
+        │           ▼
+        │     computeLevel → members/fixtures/areas
+        │           │
+        │           ▼
+        │     computeTakeoff → rows ──► basis: takeoff  (member-counted)
+        │
+        └─ ELSE massing BOM ──► basis: estimate / placeholder
+              + Bones status row explaining why engines did not run
+
+   Ventura climate JSON (in-repo) ──► panel + CSV headers (no network)
 ```
 
 | Basis | When Eco may use it |
 |---|---|
-| `takeoff` | Quantity derived from detailed enough geometry (e.g. slab polygon area, exterior wall centerline LF) |
-| `estimate` | Massing / spacing rules of thumb (studs ≈ LF ÷ o.c., sheathing ≈ face area ÷ sheet, MEP ≈ area factors) |
-| `placeholder` | Tool cannot honestly produce (engineered beams, site-specific soils, unplaced fixtures) |
+| `takeoff` | Geometry metrics (slab area, wall LF) **or** Bones member/fixture counts from real wall/slab extract |
+| `estimate` | Massing / spacing rules of thumb (studs ≈ LF ÷ o.c., sheathing ≈ face area ÷ sheet, MEP ≈ area factors) — **never** upgrade LF÷o.c. studs to `takeoff` |
+| `placeholder` | Tool cannot honestly produce; Bones unavailable / curved-only / missing level |
 
-**Default to `estimate`.** Raise to `takeoff` only for earned geometry metrics. Every figure shows basis **beside the number**.
+**Default to `estimate` for massing BOM.** Raise to `takeoff` only for earned geometry metrics or Bones member counts. Every figure shows basis **beside the number**.
 
-Optional later: deep-import or package-export Bones `computeLevel` when walls are straight and a `bones:framing` config exists — then lumber/fixture rows can upgrade toward Bones’ member-counted takeoff. Until that path ships and is tested, Eco must not label stud counts as `takeoff`.
+**Shipped:** H3.1 deep-import path in `eco-bones-engines.ts` + merge in `eco-construction.ts`. See `H3-done.md`.
 
 ## Jurisdiction note (state vs county)
 
-Bones ships **state-typical** CA values (frost 12 in coastal min, snow ~5 psf, wind ~100 mph, SDC D, seismic hold-downs). Eco H3 must pin **Ventura County** explicitly (high seismic, WUI / Hazardous Fire Area regime, negligible frost) and show the edition + climate values used — see `packages/plugin-eco/data/jurisdiction/ventura-county.json` and H3.2 UI.
+Bones ships **state-typical** CA values (frost 12 in coastal min, snow ~5 psf, wind ~100 mph, SDC D, seismic hold-downs). Eco H3 pins **Ventura County** explicitly for on-screen / CSV jurisdiction (high seismic, WUI / Hazardous Fire Area regime, negligible frost) — see `packages/plugin-eco/data/jurisdiction/ventura-county.json` and H3.2 UI. Bones engines still get `US-CA` for their internal tables; Eco does not network-fetch climate.

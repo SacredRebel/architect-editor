@@ -1,11 +1,21 @@
 /**
- * H3 construction takeoff — headless geometry extract + basis-labeled estimates.
+ * H3 construction takeoff — headless geometry extract + Bones member takeoff
+ * when Pascal wall/slab/level nodes are present.
  *
- * Does NOT deep-import Bones engines (not on the public package surface).
- * Geometry that earns it → basis `takeoff`; assembly BOM → `estimate` (default);
- * unknowns → `placeholder`. Jurisdiction data is local JSON (no network).
+ * Basis rules (sacred):
+ * - Bones member-counted quantities → `takeoff` only when members came from
+ *   real wall/slab geometry (not invented).
+ * - Massing / rule-of-thumb rows → `estimate` (default).
+ * - Unknowns → `placeholder`.
+ * - Never label stud counts from LF÷o.c. as `takeoff`.
+ *
+ * Jurisdiction climate is local Ventura JSON (no network).
  */
 
+import {
+  runBonesMemberTakeoff,
+  type BonesTakeoffStatus,
+} from './eco-bones-engines'
 import {
   VENTURA_COUNTY_JURISDICTION,
   type EcoJurisdictionProfile,
@@ -22,11 +32,12 @@ export type EcoConstructionRow = {
   detail: string
 }
 
-export type { EcoJurisdictionProfile }
+export type { EcoJurisdictionProfile, BonesTakeoffStatus }
 
 export type EcoConstructionResult = {
   jurisdiction: EcoJurisdictionProfile
   rows: EcoConstructionRow[]
+  bones: BonesTakeoffStatus
   metrics: {
     floorAreaM2: number
     exteriorWallLfM: number
@@ -186,6 +197,8 @@ export function getEcoJurisdiction(): EcoJurisdictionProfile {
 
 /**
  * Headless construction quantities for an Eco / Pascal nodes dict.
+ * Prefers Bones member takeoff when wall/slab/level geometry is present;
+ * otherwise keeps the massing adapter and records why.
  */
 export function runEcoConstructionTakeoff(nodes: NodesRecord): EcoConstructionResult {
   const jurisdiction = VENTURA_COUNTY_JURISDICTION
@@ -203,7 +216,7 @@ export function runEcoConstructionTakeoff(nodes: NodesRecord): EcoConstructionRe
   const rows: EcoConstructionRow[] = []
   const push = (row: EcoConstructionRow) => rows.push(row)
 
-  // --- Geometry (takeoff) ---
+  // --- Geometry (takeoff) — always from scene polygons / centerlines ---
   push({
     section: 'Geometry',
     item: 'Total floor area',
@@ -243,92 +256,113 @@ export function runEcoConstructionTakeoff(nodes: NodesRecord): EcoConstructionRe
     detail: `${walls.length} wall segment(s) including partitions`,
   })
 
-  // --- Framing estimates (default estimate) ---
-  const framingLf = allWallLfM > 0 ? allWallLfM : exteriorWallLfM
-  if (framingLf > 0) {
-    const studPcs = Math.ceil(framingLf / STUD_OC_M) + walls.length
+  const bones = runBonesMemberTakeoff(nodes)
+
+  if (bones.status.ok) {
     push({
-      section: 'Wall framing',
-      item: 'Studs (2x4 / 2x6 class)',
-      quantity: studPcs,
-      unit: 'pcs',
-      basis: 'estimate',
-      detail: `rule of thumb: wall LF ÷ ${STUD_OC_M} m (16" o.c.) + 1 end stud per segment — not member-counted`,
+      section: 'Bones',
+      item: 'Member takeoff',
+      quantity: bones.status.memberCount,
+      unit: 'members',
+      basis: 'takeoff',
+      detail: `computeLevel + computeTakeoff on level ${bones.status.levelId} (${bones.status.takeoffRowCount} quantity rows)`,
     })
-    push({
-      section: 'Wall framing',
-      item: 'Plates (bottom + double top)',
-      quantity: round1(framingLf * 3),
-      unit: 'lf',
-      basis: 'estimate',
-      detail: '3 × wall LF (one bottom + two top); stock drop not applied',
-    })
+    for (const row of bones.rows) push(row)
   } else {
     push({
-      section: 'Wall framing',
-      item: 'Studs / plates',
+      section: 'Bones',
+      item: 'Member takeoff',
       quantity: 0,
-      unit: 'pcs',
+      unit: '—',
       basis: 'placeholder',
-      detail: 'no walls to estimate',
+      detail: bones.status.reason,
     })
-  }
 
-  if (exteriorWallFaceM2 > 0) {
-    const sheets = Math.ceil(exteriorWallFaceM2 / SHEET_M2)
-    push({
-      section: 'Sheathing',
-      item: 'Wall sheathing 7/16" WSP',
-      quantity: sheets,
-      unit: 'sheets',
-      basis: 'estimate',
-      detail: `gross face area ÷ 4x8 (${round2(SHEET_M2)} m²); openings not deducted; +10% waste not stacked into qty`,
-    })
-  }
+    // --- Massing framing estimates (default estimate) — only when Bones did not run ---
+    const framingLf = allWallLfM > 0 ? allWallLfM : exteriorWallLfM
+    if (framingLf > 0) {
+      const studPcs = Math.ceil(framingLf / STUD_OC_M) + walls.length
+      push({
+        section: 'Wall framing',
+        item: 'Studs (2x4 / 2x6 class)',
+        quantity: studPcs,
+        unit: 'pcs',
+        basis: 'estimate',
+        detail: `rule of thumb: wall LF ÷ ${STUD_OC_M} m (16" o.c.) + 1 end stud per segment — not member-counted`,
+      })
+      push({
+        section: 'Wall framing',
+        item: 'Plates (bottom + double top)',
+        quantity: round1(framingLf * 3),
+        unit: 'lf',
+        basis: 'estimate',
+        detail: '3 × wall LF (one bottom + two top); stock drop not applied',
+      })
+    } else {
+      push({
+        section: 'Wall framing',
+        item: 'Studs / plates',
+        quantity: 0,
+        unit: 'pcs',
+        basis: 'placeholder',
+        detail: 'no walls to estimate',
+      })
+    }
 
-  // Foundation — frost 0 but 12" min embedment
-  if (exteriorWallLfM > 0) {
-    const embedM = climate.footingEmbedmentMinIn * 0.0254
-    const widthM = 0.4064 // 16" typical strip
-    const m3 = exteriorWallLfM * widthM * embedM
-    push({
-      section: 'Foundation',
-      item: 'Strip footing concrete',
-      quantity: Math.max(0.1, round1(m3 * M3_TO_YD3)),
-      unit: 'yd³',
-      basis: 'estimate',
-      detail: `perimeter ${round2(exteriorWallLfM)} m × ${round2(widthM)} m × ${climate.footingEmbedmentMinIn}" min embed (frost ${climate.frostLineIn}" — negligible coastal); SDC ${climate.seismicSdc}`,
-    })
-    const boltOcM = climate.anchorBoltSpacingFt * 0.3048
-    const bolts = Math.ceil(exteriorWallLfM / boltOcM) + exteriorWalls.length
-    push({
-      section: 'Foundation',
-      item: 'Anchor bolts',
-      quantity: bolts,
-      unit: 'pcs',
-      basis: 'estimate',
-      detail: `${climate.anchorBoltSpacingFt}' o.c. (seismic hold-downs profile) + ends; R403.1.6 class`,
-    })
-  }
+    if (exteriorWallFaceM2 > 0) {
+      const sheets = Math.ceil(exteriorWallFaceM2 / SHEET_M2)
+      push({
+        section: 'Sheathing',
+        item: 'Wall sheathing 7/16" WSP',
+        quantity: sheets,
+        unit: 'sheets',
+        basis: 'estimate',
+        detail: `gross face area ÷ 4x8 (${round2(SHEET_M2)} m²); openings not deducted; +10% waste not stacked into qty`,
+      })
+    }
 
-  // MEP area factors
-  if (floorAreaM2 > 0) {
-    push({
-      section: 'Electrical',
-      item: 'Receptacles (rough count)',
-      quantity: Math.max(1, Math.ceil(floorAreaM2 / 3.6)),
-      unit: 'pcs',
-      basis: 'estimate',
-      detail: 'NEC 210.52-ish ~12 ft wall walk ≈ 3.6 m²/device — not a receptacle walk',
-    })
-    push({
-      section: 'HVAC',
-      item: 'Cooling tonnage (rule of thumb)',
-      quantity: Math.max(0.5, round1(floorAreaM2 / 55)),
-      unit: 'tons',
-      basis: 'estimate',
-      detail: '1 ton / 55 m² conditioned floor (Bones characteristics COOLING_M2_PER_TON) — not Manual J',
-    })
+    if (exteriorWallLfM > 0) {
+      const embedM = climate.footingEmbedmentMinIn * 0.0254
+      const widthM = 0.4064 // 16" typical strip
+      const m3 = exteriorWallLfM * widthM * embedM
+      push({
+        section: 'Foundation',
+        item: 'Strip footing concrete',
+        quantity: Math.max(0.1, round1(m3 * M3_TO_YD3)),
+        unit: 'yd³',
+        basis: 'estimate',
+        detail: `perimeter ${round2(exteriorWallLfM)} m × ${round2(widthM)} m × ${climate.footingEmbedmentMinIn}" min embed (frost ${climate.frostLineIn}" — negligible coastal); SDC ${climate.seismicSdc}`,
+      })
+      const boltOcM = climate.anchorBoltSpacingFt * 0.3048
+      const bolts = Math.ceil(exteriorWallLfM / boltOcM) + exteriorWalls.length
+      push({
+        section: 'Foundation',
+        item: 'Anchor bolts',
+        quantity: bolts,
+        unit: 'pcs',
+        basis: 'estimate',
+        detail: `${climate.anchorBoltSpacingFt}' o.c. (seismic hold-downs profile) + ends; R403.1.6 class`,
+      })
+    }
+
+    if (floorAreaM2 > 0) {
+      push({
+        section: 'Electrical',
+        item: 'Receptacles (rough count)',
+        quantity: Math.max(1, Math.ceil(floorAreaM2 / 3.6)),
+        unit: 'pcs',
+        basis: 'estimate',
+        detail: 'NEC 210.52-ish ~12 ft wall walk ≈ 3.6 m²/device — not a receptacle walk',
+      })
+      push({
+        section: 'HVAC',
+        item: 'Cooling tonnage (rule of thumb)',
+        quantity: Math.max(0.5, round1(floorAreaM2 / 55)),
+        unit: 'tons',
+        basis: 'estimate',
+        detail: '1 ton / 55 m² conditioned floor (Bones characteristics COOLING_M2_PER_TON) — not Manual J',
+      })
+    }
   }
 
   push({
@@ -352,6 +386,7 @@ export function runEcoConstructionTakeoff(nodes: NodesRecord): EcoConstructionRe
   return {
     jurisdiction,
     rows,
+    bones: bones.status,
     metrics: {
       floorAreaM2: round2(floorAreaM2),
       exteriorWallLfM: round2(exteriorWallLfM),

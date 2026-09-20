@@ -66,6 +66,7 @@
     "@gltf-transform/core": "^4.5.0",
     "@gltf-transform/extensions": "^4.5.0",
     "@gltf-transform/functions": "^4.5.0",
+    "@pascal-app/plugin-bones": "github:pascalorg/plugin-bones#5679260261ee1c733656ff6dfb99e30bb24b58a7",
     "@react-three/rapier": "^2.2.0",
     "draco3dgltf": "^1.5.7",
     "ecctrl": "^2.0.2",
