@@ -9,7 +9,7 @@ H3 is still the construction-data phase — not demoted; it comes after the tool
 | Phase | Goal | Tool repo |
 |---|---|---|
 | H0 | Live loop (Protection cleared) | — |
-| H1 | GLB optimise + audit | pascalorg/skills `glb-web-export` |
+| H1 | GLB optimise + **hard** audit (fail export) + on-screen size | **DONE** — see `H1-done.md` (ceilings: 500 KB, 0.5–500 m, tex ≤512 PoT, 1 mesh/material, z-south walk) |
 | H2 | Real trees (ez-tree) | pascalorg/plugin-trees |
 | **H10** | **Curved / organic geometry** | parametric loft/shell/vault in plugin-eco |
 | **H12** | Materials, real glass, presentation; sun/sky/tonemap **interim** | **DONE** (materials/glass/baseline) — lighting **blocked on world lighting contract**; see `H12-done.md` |

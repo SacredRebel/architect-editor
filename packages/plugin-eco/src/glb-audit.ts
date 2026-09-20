@@ -8,6 +8,33 @@ import draco3d from 'draco3dgltf'
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer'
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 
+/** Compat download budget (phone / architects). */
+export const ECO_GLB_MAX_BYTES = 500 * 1024
+/** Building AABB — any axis below this is likely cm / wrong units. */
+export const ECO_GLB_MIN_EXTENT_M = 0.5
+/** Building AABB — any axis above this is likely feet-as-metres / wrong scale. */
+export const ECO_GLB_MAX_EXTENT_M = 500
+/** Texture edge ceiling (powers of two). Prefer small given the 500 KB budget. */
+export const ECO_GLB_MAX_TEX_DIM = 512
+
+export type GlbTextureAudit = {
+  width: number
+  height: number
+  powerOfTwo: boolean
+}
+
+export type GlbFrameAudit = {
+  /** Scale.z on the eco-design (or first scaled) node — must be negative for z-south. */
+  designScaleZ: number | null
+  /** extras.walk present on scene or root. */
+  walkPresent: boolean
+  /** Min / max ring z from walk (world frame, z south). */
+  walkMinZ: number | null
+  walkMaxZ: number | null
+  /** Names of solids whose ring zs are all negative (editor-north walls). */
+  northWallsNegativeZ: string[]
+}
+
 export type GlbAuditReport = {
   bytes: number
   gzipBytes: number
@@ -20,6 +47,8 @@ export type GlbAuditReport = {
   drawCalls: number
   triangles: number
   textureVramMiB: number
+  textures: GlbTextureAudit[]
+  frame: GlbFrameAudit
   counts: {
     nodes: number
     meshes: number
@@ -34,12 +63,18 @@ export type GlbAuditReport = {
 }
 
 export type HardAuditOptions = {
-  /** Max raw file bytes (default 500 KiB for phone / architects download). */
+  /** Max raw file bytes (default 500 KiB). */
   maxBytes?: number
-  /** Reject models whose longest world extent exceeds this (metres). */
+  /** Reject any world AABB axis above this (metres). */
   maxExtentM?: number
-  /** Reject models whose longest world extent is below this (metres). */
+  /** Reject any world AABB axis below this (metres). */
   minExtentM?: number
+  /** Max texture width/height (default 512). */
+  maxTexDim?: number
+  /** Skip mesh-per-material gate (rare fixtures). */
+  skipMeshBudget?: boolean
+  /** Skip Y-up / z-south frame gate. */
+  skipFrame?: boolean
 }
 
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
@@ -113,6 +148,83 @@ function bytesPerTexel(
   return imageBytes / (width * height) > 0.75 ? 1 : 0.5
 }
 
+function isPowerOfTwo(n: number): boolean {
+  return n > 0 && (n & (n - 1)) === 0
+}
+
+type WalkExtras = {
+  floors?: { name?: string; ring?: [number, number][]; top?: number }[]
+  solids?: { name?: string; ring?: [number, number][]; base?: number; top?: number }[]
+}
+
+function readWalkExtras(extras: unknown): WalkExtras | null {
+  if (!extras || typeof extras !== 'object') return null
+  const walk = (extras as { walk?: unknown }).walk
+  if (!walk || typeof walk !== 'object') return null
+  return walk as WalkExtras
+}
+
+function auditFrame(doc: Document): GlbFrameAudit {
+  const root = doc.getRoot()
+  let designScaleZ: number | null = null
+  for (const node of root.listNodes()) {
+    const name = node.getName()
+    const sz = node.getScale()[2] ?? 1
+    if (name === 'eco-design' || name.startsWith('eco-design')) {
+      designScaleZ = sz
+      break
+    }
+    if (designScaleZ === null && sz < 0) designScaleZ = sz
+  }
+
+  let walk: WalkExtras | null = null
+  for (const scene of root.listScenes()) {
+    walk = readWalkExtras(scene.getExtras())
+    if (walk) break
+  }
+  if (!walk) {
+    for (const node of root.listNodes()) {
+      walk = readWalkExtras(node.getExtras())
+      if (walk) break
+    }
+  }
+  if (!walk) {
+    walk = readWalkExtras(root.getExtras())
+  }
+
+  let walkMinZ: number | null = null
+  let walkMaxZ: number | null = null
+  const northWallsNegativeZ: string[] = []
+  if (walk) {
+    const rings: [number, number][][] = []
+    for (const f of walk.floors ?? []) {
+      if (f.ring?.length) rings.push(f.ring)
+    }
+    for (const s of walk.solids ?? []) {
+      if (s.ring?.length) rings.push(s.ring)
+      const name = s.name ?? ''
+      if (/wall:.*N/i.test(name) || /_N(?:_|$)/i.test(name) || /wN(?:_|$)/i.test(name)) {
+        const zs = s.ring.map(([, z]) => z)
+        if (zs.length && zs.every((z) => z < 0)) northWallsNegativeZ.push(name)
+      }
+    }
+    for (const ring of rings) {
+      for (const [, z] of ring) {
+        walkMinZ = walkMinZ === null ? z : Math.min(walkMinZ, z)
+        walkMaxZ = walkMaxZ === null ? z : Math.max(walkMaxZ, z)
+      }
+    }
+  }
+
+  return {
+    designScaleZ,
+    walkPresent: walk !== null,
+    walkMinZ: walkMinZ === null ? null : Number(walkMinZ.toFixed(4)),
+    walkMaxZ: walkMaxZ === null ? null : Number(walkMaxZ.toFixed(4)),
+    northWallsNegativeZ,
+  }
+}
+
 function auditDocument(doc: Document, bytes: Uint8Array): GlbAuditReport {
   const root = doc.getRoot()
   const min = [Infinity, Infinity, Infinity]
@@ -150,9 +262,17 @@ function auditDocument(doc: Document, bytes: Uint8Array): GlbAuditReport {
   }
 
   let vram = 0
+  const textures: GlbTextureAudit[] = []
   for (const texture of root.listTextures()) {
     const size = texture.getSize()
     const image = texture.getImage()
+    if (size) {
+      textures.push({
+        width: size[0]!,
+        height: size[1]!,
+        powerOfTwo: isPowerOfTwo(size[0]!) && isPowerOfTwo(size[1]!),
+      })
+    }
     if (size && image) {
       vram +=
         size[0]! *
@@ -182,6 +302,8 @@ function auditDocument(doc: Document, bytes: Uint8Array): GlbAuditReport {
     drawCalls,
     triangles: Math.round(triangles),
     textureVramMiB: Number((vram / 1048576).toFixed(2)),
+    textures,
+    frame: auditFrame(doc),
     counts: {
       nodes: root.listNodes().length,
       meshes: root.listMeshes().length,
@@ -226,9 +348,10 @@ export function assertHardGlbAudit(
   report: GlbAuditReport,
   options: HardAuditOptions = {},
 ): void {
-  const maxBytes = options.maxBytes ?? 500 * 1024
-  const maxExtentM = options.maxExtentM ?? 500
-  const minExtentM = options.minExtentM ?? 0.05
+  const maxBytes = options.maxBytes ?? ECO_GLB_MAX_BYTES
+  const maxExtentM = options.maxExtentM ?? ECO_GLB_MAX_EXTENT_M
+  const minExtentM = options.minExtentM ?? ECO_GLB_MIN_EXTENT_M
+  const maxTexDim = options.maxTexDim ?? ECO_GLB_MAX_TEX_DIM
   const fails: string[] = []
 
   if (report.bytes <= 0) fails.push('empty file')
@@ -239,21 +362,85 @@ export function assertHardGlbAudit(
   if (report.counts.meshes <= 0) fails.push('no meshes')
   if (!report.worldBounds.sizeMeters) fails.push('missing world bounds (metres)')
   else {
-    const [sx, sy, sz] = report.worldBounds.sizeMeters
-    const longest = Math.max(sx ?? 0, sy ?? 0, sz ?? 0)
-    if (longest < minExtentM) {
-      fails.push(`world extent ${longest} m below min ${minExtentM} m — likely wrong units`)
+    const axes = ['X', 'Y', 'Z'] as const
+    for (let i = 0; i < 3; i++) {
+      const extent = report.worldBounds.sizeMeters[i] ?? 0
+      if (extent < minExtentM) {
+        fails.push(
+          `${axes[i]} extent ${extent} m below min ${minExtentM} m — likely wrong units`,
+        )
+      }
+      if (extent > maxExtentM) {
+        fails.push(
+          `${axes[i]} extent ${extent} m above max ${maxExtentM} m — likely wrong scale`,
+        )
+      }
     }
-    if (longest > maxExtentM) {
-      fails.push(`world extent ${longest} m above max ${maxExtentM} m — likely wrong scale`)
+  }
+
+  if (!options.skipMeshBudget) {
+    // One mesh / draw call per material — never one per wall/slab element.
+    if (report.counts.materials > 0 && report.counts.meshes > report.counts.materials) {
+      fails.push(
+        `meshes ${report.counts.meshes} > materials ${report.counts.materials} — expected one mesh per material`,
+      )
     }
-    // Y-up: a building export should have measurable height
-    if ((sy ?? 0) < minExtentM * 0.5 && longest >= minExtentM) {
-      fails.push('Y extent near zero — expected Y-up metres')
+    if (report.counts.materials > 0 && report.drawCalls > report.counts.materials) {
+      fails.push(
+        `drawCalls ${report.drawCalls} > materials ${report.counts.materials} — expected one draw per material`,
+      )
+    }
+  }
+
+  for (const tex of report.textures) {
+    if (!tex.powerOfTwo) {
+      fails.push(`texture ${tex.width}×${tex.height} is not power-of-two`)
+    }
+    if (tex.width > maxTexDim || tex.height > maxTexDim) {
+      fails.push(
+        `texture ${tex.width}×${tex.height} exceeds max ${maxTexDim}px`,
+      )
+    }
+  }
+
+  if (!options.skipFrame) {
+    const { frame } = report
+    // Z-south / Y-up: assert the walk contract signs (H0). Do not require
+    // surviving scale.z < 0 — GLTFExporter often bakes the flip into positions.
+    if (frame.walkPresent) {
+      if (frame.northWallsNegativeZ.length === 0) {
+        // Named north walls missing — fall back to ring span must cross into −z
+        // for any building that extends past the origin in editor +z.
+        if (
+          frame.walkMinZ !== null &&
+          frame.walkMaxZ !== null &&
+          frame.walkMinZ >= 0 &&
+          frame.walkMaxZ > 0
+        ) {
+          fails.push(
+            'walk rings all have z≥0 — expected z-south (editor north → world −z)',
+          )
+        }
+      }
+      // Y-up: floor tops are metres on Y (positive height above base).
+      // Covered by AABB Y extent ≥ minExtent; walk presence is the stamp check.
+    } else {
+      fails.push('missing extras.walk — expected Y-up / z-south walk stamp')
     }
   }
 
   if (fails.length) {
     throw new Error(`glb-audit HARD FAIL: ${fails.join('; ')}`)
   }
+}
+
+/** Human-readable size for the export UI (`1.9 MB → 280 KB`). */
+export function formatByteSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${bytes} B`
+}
+
+export function formatExportSizeLabel(beforeBytes: number, afterBytes: number): string {
+  return `${formatByteSize(beforeBytes)} → ${formatByteSize(afterBytes)}`
 }

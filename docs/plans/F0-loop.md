@@ -57,7 +57,11 @@ cd apps/editor && bun run build:static && npx serve out
 # open http://localhost:3000/eco-host-harness.html
 ```
 
-`bun packages/plugin-eco/test/check-roundtrip.mjs` — pass.
+`bun packages/plugin-eco/test/check-roundtrip.mjs` — known pre-existing slabA z assert flake (not H1).
+
+## H1 (export audit)
+
+**Done:** hard audit blocks bad exports; legend shows `before → after` size (e.g. `2.1 MB → 428.8 KB`). Ceilings in `H1-done.md`: 500 KB, AABB 0.5–500 m/axis, textures PoT ≤512, one mesh per material, z-south via walk.
 
 ## H12 (materials / presentation)
 

@@ -90,7 +90,7 @@ const house = {
     parentId: 'bldg',
     height: 2.7,
     baseElevation: 0,
-    children: ['slab0'],
+    children: ['slab0', 'wN', 'wS', 'wE', 'wW'],
   },
   slab0: {
     id: 'slab0',
@@ -105,6 +105,10 @@ const house = {
     elevation: 0.05,
     thickness: 0.05,
   },
+  wN: { id: 'wN', type: 'wall', parentId: 'L0', start: [-2, 2], end: [2, 2], thickness: 0.2, height: 2.7, children: [] },
+  wS: { id: 'wS', type: 'wall', parentId: 'L0', start: [2, -2], end: [-2, -2], thickness: 0.2, height: 2.7, children: [] },
+  wE: { id: 'wE', type: 'wall', parentId: 'L0', start: [2, 2], end: [2, -2], thickness: 0.2, height: 2.7, children: [] },
+  wW: { id: 'wW', type: 'wall', parentId: 'L0', start: [-2, -2], end: [-2, 2], thickness: 0.2, height: 2.7, children: [] },
 }
 const withTree = await exportEcoGlb({
   nodes: house,

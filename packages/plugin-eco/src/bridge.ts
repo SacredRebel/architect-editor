@@ -9,6 +9,7 @@ import {
   restoreEcoSceneExtras,
 } from './eco-scene'
 import { getEcoSiteState } from './eco-site-store'
+import { setEcoExportState } from './eco-export-store'
 import { arrayBufferToBase64, downloadBytes, exportEcoGlb } from './export-glb'
 
 const PROTOCOL = 'eco/1' as const
@@ -90,13 +91,27 @@ function handleLoadScene(scene: unknown): void {
 }
 
 async function runGlbExport(): Promise<void> {
+  setEcoExportState({
+    status: 'exporting',
+    error: null,
+    sizeLabel: null,
+    beforeBytes: null,
+    afterBytes: null,
+  })
   try {
     const { nodes } = useScene.getState()
     const originLL = getEcoSiteState().site?.originLL ?? ([0, 0] as [number, number])
-    const { buffer, walk } = await exportEcoGlb({
+    const { buffer, walk, sizeLabel, optimise } = await exportEcoGlb({
       nodes: nodes as never,
       originLL,
       includePlacedAssets: true,
+    })
+    setEcoExportState({
+      status: 'ok',
+      sizeLabel,
+      error: null,
+      beforeBytes: optimise.beforeBytes,
+      afterBytes: optimise.afterBytes,
     })
     if (hostOrigin && typeof window !== 'undefined' && window.parent !== window) {
       postToHost({
@@ -111,6 +126,13 @@ async function runGlbExport(): Promise<void> {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'GLB export failed'
+    setEcoExportState({
+      status: 'error',
+      error: message,
+      sizeLabel: null,
+      beforeBytes: null,
+      afterBytes: null,
+    })
     if (hostOrigin) postToHost({ t: 'eco:error', message })
     else console.error('[eco:bridge]', message)
   }

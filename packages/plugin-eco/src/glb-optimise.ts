@@ -69,7 +69,8 @@ export async function optimiseGlb(
       textureCompress({
         targetFormat: 'jpeg',
         quality: 80,
-        resize: [1024, 1024],
+        // Match ECO_GLB_MAX_TEX_DIM (512) — keep compat under 500 KB.
+        resize: [512, 512],
       }),
     )
   }

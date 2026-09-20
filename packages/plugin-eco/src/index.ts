@@ -40,9 +40,25 @@ export {
 } from './eco-site-store'
 export { ecoAssetsHostPanel, ecoDrawingsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
 export { exportEcoGlb, stampWalkExtras } from './export-glb'
-export { assertHardGlbAudit, auditGlb } from './glb-audit'
+export {
+  assertHardGlbAudit,
+  auditGlb,
+  ECO_GLB_MAX_BYTES,
+  ECO_GLB_MAX_EXTENT_M,
+  ECO_GLB_MAX_TEX_DIM,
+  ECO_GLB_MIN_EXTENT_M,
+  formatByteSize,
+  formatExportSizeLabel,
+} from './glb-audit'
 export { optimiseGlb } from './glb-optimise'
 export type { OptimiseProfile } from './glb-optimise'
+export {
+  getEcoExportState,
+  resetEcoExportState,
+  setEcoExportState,
+  subscribeEcoExport,
+} from './eco-export-store'
+export type { EcoExportUiState } from './eco-export-store'
 export {
   buildEcoWalk,
   ECO_CURVE_WALK_TOLERANCE_M,

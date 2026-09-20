@@ -3,6 +3,10 @@
 import { useState, useSyncExternalStore } from 'react'
 import { isEcoBridgeReady, requestEcoGlbExport } from './bridge'
 import {
+  getEcoExportState,
+  subscribeEcoExport,
+} from './eco-export-store'
+import {
   ECO_CURVE_WALK_TOLERANCE_M,
   ECO_WALL_SAMPLE_STEP_M,
 } from './eco-curve-tolerance'
@@ -68,6 +72,10 @@ function usePresentation() {
   )
 }
 
+function useEcoExport() {
+  return useSyncExternalStore(subscribeEcoExport, getEcoExportState, getEcoExportState)
+}
+
 /**
  * Legend + visibility toggles for Eco site overlays, Walk, and world export.
  */
@@ -77,6 +85,7 @@ export default function EcoLegendPanel() {
   const { shells } = useShells()
   const organic = useOrganic()
   const { presentation, timeOfDayHours } = usePresentation()
+  const exportUi = useEcoExport()
   const [exporting, setExporting] = useState(false)
 
   const onExport = () => {
@@ -87,6 +96,8 @@ export default function EcoLegendPanel() {
       setTimeout(() => setExporting(false), 800)
     }
   }
+
+  const busy = exporting || exportUi.status === 'exporting'
 
   return (
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
@@ -224,21 +235,29 @@ export default function EcoLegendPanel() {
 
       <div style={{ fontWeight: 600 }}>Export</div>
       <button
-        disabled={exporting}
+        disabled={busy}
         onClick={onExport}
         style={{
           padding: '6px 10px',
-          cursor: exporting ? 'wait' : 'pointer',
+          cursor: busy ? 'wait' : 'pointer',
           textAlign: 'left',
         }}
         type="button"
       >
-        {exporting
+        {busy
           ? 'Exporting…'
           : isEcoBridgeReady()
             ? 'Send to world (eco:glb)'
             : 'Download GLB + walk.json'}
       </button>
+      {exportUi.sizeLabel ? (
+        <div style={{ fontFamily: 'ui-monospace, monospace', opacity: 0.9 }}>
+          {exportUi.sizeLabel}
+        </div>
+      ) : null}
+      {exportUi.status === 'error' && exportUi.error ? (
+        <div style={{ color: '#b42318', lineHeight: 1.35 }}>{exportUi.error}</div>
+      ) : null}
 
       {!site ? (
         <div style={{ opacity: 0.7 }}>

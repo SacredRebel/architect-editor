@@ -24,7 +24,12 @@ import {
 import { getEcoOrganicState } from './eco-organic-store'
 import { buildEcoTreeObject3D } from './eco-tree-mesh'
 import { getEcoTreesState } from './eco-trees-store'
-import { assertHardGlbAudit, auditGlb } from './glb-audit'
+import {
+  assertHardGlbAudit,
+  auditGlb,
+  ECO_GLB_MAX_BYTES,
+  formatExportSizeLabel,
+} from './glb-audit'
 import { optimiseGlb, type OptimiseProfile } from './glb-optimise'
 import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
 import { levelWorldY } from './level-y'
@@ -36,8 +41,10 @@ export type EcoGlbExportResult = {
   buffer: ArrayBuffer
   walk: EcoWalk
   originLL: [number, number]
+  /** Before→after size string for the UI (`1.9 MB → 280 KB`). */
+  sizeLabel: string
   /** Present after H1 optimise + hard audit. */
-  optimise?: {
+  optimise: {
     beforeBytes: number
     afterBytes: number
     profile: OptimiseProfile
@@ -189,8 +196,9 @@ export function consolidateByEcoMaterial(source: THREE.Group): THREE.Group {
     const merged = mergeGeometries(geos, false)
     for (const g of geos) g.dispose()
     if (!merged) {
-      console.warn(`[eco:export] mergeGeometries failed for material ${id} (${geos.length} parts)`)
-      continue
+      throw new Error(
+        `eco:export mergeGeometries failed for material ${id} (${geos.length} parts)`,
+      )
     }
     const mat = createEcoThreeMaterial(id, { doubleSide: id === 'living-roof' || id === 'glass' })
     if (mat.normalMap) {
@@ -351,15 +359,18 @@ export async function exportEcoGlb(options: {
   const optimised = await optimiseGlb(result, profile)
   const stamped = await stampWalkExtras(optimised.buffer, walk)
   const report = await auditGlb(stamped)
-  assertHardGlbAudit(report, { maxBytes: options.maxBytes ?? 500 * 1024 })
+  assertHardGlbAudit(report, { maxBytes: options.maxBytes ?? ECO_GLB_MAX_BYTES })
 
+  const beforeBytes = optimised.beforeBytes
+  const afterBytes = stamped.byteLength
   return {
     buffer: stamped,
     walk,
     originLL: options.originLL ?? [0, 0],
+    sizeLabel: formatExportSizeLabel(beforeBytes, afterBytes),
     optimise: {
-      beforeBytes: optimised.beforeBytes,
-      afterBytes: stamped.byteLength,
+      beforeBytes,
+      afterBytes,
       profile,
     },
   }

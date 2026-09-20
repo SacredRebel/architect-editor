@@ -4,55 +4,89 @@
 
 [pascalorg/skills](https://github.com/pascalorg/skills) · skill `glb-web-export` (MIT — confirmed in skill frontmatter / README).
 
-Adapted: measure → decide → apply → verify. Used `@gltf-transform/*`, `meshoptimizer`, `draco3dgltf` (allowed in Agent A brief). Did **not** vendor unclear-licence code. No KTX/`ktx` CLI (Windows/embed constraint) — JPEG resize for textured assets; meshopt for the `web` download profile.
+Adapted: measure → decide → apply → verify. Used `@gltf-transform/*`, `meshoptimizer` (allowed). Did **not** vendor unclear-licence code. **No Draco** — decoder wasm is either a CDN (forbidden in embed) or past the 200 KB binary limit. No KTX/`ktx` CLI — JPEG resize for textured assets.
+
+## Profiles
+
+| Profile | What it does | When |
+|---|---|---|
+| `compat` (default eco:glb) | dedup / prune / weld / quantize | Parametric exports — **must** fit under 500 KB here |
+| `web` | same + meshopt | Optional **headroom** for already-dense assets |
+
+**Rule:** compression is headroom, not the plan. Sibling cabins pack (~85 KB, 1 220 tris, empty `extensionsRequired`) is the bar — generate sparse, do not decimate after the fact. If a model needs meshopt to fit, the geometry is wrong first.
+
+World note (spatial-map `4a9a618`): `MeshoptDecoder` is wired through `makeGltfLoader()`, so `web`/`EXT_meshopt_compression` no longer throws in the world. Still not the primary budget strategy.
+
+## Hard audit ceilings (fail the export)
+
+| Rule | Ceiling / assert |
+|---|---|
+| Compat file size | **≤ 500 KB** |
+| AABB each axis | **∈ [0.5 m, 500 m]** (catches cm / feet-as-metres) |
+| Y-up + z-south | `extras.walk` present; named north walls have **z < 0** (H0 convention) |
+| Mesh / draw budget | **meshes ≤ materials** and **drawCalls ≤ materials** (one mesh per material, never per element) |
+| Texture edges | **power-of-two**, **≤ 512 px** (optimiser resize matches) |
+
+`assertHardGlbAudit` **throws** — wired into `exportEcoGlb` before return. Failed audit = no `eco:glb` / no download; legend shows the error.
+
+## Size on screen
+
+After every successful export the legend shows the pack numbers, e.g. **`2.1 MB → 428.8 KB`** or **`16.4 KB → 16.4 KB`** (`formatExportSizeLabel` from before→after bytes). Bridge updates `eco-export-store`; host still gets `eco:error` on failure.
 
 ## What shipped
 
 | Piece | Role |
 |---|---|
-| `src/glb-audit.ts` | Audit report + **`assertHardGlbAudit`** — throws, does not warn |
-| `src/glb-optimise.ts` | `compat` (quantize, world eco:glb) · `web` (meshopt + quantize, architects download) |
-| `exportEcoGlb` | Always optimises → stamps walk → **hard-audits** before return |
-| `test/check-glb-h1.mjs` | House export passes; corrupt / empty / 5 km box **fail**; **real Oak Leaf** → &lt;500 KB |
+| `src/glb-audit.ts` | Report + **`assertHardGlbAudit`** + size formatters + stated ceilings |
+| `src/glb-optimise.ts` | `compat` · `web`; texture resize **512** |
+| `exportEcoGlb` | Optimise → stamp walk → **hard-audit** → `sizeLabel` |
+| `src/eco-export-store.ts` | UI status / size / error for the legend |
+| `eco-legend-panel.tsx` | Shows size string + audit failure |
+| `test/check-glb-h1.mjs` | House under budget **without** meshopt; hard-fails corrupt / empty / cm / km / mesh-per-element / bad textures; Oak Leaf numbers |
 
-Also fixed `stampWalkExtras` JSON chunk padding: spaces (`0x20`) per glTF spec (nulls broke `@gltf-transform` parse).
+Also fixed `stampWalkExtras` JSON chunk padding: spaces (`0x20`) per glTF spec.
 
-## Numbers — real Oak Leaf (acceptance)
+## Numbers — real Oak Leaf
 
-Source: [`oak-leaf-massing.glb`](https://raw.githubusercontent.com/SacredRebel/sulphur-mountain-world/main/models/oak-leaf-massing.glb)
+Source: [`oak-leaf-massing.glb`](https://raw.githubusercontent.com/SacredRebel/sulphur-mountain-world/main/models/oak-leaf-massing.glb) — thin curved shells + ribbed roofs (the topology weld/meshopt handle worst).
 
-| | Before | After (`web`) |
-|---|---|---|
-| Bytes | **2 154 696** | **439 112** (20.4%) |
-| Triangles | 51 348 | 51 348 (unchanged) |
-| Textures | 0 | 0 |
-| Extent (m) | 55.45 × 14.8 × 49.9 | same |
-| Extensions | — | `EXT_meshopt_compression`, `KHR_mesh_quantization` |
+| Profile | Bytes | Triangles | `extensionsRequired` | Under 500 KB? |
+|---|---|---|---|---|
+| Raw | **2 154 696** | 51 348 | `[]` | no |
+| `compat` | **1 319 580** | 51 348 | `KHR_mesh_quantization` | **no** |
+| `web` (meshopt) | **439 112** (20.4%) | 51 348 | meshopt + quantization | **yes** |
 
-Hard audit passes at `maxBytes: 500 KB`. Fixture: `packages/plugin-eco/test/oak-leaf.glb` → `oak-leaf.web.glb`.
+**Finding:** the massing only clears 500 KB with meshopt headroom. That is a real density finding for the Python-built GLB, not a pipeline failure. Parametric studio exports stay on `compat` and must not need meshopt (asserted in `check-glb-h1.mjs`).
 
 ### Pipeline proof (stand-in, not the budget)
 
 | Asset | Before | After | Notes |
 |---|---|---|---|
-| Parametric house (`compat`) | 8 664 B raw | 12 612 B stamped | Walk extras grow JSON |
-| High-poly stand-in (different topology) | 1 964 540 B | 87 860 B | Proves the gate only — **not** the Oak Leaf number |
+| Parametric house (`compat`) | ~16.4 KB raw | ~16.4 KB stamped | No meshopt; under 500 KB; sizeLabel shown |
 
 ## Hard audit failures (deliberate)
 
 - Corrupt bytes → parse throw  
 - Empty scene → `HARD FAIL: no triangles`  
-- 5000 m cube → `HARD FAIL: world extent … above max`
+- 5000 m cube → `HARD FAIL: … above max 500 m`  
+- 0.08 m “house” → `HARD FAIL: … below min 0.5 m`  
+- 5 meshes / 1 material → `HARD FAIL: one mesh per material`  
+- Non-PoT or 1024² texture → `HARD FAIL` (ceiling **512**)
 
-## Loader note for Agent B
+## World probe (engine side)
 
-`web` output needs MeshoptDecoder (drei `useGLTF` has it; raw Three / model-viewer need it wired). World `eco:glb` uses **`compat`** so plain `GLTFLoader` keeps working.
+`window.world.probeModel(url)` → `{ meshes, triangles, floors, solids }` — reads `extras.walk` the same way `structures.ts` does. Use it on a hosted export URL during the H0 human pass so a green probe means the world would see the walk data, not only that the file parses.
+
+## Route checks
+
+Do **not** grep HTML/RSC for “This page could not be found” — that string is in every page payload including `/`. Use the `x-matched-path` response header. Studio iframe target: `https://architect-editor-snowy.vercel.app/embed` (world fix `1baefa4`; overridable with `?builder=`).
 
 ## Checks
 
-- `bun packages/plugin-eco/test/check-glb-h1.mjs test/oak-leaf.glb` — OK (real Oak Leaf)
-- `bun packages/plugin-eco/test/check-export.mjs` — OK
-- `bun packages/plugin-eco/test/check-roundtrip.mjs` — OK
+- `bun packages/plugin-eco/test/check-glb-h1.mjs test/oak-leaf.glb` — OK  
+- `bun packages/plugin-eco/test/check-export.mjs` — OK  
+- `bun packages/plugin-eco/test/check-trees.mjs` — OK  
+- `bun packages/plugin-eco/test/check-materials.mjs` / `check-h12.mjs` / `check-shell.mjs` — OK  
 
 ## Commit
 
