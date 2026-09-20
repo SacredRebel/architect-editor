@@ -43,7 +43,26 @@ export { exportEcoGlb, stampWalkExtras } from './export-glb'
 export { assertHardGlbAudit, auditGlb } from './glb-audit'
 export { optimiseGlb } from './glb-optimise'
 export type { OptimiseProfile } from './glb-optimise'
-export { buildEcoWalk, ECO_CURVE_WALK_TOLERANCE_M, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
+export {
+  buildEcoWalk,
+  ECO_CURVE_WALK_TOLERANCE_M,
+  ECO_WALK_FLOOR_INSET_M,
+  ECO_WALK_SOLID_OUTSET_M,
+  ECO_WALL_SAMPLE_STEP_M,
+} from './export-walk'
+export {
+  makeDefaultParamBox,
+  paramBoxToNodes,
+  paramBoxWalk,
+  paramBoxWorldFloorExtents,
+  updateEcoParamBox,
+  addEcoParamBox,
+  clearEcoParamBoxes,
+  getEcoParamBoxesState,
+  setEcoParamBoxes,
+  subscribeEcoParamBoxes,
+} from './eco-param-box'
+export type { EcoParamBox } from './eco-param-box'
 export {
   addEcoShell,
   clearEcoShells,
@@ -84,6 +103,27 @@ export {
   subscribeEcoTrees,
 } from './eco-trees-store'
 export type { EcoTreePlacement, EcoTreeVariantId } from './eco-trees-store'
+export {
+  ECO_MATERIALS,
+  createEcoThreeMaterial,
+  ecoMaterialById,
+  getEcoMaterialsState,
+  resetEcoMaterialsState,
+  resolveEcoMaterialId,
+  setEcoMaterialAssignment,
+  setEcoMaterialDefaults,
+  subscribeEcoMaterials,
+} from './eco-materials'
+export type { EcoMaterialDef, EcoMaterialId } from './eco-materials'
+export {
+  getEcoPresentationState,
+  setEcoPresentation,
+  setEcoTimeOfDayHours,
+  subscribeEcoPresentation,
+  toggleEcoPresentation,
+} from './eco-presentation-store'
+export { solarPosition, sunDirectionAt } from './eco-site-sun'
+export { EcoSiteLighting } from './eco-site-lighting'
 export {
   exportEcoScenePayload,
   restoreEcoSceneExtras,

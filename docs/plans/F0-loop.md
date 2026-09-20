@@ -6,43 +6,45 @@
 |---|---|
 | World | `https://spatial-map.vercel.app/` |
 | Editor (production) | `https://architect-editor-snowy.vercel.app/` — **not** `architect-editor.vercel.app` |
-| H0 override (until world ships permanent fix) | `?role=builder&builder=https://architect-editor-snowy.vercel.app/embed` |
+| Studio iframe (world default since `1baefa4`) | `https://architect-editor-snowy.vercel.app/embed` |
+| Override | `?builder=` still works if needed |
 
-Note: `/embed` on snowy returns **200** with `x-matched-path: /embed`. Earlier 404 conclusions from the wrong host were incorrect (RSC payload contains a not-found string on every page).
+**404 check:** use the `x-matched-path` response header. Do **not** grep the body for “This page could not be found” — that string is in the RSC payload of every page, including `/`.
 
 ## Checklist
 
-1. Open world with `?role=builder` (+ builder override) — **done**
-2. Walk to house, press **🏗 studio** — **done** (iframe `architect-editor-snowy.vercel.app/embed`)
+1. Open world with `?role=builder` — **done** (iframe points at snowy `/embed` by default)
+2. Walk to house, press **🏗 studio** — **done**
 3. Confirm site arrives — **done** (payload + handshake)
 4. Draw two rooms + door + one curved wall — **blocked in automation** (cross-origin iframe)
 5. Send to world → walk in / through door / into wall / on floor — **not yet**
+6. Optional: `window.world.probeModel(url)` on the exported GLB — confirm `{ floors, solids }` match what was drawn
 
 ## Results
 
 | Path | Status |
 |---|---|
 | Wrong host `architect-editor.vercel.app` | Misleading — do not use for Eco |
-| `architect-editor-snowy.vercel.app/embed` | 200, `X-Matched-Path: /embed` |
-| Live URL used | `https://spatial-map.vercel.app/?role=builder&builder=https://architect-editor-snowy.vercel.app/embed` |
+| `architect-editor-snowy.vercel.app/embed` | 200, `x-matched-path: /embed` |
+| Live URL | `https://spatial-map.vercel.app/?role=builder` (builder override only if needed) |
 | Studio opens | Yes — “the studio · Sulphur Mountain”, wall tool available |
 | `eco:ready` | Yes — caps `site`, `scene`, `assets`, `glb` from snowy origin |
 | Site sent | Yes — `world.studio.siteSent` = **97×97**, **9 guides**, step 1.5 m, `originOffsetM [-72,72]` |
 | Oak Leaf `refGlb` | Yes in live `opts.site()` — ~2.15 MB base64 |
 | Massing outline | World-local bbox ≈ x∈[-18,25] z∈[-15,26] (on terrain) |
-| Studio canvas | First pass looked empty — **camera not framed** on site (default pose at empty space). Fix: `applyEcoSite` emits `camera-controls:fit-scene` onto massing-outline |
-| Draw → send → walk | **Not completed** — needs human (or world-side driver) after frame fix deploys |
+| Studio canvas | Camera fit via `camera-controls:fit-scene` after massing load |
+| Draw → send → walk | **Not completed** — needs human pass |
 
 ### What looked right
 
-- Builder role banner, studio overlay, correct embed URL via `?builder=`
+- Builder role banner, studio overlay, correct embed URL
 - Handshake: `eco:ready` with full caps
-- Live site payload: 9 guides (boundary, 2×easement, 3×footprint, 2×road, massing-outline) + refGlb
+- Live site payload: 9 guides + refGlb
 
 ### What looked wrong / incomplete
 
-- Empty studio viewport until camera fit (fixed in plugin-eco; needs snowy redeploy)
 - Full draw / export / walk-through still needs a human pass
+- Until then we do not know exported walk data matches what was drawn — `probeModel` is the check once a URL exists
 
 ## Notion (DEVPLAN-04 tool set)
 
@@ -56,3 +58,8 @@ cd apps/editor && bun run build:static && npx serve out
 ```
 
 `bun packages/plugin-eco/test/check-roundtrip.mjs` — pass.
+
+## H12 (materials / presentation)
+
+Baseline PNGs: `docs/plans/h12-baseline/{before,after}.png`. See `H12-done.md`.
+Leaf shell compat **161 816 → 220 984** (still under 500 KB without meshopt).

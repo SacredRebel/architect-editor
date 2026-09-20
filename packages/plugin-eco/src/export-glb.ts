@@ -28,6 +28,7 @@ import { assertHardGlbAudit, auditGlb } from './glb-audit'
 import { optimiseGlb, type OptimiseProfile } from './glb-optimise'
 import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
 import { levelWorldY } from './level-y'
+import { ensureGltfExportPolyfills } from './eco-gltf-polyfill'
 
 type NodeMap = Record<string, Record<string, unknown> | undefined>
 
@@ -43,24 +44,9 @@ export type EcoGlbExportResult = {
   }
 }
 
-/** Ensure FileReader exists (Bun / Node lack it; GLTFExporter needs it). */
+/** Ensure FileReader + OffscreenCanvas exist (Bun / Node; GLTFExporter needs both). */
 export function ensureFileReaderPolyfill(): void {
-  if (typeof globalThis.FileReader !== 'undefined')
-    return // Minimal polyfill matching make-fixture.mjs
-  ;(globalThis as unknown as { FileReader: unknown }).FileReader = class FileReader {
-    result: ArrayBuffer | null = null
-    onloadend: ((ev: { target: FileReader }) => void) | null = null
-    onerror: ((err: unknown) => void) | null = null
-    readAsArrayBuffer(blob: Blob) {
-      void blob.arrayBuffer().then(
-        (buf) => {
-          this.result = buf
-          this.onloadend?.({ target: this })
-        },
-        (err) => this.onerror?.(err),
-      )
-    }
-  }
+  ensureGltfExportPolyfills()
 }
 
 function tagMesh(mesh: THREE.Object3D, materialId: EcoMaterialId): void {
@@ -161,6 +147,21 @@ function slabMesh(
   return mesh
 }
 
+/** Planar XZ UVs in metres so shell (no UV) and box (UV) merge, and normal maps tile. */
+function ensurePlanarWorldUv(geo: THREE.BufferGeometry): void {
+  const pos = geo.attributes.position
+  if (!pos) return
+  const uvs = new Float32Array(pos.count * 2)
+  for (let i = 0; i < pos.count; i++) {
+    uvs[i * 2] = pos.getX(i)
+    uvs[i * 2 + 1] = pos.getZ(i)
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+  geo.deleteAttribute('uv1')
+  geo.deleteAttribute('uv2')
+  geo.deleteAttribute('uv3')
+}
+
 /**
  * Collapse tagged design meshes into one Mesh per Eco material id.
  * Keeps the GLB small the way the massing script does.
@@ -176,11 +177,7 @@ export function consolidateByEcoMaterial(source: THREE.Group): THREE.Group {
     if (!id) return
     const geo = mesh.geometry.clone()
     geo.applyMatrix4(mesh.matrixWorld)
-    // BoxGeometry has uvs; shell BufferGeometry does not — strip so mergeGeometries accepts both.
-    geo.deleteAttribute('uv')
-    geo.deleteAttribute('uv1')
-    geo.deleteAttribute('uv2')
-    geo.deleteAttribute('uv3')
+    ensurePlanarWorldUv(geo)
     const list = buckets.get(id) ?? []
     list.push(geo)
     buckets.set(id, list)
@@ -196,6 +193,10 @@ export function consolidateByEcoMaterial(source: THREE.Group): THREE.Group {
       continue
     }
     const mat = createEcoThreeMaterial(id, { doubleSide: id === 'living-roof' || id === 'glass' })
+    if (mat.normalMap) {
+      mat.normalMap.repeat.set(0.35, 0.35)
+      mat.normalMap.needsUpdate = true
+    }
     const mesh = new THREE.Mesh(merged, mat)
     mesh.name = `mat:${id}`
     mesh.userData.ecoMaterialId = id
@@ -301,7 +302,11 @@ export async function exportEcoGlb(options: {
   nodes: NodeMap
   originLL?: [number, number]
   includePlacedAssets?: boolean
-  /** `compat` for world eco:glb (default); `web` for architects download / phone. */
+  /**
+   * Default `compat` — sparse parametric exports should fit without meshopt.
+   * `web` adds meshopt as optional headroom (world can decode it as of
+   * spatial-map MeshoptDecoder wiring). Prefer fixing geometry over switching.
+   */
   optimiseProfile?: OptimiseProfile
   /** Soften size gate for tiny test houses (default 500 KiB). */
   maxBytes?: number

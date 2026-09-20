@@ -1,9 +1,18 @@
 /**
  * GLB web optimise — adapted from pascalorg/skills glb-web-export (MIT).
  *
+ * Rule: compression is headroom, not the plan. Prefer sparse parametric geometry
+ * that lands under budget with empty extensionsRequired (see sibling cabins pack:
+ * ~85 KB / 1.2k tris, no meshopt). If a model needs meshopt to fit, fix the
+ * geometry first.
+ *
  * Two profiles:
- * - `compat` — plain GLTFLoader (world eco:glb): dedup/prune/weld/quantize + JPEG textures
- * - `web` — phone / architects download: meshopt + JPEG (no KTX/ktx CLI dependency)
+ * - `compat` (default for eco:glb) — dedup/prune/weld/quantize + JPEG. No meshopt.
+ * - `web` — same cleanup + meshopt. Safe for the world since spatial-map wires
+ *   MeshoptDecoder via makeGltfLoader(); still not the primary budget plan.
+ *
+ * Draco is never used: decoder wasm is either a CDN (forbidden in embed) or a
+ * binary over the 200 KB limit.
  */
 import { NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'

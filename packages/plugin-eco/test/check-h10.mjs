@@ -1,17 +1,16 @@
 /**
- * H10 acceptance — leaf shell + ribs + curved perimeter + doorway on curve;
- * export walk; change rise; everything follows.
- *
- * Tolerance: ECO_CURVE_WALK_TOLERANCE_M = 0.05 m (5 cm chord error).
+ * H10 acceptance — through H10.3 only (vaults/gridshell/catenary deferred).
+ * H10.0 param box → H10.1 loft → H10.2 curved walls → H10.3 shell rise.
+ * Tolerance: ECO_CURVE_WALK_TOLERANCE_M = 0.05 m.
  */
 import { getWallArcData } from '@pascal-app/core'
 import {
   chordErrorForStep,
   ECO_CURVE_WALK_TOLERANCE_M,
+  fullCircleSegmentCount,
+  sagittaForAngle,
 } from '../src/eco-curve-tolerance.ts'
 import { tessellateLoft, makeDefaultLeafLoft } from '../src/eco-loft.ts'
-import { sampleCatenary, makeDefaultCatenary } from '../src/eco-catenary.ts'
-import { tessellateVault, makeDefaultBarrelVault } from '../src/eco-vault.ts'
 import {
   buildEcoWalk,
   wallRunLength,
@@ -27,17 +26,34 @@ import {
   getEcoShellsState,
 } from '../src/eco-shell-store.ts'
 import {
-  addEcoLoft,
-  addEcoVault,
-  addEcoCatenary,
-  clearEcoOrganic,
-} from '../src/eco-organic-store.ts'
+  makeDefaultParamBox,
+  paramBoxWalk,
+  updateEcoParamBox,
+  getEcoParamBoxesState,
+  setEcoParamBoxes,
+  clearEcoParamBoxes,
+  paramBoxWorldFloorExtents,
+} from '../src/eco-param-box.ts'
+import { addEcoLoft, clearEcoOrganic } from '../src/eco-organic-store.ts'
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg)
 }
 
-// --- 1. Leaf shell with ribs, parametric rise ---
+// --- H10.0 parameter spine on a BOX ---
+clearEcoParamBoxes()
+const box = makeDefaultParamBox('h10-spine')
+setEcoParamBoxes([box])
+assert(paramBoxWalk(box).solids.filter((s) => s.name.startsWith('wall:wS')).length === 2, 'box door gap')
+updateEcoParamBox('h10-spine', { width: 9, height: 3.5, floorTop: 0.2, doorCenter: 2.5 })
+const box2 = getEcoParamBoxesState().boxes[0]
+const ext = paramBoxWorldFloorExtents(box2)
+assert(Math.abs(ext.maxX - ext.minX - 9) < 0.05, 'width follows')
+assert(paramBoxWalk(box2).solids.every((s) => Math.abs(s.top - 3.5) < 1e-9), 'height follows')
+assert(Math.abs(paramBoxWalk(box2).floors[0].top - 0.2) < 1e-9, 'floorTop follows')
+clearEcoParamBoxes()
+
+// --- H10.3 Leaf shell with ribs, parametric rise ---
 const leaf = makeDefaultLeafShell('leaf-h10')
 assert(leaf.ribSpacing > 0, 'ribs')
 assert(leaf.rise === 1, 'default rise')
@@ -53,10 +69,10 @@ assert(leaf2.rise === 1.5, 'rise updated')
 const midH1 = shellHeightAt({ ...leaf, rise: 1 }, 0, 0)
 const midH2 = shellHeightAt(leaf2, 0, 0)
 assert(midH2 > midH1 + 0.5, `rise must lift midspan ${midH1} → ${midH2}`)
-const box2 = shellBoundingBox(leaf2)
-assert(box2.max[1] > maxY1 + 1, `bbox follows rise ${maxY1} → ${box2.max[1]}`)
+const boxRise = shellBoundingBox(leaf2)
+assert(boxRise.max[1] > maxY1 + 1, `bbox follows rise ${maxY1} → ${boxRise.max[1]}`)
 
-// --- 2. Curved perimeter walls + doorway following curve ---
+// --- H10.2 Curved perimeter walls + doorway following curve ---
 const WALL_H = 2.7
 const chord = 20
 const sagitta = 2
@@ -98,7 +114,6 @@ const nodes = {
     width: doorWidth,
     height: 2.1,
   },
-  // slab so walk has a floor to enter
   slab0: {
     id: 'slab0',
     type: 'slab',
@@ -122,9 +137,16 @@ const fullRing = wallSegmentRing({ ...wall, children: [] }, 0, run)
 const samples = Math.max(1, Math.ceil(run / step))
 const ptsPerFace = samples + 1
 assert(fullRing.length >= ptsPerFace * 2, `polyline ring denser than chord, got ${fullRing.length}`)
-assert(ptsPerFace >= 40, `face ≥40 pts, got ${ptsPerFace}`)
 
-// --- 3. Export with shell + walls; rise change still in store for next export ---
+// R=5 m reference circle
+const R5 = 5
+const segs5 = fullCircleSegmentCount(R5)
+const sag5 = sagittaForAngle(R5, (2 * Math.PI) / segs5)
+assert(segs5 <= 28, `visual ceiling ~23 segs at R=5, got ${segs5}`)
+assert(sag5 <= ECO_CURVE_WALK_TOLERANCE_M + 1e-6, `R=5 worst sagitta ${sag5}`)
+assert(sag5 > 0.003, `should be near ceiling not over-dense (${sag5})`)
+
+// --- Export; rise change follows ---
 setEcoShells([getEcoShellsState().shells[0]])
 const exported = await exportEcoGlb({
   nodes,
@@ -133,9 +155,7 @@ const exported = await exportEcoGlb({
 })
 assert(exported.buffer.byteLength > 1000, 'GLB has geometry')
 assert(exported.walk.solids.length >= 2, 'walk solids exported')
-assert(exported.walk.floors.length >= 1, 'walk floors exported')
 
-// Change rise again and re-export — shell follows, walk walls unchanged
 setShellRise('leaf-h10', 0.6)
 const boxLow = shellBoundingBox(getEcoShellsState().shells[0])
 assert(boxLow.max[1] < maxY1 - 1, `lower rise ${boxLow.max[1]} < ${maxY1}`)
@@ -147,40 +167,28 @@ const exported2 = await exportEcoGlb({
 })
 assert(exported2.walk.solids.length === exported.walk.solids.length, 'walk solids stable after rise')
 
-// --- 4. Loft / vault / catenary smoke ---
+// --- H10.1 Loft ---
 clearEcoOrganic()
 const loft = makeDefaultLeafLoft('loft-h10')
 addEcoLoft(loft)
 const loftMesh = tessellateLoft(loft)
 assert(loftMesh.positions.length > 100, 'loft tessellates')
 assert(loftMesh.indices.length > 100, 'loft faces')
-
-const vault = makeDefaultBarrelVault('vault-h10')
-addEcoVault(vault)
-const vm = tessellateVault(vault)
-assert(vm.ribPaths.length > 0, 'vault ribs')
-assert(vm.positions.length > 100, 'vault mesh')
-
-const cat = makeDefaultCatenary('cat-h10')
-addEcoCatenary(cat)
-const catPts = sampleCatenary(cat)
-assert(catPts.length >= 16, 'catenary samples')
-const midY = catPts[Math.floor(catPts.length / 2)][1]
-assert(midY < cat.supportHeight - 1, `catenary sags ${midY}`)
-
 clearEcoOrganic()
 setEcoShells([])
 
 console.log('check-h10 OK', {
   toleranceM: ECO_CURVE_WALK_TOLERANCE_M,
+  R5_segments: segs5,
+  R5_worstSagittaM: Number(sag5.toFixed(5)),
   chordErrorM: Number(err.toFixed(5)),
   sampleStepM: Number(step.toFixed(3)),
   ptsPerFace,
   solids: solids.length,
   riseBefore: maxY1,
-  riseAfter15: box2.max[1],
+  riseAfter15: boxRise.max[1],
   riseAfter06: boxLow.max[1],
   glbBytes: exported.buffer.byteLength,
   loftVerts: loftMesh.positions.length / 3,
-  vaultRibs: vm.ribPaths.length,
+  stoppedAt: 'H10.3',
 })

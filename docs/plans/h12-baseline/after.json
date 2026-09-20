@@ -1,0 +1,27 @@
+{
+  "mode": "after",
+  "seed": 15466784,
+  "width": 960,
+  "height": 640,
+  "camera": {
+    "position": [
+      22,
+      14,
+      18
+    ],
+    "target": [
+      0,
+      5,
+      0
+    ],
+    "fov": 45
+  },
+  "site": {
+    "lat": 34.448,
+    "lon": -119.243,
+    "when": "2026-06-21T22:00:00.000Z",
+    "northDeg": 0
+  },
+  "bytes": 12188,
+  "wrote": "F:\\AI apps & websites\\Architect-editor\\docs\\plans\\h12-baseline\\after.png"
+}

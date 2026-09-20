@@ -54,7 +54,8 @@ export default function EcoMaterialsPanel() {
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
       <div style={{ fontWeight: 600 }}>Materials</div>
       <div style={{ opacity: 0.65 }}>
-        Export merges to one mesh per material. Glass ships with alpha (BLEND).
+        Export merges to one mesh per material. Glass ships with transmission + alpha (BLEND).
+        Normals are tiny procedural maps (32²) so compat stays under 500 KB.
       </div>
 
       <div
@@ -73,7 +74,7 @@ export default function EcoMaterialsPanel() {
               padding: 6,
               textAlign: 'center',
             }}
-            title={`roughness ${m.roughness} · metalness ${m.metalness} · opacity ${m.opacity}`}
+            title={`roughness ${m.roughness} · metalness ${m.metalness} · opacity ${m.opacity} · nml ${m.normalStrength}`}
           >
             <div
               style={{

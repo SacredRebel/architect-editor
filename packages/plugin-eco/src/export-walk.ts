@@ -3,11 +3,38 @@ import type { EcoWalk } from './bridge-types'
 import {
   adaptiveArcSampleStepM,
   ECO_CURVE_WALK_TOLERANCE_M,
+  ECO_WALK_FLOOR_INSET_M,
+  ECO_WALK_SOLID_OUTSET_M,
   ECO_WALL_SAMPLE_STEP_M,
 } from './eco-curve-tolerance'
 import { levelWorldY } from './level-y'
 
-export { ECO_CURVE_WALK_TOLERANCE_M, ECO_WALL_SAMPLE_STEP_M }
+export {
+  ECO_CURVE_WALK_TOLERANCE_M,
+  ECO_WALK_FLOOR_INSET_M,
+  ECO_WALK_SOLID_OUTSET_M,
+  ECO_WALL_SAMPLE_STEP_M,
+}
+
+/** Shrink an open plan ring toward its centroid (floor bias — never stand on air). */
+function insetPlanRing(ring: [number, number][], insetM: number): [number, number][] {
+  if (ring.length < 3 || insetM <= 0) return ring
+  let cx = 0
+  let cz = 0
+  for (const [x, z] of ring) {
+    cx += x
+    cz += z
+  }
+  cx /= ring.length
+  cz /= ring.length
+  return ring.map(([x, z]) => {
+    const dx = x - cx
+    const dz = z - cz
+    const len = Math.hypot(dx, dz) || 1
+    const scale = Math.max(0, (len - insetM) / len)
+    return [cx + dx * scale, cz + dz * scale]
+  })
+}
 
 type NodeMap = Record<string, Record<string, unknown> | undefined>
 
@@ -143,7 +170,8 @@ function frameAtRunMeters(wall: WallLike, s: number) {
  * One solid per continuous run (not per sample). Ring is a polyline, never a chord.
  */
 export function wallSegmentRing(wall: WallLike, s0: number, s1: number): [number, number][] {
-  const halfT = (wall.thickness ?? 0.1) / 2
+  // Outset past the visual face so chord approximation errs by stopping early.
+  const halfT = (wall.thickness ?? 0.1) / 2 + ECO_WALK_SOLID_OUTSET_M
   const span = Math.max(0, s1 - s0)
   const arc = getWallArcData(wall)
   const step = arc ? adaptiveArcSampleStepM(arc.radius) : ECO_WALL_SAMPLE_STEP_M
@@ -186,7 +214,10 @@ export function buildEcoWalk(nodes: NodeMap): EcoWalk {
       const elevation = slab.elevation ?? 0.05
       floors.push({
         name: `slab:${slab.id}`,
-        ring: slab.polygon.map(([x, z]) => toWorldXz([x, z])),
+        ring: insetPlanRing(
+          slab.polygon.map(([x, z]) => toWorldXz([x, z])),
+          ECO_WALK_FLOOR_INSET_M,
+        ),
         top: levelY + elevation,
       })
     }

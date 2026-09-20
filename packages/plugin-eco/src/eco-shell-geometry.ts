@@ -101,14 +101,11 @@ export function buildShellObject3D(
   const positions: number[] = []
   const indices: number[] = []
 
-  // Adaptive strips along ridge — always include control vertices so parametric
-  // ridgeHeights peaks are exact (not undersampled by uniform t).
+  // Visual tessellation: coarsest strip count that still meets the 5 cm ceiling.
+  // Walk rings stay denser separately — never make the mesh as fine as the walk.
   const ridgeLen = polylineLength(shell.ridge)
-  const minSegs = Math.max(
-    2,
-    shell.ridge.length - 1,
-    Math.ceil(ridgeLen / Math.max(ECO_CURVE_WALK_TOLERANCE_M * 20, 0.35)),
-  )
+  const visualStep = Math.max(ECO_CURVE_WALK_TOLERANCE_M * 8, 1.0) // ~1.0–1.4 m along ridge
+  const minSegs = Math.max(2, shell.ridge.length - 1, Math.ceil(ridgeLen / visualStep))
   const tSet = new Set<number>([0, 1])
   {
     let walked = 0
@@ -124,7 +121,8 @@ export function buildShellObject3D(
     for (let i = 0; i <= minSegs; i++) tSet.add(i / minSegs)
   }
   const ridgeTs = [...tSet].sort((a, b) => a - b)
-  const across = Math.max(8, Math.ceil(10 * Math.sqrt(shell.rise > 0 ? shell.rise : 1)))
+  // Across: keep control ridges; ~6–8 is enough for a leaf at walking distance
+  const across = Math.max(6, Math.min(8, Math.ceil(6 * Math.sqrt(shell.rise > 0 ? shell.rise : 1))))
   const grid: { x: number; y: number; z: number }[][] = []
 
   for (const t of ridgeTs) {

@@ -61,6 +61,13 @@ const exported = await exportEcoGlb({
 assert(exported.buffer.byteLength > 0, 'export buffer')
 assert(exported.buffer.byteLength < 500 * 1024, 'house under 500 KB')
 assert(exported.optimise?.afterBytes === exported.buffer.byteLength, 'optimise meta')
+{
+  const houseReport = await auditGlb(exported.buffer)
+  assert(
+    !houseReport.extensionsRequired.includes('EXT_meshopt_compression'),
+    'parametric house must fit without meshopt (compression is headroom)',
+  )
+}
 console.log('exportEcoGlb house OK', {
   before: exported.optimise?.beforeBytes,
   after: exported.optimise?.afterBytes,
@@ -150,19 +157,34 @@ if (existsSync(oakPath)) {
     textures: before.counts.textures,
     sizeM: before.worldBounds.sizeMeters,
   })
+  // Sparse bar: prefer empty extensionsRequired. Oak Leaf massing is dense —
+  // compat alone stays over 500 KB; meshopt headroom brings it under.
+  const compat = await optimiseGlb(raw, 'compat')
+  const compatReport = await auditGlb(compat.buffer)
+  console.log('Oak Leaf compat (no meshopt)', {
+    before: compat.beforeBytes,
+    after: compat.afterBytes,
+    under500k: compat.afterBytes < 500 * 1024,
+    extensionsRequired: compatReport.extensionsRequired,
+  })
+
   const web = await optimiseGlb(raw, 'web')
   const after = await auditGlb(web.buffer)
   assertHardGlbAudit(after, { maxBytes: 500 * 1024 })
   assert(web.afterBytes < 500 * 1024, `Oak Leaf after ${web.afterBytes} must be < 500 KB`)
   const outPath = path.join(dir, 'oak-leaf.web.glb')
   writeFileSync(outPath, Buffer.from(web.buffer))
-  console.log('Oak Leaf web optimise OK', {
+  console.log('Oak Leaf web optimise OK (meshopt headroom)', {
     before: web.beforeBytes,
     after: web.afterBytes,
     ratio: Number((web.afterBytes / web.beforeBytes).toFixed(3)),
     triangles: after.triangles,
     extensionsRequired: after.extensionsRequired,
     wrote: outPath,
+    finding:
+      compat.afterBytes >= 500 * 1024
+        ? 'massing needs meshopt to fit — geometry density is wrong first; parametric exports must stay sparse'
+        : 'fits without meshopt',
   })
 } else {
   console.log('Oak Leaf GLB not present — skip size proof (pass path as argv or OAK_LEAF_GLB)')

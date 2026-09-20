@@ -162,16 +162,19 @@ export type LoftMeshData = {
   planRing: Vec2[]
 }
 
+import { adaptiveVisualSampleStepM } from './eco-curve-tolerance'
+
 /**
  * Tessellate a loft into a triangle mesh. Positions are world metres (x,y,z)
  * with y up. Remains parametric: call again after editing rail/profiles.
+ * Default along-count uses visual (coarsest legal) step, not walk density.
  */
 export function tessellateLoft(loft: EcoLoft): LoftMeshData {
   const railLen = polylineLength2(loft.rail)
   const along =
     loft.alongSegments > 0
       ? loft.alongSegments
-      : Math.max(8, Math.ceil(railLen / 0.5))
+      : Math.max(6, Math.ceil(railLen / adaptiveVisualSampleStepM(Math.max(railLen / Math.PI, 3))))
   const positions: number[] = []
   const rows: Vec3[][] = []
 
@@ -216,7 +219,7 @@ export function makeDefaultLeafLoft(id = `loft-${Date.now()}`): EcoLoft {
   const halfL = 13
   const arch = (w: number, h: number): Vec2[] => {
     const pts: Vec2[] = []
-    const n = 16
+    const n = 8
     for (let i = 0; i <= n; i++) {
       const a = (i / n) * Math.PI
       pts.push([Math.cos(a) * w, Math.sin(a) * h])
@@ -238,7 +241,7 @@ export function makeDefaultLeafLoft(id = `loft-${Date.now()}`): EcoLoft {
       { t: 1, points: arch(0.4, 0.2) },
     ],
     thickness: 0.12,
-    alongSegments: 32,
+    alongSegments: 0,
     acrossSegments: 0,
   }
 }

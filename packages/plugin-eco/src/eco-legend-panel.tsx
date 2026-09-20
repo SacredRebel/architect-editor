@@ -29,6 +29,13 @@ import {
   subscribeEcoShells,
 } from './eco-shell-store'
 import {
+  getEcoPresentationState,
+  setEcoPresentation,
+  setEcoTimeOfDayHours,
+  subscribeEcoPresentation,
+  toggleEcoPresentation,
+} from './eco-presentation-store'
+import {
   getEcoSiteState,
   setGuideVisible,
   setShowCompass,
@@ -53,6 +60,14 @@ function useOrganic() {
   return useSyncExternalStore(subscribeEcoOrganic, getEcoOrganicState, getEcoOrganicState)
 }
 
+function usePresentation() {
+  return useSyncExternalStore(
+    subscribeEcoPresentation,
+    getEcoPresentationState,
+    getEcoPresentationState,
+  )
+}
+
 /**
  * Legend + visibility toggles for Eco site overlays, Walk, and world export.
  */
@@ -61,6 +76,7 @@ export default function EcoLegendPanel() {
   const { enabled: walkEnabled, firstPerson } = useWalkStore()
   const { shells } = useShells()
   const organic = useOrganic()
+  const { presentation, timeOfDayHours } = usePresentation()
   const [exporting, setExporting] = useState(false)
 
   const onExport = () => {
@@ -74,6 +90,35 @@ export default function EcoLegendPanel() {
 
   return (
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
+      <div style={{ fontWeight: 600 }}>Presentation (H12)</div>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input
+          checked={presentation}
+          onChange={(e) => setEcoPresentation(e.target.checked)}
+          type="checkbox"
+        />
+        Presentation view — site sun, hide chrome, frame camera
+      </label>
+      <button
+        onClick={() => toggleEcoPresentation()}
+        style={{ padding: '6px 10px', cursor: 'pointer', textAlign: 'left' }}
+        type="button"
+      >
+        {presentation ? 'Exit presentation' : 'One-click presentation'}
+      </button>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        Time of day
+        <input
+          max={24}
+          min={0}
+          onChange={(e) => setEcoTimeOfDayHours(Number(e.target.value))}
+          step={0.25}
+          type="range"
+          value={timeOfDayHours}
+        />
+        <span style={{ width: 36, textAlign: 'right' }}>{timeOfDayHours.toFixed(1)}h</span>
+      </label>
+
       <div style={{ fontWeight: 600 }}>Walk</div>
       <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <input
