@@ -199,8 +199,13 @@ export function getEcoJurisdiction(): EcoJurisdictionProfile {
  * Headless construction quantities for an Eco / Pascal nodes dict.
  * Prefers Bones member takeoff when wall/slab/level geometry is present;
  * otherwise keeps the massing adapter and records why.
+ *
+ * Async: awaits the Bones engines chunk (dynamic import) on first run so
+ * page-open editor bundles never pay for construction engines.
  */
-export function runEcoConstructionTakeoff(nodes: NodesRecord): EcoConstructionResult {
+export async function runEcoConstructionTakeoff(
+  nodes: NodesRecord,
+): Promise<EcoConstructionResult> {
   const jurisdiction = VENTURA_COUNTY_JURISDICTION
   const climate = jurisdiction.climate
   const walls = extractWalls(nodes)
@@ -256,7 +261,7 @@ export function runEcoConstructionTakeoff(nodes: NodesRecord): EcoConstructionRe
     detail: `${walls.length} wall segment(s) including partitions`,
   })
 
-  const bones = runBonesMemberTakeoff(nodes)
+  const bones = await runBonesMemberTakeoff(nodes)
 
   if (bones.status.ok) {
     push({

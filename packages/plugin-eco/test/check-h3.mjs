@@ -99,115 +99,134 @@ function makeCurvedOnly() {
   }
 }
 
-// --- Hand check 1: floor area ---
-const poly = [
-  [0, 0],
-  [20, 0],
-  [20, 10],
-  [0, 10],
-]
-const handArea = 20 * 10
-const shoelace = polygonAreaM2(poly)
-assert(Math.abs(shoelace - handArea) < 1e-9, `shoelace ${shoelace} ≠ hand ${handArea}`)
+async function main() {
+  // --- Hand check 1: floor area ---
+  const poly = [
+    [0, 0],
+    [20, 0],
+    [20, 10],
+    [0, 10],
+  ]
+  const handArea = 20 * 10
+  const shoelace = polygonAreaM2(poly)
+  assert(Math.abs(shoelace - handArea) < 1e-9, `shoelace ${shoelace} ≠ hand ${handArea}`)
 
-const result = runEcoConstructionTakeoff(makeBuilding20x10())
-assert(result.metrics.floorAreaM2 === 200, `floorArea ${result.metrics.floorAreaM2}`)
-const floorRow = result.rows.find((r) => r.item === 'Total floor area')
-assert(floorRow?.basis === 'takeoff', 'floor area must be takeoff')
-assert(floorRow?.quantity === 200, 'floor row qty')
+  const result = await runEcoConstructionTakeoff(makeBuilding20x10())
+  assert(result.metrics.floorAreaM2 === 200, `floorArea ${result.metrics.floorAreaM2}`)
+  const floorRow = result.rows.find((r) => r.item === 'Total floor area')
+  assert(floorRow?.basis === 'takeoff', 'floor area must be takeoff')
+  assert(floorRow?.quantity === 200, 'floor row qty')
 
-// --- Hand check 2: exterior wall LF ---
-const handLf = 2 * (20 + 10)
-assert(result.metrics.exteriorWallLfM === 60, `exterior LF ${result.metrics.exteriorWallLfM} ≠ ${handLf}`)
-const lfRow = result.rows.find((r) => r.item === 'Exterior wall length')
-assert(lfRow?.basis === 'takeoff', 'exterior LF must be takeoff')
-assert(lfRow?.quantity === 60, 'LF row qty')
+  // --- Hand check 2: exterior wall LF ---
+  const handLf = 2 * (20 + 10)
+  assert(result.metrics.exteriorWallLfM === 60, `exterior LF ${result.metrics.exteriorWallLfM} ≠ ${handLf}`)
+  const lfRow = result.rows.find((r) => r.item === 'Exterior wall length')
+  assert(lfRow?.basis === 'takeoff', 'exterior LF must be takeoff')
+  assert(lfRow?.quantity === 60, 'LF row qty')
 
-// Jurisdiction is Ventura, not a generic default
-assert(result.jurisdiction.id === 'US-CA-VENTURA', 'jurisdiction id')
-assert(result.jurisdiction.climate.frostLineIn === 0, 'frost')
-assert(result.jurisdiction.climate.seismicSdc === 'D', 'seismic')
-assert(result.jurisdiction.climate.wui === true, 'wui')
-assert(result.jurisdiction.climate.groundSnowLoadPsf === 0, 'snow')
+  // Jurisdiction is Ventura, not a generic default
+  assert(result.jurisdiction.id === 'US-CA-VENTURA', 'jurisdiction id')
+  assert(result.jurisdiction.climate.frostLineIn === 0, 'frost')
+  assert(result.jurisdiction.climate.seismicSdc === 'D', 'seismic')
+  assert(result.jurisdiction.climate.wui === true, 'wui')
+  assert(result.jurisdiction.climate.groundSnowLoadPsf === 0, 'snow')
 
-// Every row has a basis
-for (const row of result.rows) {
-  assert(
-    row.basis === 'takeoff' || row.basis === 'estimate' || row.basis === 'placeholder',
-    `bad basis on ${row.item}`,
-  )
-}
-
-const csv = ecoConstructionCsv(result)
-assert(csv.includes('basis'), 'csv has basis column')
-assert(csv.includes('# jurisdiction,'), 'csv stamps jurisdiction')
-assert(csv.includes('takeoff'), 'csv has takeoff rows')
-
-// --- Browser-safe ESM vendor path (panel is 'use client') ---
-const bridgeSrc = readFileSync(join(ecoSrc, 'eco-bones-engines.ts'), 'utf8')
-assert(!bridgeSrc.includes('createRequire'), 'eco-bones-engines must not use createRequire (breaks Vite client)')
-assert(
-  bridgeSrc.includes("from './bones-vendor/") || bridgeSrc.includes('from "./bones-vendor/'),
-  'eco-bones-engines must ESM-import bones-vendor',
-)
-assert(
-  existsSync(join(ecoSrc, 'bones-vendor/src/framing/compute.ts')),
-  'bones-vendor computeLevel missing',
-)
-assert(
-  existsSync(join(ecoSrc, 'bones-vendor/src/engines/takeoff.ts')),
-  'bones-vendor computeTakeoff missing',
-)
-assert(existsSync(join(ecoSrc, 'bones-vendor/ATTRIBUTION.md')), 'bones-vendor MIT attribution missing')
-
-// --- Bones path (vendored engines — always load) ---
-const bonesEngines = loadBonesEngines()
-assert(bonesEngines, 'vendored Bones engines must load')
-assert(result.bones.ok === true, `bones should run on wall+slab fixture: ${JSON.stringify(result.bones)}`)
-if (result.bones.ok) {
-  assert(result.bones.memberCount > 0, 'bones members > 0')
-  assert(result.bones.takeoffRowCount > 0, 'bones takeoff rows > 0')
-  assert(result.bones.levelId === 'L0', 'bones level L0')
-}
-
-const bonesLumber = result.rows.filter(
-  (r) => r.section.startsWith('Bones ·') && r.basis === 'takeoff' && r.unit === 'pcs',
-)
-assert(bonesLumber.length > 0, 'expected Bones member-counted pcs rows')
-
-// Massing LF÷o.c. stud estimate must NOT appear when Bones ran
-const massingStuds = result.rows.find((r) => r.item.startsWith('Studs (2x4'))
-assert(!massingStuds, 'massing stud estimate must be omitted when Bones takeoff ran')
-
-// LF÷o.c. language must never be labeled takeoff
-for (const row of result.rows) {
-  if (/LF ÷|o\.c\.|rule of thumb/i.test(row.detail) && /stud/i.test(row.item)) {
-    assert(row.basis !== 'takeoff', `stud rule-of-thumb labeled takeoff: ${row.item}`)
+  // Every row has a basis
+  for (const row of result.rows) {
+    assert(
+      row.basis === 'takeoff' || row.basis === 'estimate' || row.basis === 'placeholder',
+      `bad basis on ${row.item}`,
+    )
   }
+
+  const csv = ecoConstructionCsv(result)
+  assert(csv.includes('basis'), 'csv has basis column')
+  assert(csv.includes('# jurisdiction,'), 'csv stamps jurisdiction')
+  assert(csv.includes('takeoff'), 'csv has takeoff rows')
+
+  // --- Browser-safe ESM vendor path (panel is 'use client') ---
+  const bridgeSrc = readFileSync(join(ecoSrc, 'eco-bones-engines.ts'), 'utf8')
+  assert(!bridgeSrc.includes('createRequire'), 'eco-bones-engines must not use createRequire (breaks Vite client)')
+  assert(
+    bridgeSrc.includes("import('./bones-vendor/") || bridgeSrc.includes('import("./bones-vendor/'),
+    'eco-bones-engines must dynamic-import bones-vendor (lazy on panel open)',
+  )
+  assert(
+    !bridgeSrc.includes("from './bones-vendor/") && !bridgeSrc.includes('from "./bones-vendor/'),
+    'eco-bones-engines must not statically import bones-vendor (page-open weight)',
+  )
+  assert(
+    existsSync(join(ecoSrc, 'bones-vendor/src/framing/compute.ts')),
+    'bones-vendor computeLevel missing',
+  )
+  assert(
+    existsSync(join(ecoSrc, 'bones-vendor/src/engines/takeoff.ts')),
+    'bones-vendor computeTakeoff missing',
+  )
+  assert(existsSync(join(ecoSrc, 'bones-vendor/ATTRIBUTION.md')), 'bones-vendor MIT attribution missing')
+
+  // National jurisdiction tables must not be on the Ventura default load path
+  const profilesSrc = readFileSync(join(ecoSrc, 'bones-vendor/src/jurisdiction/profiles.ts'), 'utf8')
+  assert(
+    !/import\s+[^;]*jurisdictions-(climate|adoption)\.json/.test(profilesSrc),
+    'profiles.ts must not import national jurisdictions-*.json',
+  )
+  assert(profilesSrc.includes('VENTURA_PROFILE'), 'profiles.ts must ship VENTURA_PROFILE')
+
+  // --- Bones path (vendored engines — dynamic import) ---
+  const bonesEngines = await loadBonesEngines()
+  assert(bonesEngines, 'vendored Bones engines must load')
+  assert(result.bones.ok === true, `bones should run on wall+slab fixture: ${JSON.stringify(result.bones)}`)
+  if (result.bones.ok) {
+    assert(result.bones.memberCount > 0, 'bones members > 0')
+    assert(result.bones.takeoffRowCount > 0, 'bones takeoff rows > 0')
+    assert(result.bones.levelId === 'L0', 'bones level L0')
+  }
+
+  const bonesLumber = result.rows.filter(
+    (r) => r.section.startsWith('Bones ·') && r.basis === 'takeoff' && r.unit === 'pcs',
+  )
+  assert(bonesLumber.length > 0, 'expected Bones member-counted pcs rows')
+
+  // Massing LF÷o.c. stud estimate must NOT appear when Bones ran
+  const massingStuds = result.rows.find((r) => r.item.startsWith('Studs (2x4'))
+  assert(!massingStuds, 'massing stud estimate must be omitted when Bones takeoff ran')
+
+  // LF÷o.c. language must never be labeled takeoff
+  for (const row of result.rows) {
+    if (/LF ÷|o\.c\.|rule of thumb/i.test(row.detail) && /stud/i.test(row.item)) {
+      assert(row.basis !== 'takeoff', `stud rule-of-thumb labeled takeoff: ${row.item}`)
+    }
+  }
+
+  console.log('  bones path: OK (ESM vendor, dynamic import)')
+  console.log(`    members: ${result.bones.ok ? result.bones.memberCount : 0}`)
+  console.log(`    sample takeoff:`)
+  for (const row of bonesLumber.slice(0, 4)) {
+    console.log(`      [${row.basis}] ${row.section} / ${row.item}: ${row.quantity} ${row.unit}`)
+  }
+
+  // --- Curved-only: Bones must not fake; massing warning + estimate path ---
+  const curved = await runEcoConstructionTakeoff(makeCurvedOnly())
+  assert(curved.bones.ok === false, 'curved-only must not claim bones takeoff')
+  assert(/curved/i.test(curved.bones.ok === false ? curved.bones.reason : ''), 'curved reason')
+  const curvedBonesRow = curved.rows.find((r) => r.section === 'Bones' && r.item === 'Member takeoff')
+  assert(curvedBonesRow?.basis === 'placeholder', 'bones skip is placeholder')
+  const curvedStuds = curved.rows.find((r) => r.item.startsWith('Studs'))
+  if (curvedStuds) {
+    assert(curvedStuds.basis === 'estimate', 'curved massing studs stay estimate')
+  }
+
+  assert(csv.includes('estimate') || result.bones.ok, 'csv has estimate rows or bones-only takeoff')
+
+  console.log('check-h3 OK')
+  console.log(`  floor area: ${result.metrics.floorAreaM2} m² (hand ${handArea})`)
+  console.log(`  exterior wall LF: ${result.metrics.exteriorWallLfM} m (hand ${handLf})`)
+  console.log(`  rows: ${result.rows.length}; jurisdiction: ${result.jurisdiction.name}`)
+  console.log(`  bones: ${result.bones.ok ? 'wired' : result.bones.reason}`)
 }
 
-console.log('  bones path: OK (ESM vendor)')
-console.log(`    members: ${result.bones.ok ? result.bones.memberCount : 0}`)
-console.log(`    sample takeoff:`)
-for (const row of bonesLumber.slice(0, 4)) {
-  console.log(`      [${row.basis}] ${row.section} / ${row.item}: ${row.quantity} ${row.unit}`)
-}
-
-// --- Curved-only: Bones must not fake; massing warning + estimate path ---
-const curved = runEcoConstructionTakeoff(makeCurvedOnly())
-assert(curved.bones.ok === false, 'curved-only must not claim bones takeoff')
-assert(/curved/i.test(curved.bones.ok === false ? curved.bones.reason : ''), 'curved reason')
-const curvedBonesRow = curved.rows.find((r) => r.section === 'Bones' && r.item === 'Member takeoff')
-assert(curvedBonesRow?.basis === 'placeholder', 'bones skip is placeholder')
-const curvedStuds = curved.rows.find((r) => r.item.startsWith('Studs'))
-if (curvedStuds) {
-  assert(curvedStuds.basis === 'estimate', 'curved massing studs stay estimate')
-}
-
-assert(csv.includes('estimate') || result.bones.ok, 'csv has estimate rows or bones-only takeoff')
-
-console.log('check-h3 OK')
-console.log(`  floor area: ${result.metrics.floorAreaM2} m² (hand ${handArea})`)
-console.log(`  exterior wall LF: ${result.metrics.exteriorWallLfM} m (hand ${handLf})`)
-console.log(`  rows: ${result.rows.length}; jurisdiction: ${result.jurisdiction.name}`)
-console.log(`  bones: ${result.bones.ok ? 'wired' : result.bones.reason}`)
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

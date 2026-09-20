@@ -1,18 +1,13 @@
 /**
  * Jurisdiction profiles — how location changes the framing.
  *
- * Building codes are adopted at the STATE level in the US (a few states leave
- * it to counties/cities), and the values that actually move framing — frost
- * depth, ground snow load, wind speed, seismic category — vary by site within
- * a state. Bones ships state-level profiles (typical values, researched with
- * sources in docs/research/) as smart defaults; every value stays overridable.
- *
- * Data files are compiled by research (data/jurisdictions-*.json); this
- * module merges them into typed profiles and applies them to a FramingSpec.
+ * Eco H3 ships the **county**, not the nation: Ventura County climate/code
+ * values are inlined here so FramingSpec never pulls the national
+ * `jurisdictions-climate.json` / `jurisdictions-adoption.json` tables
+ * (~115 KB). Those files remain under `data/` for upstream parity / future
+ * jurisdiction changes; they are not on the default load path.
  */
 
-import adoptionData from '../../data/jurisdictions-adoption.json'
-import climateData from '../../data/jurisdictions-climate.json'
 import {
   DEFAULT_SPEC,
   type FramingSpec,
@@ -45,30 +40,29 @@ export type JurisdictionProfile = {
   notes: string[]
 }
 
-/** States where exterior CMU block is the default single-family practice. */
-const CMU_DEFAULT_STATES = new Set(['FL'])
-
-type AdoptionRow = {
-  name?: string
-  residentialCode?: string
-  /** IRC edition year, or null where the state/province code is NOT an IRC adoption. */
-  ircBase?: number | null
-  amendmentFlavor?: string
-  specialRegimes?: string[]
+/**
+ * Ventura County, CA — matches `packages/plugin-eco/data/jurisdiction/ventura-county.json`
+ * and `src/eco-jurisdiction-ventura.ts`. Wired into FramingSpec via applyJurisdiction.
+ */
+export const VENTURA_PROFILE: JurisdictionProfile = {
+  code: 'US-CA-VENTURA',
+  name: 'Ventura County, California (unincorporated / VCBC)',
+  residentialCode:
+    '2025 California Residential Code (CRC), Title 24 Part 2.5 (2024 IRC base), as adopted by the 2025 Ventura County Building Code (VCBC Ordinance 4655)',
+  frostLineIn: 0,
+  groundSnowLoadPsf: 0,
+  ultimateWindMph: 100,
+  seismicSdc: 'D',
+  hurricaneTies: false,
+  seismicHoldDowns: true,
+  exteriorWallDefault: 'framed',
+  nonIrcCode: false,
+  notes: [
+    'Coastal Ventura: negligible frost; R403 12 in embedment floor still applies via applyJurisdiction.',
+    'WUI / Hazardous Fire Area assumed for Eco Village Sulphur Mountain context.',
+    'National jurisdictions-*.json not loaded — county profile only.',
+  ],
 }
-type ClimateRow = {
-  name?: string
-  frostLineIn?: number
-  groundSnowLoadPsf?: number
-  ultimateWindMph?: number
-  seismicSdc?: string
-  flags?: { hurricaneTies?: boolean; seismicHoldDowns?: boolean; hvhz?: boolean }
-  frostLineNote?: string
-  snowNote?: string
-}
-
-const adoption = (adoptionData as { states?: Record<string, AdoptionRow> }).states ?? {}
-const climate = (climateData as { states?: Record<string, ClimateRow> }).states ?? {}
 
 export const INTL_PROFILE: JurisdictionProfile = {
   code: 'INTL',
@@ -85,29 +79,19 @@ export const INTL_PROFILE: JurisdictionProfile = {
   notes: ['Pick a US state for code-informed sizing; INTL uses conservative generic defaults.'],
 }
 
+/** Eco default: Ventura County. US-CA / CA aliases map here (no national table). */
 export function profileFor(code: string): JurisdictionProfile {
   if (code === 'INTL' || code === 'AUTO') return INTL_PROFILE
-  const a = adoption[code]
-  const c = climate[code]
-  if (!a && !c) return { ...INTL_PROFILE, code, name: code }
-  const notes: string[] = []
-  if (a?.amendmentFlavor) notes.push(a.amendmentFlavor)
-  if (c?.frostLineNote) notes.push(`Frost: ${c.frostLineNote}`)
-  if (c?.snowNote) notes.push(`Snow: ${c.snowNote}`)
-  return {
-    code,
-    name: a?.name ?? c?.name ?? code,
-    residentialCode: a?.residentialCode ?? 'IRC (edition unverified)',
-    frostLineIn: c?.frostLineIn ?? 12,
-    groundSnowLoadPsf: c?.groundSnowLoadPsf ?? 20,
-    ultimateWindMph: c?.ultimateWindMph ?? 115,
-    seismicSdc: c?.seismicSdc ?? 'B',
-    hurricaneTies: c?.flags?.hurricaneTies ?? (c?.ultimateWindMph ?? 0) >= 130,
-    seismicHoldDowns: c?.flags?.seismicHoldDowns ?? /^[DEF]/.test(c?.seismicSdc ?? ''),
-    exteriorWallDefault: CMU_DEFAULT_STATES.has(code) ? 'cmu' : 'framed',
-    nonIrcCode: a !== undefined && a.ircBase === null,
-    notes,
+  if (
+    code === 'US-CA-VENTURA' ||
+    code === 'US-CA' ||
+    code === 'CA' ||
+    code === 'VENTURA'
+  ) {
+    return VENTURA_PROFILE
   }
+  // Unknown codes: stamp the code on INTL defaults — do not pull national JSON.
+  return { ...INTL_PROFILE, code, name: code }
 }
 
 /**
@@ -136,13 +120,12 @@ export function nonIrcCodeWarning(profile: JurisdictionProfile): string | null {
   )
 }
 
-/** All selectable jurisdiction codes: INTL + every state present in the data. */
+/** Selectable codes on Eco's default path: INTL + Ventura only. */
 export function jurisdictionOptions(): { code: string; name: string }[] {
-  const codes = new Set([...Object.keys(adoption), ...Object.keys(climate)])
-  const states = [...codes]
-    .sort()
-    .map((code) => ({ code, name: adoption[code]?.name ?? climate[code]?.name ?? code }))
-  return [{ code: 'INTL', name: 'International (generic)' }, ...states]
+  return [
+    { code: 'INTL', name: 'International (generic)' },
+    { code: VENTURA_PROFILE.code, name: VENTURA_PROFILE.name },
+  ]
 }
 
 /**
@@ -206,5 +189,5 @@ export function applyJurisdiction(
   return next
 }
 
-export const DEFAULT_PROFILE = INTL_PROFILE
+export const DEFAULT_PROFILE = VENTURA_PROFILE
 export { DEFAULT_SPEC }

@@ -11,13 +11,60 @@
 |---|---|
 | `H3-eval.md` | Inputs/outputs, headless vs UI, adapter shape, Bones wiring note |
 | `bones-vendor/` | MIT-attributed pure `computeLevel` / `computeTakeoff` / `FramingNode` + tables |
-| `eco-bones-engines.ts` | Browser-safe ESM imports from vendor (no `createRequire`) |
+| `eco-bones-engines.ts` | Dynamic `import()` of vendor (no static bones on page open) |
 | `eco-construction.ts` | Geometry takeoff + Bones member rows (or massing estimates) + CSV |
 | `eco-construction-panel.tsx` | Panel: jurisdiction, Bones status, basis beside every qty, Download CSV |
 | `eco-jurisdiction-ventura.ts` | Ventura County code edition + climate |
 | `ecoConstructionHostPanel` | Rail panel (bootstrap registers it) |
 
 When the scene has Pascal `wall`/`slab`/`level` nodes Bones can extract, Eco runs **`computeLevel` + `computeTakeoff` headless** (works in the `'use client'` panel via vendored ESM) and merges member-counted rows as basis **`takeoff`**. If Bones cannot run (no level, curved-only walls, 0 members), the massing adapter remains and a **Bones · Member takeoff** placeholder row states why — no fake member counts. Stud counts from LF÷o.c. stay **`estimate`** and are omitted when Bones takeoff ran.
+
+## Bundle weight (H3 fix)
+
+### Why the graph was this connected (not a barrel)
+
+Traced the static import closure from `framing/compute`, `framing/schema`, and `engines/takeoff`.
+
+- **No barrel** — there is no `index.ts` / types re-export hub under `bones-vendor/`.
+- **Genuine upstream hub:** `framing/compute.ts` is the assembly point. It **statically** imports every engine it may call (electrical, HVAC, plumbing, CMU, wall/floor/roof framing, foundation, bracing, LGS, device derive, jurisdiction profiles, …). Opening any of the three Eco entry points therefore pulled the full vendor tree (~1.35 MB source: 1,069,080 TS + 279,755 JSON).
+- Leaf-only imports cannot cut that closure without forking `computeLevel` itself. Eco therefore **lazy-loads** the whole engines chunk when the Construction panel mounts (same idea as the world's glTF loader).
+
+Additionally, `index.ts` re-exported `eco-construction`, which statically imported the engines bridge — so `@eco/plugin-eco` on page open paid for construction even though the panel component was already `() => import(...)`.
+
+### What was cut vs lazy
+
+| Change | Effect |
+|---|---|
+| Dynamic `import()` in `eco-bones-engines.ts` | Editor with Construction never opened pays **~3 KB** for the bridge, not the engines |
+| Engines + tables | Still load when the panel mounts / first takeoff runs |
+| National `jurisdictions-*.json` | **Removed from default load path** — Ventura inlined in `profiles.ts` |
+
+### Ventura-only jurisdiction
+
+- `bones-vendor/.../profiles.ts` ships `VENTURA_PROFILE` (frost 0, snow 0, wind 100, SDC D, seismic hold-downs) matching `data/jurisdiction/ventura-county.json`.
+- `applyJurisdiction` wires that into `FramingSpec` (12 in footing floor, 4 ft anchors, no hurricane / snow bumps).
+- National `jurisdictions-climate.json` (64 KB) + `jurisdictions-adoption.json` (51 KB) remain on disk for upstream parity / future jurisdiction changes but are **not imported**.
+- Eco UI / CSV still stamp `VENTURA_COUNTY_JURISDICTION`; engines config uses `jurisdiction: 'US-CA-VENTURA'`.
+
+### Measure method (reproducible)
+
+```bash
+# BEFORE (static imports of the three entry points) — recorded once:
+bun build packages/plugin-eco/src/eco-bones-engines.ts --outdir …/h3-before --target browser --minify
+
+# AFTER (same command + --splitting so dynamic import() stays a separate chunk):
+bun build packages/plugin-eco/src/eco-bones-engines.ts --outdir …/h3-after --target browser --minify --splitting
+```
+
+Compat assert guards exports, not this weight — note that. Numbers below are minify bytes from that recipe.
+
+| Metric | Bytes | Note |
+|---|---|---|
+| **Before** (engines bridge + full static closure) | **1,178,300** (1.18 MB) | Single entry file; national JSON included |
+| **After — page open** (eager entry only) | **3,332** (~3.3 KB) | `eco-bones-engines.js` with `--splitting` |
+| **After — panel open** (eager + all async chunks) | **1,088,963** (~1.09 MB) | Engines still available; national JSON out (~89 KB saved vs before) |
+
+**Page-open savings:** ~1.17 MB no longer lands until Construction opens.
 
 ## Jurisdiction shown (Ventura County, CA)
 
@@ -32,7 +79,7 @@ When the scene has Pascal `wall`/`slab`/`level` nodes Bones can extract, Eco run
 | Seismic SDC | **D** + hold-downs; anchor bolts **4 ft** o.c. |
 | WUI | **yes** — HFA / Chapter 7A / CWUIC class |
 
-Bones engines receive jurisdiction code `US-CA` (state-typical CA tables inside the package). Eco **UI / CSV headers** still stamp the in-repo Ventura profile — climate is never fetched at runtime.
+Bones engines receive jurisdiction code `US-CA-VENTURA` (inlined Ventura profile — not national CA row). Eco **UI / CSV headers** stamp the in-repo Ventura profile — climate is never fetched at runtime.
 
 ## Hand checks (20 m × 10 m box)
 
@@ -59,7 +106,7 @@ Fixture: one slab `[0,0]→[20,0]→[20,10]→[0,10]`, four walls on the perimet
 bun packages/plugin-eco/test/check-h3.mjs
 ```
 
-Expect: floor 200 m², exterior LF 60 m, Ventura id, every row has a basis; Bones ESM vendor present (no `createRequire`); member takeoff OK; curved-only fixture keeps placeholder + estimates.
+Expect: floor 200 m², exterior LF 60 m, Ventura id, every row has a basis; Bones ESM vendor present (no `createRequire`); dynamic `import('./bones-vendor/…')` (not static); national jurisdictions JSON not imported by `profiles.ts`; member takeoff OK; curved-only fixture keeps placeholder + estimates.
 
 ## Paths
 

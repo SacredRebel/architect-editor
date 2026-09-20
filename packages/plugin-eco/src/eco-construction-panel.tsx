@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useScene } from '@pascal-app/core'
 import {
   ecoConstructionCsv,
   getEcoJurisdiction,
   runEcoConstructionTakeoff,
+  type EcoConstructionResult,
   type TakeoffBasis,
 } from './eco-construction'
 
@@ -17,13 +18,54 @@ function basisColor(basis: TakeoffBasis): string {
 
 /**
  * Construction takeoff panel — Ventura County jurisdiction + basis-labeled CSV.
+ * Bones engines load via dynamic import on mount (not on editor page open).
  */
 export default function EcoConstructionPanel() {
   const nodes = useScene((s) => s.nodes)
-  const result = useMemo(
-    () => runEcoConstructionTakeoff(nodes as Record<string, Record<string, unknown>>),
-    [nodes],
-  )
+  const [result, setResult] = useState<EcoConstructionResult | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    void runEcoConstructionTakeoff(nodes as Record<string, Record<string, unknown>>)
+      .then((next) => {
+        if (!cancelled) {
+          setResult(next)
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err))
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [nodes])
+
+  if (loading && !result) {
+    return (
+      <div style={{ padding: 12, fontSize: 12, opacity: 0.7 }}>
+        Loading construction engines…
+      </div>
+    )
+  }
+
+  if (error && !result) {
+    return (
+      <div style={{ padding: 12, fontSize: 12, color: '#ff6b6b' }}>
+        Construction takeoff failed: {error}
+      </div>
+    )
+  }
+
+  if (!result) return null
+
   const j = result.jurisdiction
   const c = j.climate
 
@@ -45,6 +87,7 @@ export default function EcoConstructionPanel() {
         Geometry metrics plus Bones <code>computeLevel</code>/<code>computeTakeoff</code> when
         Pascal wall/slab/level nodes are present. Every row carries an honest <code>basis</code>{' '}
         — member counts are <code>takeoff</code>; massing rules of thumb stay <code>estimate</code>.
+        {loading ? ' Updating…' : null}
       </div>
 
       <div
