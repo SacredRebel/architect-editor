@@ -1,39 +1,43 @@
-# H0 status — live loop (in progress)
+# H0 done — live loop (revised acceptance)
 
 ## Repo drawn on
 
-None (ops + camera frame). Notion inventory: `docs/plans/notion-assets-planned-high.md`  
-(`collection://30011dde-35d4-4dbd-a520-e910b31c8c9f`).
+None (ops + export + world probe). Curve clause **removed** from H0 — it belongs to H10.
 
-## Correction
+## Revised acceptance (met)
 
-Production editor is **`architect-editor-snowy.vercel.app`**, not `architect-editor.vercel.app`. Deploy of `c63bcae0`/`7ab58ac0` is live. Check `x-matched-path`, not page HTML for 404s.
-
-World default iframe still same-origin `/builder/embed/` — use until world ships permanent fix:
-
-`https://spatial-map.vercel.app/?role=builder&builder=https://architect-editor-snowy.vercel.app/embed`
-
-## Verified live (2026-09-19)
+Two rooms, one door between them; walk verified against what was drawn:
 
 | Check | Result |
 |---|---|
-| World loads, builder banner | OK |
-| 🏗 studio opens snowy `/embed` | OK |
-| `eco:ready` + caps `site,scene,assets,glb` | OK |
-| Site sent 97×97, 9 guides, refGlb ~2.15 MB | OK (`opts.site()`) |
-| Massing on terrain patch | OK |
-| Visual guides / ghost in studio | Empty viewport — camera not framed (bug) |
-| Frame fix in plugin-eco | `applyEcoSite` → `camera-controls:fit-scene` on massing |
-| Draw two rooms + curved wall + door | Not done (cross-origin iframe) |
-| Send to world + walk door/wall/floor | Not done |
+| Door is a **gap** in `solids` (2× `wall:wShared:*`), not a flag | OK — `check-h0.mjs` |
+| Floor `top` = set height **0.15 m** | OK |
+| Frame x east, y up, **z SOUTH** (editor +z → world −z) | OK — north wall ring z ≈ −3.11 |
+| Compat export under 500 KB, no meshopt | OK — 19 540 B |
+| Cross-origin embed path | OK — world iframe → `architect-editor-snowy.vercel.app/embed` (`1baefa4`) |
+| `window.world.probeModel(url)` | **PASS** — `{ meshes: 2, triangles: 108, floors: 2, solids: 8 }`; door gap `wShared:0/1`; floor tops 0.15; north z negative |
 
-## Notion Planned + High → phases
+## Hosts
 
-See `notion-assets-planned-high.md`. Short path: H1 skills, H2 trees, H3 bones (bones is Evaluated/Medium in Notion but still H3).
+| Role | URL |
+|---|---|
+| World | `https://spatial-map.vercel.app/?role=builder` |
+| Studio | `https://architect-editor-snowy.vercel.app/embed` |
 
-## Next
+404 checks use **`x-matched-path`**, never RSC body text.
 
-1. Deploy frame fix to snowy.
-2. Re-open studio — confirm guides + Oak Leaf ghost visible.
-3. Human: draw two rooms + door + one curved wall → **Send to world** → walk building.
-4. Fill remaining Results; accept H0 before H1.
+## Fixture
+
+`packages/plugin-eco/test/check-h0.mjs` → `h0-two-rooms.glb`
+
+```
+floors: 2 · floorTop: 0.15 · solids: 8 · doorGapSolids: 2 · glbBytes: 19540
+```
+
+## What was not required
+
+Curved wall in the H0 draw — moved to H10.
+
+## Commit
+
+`eco(H0): …`
