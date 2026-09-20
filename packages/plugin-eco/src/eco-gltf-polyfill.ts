@@ -31,7 +31,11 @@ function pngChunk(type: string, data: Uint8Array): Uint8Array {
 }
 
 /** Minimal RGB/RGBA → PNG (8-bit). */
-export function encodePngRgba(width: number, height: number, rgba: Uint8Array): Uint8Array {
+export function encodePngRgba(
+  width: number,
+  height: number,
+  rgba: Uint8Array | Uint8ClampedArray,
+): Uint8Array {
   const raw = new Uint8Array((width * 4 + 1) * height)
   for (let y = 0; y < height; y++) {
     const row = y * (width * 4 + 1)

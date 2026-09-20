@@ -45,7 +45,8 @@ async function createPmrem(gl: THREE.WebGLRenderer): Promise<PmremLike | null> {
     const anyGl = gl as THREE.WebGLRenderer & { isWebGPURenderer?: boolean }
     if (anyGl.isWebGPURenderer) {
       const { PMREMGenerator } = await import('three/webgpu')
-      return new PMREMGenerator(gl) as unknown as PmremLike
+      // R3F gl is WebGLRenderer; webgpu PMREMGenerator expects its Renderer type.
+      return new PMREMGenerator(gl as never) as unknown as PmremLike
     }
     return new THREE.PMREMGenerator(gl)
   } catch {
@@ -88,7 +89,7 @@ export function EcoSiteLighting() {
 
   useLayoutEffect(() => {
     prevTone.current = {
-      colorSpace: gl.outputColorSpace,
+      colorSpace: gl.outputColorSpace as THREE.ColorSpace,
       toneMapping: gl.toneMapping,
       exposure: gl.toneMappingExposure,
       environment: scene.environment,

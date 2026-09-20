@@ -114,14 +114,20 @@ export function instantAt(hours: number, timeZone: string, day: Date = new Date(
   const offsetMs = (d: Date) => {
     const p = parts(d)
     return (
-      Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) -
-      Math.floor(d.getTime() / 1000) * 1000
+      Date.UTC(
+        +(p.year ?? '0'),
+        +(p.month ?? '1') - 1,
+        +(p.day ?? '1'),
+        +(p.hour ?? '0'),
+        +(p.minute ?? '0'),
+        +(p.second ?? '0'),
+      ) - Math.floor(d.getTime() / 1000) * 1000
     )
   }
   const today = parts(day)
   const h = Math.floor(hours)
   const m = Math.round((hours - h) * 60)
-  const wall = Date.UTC(+today.year, +today.month - 1, +today.day, h, m, 0)
+  const wall = Date.UTC(+(today.year ?? '0'), +(today.month ?? '1') - 1, +(today.day ?? '1'), h, m, 0)
   let guess = new Date(wall - offsetMs(day))
   guess = new Date(wall - offsetMs(guess))
   return guess

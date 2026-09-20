@@ -99,6 +99,7 @@ export {
 } from './hooks/spatial-grid/support-host-patch'
 export { useSpatialQuery } from './hooks/spatial-grid/use-spatial-query'
 export { loadAssetUrl, saveAsset } from './lib/asset-storage'
+export { simplifyClosedPolygon } from './lib/polygon-geometry'
 export {
   clampDoorOperationState,
   getDoorRenderOpenAmount,

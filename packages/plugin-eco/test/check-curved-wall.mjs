@@ -62,16 +62,16 @@ const walk = buildEcoWalk(nodes)
 const solids = walk.solids.filter((s) => s.name.startsWith('wall:wCurve'))
 assert(solids.length === 2, `door should split into 2 solids, got ${solids.length}`)
 
-// Full wall without door — one solid with dense ring
+// Full wall without door — dense sample then slab-style RDP (curves keep bend pts)
 const fullRing = wallSegmentRing({ ...wall, children: [] }, 0, run)
-// left face samples + right face samples; each face has samples+1 points
 const samples = Math.max(1, Math.ceil(run / ECO_WALL_SAMPLE_STEP_M))
-const ptsPerFace = samples + 1
+const ptsPerFaceDense = samples + 1
+assert(ptsPerFaceDense >= 40, `dense sample needs ≥40 pts/face, got ${ptsPerFaceDense} (run=${run})`)
+// After simplifyClosedPolygon, curved rings must stay denser than a box (4 pts)
 assert(
-  fullRing.length >= ptsPerFace * 2,
-  `ring should have ≥ ${ptsPerFace * 2} pts (2 faces × ${ptsPerFace}), got ${fullRing.length}`,
+  fullRing.length >= 16,
+  `curved ring after simplify should keep ≥16 pts, got ${fullRing.length}`,
 )
-assert(ptsPerFace >= 40, `each face needs ≥40 pts, got ${ptsPerFace} (run=${run})`)
 
 // Gap along arc ≈ door width ± 5 cm
 const a = solids[0]
@@ -93,8 +93,8 @@ assert(walk2.solids.filter((s) => s.name.startsWith('wall:wCurve')).length === 2
 
 console.log('check-curved-wall OK', {
   run: Number(run.toFixed(3)),
-  ptsPerFace,
-  ringPts: fullRing.length,
+  ptsPerFaceDense,
+  ringPtsAfterSimplify: fullRing.length,
   solids: solids.length,
   doorLocalX: Number(doorLocalX.toFixed(3)),
   sampleStep: ECO_WALL_SAMPLE_STEP_M,

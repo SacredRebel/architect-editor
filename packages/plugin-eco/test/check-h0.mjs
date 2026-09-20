@@ -1,5 +1,5 @@
 /**
- * H0 acceptance — two rooms, one door between them; walk contract + z-south.
+ * H0 acceptance — two rooms, interior + exterior doors; walk contract + z-south.
  * Curve clause moved to H10 (editor cannot draw curves until H10).
  *
  * Usage: bun packages/plugin-eco/test/check-h0.mjs
@@ -89,7 +89,17 @@ function makeTwoRooms() {
       end: [-4, 3],
       thickness: 0.2,
       height: WALL_H,
-      children: [],
+      children: ['doorExt'],
+    },
+    // Exterior entry on west wall — door as gap (not a flag)
+    doorExt: {
+      id: 'doorExt',
+      type: 'door',
+      parentId: 'wW',
+      wallId: 'wW',
+      position: [3, 1.05, 0], // localX mid of 6 m wall
+      width: 0.9,
+      height: 2.1,
     },
     // Shared wall between rooms — door gap (not a flag)
     wShared: {
@@ -154,14 +164,26 @@ for (const f of walk.floors) {
     Math.abs(f.top - FLOOR_TOP) < 1e-9,
     `floor ${f.name} top ${f.top} ≠ set ${FLOOR_TOP}`,
   )
+  assert(f.ring.length === 4, `slab ${f.name} should be 4 pts after inset, got ${f.ring.length}`)
 }
 
 const shared = walk.solids.filter((s) => s.name.startsWith('wall:wShared'))
-assert(shared.length === 2, `door must be a GAP → 2 solids, got ${shared.length}`)
+assert(shared.length === 2, `interior door must be a GAP → 2 solids, got ${shared.length}`)
+const exterior = walk.solids.filter((s) => s.name.startsWith('wall:wW'))
+assert(exterior.length === 2, `exterior door must be a GAP → 2 solids, got ${exterior.length}`)
 assert(
   !walk.solids.some((s) => 'door' in s || s.door || s.hasDoor),
   'no door flag on solids — absence only',
 )
+
+// Straight wall rings: collinear filler removed (≈4 corners like slabs)
+for (const s of walk.solids) {
+  if (!s.name.startsWith('wall:')) continue
+  assert(
+    s.ring.length <= 6,
+    `${s.name} ring still has collinear filler: ${s.ring.length} pts (want ≤6)`,
+  )
+}
 
 // Editor north wall at z=+3 → world z SOUTH (negative)
 const northA = walk.solids.find((s) => s.name === 'wall:wN_A')
@@ -185,7 +207,8 @@ assert(
   'H0 export must not need meshopt',
 )
 assert(stamped.floors.length === 2, 'stamped floors')
-assert(stamped.solids.filter((s) => s.name.startsWith('wall:wShared')).length === 2, 'stamped door gap')
+assert(stamped.solids.filter((s) => s.name.startsWith('wall:wShared')).length === 2, 'stamped interior door gap')
+assert(stamped.solids.filter((s) => s.name.startsWith('wall:wW')).length === 2, 'stamped exterior door gap')
 
 const outPath = path.join(dir, 'h0-two-rooms.glb')
 writeFileSync(outPath, Buffer.from(buffer))
@@ -195,7 +218,9 @@ console.log('check-h0 OK', {
   floorTop: FLOOR_TOP,
   wallH: WALL_H,
   solids: walk.solids.length,
-  doorGapSolids: shared.length,
+  interiorDoorGapSolids: shared.length,
+  exteriorDoorGapSolids: exterior.length,
+  northRingPts: northA.ring.length,
   northZs: northZs.slice(0, 2),
   glbBytes: buffer.byteLength,
   extensionsRequired: report.extensionsRequired,

@@ -201,11 +201,15 @@ function auditFrame(doc: Document): GlbFrameAudit {
       if (f.ring?.length) rings.push(f.ring)
     }
     for (const s of walk.solids ?? []) {
-      if (s.ring?.length) rings.push(s.ring)
+      const ring = s.ring
+      if (ring?.length) rings.push(ring)
       const name = s.name ?? ''
-      if (/wall:.*N/i.test(name) || /_N(?:_|$)/i.test(name) || /wN(?:_|$)/i.test(name)) {
-        const zs = s.ring.map(([, z]) => z)
-        if (zs.length && zs.every((z) => z < 0)) northWallsNegativeZ.push(name)
+      if (
+        ring?.length &&
+        (/wall:.*N/i.test(name) || /_N(?:_|$)/i.test(name) || /wN(?:_|$)/i.test(name))
+      ) {
+        const zs = ring.map(([, z]) => z)
+        if (zs.every((z) => z < 0)) northWallsNegativeZ.push(name)
       }
     }
     for (const ring of rings) {

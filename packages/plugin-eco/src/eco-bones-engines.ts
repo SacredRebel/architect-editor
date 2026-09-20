@@ -79,9 +79,9 @@ export function loadBonesEngines(): Promise<BonesEngines> {
         import('./bones-vendor/src/engines/takeoff'),
       ])
       return {
-        computeLevel: computeMod.computeLevel as BonesEngines['computeLevel'],
-        computeTakeoff: takeoffMod.computeTakeoff as BonesEngines['computeTakeoff'],
-        FramingNode: schemaMod.FramingNode as BonesEngines['FramingNode'],
+        computeLevel: computeMod.computeLevel as unknown as BonesEngines['computeLevel'],
+        computeTakeoff: takeoffMod.computeTakeoff as unknown as BonesEngines['computeTakeoff'],
+        FramingNode: schemaMod.FramingNode as unknown as BonesEngines['FramingNode'],
       }
     })()
   }

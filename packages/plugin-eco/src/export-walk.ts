@@ -1,4 +1,4 @@
-import { getWallArcData, getWallChordFrame, getWallCurveFrameAt } from '@pascal-app/core'
+import { getWallArcData, getWallChordFrame, getWallCurveFrameAt, simplifyClosedPolygon } from '@pascal-app/core'
 import type { EcoWalk } from './bridge-types'
 import {
   adaptiveArcSampleStepM,
@@ -15,6 +15,9 @@ export {
   ECO_WALK_SOLID_OUTSET_M,
   ECO_WALL_SAMPLE_STEP_M,
 }
+
+/** Same tolerance auto-slabs use in core space-detection. */
+const ECO_WALK_RING_SIMPLIFY_TOLERANCE_M = 0.08
 
 /** Shrink an open plan ring toward its centroid (floor bias — never stand on air). */
 function insetPlanRing(ring: [number, number][], insetM: number): [number, number][] {
@@ -187,8 +190,9 @@ export function wallSegmentRing(wall: WallLike, s0: number, s1: number): [number
   }
 
   // Open ring: left face along the run, then right face reverse.
-  const ring = [...left, ...right.reverse()]
-  return ring.map(([x, z]) => toWorldXz([x, z]))
+  // Collapse collinear filler (straight walls) with the same RDP slabs use.
+  const ring = [...left, ...right.reverse()].map(([x, z]) => toWorldXz([x, z]))
+  return simplifyClosedPolygon(ring, ECO_WALK_RING_SIMPLIFY_TOLERANCE_M)
 }
 
 /** Step used for a wall (for tests / docs). */

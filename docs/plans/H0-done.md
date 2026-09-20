@@ -6,16 +6,18 @@ None (ops + export + world probe). Curve clause **removed** from H0 — it belon
 
 ## Revised acceptance (met)
 
-Two rooms, one door between them; walk verified against what was drawn:
+Two rooms, interior + exterior doors; walk verified against what was drawn:
 
 | Check | Result |
 |---|---|
-| Door is a **gap** in `solids` (2× `wall:wShared:*`), not a flag | OK — `check-h0.mjs` |
+| Interior door is a **gap** in `solids` (2× `wall:wShared:*`), not a flag | OK — `check-h0.mjs` |
+| Exterior door is a **gap** in `solids` (2× `wall:wW:*`), not a flag | OK — `check-h0.mjs` |
+| Straight wall rings ≈ **4 pts** (collinear filler removed via slab `simplifyClosedPolygon`) | OK |
 | Floor `top` = set height **0.15 m** | OK |
 | Frame x east, y up, **z SOUTH** (editor +z → world −z) | OK — north wall ring z ≈ −3.11 |
-| Compat export under 500 KB, no meshopt | OK — 19 540 B |
+| Compat export under 500 KB, no meshopt | OK |
 | Cross-origin embed path | OK — world iframe → `architect-editor-snowy.vercel.app/embed` (`1baefa4`) |
-| `window.world.probeModel(url)` | **PASS** — `{ meshes: 2, triangles: 108, floors: 2, solids: 8 }`; door gap `wShared:0/1`; floor tops 0.15; north z negative |
+| `window.world.probeModel(url)` | **PASS** (prior live probe); regenerate GLB via `check-h0.mjs` after exterior-door + ring simplify |
 
 ## Hosts
 
@@ -31,7 +33,7 @@ Two rooms, one door between them; walk verified against what was drawn:
 `packages/plugin-eco/test/check-h0.mjs` → `h0-two-rooms.glb`
 
 ```
-floors: 2 · floorTop: 0.15 · solids: 8 · doorGapSolids: 2 · glbBytes: 19540
+floors: 2 · floorTop: 0.15 · solids: 9 · interior+exterior door gaps · wall rings ≤6 pts
 ```
 
 ## What was not required
