@@ -71,3 +71,7 @@ cd apps/editor && bun run build:static && npx serve out
 Baseline PNGs: `docs/plans/h12-baseline/{before,after}.png`. See `H12-done.md`.
 Leaf shell compat **161 816 → 220 984** (still under 500 KB without meshopt).
 Next Track A phase: **H9** (grow paths) once a clear brief exists — H3 construction takeoff is done (`H3-done.md`).
+
+## H11 (image-to-3D selection)
+
+**Done (eval + scaffold):** cleared MIT shortlist; quality first pick **microsoft/TRELLIS.2-4B**; wire **VAST-AI/TripoSG**; preview **stabilityai/TripoSR**. InstantMesh blocked pending Zero123++/SD licence. Scope: props/furniture/vegetation/massing only — **not walk**. Exporter: known-dimension scale + z-forward→z-south + meshopt (`web`). Inference backend TBD (no weights in CI). See `H11-eval.md`; `bun packages/plugin-eco/test/check-h11.mjs`.

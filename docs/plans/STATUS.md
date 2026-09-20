@@ -1,8 +1,8 @@
 # STATUS — Agent A
 updated: 2026-09-20
-phase: H3 (done — Bones engines ESM-vendored for panel)
-state: construction takeoff = Ventura jurisdiction + geometry takeoff + Bones computeLevel/computeTakeoff via bones-vendor ESM (client panel safe); massing estimates + warning when geometry unfit; lighting untouched
-commit: 76022475
-checks: H0 DONE; H1 hard-audit green; H2 trees; H10.0–3 green; H12 materials+glass+baseline green; lighting contract green (do not retune); H3 eval + Bones ESM vendor + CSV green (`check-h3.mjs`)
-blocked-by: H10 world probeModel still open; H10.4 / H9+ have no implementable brief yet
-notes: H3.1 vendors pure Bones engines into `src/bones-vendor/` (pin 5679260…). No createRequire. Member rows = takeoff; LF÷o.c. studs never takeoff. Do not touch lighting contract / materials retune.
+phase: H11 (done — image-to-3D selection + export scaffold)
+state: H11 eval locked (TRELLIS.2-4B first pick; TripoSG wire; TripoSR preview); InstantMesh blocked pending Zero123++/SD licence; adapter + scale/axis/meshopt helpers shipped; inference backend deferred (no weights in CI). Lighting untouched. H3 construction takeoff still green.
+commit: pending
+checks: H0 DONE; H1 hard-audit green; H2 trees; H10.0–3 green; H12 materials+glass+baseline green; lighting contract green (do not retune); H3 eval + Bones ESM vendor + CSV green; H11 eval + check-h11 green
+blocked-by: H10 world probeModel still open; H10.4 / H9+ have no implementable brief yet; H11 inference GPU host TBD; InstantMesh licence gate
+notes: Do not pull banned image-to-3D models. Image-to-3D = props/furniture/vegetation/massing only — not walk. Do not touch lighting contract / materials retune / H3 rework.

@@ -33,6 +33,7 @@
     "check:h10": "bun test/check-h10.mjs",
     "check:h12": "bun test/check-h12.mjs",
     "check:h3": "bun test/check-h3.mjs",
+    "check:h11": "bun test/check-h11.mjs",
     "render:h12": "bun test/render-h12-baseline.mjs"
   },
   "peerDependencies": {

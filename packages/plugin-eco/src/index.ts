@@ -174,3 +174,39 @@ export type {
   TakeoffBasis,
 } from './eco-construction'
 export { VENTURA_COUNTY_JURISDICTION } from './eco-jurisdiction-ventura'
+export {
+  IMAGE3D_BANNED_IDS,
+  IMAGE3D_DEFAULT_TIER,
+  IMAGE3D_MODELS,
+  IMAGE3D_PREVIEW,
+  IMAGE3D_QUALITY_FIRST_PICK,
+  IMAGE3D_SCOPE_NOTE,
+  IMAGE3D_WIRE_FIRST,
+  DeferredImage3dBackend,
+  createImage3dBackend,
+  image3dModelById,
+  image3dModelForTier,
+  isBannedImage3dId,
+} from './eco-image3d'
+export type {
+  Image3dBackend,
+  Image3dBackendStatus,
+  Image3dInput,
+  Image3dKnownDimension,
+  Image3dModelDef,
+  Image3dModelId,
+  Image3dResult,
+  Image3dTier,
+} from './eco-image3d'
+export {
+  applyUniformScale,
+  applyZForwardToWorldZSouth,
+  measureGlbExtents,
+  prepareImage3dGlb,
+  scaleFactorForKnownDimension,
+} from './eco-image3d-export'
+export type {
+  Image3dExportOptions,
+  Image3dExportResult,
+  Image3dSourceFrame,
+} from './eco-image3d-export'

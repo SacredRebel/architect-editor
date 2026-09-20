@@ -89,6 +89,19 @@ export default function EcoAssetsPanel() {
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
       <div style={{ fontWeight: 600 }}>My assets</div>
       <div
+        style={{
+          opacity: 0.75,
+          lineHeight: 1.4,
+          padding: '6px 8px',
+          background: 'rgba(255,255,255,0.04)',
+          borderRadius: 6,
+        }}
+      >
+        Image→3D (H11): props / furniture / vegetation / massing only — not walk. Walkable
+        buildings stay studio-drawn. Inference backend TBD (quality:{' '}
+        <code>TRELLIS.2-4B</code>).
+      </div>
+      <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
         style={{
