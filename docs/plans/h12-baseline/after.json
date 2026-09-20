@@ -22,6 +22,11 @@
     "when": "2026-06-21T22:00:00.000Z",
     "northDeg": 0
   },
-  "bytes": 12188,
+  "shade": {
+    "ambient": 0.55,
+    "sun": 0.55,
+    "exposure": 1.2
+  },
+  "bytes": 10645,
   "wrote": "F:\\AI apps & websites\\Architect-editor\\docs\\plans\\h12-baseline\\after.png"
 }

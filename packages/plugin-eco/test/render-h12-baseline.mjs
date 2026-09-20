@@ -101,25 +101,35 @@ function buildScene(mode) {
   scene.background = new THREE.Color(mode === 'after' ? 0xb8d4e8 : 0xd0d0d0)
   scene.add(obj)
 
+  // Software rasterizer reads shade.* (scene lights are documentary / R3F parity).
+  // After: stronger fill so living-roof #5d7a55 reads green, not near-black.
+  let shade
   if (mode === 'after') {
-    const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x6b5a45, 0.55)
+    const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x6b5a45, 0.85)
     scene.add(hemi)
-    const sun = new THREE.DirectionalLight(0xfff2dd, 1.35)
+    const sun = new THREE.DirectionalLight(0xfff2dd, 2.0)
     const dir = sunDirectionAt(LAT, LON, WHEN, NORTH_DEG)
     sun.position.set(dir.x * 40, dir.y * 40, dir.z * 40)
     scene.add(sun)
-    scene.add(new THREE.AmbientLight(0xffffff, 0.15))
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4))
+    shade = { ambient: 0.55, sun: 0.55, exposure: 1.2 }
   } else {
     scene.add(new THREE.AmbientLight(0xffffff, 0.55))
     const key = new THREE.DirectionalLight(0xffffff, 0.65)
     key.position.set(12, 18, 10)
     scene.add(key)
+    shade = { ambient: 0.32, sun: 0.9, exposure: 1.0 }
   }
-  return { scene, shell, lightDir: mode === 'after' ? sunDirectionAt(LAT, LON, WHEN, NORTH_DEG) : { x: 0.4, y: 0.85, z: 0.35 } }
+  return {
+    scene,
+    shell,
+    lightDir: mode === 'after' ? sunDirectionAt(LAT, LON, WHEN, NORTH_DEG) : { x: 0.4, y: 0.85, z: 0.35 },
+    shade,
+  }
 }
 
 /** Software rasterize with fixed camera — no WebGL dependency. */
-function renderRGB(scene, width, height, lightDirIn) {
+function renderRGB(scene, width, height, lightDirIn, shade = { ambient: 0.25, sun: 1, exposure: 1 }) {
   const cam = new THREE.PerspectiveCamera(45, width / height, 0.5, 200)
   cam.position.set(22, 14, 18)
   cam.lookAt(0, 5, 0)
@@ -129,8 +139,9 @@ function renderRGB(scene, width, height, lightDirIn) {
   const zbuf = new Float32Array(width * height)
   zbuf.fill(Infinity)
   const rgb = new Uint8Array(width * height * 3)
-  // background
-  const bg = scene.background
+  // background — Color is linear; write display sRGB
+  const bgLin = scene.background
+  const bg = bgLin.clone().convertLinearToSRGB()
   const br = Math.round(bg.r * 255)
   const bgG = Math.round(bg.g * 255)
   const bb = Math.round(bg.b * 255)
@@ -156,7 +167,9 @@ function renderRGB(scene, width, height, lightDirIn) {
     const pos = geo.attributes.position
     if (!pos) return
     const idx = geo.index
-    const color = mesh.material.color || new THREE.Color(0x9a9a9a)
+    // Three stores material.color in linear; PNG needs display sRGB.
+    const linear = mesh.material.color || new THREE.Color(0x9a9a9a)
+    const color = linear.clone().convertLinearToSRGB()
     const mw = mesh.matrixWorld
     const triCount = idx ? idx.count / 3 : pos.count / 3
 
@@ -182,10 +195,11 @@ function renderRGB(scene, width, height, lightDirIn) {
       // Double-sided: flip normal toward light if needed
       let ndl = n.dot(lightDir)
       if (ndl < 0) ndl = -ndl
-      ndl = Math.max(0.18, ndl)
-      const cr = Math.min(255, Math.round(color.r * 255 * ndl))
-      const cg = Math.min(255, Math.round(color.g * 255 * ndl))
-      const cb = Math.min(255, Math.round(color.b * 255 * ndl))
+      // ambient + sun*N·L, then exposure (scene hemi/ambient not sampled otherwise)
+      const lit = Math.min(1, (shade.ambient + ndl * shade.sun) * shade.exposure)
+      const cr = Math.min(255, Math.round(color.r * 255 * lit))
+      const cg = Math.min(255, Math.round(color.g * 255 * lit))
+      const cb = Math.min(255, Math.round(color.b * 255 * lit))
 
       const p0 = project(v0, vp, width, height)
       const p1 = project(v1, vp, width, height)
@@ -241,8 +255,8 @@ function edge(a, b, c) {
   return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)
 }
 
-const { scene, lightDir } = buildScene(MODE === 'after' ? 'after' : 'before')
-const rgb = renderRGB(scene, W, H, lightDir)
+const { scene, lightDir, shade } = buildScene(MODE === 'after' ? 'after' : 'before')
+const rgb = renderRGB(scene, W, H, lightDir, shade)
 const png = writePngRGB(W, H, rgb)
 const outName = MODE === 'after' ? 'after.png' : 'before.png'
 const outPath = path.join(outDir, outName)
@@ -255,6 +269,7 @@ const meta = {
   height: H,
   camera: { position: [22, 14, 18], target: [0, 5, 0], fov: 45 },
   site: { lat: LAT, lon: LON, when: WHEN.toISOString(), northDeg: NORTH_DEG },
+  shade,
   bytes: png.byteLength,
   wrote: outPath,
 }

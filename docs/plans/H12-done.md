@@ -29,6 +29,8 @@ Fixed camera `(22,14,18)` → `(0,5,0)`, fov 45, seed `0xec0120`, Ojai lat/lon, 
 
 Harness: `bun packages/plugin-eco/test/render-h12-baseline.mjs before|after`
 
+> **Note:** `after.png` was re-exposed for readability (software path converts linear→sRGB and applies ambient+sun fill so living-roof green reads clearly; camera/seed/time unchanged).
+
 ## Compat bytes (assert green, no meshopt)
 
 | Export | Before H12 materials | After H12 (compat) | Under 500 KB? |
