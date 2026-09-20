@@ -1,7 +1,6 @@
 /**
  * Presentation / H12 view state — considered camera + clean frame.
- * `timeOfDayHours` feeds the interim EcoSiteLighting stub only; final sun
- * position / exposure come from the world lighting contract (not yet landed).
+ * `timeOfDayHours` drives EcoSiteLighting via NOAA `instantAt` (America/Los_Angeles).
  */
 
 type PresState = {

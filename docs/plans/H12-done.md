@@ -3,12 +3,11 @@
 ## STATUS
 
 - **Done:** materials library, real glass (transmission + `alphaMode: BLEND`), one mesh per material, compat under 500 KB, baseline PNGs, presentation chrome.
-- **Hold — do not finalise:** sun position, sky/IBL, tone-mapping, exposure. Current `EcoSiteLighting` / `eco-site-sun` / harness shade numbers are **interim stubs** awaiting the **world lighting contract**. Do not reverse-engineer final lighting from editor looks (editor-pretty / walk-wrong is the failure mode). When the contract lands, wire the sun to it.
+- **Done — lighting:** `EcoSiteLighting` wired to the **world lighting contract** (spatial-map `af1f0bd` / `docs/lighting-contract.md`). NOAA sun, SRGB + ACES + dusk exposure, PMREM sky IBL sampled at the origin, contract sun/shadow/skylight. Materials were **not** retuned in this pass (ACES was already the viewer tone map; IBL change may shift reads later).
 
 ## Repo drawn on
 
-`packages/plugin-eco` only — expands F5 materials into a full presentation palette,
-adds interim site-sun stubs from lat/lon/time, and a one-click presentation view.
+`packages/plugin-eco` — materials palette, glass, presentation chrome, and contract lighting ported from spatial-map `src/world/{sun,sky}.ts`.
 
 ## What shipped
 
@@ -18,10 +17,27 @@ adds interim site-sun stubs from lat/lon/time, and a one-click presentation view
 | `createEcoThreeMaterial` | Glass → `MeshPhysicalMaterial` (transmission); others → `MeshStandardMaterial`; 32² procedural normals |
 | `eco-gltf-polyfill.ts` | Bun/Node `OffscreenCanvas` + `ImageData` so DataTexture normals export without `document` |
 | `consolidateByEcoMaterial` | **One mesh per material**; planar world-XZ UVs (not strip) so normals tile |
-| `eco-site-sun.ts` | **INTERIM STUB** — `sunDirectionAt(lat, lon, time, northDeg)`; not the world sun contract |
-| `eco-site-lighting.tsx` | **INTERIM STUB** — hemi + directional + ambient; keep mounted; wire to contract later |
-| `eco-presentation-store.ts` | Presentation toggle + time-of-day hours (feeds interim sun only) |
+| `eco-site-sun.ts` | **NOAA** `sunPosition` / `instantAt` / `sunDirectionAt` (contract site defaults) |
+| `eco-site-sky.ts` | Contract sky keys, Preetham sun transmission, equirect bake, `DirectionalLight` + skylight hemi fill |
+| `eco-site-lighting.tsx` | SRGB + ACES + `0.75 × sky.exposure`; PMREM env at origin; mutes viewer theme lights |
+| `eco-presentation-store.ts` | Presentation toggle + time-of-day hours (local `America/Los_Angeles`) |
 | `EcoLegendPanel` | One-click presentation + time slider; hides guides / ghost / compass / walk chrome |
+
+## Lighting contract (mounted)
+
+| Item | Value |
+|---|---|
+| `outputColorSpace` | `SRGBColorSpace` |
+| `toneMapping` | `ACESFilmicToneMapping` |
+| `toneMappingExposure` | `0.75 × sky.exposure` |
+| `sky.exposure` | `1 + 0.9 × (1 − smoothstep(alt°, −2, 30))` |
+| Sun | NOAA + refraction; default lat **34.4331**, lng **−119.1554**, `America/Los_Angeles` |
+| Sun light | `DirectionalLight(0xffffff, 3)`; intensity / colour from sky.ts; shadows **4096²**, bias **−0.0004**, normalBias **0.6** |
+| Skylight | `(0.1 + 1.5 × day) × skylightScale` (hemi fill only; **not** IBL) |
+| Environment | Equirect bake of sky → **PMREM**; direction-only (= origin) |
+| Atmosphere | turbidity **4**, rayleigh **1.0**, mieCoefficient **0.005** |
+
+**Removed:** provisional hemi+ambient stub used as the sky/IBL stand-in.
 
 ## Visual baseline (H12.0)
 
@@ -34,7 +50,7 @@ Fixed camera `(22,14,18)` → `(0,5,0)`, fov 45, seed `0xec0120`, Ojai lat/lon, 
 
 Harness: `bun packages/plugin-eco/test/render-h12-baseline.mjs before|after`
 
-> **Harness ≠ world contract.** Fixed light/exposure keeps regression PNGs comparable only. `after.png` was re-exposed for readability (software linear→sRGB + ambient/sun fill so living-roof green reads; camera/seed/time unchanged).
+> Harness PNGs stay regression-only (fixed shade). Editor presentation uses the contract path above.
 
 ## Compat bytes (assert green, no meshopt)
 
@@ -44,28 +60,18 @@ Harness: `bun packages/plugin-eco/test/render-h12-baseline.mjs before|after`
 | Six-material demo (`check-materials`) | ~same class | **243 912** | yes |
 | H12 demo house+shell+glass (`check-h12`) | — | **242 556** | yes |
 
-Normals are tiny procedural 32² maps — not photo textures. If the budget slipped, shrink those further; **do not** answer with meshopt.
-
 ## Glass
 
 - Viewport: `MeshPhysicalMaterial` with `transmission ≈ 0.92`, `ior 1.5`, `opacity 0.22`
 - Export: `alphaMode: BLEND` (asserted in `check-materials` / `check-h12`)
 
-## Tessellation note (carry from H10)
-
-Visual surfaces use the coarsest count meeting sagitta ≤ 0.05 m (~**23** segs at R=5). Walk rings may stay finer. Confirmed in `check-h10` (`R5_segments: 23`).
-
-## Mannheim note (not a blocker)
-
-Demo leaf shell rise/span ≈ **0.75** is **not** Mannheim Multihalle-like (that gridshell is a low rise over a much larger span). Reconcile proportions at **H10.4** — H12 only presents the current parametric demo.
-
 ## Checks
 
 - `bun packages/plugin-eco/test/check-h12.mjs`
+- `bun packages/plugin-eco/test/check-lighting.mjs`
 - `bun packages/plugin-eco/test/check-materials.mjs`
 - `bun packages/plugin-eco/test/check-shell.mjs`
-- `bun packages/plugin-eco/test/render-h12-baseline.mjs before|after`
 
 ## Commit
 
-`eco(H12): …`
+`eco(H12): …` / `eco(lighting): …`

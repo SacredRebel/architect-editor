@@ -138,7 +138,21 @@ export {
   subscribeEcoPresentation,
   toggleEcoPresentation,
 } from './eco-presentation-store'
-export { solarPosition, sunDirectionAt } from './eco-site-sun'
+export {
+  ECO_DEFAULT_LAT,
+  ECO_DEFAULT_LNG,
+  ECO_DEFAULT_TZ,
+  instantAt,
+  solarPosition,
+  sunDirectionAt,
+  sunPosition,
+  sunVector,
+} from './eco-site-sun'
+export {
+  ECO_BASE_EXPOSURE,
+  ECO_SUNLIGHT_AIR,
+  EcoSky,
+} from './eco-site-sky'
 export { EcoSiteLighting } from './eco-site-lighting'
 export {
   exportEcoScenePayload,

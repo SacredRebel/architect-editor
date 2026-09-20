@@ -1,10 +1,23 @@
 'use client'
 
-import { useMemo, useSyncExternalStore } from 'react'
-import { useFrame } from '@react-three/fiber'
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
-import { sunDirectionAt } from './eco-site-sun'
+import { ECO_BASE_EXPOSURE, EcoSky } from './eco-site-sky'
+import {
+  ECO_DEFAULT_LAT,
+  ECO_DEFAULT_LNG,
+  ECO_DEFAULT_TZ,
+  instantAt,
+} from './eco-site-sun'
 import {
   getEcoPresentationState,
   subscribeEcoPresentation,
@@ -15,57 +28,181 @@ function useSite() {
 }
 
 function usePres() {
-  return useSyncExternalStore(subscribeEcoPresentation, getEcoPresentationState, getEcoPresentationState)
-}
-
-/**
- * INTERIM STUB — not the final editor↔world lighting match.
- *
- * Placeholder mount so presentation still works: hemisphere (sky/IBL stand-in)
- * + directional sun + ambient. Intensities / colours / exposure here are NOT
- * the world lighting contract. When that contract lands, wire sun/sky/IBL/
- * tone-mapping/exposure to it — do not reverse-engineer final numbers from
- * these stubs (editor-pretty / walk-wrong is the failure mode to avoid).
- */
-export function EcoSiteLighting() {
-  const { site } = useSite()
-  const { presentation, timeOfDayHours } = usePres()
-
-  const lights = useMemo(() => {
-    const lat = site?.originLL?.[1] ?? 34.448
-    const lon = site?.originLL?.[0] ?? -119.243
-    const north = site?.northDeg ?? 0
-    const when = dateAtLocalHours(timeOfDayHours)
-    const dir = sunDirectionAt(lat, lon, when, north)
-    return { dir, presentation }
-  }, [site, timeOfDayHours, presentation])
-
-  const sunRef = useMemo(() => new THREE.DirectionalLight(0xfff2dd, 1.25), [])
-  const hemiRef = useMemo(() => new THREE.HemisphereLight(0xc8d9f0, 0x6a5a48, 0.5), [])
-
-  useFrame(() => {
-    const { dir } = lights
-    const elev = Math.max(0.05, dir.y)
-    sunRef.intensity = lights.presentation ? 1.55 : 1.15
-    hemiRef.intensity = lights.presentation ? 0.65 : 0.45
-    sunRef.position.set(dir.x * 50, elev * 50, dir.z * 50)
-    sunRef.target.position.set(0, 0, 0)
-    sunRef.color.set(dir.y > 0.08 ? 0xfff2dd : 0xffb070)
-  })
-
-  return (
-    <group name="eco-site-lighting">
-      <primitive object={hemiRef} />
-      <primitive object={sunRef} />
-      <primitive object={sunRef.target} />
-      <ambientLight intensity={presentation ? 0.12 : 0.2} />
-    </group>
+  return useSyncExternalStore(
+    subscribeEcoPresentation,
+    getEcoPresentationState,
+    getEcoPresentationState,
   )
 }
 
-function dateAtLocalHours(hours: number): Date {
-  // INTERIM: approximate Pacific daylight (UTC-7) for Ojai — stub only.
-  const h = ((hours % 24) + 24) % 24
-  const utcH = h + 7
-  return new Date(Date.UTC(2026, 5, 21, Math.floor(utcH), Math.round((utcH % 1) * 60), 0))
+type PmremLike = {
+  fromEquirectangular: (tex: THREE.Texture) => { texture: THREE.Texture }
+  dispose: () => void
+}
+
+async function createPmrem(gl: THREE.WebGLRenderer): Promise<PmremLike | null> {
+  try {
+    const anyGl = gl as THREE.WebGLRenderer & { isWebGPURenderer?: boolean }
+    if (anyGl.isWebGPURenderer) {
+      const { PMREMGenerator } = await import('three/webgpu')
+      return new PMREMGenerator(gl) as unknown as PmremLike
+    }
+    return new THREE.PMREMGenerator(gl)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * World lighting contract (spatial-map af1f0bd / docs/lighting-contract.md).
+ *
+ * Order: SRGB + ACES + exposure first, then PMREM sky at origin, NOAA sun,
+ * intensity/colour, shadows. Hemisphere is skylight fill only — never the IBL.
+ */
+export function EcoSiteLighting() {
+  const { site } = useSite()
+  const { timeOfDayHours } = usePres()
+  const gl = useThree((s) => s.gl) as THREE.WebGLRenderer
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
+  const invalidate = useThree((s) => s.invalidate)
+
+  const sky = useMemo(() => new EcoSky(), [])
+  const groupRef = useRef<THREE.Group>(null)
+  const pmremRef = useRef<PmremLike | null>(null)
+  const envRef = useRef<THREE.Texture | null>(null)
+  const lastKey = useRef('')
+  const [pmremTick, setPmremTick] = useState(0)
+  const prevTone = useRef<{
+    colorSpace: THREE.ColorSpace
+    toneMapping: THREE.ToneMapping
+    exposure: number
+    environment: THREE.Texture | null
+    environmentIntensity: number
+    background: THREE.Color | THREE.Texture | null
+  } | null>(null)
+
+  const lat = site?.originLL?.[1] ?? ECO_DEFAULT_LAT
+  const lng = site?.originLL?.[0] ?? ECO_DEFAULT_LNG
+  const northDeg = site?.northDeg ?? 0
+
+  useLayoutEffect(() => {
+    prevTone.current = {
+      colorSpace: gl.outputColorSpace,
+      toneMapping: gl.toneMapping,
+      exposure: gl.toneMappingExposure,
+      environment: scene.environment,
+      environmentIntensity: scene.environmentIntensity,
+      background: scene.background as THREE.Color | THREE.Texture | null,
+    }
+    // Contract §1 — before any material judgement.
+    gl.outputColorSpace = THREE.SRGBColorSpace
+    gl.toneMapping = THREE.ACESFilmicToneMapping
+    gl.toneMappingExposure = ECO_BASE_EXPOSURE
+    if (gl.shadowMap) {
+      gl.shadowMap.enabled = true
+      gl.shadowMap.type = THREE.PCFSoftShadowMap
+    }
+
+    let cancelled = false
+    void createPmrem(gl).then((pmrem) => {
+      if (cancelled) {
+        pmrem?.dispose()
+        return
+      }
+      pmremRef.current = pmrem
+      lastKey.current = ''
+      setPmremTick((n) => n + 1)
+      invalidate()
+    })
+
+    invalidate()
+    return () => {
+      cancelled = true
+      const prev = prevTone.current
+      if (prev) {
+        gl.outputColorSpace = prev.colorSpace
+        gl.toneMapping = prev.toneMapping
+        gl.toneMappingExposure = prev.exposure
+        if (scene.environment === envRef.current || scene.environment === sky.equirect) {
+          scene.environment = prev.environment
+          scene.environmentIntensity = prev.environmentIntensity
+        }
+        if (scene.background === sky.equirect) {
+          scene.background = prev.background
+        }
+      }
+      envRef.current?.dispose()
+      envRef.current = null
+      pmremRef.current?.dispose()
+      pmremRef.current = null
+      sky.dispose()
+    }
+  }, [gl, scene, sky, invalidate])
+
+  useEffect(() => {
+    const when = instantAt(timeOfDayHours, ECO_DEFAULT_TZ)
+    const key = `${lat.toFixed(5)},${lng.toFixed(5)},${northDeg},${timeOfDayHours.toFixed(3)},${when.toISOString()},${pmremTick}`
+    if (key === lastKey.current) return
+    lastKey.current = key
+
+    const fillWas = sky.skylightScale
+    sky.set(when, lat, lng, northDeg)
+
+    let pmremOk = false
+    const pmrem = pmremRef.current
+    const equirect = sky.equirect
+    if (pmrem && equirect) {
+      try {
+        // Equirect bake is direction-only (= sampled at the origin).
+        const built = pmrem.fromEquirectangular(equirect)
+        envRef.current?.dispose()
+        envRef.current = built.texture
+        scene.environment = built.texture
+        scene.environmentIntensity = 1
+        sky.skylightScale = 0.4
+        pmremOk = true
+      } catch {
+        pmremOk = false
+      }
+    }
+    if (!pmremOk && equirect) {
+      scene.environment = equirect
+      scene.environmentIntensity = 1
+      sky.skylightScale = 0.55
+    }
+    if (equirect) scene.background = equirect
+    if (sky.skylightScale !== fillWas) {
+      sky.ambient.intensity *= sky.skylightScale / fillWas
+    }
+    gl.toneMappingExposure = ECO_BASE_EXPOSURE * sky.exposure
+    invalidate()
+  }, [lat, lng, northDeg, timeOfDayHours, sky, scene, gl, invalidate, pmremTick])
+
+  useFrame(() => {
+    gl.outputColorSpace = THREE.SRGBColorSpace
+    gl.toneMapping = THREE.ACESFilmicToneMapping
+    gl.toneMappingExposure = ECO_BASE_EXPOSURE * sky.exposure
+
+    // Visual dome rides the camera; IBL was baked as directions from the origin.
+    sky.mesh.position.copy(camera.position)
+
+    const root = groupRef.current
+    if (!root) return
+    scene.traverse((obj) => {
+      const light = obj as THREE.Light
+      if (!light.isLight) return
+      if (obj === root || root.getObjectById(obj.id)) return
+      light.intensity = 0
+    })
+  }, -2)
+
+  return (
+    <group name="eco-site-lighting" ref={groupRef}>
+      <primitive object={sky.mesh} />
+      <primitive object={sky.sun} />
+      <primitive object={sky.sun.target} />
+      <primitive object={sky.ambient} />
+    </group>
+  )
 }
