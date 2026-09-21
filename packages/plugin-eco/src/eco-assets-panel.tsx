@@ -97,9 +97,8 @@ export default function EcoAssetsPanel() {
           borderRadius: 6,
         }}
       >
-        Image→3D (H11): props / furniture / vegetation / massing only — not walk. Walkable
-        buildings stay studio-drawn. Inference backend TBD (quality:{' '}
-        <code>TRELLIS.2-4B</code>).
+        Image→3D (H14): use the <strong>Photo → 3D</strong> panel for atlas Meshy
+        (props / massing only — not walk). Upload GLB here for already-baked models.
       </div>
       <div
         onDragOver={(e) => e.preventDefault()}
@@ -162,10 +161,12 @@ export default function EcoAssetsPanel() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {asset.name}
+                {asset.role === 'massing' ? ' · massing' : ''}
               </div>
               <div style={{ opacity: 0.55 }}>
                 {(asset.byteLength / 1024).toFixed(1)} KB ·{' '}
                 {placements.filter((p) => p.assetId === asset.id).length} placed
+                {asset.role === 'massing' ? ' · not walkable' : ''}
               </div>
             </div>
             <button onClick={() => placeEcoAsset(asset.id)} type="button">

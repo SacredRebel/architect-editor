@@ -6,10 +6,11 @@
  * ~85 KB / 1.2k tris, no meshopt). If a model needs meshopt to fit, fix the
  * geometry first.
  *
- * Two profiles:
+ * Three profiles:
  * - `compat` (default for eco:glb) — dedup/prune/weld/quantize + JPEG. No meshopt.
  * - `web` — same cleanup + meshopt. Safe for the world since spatial-map wires
  *   MeshoptDecoder via makeGltfLoader(); still not the primary budget plan.
+ * - `image3d` — H14 atlas soups: meshopt + WebP ≤1024 (≤5 MB).
  *
  * Draco is never used: decoder wasm is either a CDN (forbidden in embed) or a
  * binary over the 200 KB limit.
@@ -28,7 +29,12 @@ import {
 import { MeshoptEncoder } from 'meshoptimizer'
 import { createGlbIo } from './glb-audit'
 
-export type OptimiseProfile = 'compat' | 'web'
+/**
+ * - `compat` — parametric eco:glb (JPEG ≤512, no meshopt)
+ * - `web` — meshopt headroom (JPEG ≤512)
+ * - `image3d` — H14 atlas props/massing: meshopt + WebP ≤1024, ≤5 MB target
+ */
+export type OptimiseProfile = 'compat' | 'web' | 'image3d'
 
 export type OptimiseResult = {
   buffer: ArrayBuffer
@@ -62,20 +68,30 @@ export async function optimiseGlb(
   // Lossless cleanup first (skill default name-preserving pipeline).
   await doc.transform(dedup(), prune({ keepLeaves: false }), weld())
 
-  // Texture: resize-ish via textureCompress quality + JPEG (no ktx binary needed).
+  // Texture: resize via textureCompress (no KTX/Basis — loader is meshopt-only for image3d).
   // Skip if no textures — common for editor parametric exports.
   if (doc.getRoot().listTextures().length > 0) {
-    await doc.transform(
-      textureCompress({
-        targetFormat: 'jpeg',
-        quality: 80,
-        // Match ECO_GLB_MAX_TEX_DIM (512) — keep compat under 500 KB.
-        resize: [512, 512],
-      }),
-    )
+    if (profile === 'image3d') {
+      await doc.transform(
+        textureCompress({
+          targetFormat: 'webp',
+          quality: 80,
+          resize: [1024, 1024],
+        }),
+      )
+    } else {
+      await doc.transform(
+        textureCompress({
+          targetFormat: 'jpeg',
+          quality: 80,
+          // Match ECO_GLB_MAX_TEX_DIM (512) — keep compat under 500 KB.
+          resize: [512, 512],
+        }),
+      )
+    }
   }
 
-  if (profile === 'web') {
+  if (profile === 'web' || profile === 'image3d') {
     await MeshoptEncoder.ready
     await doc.transform(
       resample(),

@@ -4,7 +4,7 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { EcoWalk } from './bridge-types'
-import { base64ToBytes, getEcoAssetsState } from './eco-assets-store'
+import { assetRole, base64ToBytes, getEcoAssetsState } from './eco-assets-store'
 import {
   createEcoThreeMaterial,
   elementKeyForShell,
@@ -273,8 +273,11 @@ async function addPlacedAssets(group: THREE.Group): Promise<void> {
   const loader = new GLTFLoader()
 
   for (const p of placements) {
+    // H14 massing refs are tracing aids only — never enter walk export.
+    if (p.excludeFromWalkExport) continue
     const asset = byId.get(p.assetId)
     if (!asset) continue
+    if (assetRole(asset) === 'massing') continue
     try {
       const bytes = base64ToBytes(asset.bytesBase64)
       const copy = new Uint8Array(bytes.byteLength)
@@ -290,6 +293,16 @@ async function addPlacedAssets(group: THREE.Group): Promise<void> {
       // skip broken asset
     }
   }
+}
+
+/** True when a placement must be omitted from walk / eco:glb export. */
+export function isExcludedFromWalkExport(
+  placement: { excludeFromWalkExport?: boolean; assetId: string },
+  asset?: { role?: string } | null,
+): boolean {
+  if (placement.excludeFromWalkExport) return true
+  if (asset && assetRole(asset as { role?: 'prop' | 'massing' }) === 'massing') return true
+  return false
 }
 
 async function addEcoTrees(group: THREE.Group): Promise<void> {
