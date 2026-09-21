@@ -55,3 +55,23 @@ export const ecoConstructionHostPanel: EditorHostPanel = {
   component: () => import('./eco-construction-panel'),
   defaultInstalled: true,
 }
+
+export const ecoShellHostPanel: EditorHostPanel = {
+  id: 'eco:plugin-eco:shell',
+  label: 'Leaf shell',
+  icon: { kind: 'url', src: '/icons/mesh.webp' },
+  description: 'H10 parametric leaf shell — span, spine, rise, curvature',
+  pluginId: 'eco:plugin-eco',
+  component: () => import('./eco-shell-panel'),
+  defaultInstalled: true,
+}
+
+export const ecoImage3dHostPanel: EditorHostPanel = {
+  id: 'eco:plugin-eco:image3d',
+  label: 'Photo → 3D',
+  icon: { kind: 'url', src: '/icons/couch.webp' },
+  description: 'H14 photo→prop and sketch→massing via Eco atlas (PIN required)',
+  pluginId: 'eco:plugin-eco',
+  component: () => import('./eco-image3d-panel'),
+  defaultInstalled: true,
+}
