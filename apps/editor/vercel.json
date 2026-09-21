@@ -5,6 +5,11 @@
   "outputDirectory": ".next",
   "cleanUrls": true,
   "trailingSlash": false,
+  "git": {
+    "deploymentEnabled": {
+      "cursor/*": false
+    }
+  },
   "rewrites": [
     { "source": "/builder", "destination": "/" },
     { "source": "/builder/", "destination": "/" },
