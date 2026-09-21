@@ -1,12 +1,13 @@
 /**
  * GLB audit — adapted from pascalorg/skills glb-web-export (MIT).
  * Hard gate for eco exports: failures throw, they do not warn.
+ *
+ * Node-only deps (draco3dgltf, zlib) are loaded dynamically so the Next.js
+ * client / Turbopack graph never statically resolves `fs`.
  */
 import { NodeIO, type Document } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-import draco3d from 'draco3dgltf'
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer'
-import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 
 /** Compat download budget (phone / architects). */
 export const ECO_GLB_MAX_BYTES = 500 * 1024
@@ -81,21 +82,54 @@ const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 
 let ioPromise: Promise<NodeIO> | null = null
 
+function isNodeRuntime(): boolean {
+  return typeof process !== 'undefined' && Boolean(process.versions?.node)
+}
+
 export async function createGlbIo(): Promise<NodeIO> {
   if (!ioPromise) {
     ioPromise = (async () => {
-      const io = new NodeIO()
-        .registerExtensions(ALL_EXTENSIONS)
-        .registerDependencies({
-          'meshopt.decoder': MeshoptDecoder,
-          'meshopt.encoder': MeshoptEncoder,
-          'draco3d.decoder': await draco3d.createDecoderModule(),
-          'draco3d.encoder': await draco3d.createEncoderModule(),
-        })
+      const deps: Record<string, unknown> = {
+        'meshopt.decoder': MeshoptDecoder,
+        'meshopt.encoder': MeshoptEncoder,
+      }
+      if (isNodeRuntime()) {
+        try {
+          // turbopackIgnore: keep Node decoder out of the browser graph.
+          const draco3d = (
+            await import(/* turbopackIgnore: true */ 'draco3dgltf')
+          ).default
+          deps['draco3d.decoder'] = await draco3d.createDecoderModule()
+          deps['draco3d.encoder'] = await draco3d.createEncoderModule()
+        } catch {
+          // Browser / missing optional decoder — meshopt-only is fine for eco exports.
+        }
+      }
+      const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies(deps)
       return io
     })()
   }
   return ioPromise
+}
+
+async function compressedSizes(bytes: Uint8Array): Promise<{ gzipBytes: number; brotliBytes: number }> {
+  if (!isNodeRuntime()) return { gzipBytes: 0, brotliBytes: 0 }
+  try {
+    const { brotliCompressSync, constants, gzipSync } = await import(
+      /* turbopackIgnore: true */ 'node:zlib'
+    )
+    return {
+      gzipBytes: gzipSync(bytes, { level: 9 }).byteLength,
+      brotliBytes: brotliCompressSync(bytes, {
+        params: {
+          [constants.BROTLI_PARAM_QUALITY]: 11,
+          [constants.BROTLI_PARAM_LGWIN]: 24,
+        },
+      }).byteLength,
+    }
+  } catch {
+    return { gzipBytes: 0, brotliBytes: 0 }
+  }
 }
 
 function multiply(a: number[], b: number[]): number[] {
@@ -229,7 +263,7 @@ function auditFrame(doc: Document): GlbFrameAudit {
   }
 }
 
-function auditDocument(doc: Document, bytes: Uint8Array): GlbAuditReport {
+async function auditDocument(doc: Document, bytes: Uint8Array): Promise<GlbAuditReport> {
   const root = doc.getRoot()
   const min = [Infinity, Infinity, Infinity]
   const max = [-Infinity, -Infinity, -Infinity]
@@ -288,16 +322,12 @@ function auditDocument(doc: Document, bytes: Uint8Array): GlbAuditReport {
 
   const round = (v: number) => (Number.isFinite(v) ? Number(v.toFixed(4)) : null)
   const finite = Number.isFinite(min[0])
+  const { gzipBytes, brotliBytes } = await compressedSizes(bytes)
 
   return {
     bytes: bytes.byteLength,
-    gzipBytes: gzipSync(bytes, { level: 9 }).byteLength,
-    brotliBytes: brotliCompressSync(bytes, {
-      params: {
-        [constants.BROTLI_PARAM_QUALITY]: 11,
-        [constants.BROTLI_PARAM_LGWIN]: 24,
-      },
-    }).byteLength,
+    gzipBytes,
+    brotliBytes,
     worldBounds: {
       min: finite ? min.map((v) => round(v)!) : null,
       max: finite ? max.map((v) => round(v)!) : null,
@@ -341,7 +371,7 @@ export async function auditGlb(input: ArrayBuffer | Uint8Array): Promise<GlbAudi
   bytes.set(src)
   const io = await createGlbIo()
   const doc = await io.readBinary(bytes)
-  return auditDocument(doc, bytes)
+  return await auditDocument(doc, bytes)
 }
 
 /**

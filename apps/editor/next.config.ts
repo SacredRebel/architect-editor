@@ -64,12 +64,15 @@ const nextConfig: NextConfig = {
     '@pascal-app/plugin-environment',
     '@dgreenheck/ez-tree',
   ],
+  // Node Draco WASM bindings require `fs`; keep them off the client graph.
+  serverExternalPackages: ['draco3dgltf'],
   turbopack: {
     resolveAlias: {
       react: './node_modules/react',
       three: './node_modules/three',
       '@react-three/fiber': './node_modules/@react-three/fiber',
       '@react-three/drei': './node_modules/@react-three/drei',
+      draco3dgltf: './lib/stubs/draco3dgltf.js',
     },
   },
   experimental: {
