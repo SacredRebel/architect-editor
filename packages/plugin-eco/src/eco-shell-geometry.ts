@@ -80,8 +80,9 @@ export function shellHeightAt(shell: EcoShell, x: number, z: number): number {
   }
   const lat = hit.d / maxLat
   const w = smoothstep(0, 1, lat) // 0 at ridge → 1 at eave
-  // Curl: bias mid-span upward slightly vs linear
-  const curl = Math.sin((1 - w) * Math.PI) * 0.15 * (ridgeH - shell.eaveHeight)
+  // Curl: bias mid-span upward slightly vs linear (parametric curvature, default 0.15)
+  const curlAmt = typeof shell.curvature === 'number' ? shell.curvature : 0.15
+  const curl = Math.sin((1 - w) * Math.PI) * curlAmt * (ridgeH - shell.eaveHeight)
   return ridgeH * (1 - w) + shell.eaveHeight * w + curl * (1 - w)
 }
 

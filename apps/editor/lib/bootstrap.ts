@@ -107,14 +107,18 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
       ecoConstructionHostPanel,
       ecoDrawingsHostPanel,
       ecoHostPanel,
+      ecoImage3dHostPanel,
       ecoMaterialsHostPanel,
       ecoPresentation,
+      ecoShellHostPanel,
     }) => {
       registerEditorHostPanel(ecoHostPanel)
       registerEditorHostPanel(ecoAssetsHostPanel)
       registerEditorHostPanel(ecoMaterialsHostPanel)
       registerEditorHostPanel(ecoDrawingsHostPanel)
       registerEditorHostPanel(ecoConstructionHostPanel)
+      registerEditorHostPanel(ecoShellHostPanel)
+      registerEditorHostPanel(ecoImage3dHostPanel)
       registerViewerPresentation(ecoPresentation)
     },
   )

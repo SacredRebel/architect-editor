@@ -38,7 +38,16 @@ export {
   setShowGhost,
   subscribeEcoSite,
 } from './eco-site-store'
-export { ecoAssetsHostPanel, ecoConstructionHostPanel, ecoDrawingsHostPanel, ecoHostPanel, ecoMaterialsHostPanel, ecoPresentation } from './eco-ui'
+export {
+  ecoAssetsHostPanel,
+  ecoConstructionHostPanel,
+  ecoDrawingsHostPanel,
+  ecoHostPanel,
+  ecoImage3dHostPanel,
+  ecoMaterialsHostPanel,
+  ecoPresentation,
+  ecoShellHostPanel,
+} from './eco-ui'
 export { exportEcoGlb, stampWalkExtras } from './export-glb'
 export {
   assertHardGlbAudit,
@@ -83,14 +92,16 @@ export {
   addEcoShell,
   clearEcoShells,
   getEcoShellsState,
+  getLeafShellParams,
   makeDefaultLeafShell,
   removeEcoShell,
   setEcoShells,
+  setLeafShellParams,
   setShellRise,
   subscribeEcoShells,
   updateEcoShell,
 } from './eco-shell-store'
-export type { EcoShell } from './eco-shell-store'
+export type { EcoShell, LeafShellParams } from './eco-shell-store'
 export {
   addEcoCatenary,
   addEcoLoft,
@@ -201,6 +212,7 @@ export type {
 export {
   applyUniformScale,
   applyZForwardToWorldZSouth,
+  guessServiceHeightM,
   measureGlbExtents,
   prepareImage3dGlb,
   scaleFactorForKnownDimension,
@@ -210,3 +222,35 @@ export type {
   Image3dExportResult,
   Image3dSourceFrame,
 } from './eco-image3d-export'
+export {
+  ATLAS_IMAGE_LONG_SIDE_PX,
+  ATLAS_IMAGE_MAX_CHARS,
+  ATLAS_PART_MAX_BYTES,
+  ATLAS_POLL_MS,
+  AtlasImage3dClient,
+  AtlasImage3dError,
+  ECO_ATLAS_BASE,
+  createAtlasImage3dClient,
+  joinGlbParts,
+  shrinkImageToDataUri,
+} from './eco-atlas-image3d'
+export type {
+  AtlasImage3dConfig,
+  AtlasImage3dKind,
+  AtlasImage3dStatus,
+  AtlasImage3dStatusResult,
+} from './eco-atlas-image3d'
+export {
+  IMAGE3D_EXPORT_MAX_BYTES,
+  IMAGE3D_EXPORT_MAX_TEX_DIM,
+  IMAGE3D_FORBIDDEN_EXTENSIONS,
+  assertImage3dExportBudget,
+  enforceImage3dExportBudget,
+} from './eco-image3d-budget'
+export {
+  assetRole,
+  clearEcoAssets,
+  placementsExcludedFromWalkExport,
+} from './eco-assets-store'
+export type { EcoAssetRole } from './eco-assets-store'
+export { isExcludedFromWalkExport } from './export-glb'

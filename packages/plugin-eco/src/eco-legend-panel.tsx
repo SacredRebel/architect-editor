@@ -168,6 +168,9 @@ export default function EcoLegendPanel() {
             />
             <span style={{ width: 36, textAlign: 'right' }}>{(s.rise ?? 1).toFixed(2)}</span>
           </label>
+          <div style={{ opacity: 0.65 }}>
+            Full leaf params (span / spine / curvature) → Leaf shell panel.
+          </div>
         </div>
       ))}
       <div style={{ opacity: 0.65 }}>Shells export in the GLB only — no walk solids.</div>
