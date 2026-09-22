@@ -1,45 +1,44 @@
-# H16.0 — Temple forms (check and merge)
+# H16 — Temple forms + universal geometry kit
 
-## Source
+## H16.0 — Temple forms
 
-Branch `eco/h16-temple-forms` @ `6556fae6` — ActArtech MIT plugin vendored as
-`packages/plugin-hagia-sophia` (from github.com/ActArtech/editor @ 9a6d5e74).
-
-Credit: ActArtech — panel, README, LICENSE.
-
-## Checks (Agent A)
+Branch `eco/h16-temple-forms` → merge `b611ed8a`. ActArtech MIT plugin as
+`packages/plugin-hagia-sophia` (dome, arch, pendentive, pier, column + Temple forms panel).
 
 | Check | Result |
 |---|---|
-| `cd packages/plugin-hagia-sophia && bun test` | **74 pass** / 0 fail |
-| `tsc --noEmit` | green |
-| `bun install --frozen-lockfile` | green (lockfile already lists workspace) |
-| `bun run build --filter=editor` | green (local; npx bun@1.3.14 blocked by TLS on this agent) |
+| `bun test` in plugin-hagia-sophia | **74 pass** |
+| production | READY at https://architect-editor-snowy.vercel.app (`b611ed8a`) |
 
-## Acceptance (code)
+Screenshot: ![20 ft domed bay](./H16-domed-bay.png)
 
-- Build palette kinds: `hagia-sophia:dome|arch|pier` + temple column — place tools present
-- Temple forms rail: `composeDomedBay` → **13 parts**, one bay tag; Hagia Sophia core span **31.2 m**
-- Arch proportion buttons in panel (`ARCH_FORMS`)
-- True pendentives: geometry tests assert sphere of radius S/√2, meet ring at crowns
+Do **not** rename `hagia-sophia:*` kind ids. Credit ActArtech in panel / README / LICENSE.
 
-## Screenshot
+## H16.1 — Universal geometry kit
 
-![20 ft domed bay](./H16-domed-bay.png)
+Branch `eco/h16-1-geometry` → merge `46ca57b9` (feature `be4929ce`).
 
-Generated via `bun packages/plugin-hagia-sophia/test/render-h16-bay.mjs` (13-part bay).
+Package `packages/plugin-geometry`: 20 plain-named construction forms, Geometry rail panel,
+place / bearing / lock, plan-snap, walls-from-figure, user forms, 3D construction lines,
+**floorplan 2D overlay**, **drag scale handle** (2D + 3D), fuller **13 Archimedean** vertex sets.
 
-## Kind ids
+| Check | Result |
+|---|---|
+| `bun packages/plugin-geometry/test/check-h16-geometry.mjs` | **OK** (20 forms, 13 Archimedean, 11 tilings) |
+| `bun install --frozen-lockfile` + `bun run build --filter=editor` | green (local bun; npx bun@1.3.14 TLS-blocked on agent) |
+| preview (`be4929ce`) | READY branch alias `architect-editor-git-eco-h16-1-geometry-…` |
+| production | READY https://architect-editor-snowy.vercel.app (`46ca57b9`) |
 
-Do **not** rename `hagia-sophia:*`. H16.1+ builds on `src/temple/proportions.ts`.
+### Deferred
 
-## Deployment
+- **Soap-film / minimal surface on a closed curve** — reuses H15.3’s generator (placeholder guide in kit until then).
 
-| Role | State | URL / SHA |
-|---|---|---|
-| Preview (`eco/h16-temple-forms`) | READY | https://architect-editor-c0zsi9rfd-pauls-projects-af8162cc.vercel.app (`89e9f172`) |
-| Production | READY | https://architect-editor-snowy.vercel.app (`b611ed8a`) |
+### Banned UI labels
 
-## Commit
+No “sacred”, “divine”, Flower of Life, Metatron, Seed of Life, vesica piscis, or Platonic as labels
+(keywords only). Enforced by `check-h16-geometry`.
 
-Feature `6556fae6` · docs stamp `89e9f172` · merge `b611ed8a`
+## Later (after H15)
+
+H16.2 catenary arches · H16.3 curved solids · H16.4 VR · H16.5 IFC + envelope — see the H16 brief;
+queued notes in `H17-H18-queued.md`.
