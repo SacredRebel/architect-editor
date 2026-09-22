@@ -1,0 +1,22 @@
+# NOTICE — third-party MIT geometry sources adapted in this package
+
+The following upstream projects are MIT-licensed. Copyright notices are preserved
+here; code was ported and renamed to plain geometric labels (no mystical UI names).
+
+## evoluteur/sacred-geometry
+Copyright (c) evoluteur
+Source: https://github.com/evoluteur/sacred-geometry
+Used for: circle-and-line construction patterns (ported / renamed).
+
+## DrThomasAger/flower-of-life-composer
+Copyright (c) DrThomasAger
+Source: https://github.com/DrThomasAger/flower-of-life-composer
+Used for: hexagonal lattice growth, erase, and repair logic (ported to TypeScript).
+
+## HollandRisley/sacred-sandbox
+Copyright (c) HollandRisley
+Source: https://github.com/HollandRisley/sacred-sandbox
+Used for: regular-solid constructions (ported toward three@0.186).
+
+Each form card also cites the classical book listed in docs/plans (Euclid, Vitruvius,
+Roriczer, Dürer, Kepler, etc.) with a free-scan link.
