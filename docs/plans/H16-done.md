@@ -33,6 +33,13 @@ Generated via `bun packages/plugin-hagia-sophia/test/render-h16-bay.mjs` (13-par
 
 Do **not** rename `hagia-sophia:*`. H16.1+ builds on `src/temple/proportions.ts`.
 
+## Deployment
+
+| Role | State | URL / SHA |
+|---|---|---|
+| Preview (`eco/h16-temple-forms`) | READY | https://architect-editor-c0zsi9rfd-pauls-projects-af8162cc.vercel.app (`89e9f172`) |
+| Production | READY | https://architect-editor-snowy.vercel.app (`b611ed8a`) |
+
 ## Commit
 
-`eco(H16): temple forms — …` (`6556fae6`) + docs stamp on merge.
+Feature `6556fae6` · docs stamp `89e9f172` · merge `b611ed8a`
