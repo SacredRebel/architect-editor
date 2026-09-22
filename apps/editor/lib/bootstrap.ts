@@ -15,6 +15,7 @@ import {
   environmentPlugin,
   environmentPresentation,
 } from '@pascal-app/plugin-environment'
+import { hagiaSophiaPlugin, templeHostPanel } from '@pascal-app/plugin-hagia-sophia'
 import { poolHostPanel, poolPlugin } from '@pascal-app/plugin-pool'
 import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
 import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'
@@ -126,6 +127,10 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
 extendPluginDiscovery(async () => [environmentPlugin])
 registerEditorHostPanel(environmentHostPanel)
 registerViewerPresentation(environmentPresentation)
+// Temple forms: ActArtech's dome, arch, pendentive, pier and column kinds (MIT, from their
+// Hagia Sophia plugin) with our domed bay at any size, true pendentives and placement tools.
+extendPluginDiscovery(async () => [hagiaSophiaPlugin])
+registerEditorHostPanel(templeHostPanel)
 extendPluginDiscovery(async () => [bonesPlugin])
 // Opt-in: Bones ships uninstalled — users enable it per scene from the
 // Plugins panel (engineering X-ray is a specialist view, not a default).

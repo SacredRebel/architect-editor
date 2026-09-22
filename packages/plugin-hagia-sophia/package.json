@@ -1,0 +1,51 @@
+{
+  "name": "@pascal-app/plugin-hagia-sophia",
+  "version": "0.2.0",
+  "description": "Temple forms — ActArtech's Hagia Sophia kinds (dome, arch, pendentive, pier, column) with a domed bay at any size, true pendentives, placement tools and a rail panel.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "peerDependencies": {
+    "@pascal-app/core": "^1.0.1",
+    "@pascal-app/editor": "^1.0.1",
+    "@pascal-app/viewer": "^1.0.1",
+    "@react-three/fiber": "^9",
+    "react": "^18 || ^19",
+    "three": "^0.186",
+    "zod": ">=4.5.4 <4.6"
+  },
+  "devDependencies": {
+    "@pascal-app/core": "^1.0.1",
+    "@pascal-app/editor": "^1.0.1",
+    "@pascal-app/viewer": "^1.0.1",
+    "@types/bun": "^1.3.0",
+    "@types/react": "19.2.2",
+    "@types/three": "^0.184.0",
+    "three": "^0.186.0",
+    "typescript": "6.0.3",
+    "zod": ">=4.5.4 <4.6"
+  },
+  "keywords": ["pascal", "3d", "editor", "plugin", "dome", "arch", "pendentive", "hagia-sophia"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SacredRebel/architect-editor.git",
+    "directory": "packages/plugin-hagia-sophia"
+  }
+}
