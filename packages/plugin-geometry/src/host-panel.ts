@@ -16,3 +16,6 @@ export const geometryPresentation: ViewerPresentationContribution = {
   pluginId: 'pascal:geometry',
   component: () => import('./presentation'),
 }
+
+/** Lazy 2D floor-plan construction overlay (pass as Editor `floorplanSceneSlot`). */
+export const geometryFloorplanOverlay = () => import('./floorplan-overlay')

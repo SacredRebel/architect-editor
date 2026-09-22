@@ -197,6 +197,8 @@ export default function GeometryPanel() {
       <div style={{ fontWeight: 600 }}>Geometry</div>
       <div style={{ opacity: 0.7, lineHeight: 1.4 }}>
         Construction figures with plain geometric names. Type a size in feet-inches or metres.
+        Drag the blue scale handle on a selected figure (2D or 3D). Minimal-surface soap-film
+        awaits H15.3.
       </div>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span>Form</span>

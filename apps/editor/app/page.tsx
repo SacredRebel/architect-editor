@@ -2,6 +2,7 @@
 
 import { Editor, ItemsPanel } from '@pascal-app/editor'
 import { Hammer, Layers, Package, Settings } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BuildTab } from '@/components/build-tab'
@@ -9,6 +10,11 @@ import {
   CommunityViewerToolbarLeft,
   CommunityViewerToolbarRight,
 } from '@/components/viewer-toolbar'
+
+const GeometryFloorplanOverlay = dynamic(
+  () => import('@pascal-app/plugin-geometry').then((m) => m.geometryFloorplanOverlay()),
+  { ssr: false },
+)
 
 // The open-source editor only ships the built-in catalog (no uploaded items),
 // so the Library/Community/Mine source chips and tag filters add nothing —
@@ -105,6 +111,7 @@ export default function Home() {
         </div>
       )}
       <Editor
+        floorplanSceneSlot={<GeometryFloorplanOverlay />}
         layoutVersion="v2"
         projectId={PROJECT_ID}
         sidebarTabs={SIDEBAR_TABS}

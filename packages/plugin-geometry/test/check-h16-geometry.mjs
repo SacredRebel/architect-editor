@@ -21,6 +21,7 @@ import {
   tilingIds,
   twoCircle,
 } from '../src/forms.ts'
+import { archimedeanKinds } from '../src/archimedean.ts'
 import { BANNED_UI_LABELS, PHI, SQRT3 } from '../src/math.ts'
 
 function assert(cond, msg) {
@@ -90,6 +91,35 @@ for (const kind of ['cuboctahedron', 'truncated-tetrahedron', 'rhombicuboctahedr
     const s = archimedeanSolid(kind, edge)
     assert(s.meta.radiusSpread < 1e-5, `arch ${kind} spherical`)
     assert(Math.abs(s.meta.edgeMean - edge) / edge < 0.03, `arch ${kind} edge`)
+  }
+}
+
+{
+  const ARCH_EXPECTED = {
+    'truncated-tetrahedron': 12,
+    cuboctahedron: 12,
+    'truncated-cube': 24,
+    'truncated-octahedron': 24,
+    rhombicuboctahedron: 24,
+    'snub-cube': 24,
+    icosidodecahedron: 30,
+    'truncated-dodecahedron': 60,
+    'truncated-icosahedron': 60,
+    rhombicosidodecahedron: 60,
+    'snub-dodecahedron': 60,
+    'truncated-cuboctahedron': 48,
+    'truncated-icosidodecahedron': 120,
+  }
+  assert(archimedeanKinds().length === 13, '13 Archimedean kinds')
+  for (const kind of archimedeanKinds()) {
+    for (const edge of sizes) {
+      const s = archimedeanSolid(kind, edge)
+      const expectV = ARCH_EXPECTED[kind]
+      assert(s.meta.vertexCount === expectV, `arch ${kind} verts ${s.meta.vertexCount}≠${expectV}`)
+      assert(s.meta.radiusSpread < 1e-3, `arch ${kind} spherical spread=${s.meta.radiusSpread}`)
+      assert(Math.abs(s.meta.edgeMean - edge) / edge < 0.08, `arch ${kind} edge`)
+      assert(s.edges.length > 0, `arch ${kind} has edges`)
+    }
   }
 }
 
