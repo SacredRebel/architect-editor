@@ -3,9 +3,11 @@
 import { TransformControls } from '@react-three/drei'
 import { useLoader } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import type { Group, Object3D } from 'three'
+import type { Group, Material, Mesh, Object3D } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import {
+  assetRole,
   base64ToBytes,
   getEcoAssetsState,
   selectEcoPlacement,
@@ -17,6 +19,28 @@ function useAssets() {
   return useSyncExternalStore(subscribeEcoAssets, getEcoAssetsState, getEcoAssetsState)
 }
 
+function makeMeshoptLoader() {
+  const loader = new GLTFLoader()
+  loader.setMeshoptDecoder(MeshoptDecoder)
+  return loader
+}
+
+function applyOpacity(root: Object3D, opacity: number): void {
+  root.traverse((obj) => {
+    const mesh = obj as Mesh
+    if (!mesh.isMesh) return
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const m of mats) {
+      const mat = m as Material & { transparent?: boolean; opacity?: number }
+      if (!mat) continue
+      mat.transparent = opacity < 0.999
+      mat.opacity = opacity
+      mat.depthWrite = opacity >= 0.999
+      mat.needsUpdate = true
+    }
+  })
+}
+
 function PlacedModel({
   base64,
   selected,
@@ -24,6 +48,9 @@ function PlacedModel({
   position,
   rotation,
   scale,
+  locked,
+  opacity,
+  layerName,
 }: {
   base64: string
   selected: boolean
@@ -31,6 +58,9 @@ function PlacedModel({
   position: [number, number, number]
   rotation: [number, number, number]
   scale: [number, number, number]
+  locked: boolean
+  opacity: number
+  layerName: string
 }) {
   const url = useMemo(() => {
     const bytes = base64ToBytes(base64)
@@ -42,15 +72,22 @@ function PlacedModel({
 
   useEffect(() => () => URL.revokeObjectURL(url), [url])
 
-  const gltf = useLoader(GLTFLoader, url)
+  const gltf = useLoader(GLTFLoader, url, (loader) => {
+    ;(loader as GLTFLoader).setMeshoptDecoder(MeshoptDecoder)
+  })
   const group = useRef<Group>(null)
-  const root = useMemo(() => gltf.scene.clone(true), [gltf])
+  const root = useMemo(() => {
+    const cloned = gltf.scene.clone(true)
+    applyOpacity(cloned, opacity)
+    return cloned
+  }, [gltf, opacity])
 
   return (
     <group
+      name={layerName}
       onClick={(e) => {
         e.stopPropagation()
-        selectEcoPlacement(placementId)
+        if (!locked) selectEcoPlacement(placementId)
       }}
       position={position}
       ref={group}
@@ -58,7 +95,7 @@ function PlacedModel({
       scale={scale}
     >
       <primitive object={root as Object3D} />
-      {selected && group.current && (
+      {selected && !locked && group.current && (
         <TransformControls
           object={group.current}
           onMouseUp={() => {
@@ -80,24 +117,64 @@ function PlacedModel({
 export function EcoPlacedAssets() {
   const { assets, placements, selectedPlacementId } = useAssets()
 
+  const props = placements.filter((p) => {
+    const asset = assets.find((a) => a.id === p.assetId)
+    return asset ? assetRole(asset) !== 'massing' : true
+  })
+  const massings = placements.filter((p) => {
+    const asset = assets.find((a) => a.id === p.assetId)
+    return asset ? assetRole(asset) === 'massing' : Boolean(p.excludeFromWalkExport)
+  })
+
   return (
-    <group name="eco-placed-assets">
-      {placements.map((placement) => {
-        const asset = assets.find((a) => a.id === placement.assetId)
-        if (!asset) return null
-        return (
-          <Suspense key={placement.id} fallback={null}>
-            <PlacedModel
-              base64={asset.bytesBase64}
-              placementId={placement.id}
-              position={placement.position}
-              rotation={placement.rotation}
-              scale={placement.scale}
-              selected={selectedPlacementId === placement.id}
-            />
-          </Suspense>
-        )
-      })}
-    </group>
+    <>
+      <group name="eco-placed-assets">
+        {props.map((placement) => {
+          const asset = assets.find((a) => a.id === placement.assetId)
+          if (!asset) return null
+          return (
+            <Suspense key={placement.id} fallback={null}>
+              <PlacedModel
+                base64={asset.bytesBase64}
+                layerName={`prop:${placement.id}`}
+                locked={Boolean(placement.locked)}
+                opacity={placement.opacity ?? 1}
+                placementId={placement.id}
+                position={placement.position}
+                rotation={placement.rotation}
+                scale={placement.scale}
+                selected={selectedPlacementId === placement.id}
+              />
+            </Suspense>
+          )
+        })}
+      </group>
+      <group name="eco-massing-refs">
+        {massings.map((placement) => {
+          const asset = assets.find((a) => a.id === placement.assetId)
+          if (!asset) return null
+          return (
+            <Suspense key={placement.id} fallback={null}>
+              <PlacedModel
+                base64={asset.bytesBase64}
+                layerName={`massing:${placement.id}`}
+                locked
+                opacity={placement.opacity ?? 0.45}
+                placementId={placement.id}
+                position={placement.position}
+                rotation={placement.rotation}
+                scale={placement.scale}
+                selected={false}
+              />
+            </Suspense>
+          )
+        })}
+      </group>
+    </>
   )
+}
+
+/** Exported for tests — loader must carry meshopt, never Draco. */
+export function createEcoGlbLoader(): GLTFLoader {
+  return makeMeshoptLoader()
 }

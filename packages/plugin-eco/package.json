@@ -34,7 +34,9 @@
     "check:h12": "bun test/check-h12.mjs",
     "check:h3": "bun test/check-h3.mjs",
     "check:h11": "bun test/check-h11.mjs",
-    "render:h12": "bun test/render-h12-baseline.mjs"
+    "check:h14": "bun test/check-h14.mjs",
+    "render:h12": "bun test/render-h12-baseline.mjs",
+    "render:h14": "bun test/render-h14-flows.mjs"
   },
   "peerDependencies": {
     "@pascal-app/core": "^1.0.1",

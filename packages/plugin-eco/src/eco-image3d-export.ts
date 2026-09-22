@@ -1,15 +1,20 @@
 /**
- * H11 — post-inference export helpers for image-to-3D soups.
+ * H11 / H14 — post-inference export helpers for image-to-3D soups.
  *
  * Pipeline: raw model GLB (unit cube, usually z-forward Y-up)
  *   → scale from known dimension
  *   → remap to world frame (x east, y up, z south)
- *   → meshopt via optimiseGlb('web')  (100k–500k tris expected)
+ *   → meshopt (+ WebP ≤1024 for H14 `image3d` profile)
  *
- * No walk floors/solids are stamped — props only.
+ * No walk floors/solids are stamped — props / massing only.
  */
 import { NodeIO, type Document } from '@gltf-transform/core'
-import { createGlbIo } from './glb-audit'
+import { auditGlb, createGlbIo } from './glb-audit'
+import {
+  enforceImage3dExportBudget,
+  IMAGE3D_EXPORT_MAX_BYTES,
+  IMAGE3D_EXPORT_MAX_TEX_DIM,
+} from './eco-image3d-budget'
 import type { Image3dKnownDimension } from './eco-image3d'
 import { optimiseGlb, type OptimiseProfile, type OptimiseResult } from './glb-optimise'
 
@@ -20,10 +25,12 @@ export type Image3dExportOptions = {
   /** Default z-forward Y-up (most image-to-3D exporters). */
   sourceFrame?: Image3dSourceFrame
   /**
-   * Default `web` — dense soups need meshopt headroom.
-   * Parametric buildings stay on `compat`; do not use that here.
+   * Default `image3d` (H14) — meshopt + WebP ≤1024, ≤5 MB budget.
+   * Legacy H11 tests may pass `web`. Parametric buildings stay on `compat`.
    */
   optimiseProfile?: OptimiseProfile
+  /** Enforce H14 loader budget (default true for image3d/web profiles). */
+  enforceBudget?: boolean
 }
 
 export type Image3dExportResult = {
@@ -200,8 +207,18 @@ export async function prepareImage3dGlb(
   const extentAfter = measureGlbExtents(doc)
   const scaled = await writeBinary(io, doc)
 
-  const profile = options.optimiseProfile ?? 'web'
+  const profile = options.optimiseProfile ?? 'image3d'
   const optimise = await optimiseGlb(scaled, profile)
+
+  const enforce =
+    options.enforceBudget ?? (profile === 'image3d' || profile === 'web')
+  if (enforce) {
+    const report = await auditGlb(optimise.buffer)
+    enforceImage3dExportBudget(report, {
+      maxBytes: IMAGE3D_EXPORT_MAX_BYTES,
+      maxTexDim: IMAGE3D_EXPORT_MAX_TEX_DIM,
+    })
+  }
 
   return {
     buffer: optimise.buffer,
@@ -210,4 +227,12 @@ export async function prepareImage3dGlb(
     extentAfterM: extentAfter,
     optimise,
   }
+}
+
+/**
+ * Heuristic height (m) when the user does not supply a known dimension.
+ * Object props default ~human-scale furniture; buildings ~single-storey eave.
+ */
+export function guessServiceHeightM(kind: 'object' | 'building'): number {
+  return kind === 'building' ? 3.2 : 0.9
 }
