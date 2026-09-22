@@ -63,6 +63,7 @@ const nextConfig: NextConfig = {
     '@pascal-app/plugin-bones',
     '@pascal-app/plugin-environment',
     '@pascal-app/plugin-hagia-sophia',
+    '@pascal-app/plugin-geometry',
     '@dgreenheck/ez-tree',
   ],
   // Node Draco WASM bindings require `fs`; keep them off the client graph.

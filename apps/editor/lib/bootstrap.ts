@@ -16,6 +16,11 @@ import {
   environmentPresentation,
 } from '@pascal-app/plugin-environment'
 import { hagiaSophiaPlugin, templeHostPanel } from '@pascal-app/plugin-hagia-sophia'
+import {
+  geometryHostPanel,
+  geometryPlugin,
+  geometryPresentation,
+} from '@pascal-app/plugin-geometry'
 import { poolHostPanel, poolPlugin } from '@pascal-app/plugin-pool'
 import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
 import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'
@@ -131,6 +136,9 @@ registerViewerPresentation(environmentPresentation)
 // Hagia Sophia plugin) with our domed bay at any size, true pendentives and placement tools.
 extendPluginDiscovery(async () => [hagiaSophiaPlugin])
 registerEditorHostPanel(templeHostPanel)
+extendPluginDiscovery(async () => [geometryPlugin])
+registerEditorHostPanel(geometryHostPanel)
+registerViewerPresentation(geometryPresentation)
 extendPluginDiscovery(async () => [bonesPlugin])
 // Opt-in: Bones ships uninstalled — users enable it per scene from the
 // Plugins panel (engineering X-ray is a specialist view, not a default).
