@@ -19,6 +19,7 @@ import {
   clearPlacedFigures,
   getGeometryState,
   removePlacedFigure,
+  setSelectedFigure,
   subscribeGeometry,
   updatePlacedFigure,
 } from './store'
@@ -171,6 +172,26 @@ export default function GeometryPanel() {
     )
   }
 
+  const rebuildSelected = (patch: { size?: number; bearingDeg?: number; origin?: [number, number] }) => {
+    const fig = figures.find((f) => f.id === selectedId)
+    if (!fig || fig.locked) {
+      setNote(fig?.locked ? 'Unlock the figure first.' : 'Select a placed figure.')
+      return
+    }
+    const size = patch.size ?? fig.size
+    const bearingDeg = patch.bearingDeg ?? fig.bearingDeg
+    const origin = patch.origin ?? fig.origin
+    const built = buildForm(fig.formId, { size, origin, bearingDeg })
+    updatePlacedFigure(fig.id, {
+      size,
+      bearingDeg,
+      origin,
+      figure: built.figure,
+      solid: built.solid,
+    })
+    setNote(`Updated ${fig.label}: ${built.summary}`)
+  }
+
   return (
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
       <div style={{ fontWeight: 600 }}>Geometry</div>
@@ -263,10 +284,20 @@ export default function GeometryPanel() {
           <div style={{ fontWeight: 600 }}>Placed ({figures.length})</div>
           {figures.map((f) => (
             <div key={f.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <span style={{ flex: 1, opacity: f.id === selectedId ? 1 : 0.7 }}>
+              <button
+                type="button"
+                style={{
+                  ...btn,
+                  flex: 1,
+                  textAlign: 'left',
+                  fontWeight: f.id === selectedId ? 600 : 400,
+                  opacity: f.id === selectedId ? 1 : 0.7,
+                }}
+                onClick={() => setSelectedFigure(f.id)}
+              >
                 {f.label}
-                {f.locked ? ' 🔒' : ''}
-              </span>
+                {f.locked ? ' · locked' : ''}
+              </button>
               <button
                 type="button"
                 style={btn}
@@ -279,6 +310,53 @@ export default function GeometryPanel() {
               </button>
             </div>
           ))}
+          {selectedId && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <button
+                type="button"
+                style={btn}
+                onClick={() => {
+                  const fig = figures.find((f) => f.id === selectedId)
+                  if (!fig) return
+                  rebuildSelected({ size: fig.size * 1.1 })
+                }}
+              >
+                Scale +10%
+              </button>
+              <button
+                type="button"
+                style={btn}
+                onClick={() => {
+                  const fig = figures.find((f) => f.id === selectedId)
+                  if (!fig) return
+                  rebuildSelected({ size: fig.size / 1.1 })
+                }}
+              >
+                Scale −10%
+              </button>
+              <button
+                type="button"
+                style={btn}
+                onClick={() => {
+                  const fig = figures.find((f) => f.id === selectedId)
+                  if (!fig) return
+                  rebuildSelected({ bearingDeg: fig.bearingDeg + 15 })
+                }}
+              >
+                Turn +15°
+              </button>
+              <button
+                type="button"
+                style={btn}
+                onClick={() => {
+                  const target = useEditor.getState().navigationSyncPose?.target ?? [0, 0, 0]
+                  rebuildSelected({ origin: [target[0], target[2]] })
+                }}
+              >
+                Move to view
+              </button>
+            </div>
+          )}
         </div>
       )}
       {note && <div style={{ opacity: 0.9 }}>{note}</div>}
