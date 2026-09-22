@@ -5,7 +5,7 @@ export const geometryPlugin: Plugin = {
   apiVersion: 1,
 }
 
-export { geometryHostPanel, geometryPresentation } from './host-panel'
+export { geometryFloorplanOverlay, geometryHostPanel, geometryPresentation } from './host-panel'
 export { FORMS, formById } from './catalog'
 export type { FormDef, FormId } from './catalog'
 export * from './forms'
