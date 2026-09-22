@@ -106,7 +106,7 @@ export function totalAssetBytes(): number {
   return state.assets.reduce((sum, a) => sum + a.byteLength, 0)
 }
 
-export function assetRole(asset: EcoAssetMeta): EcoAssetRole {
+export function assetRole(asset: Pick<EcoAssetMeta, 'role'>): EcoAssetRole {
   return asset.role ?? 'prop'
 }
 
