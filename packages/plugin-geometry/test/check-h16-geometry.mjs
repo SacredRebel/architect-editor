@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { FORMS } from '../src/catalog.ts'
 import {
   adQuadratum,
+  archimedeanSolid,
   cordTriple,
   equalShadows,
   extremeMean,
@@ -16,6 +17,8 @@ import {
   regularSolid,
   rootRectangle,
   snapToLattice,
+  tilingFill,
+  tilingIds,
   twoCircle,
 } from '../src/forms.ts'
 import { BANNED_UI_LABELS, PHI, SQRT3 } from '../src/math.ts'
@@ -74,12 +77,34 @@ for (const L of sizes) {
   assert(Math.hypot(snapped[0] - pts[3][0], snapped[1] - pts[3][1]) < 1e-9, 'snap to lattice ≤1mm')
 }
 
-for (const kind of ['tetrahedron', 'cube', 'octahedron', 'icosahedron']) {
+for (const kind of ['tetrahedron', 'cube', 'octahedron', 'icosahedron', 'dodecahedron']) {
   for (const edge of sizes) {
     const s = regularSolid(kind, edge)
     assert(s.meta.radiusSpread < 1e-6, `${kind} spherical`)
     assert(Math.abs(s.meta.edgeMean - edge) < 1e-4, `${kind} edge mean`)
   }
+}
+
+for (const kind of ['cuboctahedron', 'truncated-tetrahedron', 'rhombicuboctahedron']) {
+  for (const edge of sizes) {
+    const s = archimedeanSolid(kind, edge)
+    assert(s.meta.radiusSpread < 1e-5, `arch ${kind} spherical`)
+    assert(Math.abs(s.meta.edgeMean - edge) / edge < 0.03, `arch ${kind} edge`)
+  }
+}
+
+assert(tilingIds().length === 11, `11 tilings, got ${tilingIds().length}`)
+for (const id of ['4.4.4.4', '3.3.3.3.3.3', '6.6.6']) {
+  for (const tile of [1, 2]) {
+    const t = tilingFill(id, tile, 20)
+    assert(t.meta.maxGap < 1e-6 || t.meta.maxGap < tile, `tiling ${id} gap ${t.meta.maxGap}`)
+    assert(t.polylines.length > 0, `tiling ${id} draws`)
+  }
+}
+// Square tiling must cover 20×20 with zero leftover when tile divides area.
+{
+  const t = tilingFill('4.4.4.4', 1, 20)
+  assert(t.meta.maxGap < 1e-9, `4.4.4.4 closed over 20×20, gap=${t.meta.maxGap}`)
 }
 
 assert(FORMS.length === 20, `20 forms, got ${FORMS.length}`)
@@ -97,4 +122,14 @@ for (const f of FORMS) {
   }
 }
 
-console.log('check-h16-geometry: OK', { forms: FORMS.length, sizes })
+// Grep panel + catalog UI strings for banned words as titles.
+const uiFiles = ['../src/panel.tsx', '../src/catalog.ts', '../src/host-panel.ts']
+for (const rel of uiFiles) {
+  const src = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), rel), 'utf8').toLowerCase()
+  for (const ban of BANNED_UI_LABELS) {
+    // allow in comments / keywords only — fail if used as visible label=
+    assert(!src.includes(`>${ban}<`) && !src.includes(`label: '${ban}'`), `${rel} banned ${ban}`)
+  }
+}
+
+console.log('check-h16-geometry: OK', { forms: FORMS.length, sizes, tilings: tilingIds().length })

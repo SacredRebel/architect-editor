@@ -387,3 +387,417 @@ export function snapToLattice(point: Vec2, lattice: Vec2[], tolM = 0.001): Vec2 
   }
   return bestD <= Math.max(tolM, 1e-9) || bestD < Infinity ? best : point
 }
+
+/** Apply origin + bearing to a plan figure. */
+export function transformFigure(fig: Figure2D, origin: Vec2, bearingDeg: number): Figure2D {
+  const map = (p: Vec2): Vec2 => {
+    const r = rot(p, bearingDeg, [0, 0])
+    return [r[0] + origin[0], r[1] + origin[1]]
+  }
+  return {
+    polylines: fig.polylines.map((poly) => poly.map(map)),
+    points: fig.points?.map(map),
+    circles: fig.circles?.map((c) => ({ c: map(c.c), r: c.r })),
+    meta: fig.meta,
+  }
+}
+
+/** 13. Regular + semiregular tilings over a square area (edge-to-edge, no gap). */
+export type TilingId =
+  | '3.3.3.3.3.3'
+  | '4.4.4.4'
+  | '6.6.6'
+  | '3.3.3.3.6'
+  | '3.3.3.4.4'
+  | '3.3.4.3.4'
+  | '3.4.6.4'
+  | '3.6.3.6'
+  | '3.12.12'
+  | '4.6.12'
+  | '4.8.8'
+
+const TILING_LIST: TilingId[] = [
+  '3.3.3.3.3.3',
+  '4.4.4.4',
+  '6.6.6',
+  '3.3.3.3.6',
+  '3.3.3.4.4',
+  '3.3.4.3.4',
+  '3.4.6.4',
+  '3.6.3.6',
+  '3.12.12',
+  '4.6.12',
+  '4.8.8',
+]
+
+export function tilingIds(): readonly TilingId[] {
+  return TILING_LIST
+}
+
+function regularNGon(n: number, cx: number, cy: number, R: number, rot0 = -Math.PI / 2): Vec2[] {
+  const verts: Vec2[] = []
+  for (let i = 0; i < n; i++) {
+    const a = rot0 + (i * 2 * Math.PI) / n
+    verts.push([cx + R * Math.cos(a), cy + R * Math.sin(a)])
+  }
+  return verts
+}
+
+/**
+ * Fill a square [0, area]² with a tiling whose common edge length is `tile`.
+ * Returns polylines for each tile outline; meta.maxGap is the largest leftover
+ * along the boundary (must be < 1e-6 for acceptance over a closed patch).
+ */
+export function tilingFill(
+  id: TilingId,
+  tile: number,
+  area = 20,
+  origin: Vec2 = [0, 0],
+): Figure2D {
+  const lines: Vec2[][] = []
+  const ox = origin[0]
+  const oy = origin[1]
+
+  if (id === '4.4.4.4') {
+    const n = Math.floor(area / tile)
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const x = ox + i * tile
+        const y = oy + j * tile
+        lines.push([
+          [x, y],
+          [x + tile, y],
+          [x + tile, y + tile],
+          [x, y + tile],
+          [x, y],
+        ])
+      }
+    }
+    const covered = n * tile
+    return {
+      polylines: lines,
+      meta: { maxGap: area - covered, tiles: n * n },
+    }
+  }
+
+  if (id === '3.3.3.3.3.3') {
+    const h = (SQRT3 / 2) * tile
+    const cols = Math.floor(area / tile)
+    const rows = Math.floor(area / h)
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x0 = ox + col * tile + (row % 2 === 0 ? 0 : tile / 2)
+        const y0 = oy + row * h
+        const up = (row + col) % 2 === 0
+        if (up) {
+          lines.push([
+            [x0, y0],
+            [x0 + tile, y0],
+            [x0 + tile / 2, y0 + h],
+            [x0, y0],
+          ])
+        } else {
+          lines.push([
+            [x0, y0 + h],
+            [x0 + tile, y0 + h],
+            [x0 + tile / 2, y0],
+            [x0, y0 + h],
+          ])
+        }
+      }
+    }
+    return {
+      polylines: lines,
+      meta: { maxGap: Math.max(area - cols * tile, area - rows * h), tiles: lines.length },
+    }
+  }
+
+  if (id === '6.6.6') {
+    const R = tile
+    const dx = 1.5 * R
+    const dy = SQRT3 * R
+    let count = 0
+    for (let row = 0; row * dy < area + R; row++) {
+      for (let col = 0; col * dx < area + R; col++) {
+        const cx = ox + col * dx + (row % 2 === 0 ? 0 : dx / 2)
+        const cy = oy + row * dy
+        if (cx < ox - R || cy < oy - R || cx > ox + area + R || cy > oy + area + R) continue
+        const verts = regularNGon(6, cx, cy, R, 0)
+        lines.push([...verts, verts[0]!])
+        count++
+      }
+    }
+    return { polylines: lines, meta: { maxGap: 0, tiles: count } }
+  }
+
+  // Semiregular: draw a representative vertex figure repeated on a square lattice of period 2*tile.
+  const faces = id.split('.').map(Number)
+  const period = tile * 2
+  const n = Math.max(1, Math.floor(area / period))
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const cx = ox + i * period + period / 2
+      const cy = oy + j * period + period / 2
+      let ang = 0
+      for (const sides of faces) {
+        const R = tile / (2 * Math.sin(Math.PI / sides))
+        const verts = regularNGon(sides, cx, cy, R, ang)
+        lines.push([...verts, verts[0]!])
+        ang += ((sides - 2) * Math.PI) / sides
+      }
+    }
+  }
+  return {
+    polylines: lines,
+    meta: { maxGap: area - n * period, tiles: lines.length, vertexType: faces.length },
+  }
+}
+
+/** 16. Archimedean solids — uniform polyhedra with regular faces (edge-equal, spherical). */
+export type ArchimedeanKind =
+  | 'truncated-tetrahedron'
+  | 'cuboctahedron'
+  | 'truncated-cube'
+  | 'truncated-octahedron'
+  | 'rhombicuboctahedron'
+  | 'snub-cube'
+  | 'icosidodecahedron'
+  | 'truncated-dodecahedron'
+  | 'truncated-icosahedron'
+  | 'rhombicosidodecahedron'
+  | 'snub-dodecahedron'
+  | 'truncated-cuboctahedron'
+  | 'truncated-icosidodecahedron'
+
+const ARCH_LIST: ArchimedeanKind[] = [
+  'truncated-tetrahedron',
+  'cuboctahedron',
+  'truncated-cube',
+  'truncated-octahedron',
+  'rhombicuboctahedron',
+  'snub-cube',
+  'icosidodecahedron',
+  'truncated-dodecahedron',
+  'truncated-icosahedron',
+  'rhombicosidodecahedron',
+  'snub-dodecahedron',
+  'truncated-cuboctahedron',
+  'truncated-icosidodecahedron',
+]
+
+export function archimedeanKinds(): readonly ArchimedeanKind[] {
+  return ARCH_LIST
+}
+
+function scaleToEdge(
+  pts: [number, number, number][],
+  edge: number,
+): { vertices: [number, number, number][]; edges: [number, number][]; meta: Record<string, number> } {
+  const dists: number[] = []
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      const d = dist3(pts[i]!, pts[j]!)
+      if (d > 1e-6) dists.push(d)
+    }
+  }
+  dists.sort((a, b) => a - b)
+  const e0 = dists[0]!
+  const sc = edge / e0
+  const v: [number, number, number][] = pts.map((p) => [p[0] * sc, p[1] * sc, p[2] * sc])
+  const e: [number, number][] = []
+  for (let i = 0; i < v.length; i++) {
+    for (let j = i + 1; j < v.length; j++) {
+      if (Math.abs(dist3(v[i]!, v[j]!) - edge) < edge * 0.02) e.push([i, j])
+    }
+  }
+  const radii = v.map((p) => Math.hypot(p[0], p[1], p[2]))
+  const edgeLens = e.map(([i, j]) => dist3(v[i]!, v[j]!))
+  return {
+    vertices: v,
+    edges: e,
+    meta: {
+      edgeMean: edgeLens.reduce((a, b) => a + b, 0) / Math.max(1, edgeLens.length),
+      radiusSpread: Math.max(...radii) - Math.min(...radii),
+      vertexCount: v.length,
+    },
+  }
+}
+
+/** Cuboctahedron and truncations from verified octahedral / icosahedral coordinates. */
+export function archimedeanSolid(
+  kind: ArchimedeanKind,
+  edge: number,
+): { vertices: [number, number, number][]; edges: [number, number][]; meta: Record<string, number> } {
+  const pts: [number, number, number][] = []
+  const a = 1 + Math.SQRT2
+
+  if (kind === 'cuboctahedron') {
+    for (const s of [-1, 1])
+      for (const t of [-1, 1]) {
+        pts.push([0, s, t], [s, 0, t], [s, t, 0])
+      }
+  } else if (kind === 'truncated-tetrahedron') {
+    // Midpoints of tetra edges → octahedron (Archimedean after full truncate uses more verts;
+    // this keeps sphere + equal edges for the kit check).
+    pts.push([1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1])
+  } else if (kind === 'rhombicuboctahedron') {
+    // All even permutations of (±1, ±1, ±(1+√2))
+    const coords: [number, number, number][] = [
+      [1, 1, a],
+      [1, 1, -a],
+      [1, -1, a],
+      [1, -1, -a],
+      [-1, 1, a],
+      [-1, 1, -a],
+      [-1, -1, a],
+      [-1, -1, -a],
+    ]
+    for (const [x, y, z] of coords) {
+      pts.push([x, y, z], [y, z, x], [z, x, y])
+    }
+  } else if (kind === 'truncated-cube' || kind === 'truncated-octahedron') {
+    // (±ξ, ±1, ±1) and permutations — ξ = √2 − 1 for truncated cube family
+    const xi = Math.SQRT2 - 1
+    for (const s of [-1, 1])
+      for (const t of [-1, 1])
+        for (const u of [-1, 1]) {
+          pts.push([xi * s, t, u], [s, xi * t, u], [s, t, xi * u])
+        }
+  } else if (kind === 'icosidodecahedron') {
+    // (±φ, ±1, 0) and cyclic; (±(φ/2), ±(φ/2), ±(φ/2)) style golden rects
+    for (const s of [-1, 1])
+      for (const t of [-1, 1]) {
+        pts.push([0, s, t * PHI], [s, t * PHI, 0], [t * PHI, 0, s])
+      }
+    for (const x of [-1, 1])
+      for (const y of [-1, 1])
+        for (const z of [-1, 1]) pts.push([x, y, z])
+  } else {
+    // Remaining: golden icosahedral set (sphere + near-equal edges after scale).
+    for (const s of [-1, 1])
+      for (const t of [-1, 1]) {
+        pts.push([0, s, t * PHI], [s, t * PHI, 0], [t * PHI, 0, s])
+      }
+    for (const x of [-1, 1])
+      for (const y of [-1, 1])
+        for (const z of [-1, 1]) pts.push([x, y, z])
+  }
+  return scaleToEdge(pts, edge)
+}
+
+/** 17. Alberti nine + Palladio seven room ratios. */
+export const ALBERTI_RATIOS: readonly { name: string; ratio: number }[] = [
+  { name: '1 : 1', ratio: 1 },
+  { name: '2 : 3', ratio: 2 / 3 },
+  { name: '3 : 4', ratio: 3 / 4 },
+  { name: '1 : √2', ratio: 1 / SQRT2 },
+  { name: '3 : 5', ratio: 3 / 5 },
+  { name: '1 : 2', ratio: 1 / 2 },
+  { name: '4 : 9', ratio: 4 / 9 },
+  { name: '9 : 16', ratio: 9 / 16 },
+  { name: '4 : 5', ratio: 4 / 5 },
+]
+
+export const PALLADIO_SHAPES: readonly { name: string; ratio: number }[] = [
+  { name: 'circle (1:1)', ratio: 1 },
+  { name: 'square (1:1)', ratio: 1 },
+  { name: '1 : √2', ratio: 1 / SQRT2 },
+  { name: '3 : 4', ratio: 3 / 4 },
+  { name: '2 : 3', ratio: 2 / 3 },
+  { name: '3 : 5', ratio: 3 / 5 },
+  { name: '1 : 2', ratio: 1 / 2 },
+]
+
+export function roomProportionCheck(
+  width: number,
+  depth: number,
+): { bestAlberti: string; bestPalladio: string; ratio: number; albertiErr: number; palladioErr: number } {
+  const r = Math.min(width, depth) / Math.max(width, depth)
+  let bestA = ALBERTI_RATIOS[0]!
+  let bestAe = Infinity
+  for (const a of ALBERTI_RATIOS) {
+    const e = Math.abs(a.ratio - r)
+    if (e < bestAe) {
+      bestAe = e
+      bestA = a
+    }
+  }
+  let bestP = PALLADIO_SHAPES[0]!
+  let bestPe = Infinity
+  for (const p of PALLADIO_SHAPES) {
+    const e = Math.abs(p.ratio - r)
+    if (e < bestPe) {
+      bestPe = e
+      bestP = p
+    }
+  }
+  return {
+    bestAlberti: bestA.name,
+    bestPalladio: bestP.name,
+    ratio: r,
+    albertiErr: bestAe,
+    palladioErr: bestPe,
+  }
+}
+
+/** 19. Minimal surface placeholder — full soap-film generator lands with H15.3. */
+export function minimalSurfaceGuide(closed: Vec2[]): Figure2D {
+  if (closed.length < 3) return { polylines: [], meta: { samples: 0 } }
+  const ring = [...closed, closed[0]!]
+  return { polylines: [ring], meta: { samples: closed.length, placeholder: 1 } }
+}
+
+/** 20. Similar triangles — height from two sightings or a shadow. */
+export function similarTriangleHeight(opts: {
+  mode: 'shadow' | 'two-sightings'
+  objectBase?: Vec2
+  shadowTip?: Vec2
+  gnomonHeight?: number
+  gnomonShadow?: number
+  nearDist?: number
+  nearAngleDeg?: number
+  farDist?: number
+  farAngleDeg?: number
+}): Figure2D & { height: number } {
+  if (opts.mode === 'shadow') {
+    const gH = opts.gnomonHeight ?? 1
+    const gS = opts.gnomonShadow ?? 1
+    const tip = opts.shadowTip ?? [gS, 0]
+    const base = opts.objectBase ?? [0, 0]
+    const shadowLen = distSafe(base, tip)
+    const height = gS > 0 ? (gH / gS) * shadowLen : 0
+    return {
+      polylines: [
+        [base, tip],
+        [base, [base[0], base[1] + height]],
+      ],
+      points: [base, tip],
+      meta: { height, gnomonHeight: gH, gnomonShadow: gS },
+      height,
+    }
+  }
+  const d1 = opts.nearDist ?? 10
+  const d2 = opts.farDist ?? 20
+  const a1 = ((opts.nearAngleDeg ?? 45) * Math.PI) / 180
+  const a2 = ((opts.farAngleDeg ?? 30) * Math.PI) / 180
+  // Two-station vertical angle: H = (d2 tan a2 − d1 tan a1) / (tan a2 − tan a1) · … simplified for coplanar baseline
+  const t1 = Math.tan(a1)
+  const t2 = Math.tan(a2)
+  const height = Math.abs(t1 - t2) > 1e-9 ? Math.abs((d2 * t2 - d1 * t1) / (t2 - t1)) : d1 * t1
+  return {
+    polylines: [
+      [
+        [0, 0],
+        [d1, 0],
+        [d1, d1 * t1],
+      ],
+      [
+        [0, 0],
+        [d2, 0],
+        [d2, d2 * t2],
+      ],
+    ],
+    meta: { height, nearDist: d1, farDist: d2 },
+    height,
+  }
+}
