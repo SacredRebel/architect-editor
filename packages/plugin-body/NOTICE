@@ -1,0 +1,14 @@
+/**
+ * NOTICE — third-party source
+ *
+ * Half-edge body kernel files under `src/kernel/` and schemas under `src/schema/`
+ * are ported from qurkuid/editor @ deploy/floorplan (MIT):
+ *   https://github.com/qurkuid/editor/tree/deploy/floorplan
+ * Paths of origin:
+ *   packages/core/src/lib/body-*.ts
+ *   packages/core/src/schema/nodes/body*.ts
+ *   packages/nodes/src/body/
+ *   packages/nodes/src/body-group/
+ *
+ * Copyright notices from that repository are preserved by this NOTICE and LICENSE.
+ */

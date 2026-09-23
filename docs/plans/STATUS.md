@@ -1,7 +1,7 @@
 # STATUS — Agent A
 updated: 2026-09-22
-phase: H16.2 merged — next H16.3 (body kernel)
-state: H16.2 catenary arches / vaults / Poleni thrust on main. Production READY. Queue continues H16.3→H16.5 → H17 → H18.
+phase: H16.3 in flight — body kernel
+state: H16.2 catenary on production. H16.3 plugin-body (qurkuid half-edge kernel) on `eco/h16-3-body`. Queue continues H16.4→H16.5 → H17 → H18 after merge.
 
 | Phase | Status | Finishing commit | Known missing |
 |---|---|---|---|
@@ -9,13 +9,13 @@ state: H16.2 catenary arches / vaults / Poleni thrust on main. Production READY.
 | H15 | **done** | merge `97e5ff19` (feature `5d3f6370`) | live atlas still owner-side; freehand smooth-wall canvas later |
 | H16.0 | **done** | merge `b611ed8a` | — |
 | H16.1 | **done** | merge `46ca57b9` | wire soap-film into geometry kit (optional polish) |
-| H16.2 | **done** | merge `aa5a96d2` (feature same) | — |
-| H16.3–H16.5 | next | — | body kernel → VR → IFC/envelope |
+| H16.2 | **done** | merge `aa5a96d2` (stamp `7c21db9e`) | — |
+| H16.3 | **in flight** | `eco/h16-3-body` | preview → merge → production |
+| H16.4–H16.5 | next | — | VR → IFC/envelope |
 | H17–H18 | queued after H16.5 | — | `H17-H18-queued.md` |
 
-commit: main `aa5a96d2`
-checks: `check-h16-2` OK; plugin-hagia-sophia 81 pass; editor build green
+commit: branch `eco/h16-3-body` (main `7c21db9e`)
+checks: `check-h16-2` OK; `check-h16-3` OK; plugin-body 88 pass; editor build pending push
 deployment:
-- H16.2 preview READY https://architect-editor-git-eco-h16-2-catenary-pauls-projects-af8162cc.vercel.app (`aa5a96d2`)
-- production READY https://architect-editor-snowy.vercel.app (`aa5a96d2` / health ok)
+- H16.2 production READY https://architect-editor-snowy.vercel.app (`aa5a96d2`)
 queue: H16.3 → H16.4 → H16.5 → H17 → H18

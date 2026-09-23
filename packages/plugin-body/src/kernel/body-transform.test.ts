@@ -1,0 +1,323 @@
+import { describe, expect, test } from 'bun:test'
+import { BodyNode } from '../schema/body'
+import { createCircularArcFaceBody, getBodyLoopBoundaryPoints } from './body-curves'
+import { pushPullBodyFace } from './body-push-pull'
+import { createRectangleBody, getBodySemanticHash, validateBodyTopology } from './body-topology'
+import { transformBody } from './body-transform'
+
+const transform = {
+  translation: [2, 0, 0],
+  rotationAxis: [0, 1, 0],
+  rotationAngle: Math.PI / 2,
+  scale: [0.5, 0.5, 0.5],
+  pivot: [0.6, 0.6, 0.4],
+} as const
+
+function transformPoint(
+  point: readonly [number, number, number],
+  translation: readonly [number, number, number],
+  rotationAxis: readonly [number, number, number],
+  rotationAngle: number,
+  scale: readonly [number, number, number],
+  pivot: readonly [number, number, number],
+): [number, number, number] {
+  const axisLength = Math.hypot(...rotationAxis)
+  const axis = rotationAxis.map((value) => value / axisLength) as [number, number, number]
+  const relative: [number, number, number] = [
+    (point[0] - pivot[0]) * scale[0],
+    (point[1] - pivot[1]) * scale[1],
+    (point[2] - pivot[2]) * scale[2],
+  ]
+  const cosine = Math.cos(rotationAngle)
+  const sine = Math.sin(rotationAngle)
+  const cross: [number, number, number] = [
+    axis[1] * relative[2] - axis[2] * relative[1],
+    axis[2] * relative[0] - axis[0] * relative[2],
+    axis[0] * relative[1] - axis[1] * relative[0],
+  ]
+  const dot = axis[0] * relative[0] + axis[1] * relative[1] + axis[2] * relative[2]
+  const oneMinusCosine = 1 - cosine
+  return [
+    relative[0] * cosine +
+      cross[0] * sine +
+      axis[0] * dot * oneMinusCosine +
+      pivot[0] +
+      translation[0],
+    relative[1] * cosine +
+      cross[1] * sine +
+      axis[1] * dot * oneMinusCosine +
+      pivot[1] +
+      translation[1],
+    relative[2] * cosine +
+      cross[2] * sine +
+      axis[2] * dot * oneMinusCosine +
+      pivot[2] +
+      translation[2],
+  ]
+}
+
+describe('Body transform kernel', () => {
+  test('moves rotates and scales geometry while preserving semantic topology', () => {
+    // Given
+    const source = pushPullBodyFace(
+      BodyNode.parse({
+        id: 'body_transform_kernel',
+        shells: [{ id: 'shell:0', faceIds: ['face:0'] }],
+        vertices: [
+          { id: 'vertex:0', position: [0, 0, 0] },
+          { id: 'vertex:1', position: [1.2, 0, 0] },
+          { id: 'vertex:2', position: [1.2, 0, 0.8] },
+          { id: 'vertex:3', position: [0, 0, 0.8] },
+        ],
+        halfEdges: [
+          { id: 'edge:0', vertexId: 'vertex:0', nextId: 'edge:1', loopId: 'loop:0' },
+          { id: 'edge:1', vertexId: 'vertex:1', nextId: 'edge:2', loopId: 'loop:0' },
+          { id: 'edge:2', vertexId: 'vertex:2', nextId: 'edge:3', loopId: 'loop:0' },
+          { id: 'edge:3', vertexId: 'vertex:3', nextId: 'edge:0', loopId: 'loop:0' },
+        ],
+        loops: [{ id: 'loop:0', faceId: 'face:0', kind: 'outer' }],
+        faces: [
+          {
+            id: 'face:0',
+            outerLoopId: 'loop:0',
+            surface: { materialRef: 'material:oak', uvOrigin: [0, 0, 0] },
+          },
+        ],
+      }),
+      'face:0',
+      1.2,
+    ).body
+
+    // When
+    const result = transformBody(source, transform)
+
+    // Then
+    const xs = result.vertices.map((vertex) => vertex.position[0])
+    const ys = result.vertices.map((vertex) => vertex.position[1])
+    const zs = result.vertices.map((vertex) => vertex.position[2])
+    const movedFace = result.faces.find((face) => face.id === 'face:0')
+    expect(result.revision).toBe(2)
+    expect(Math.min(...xs)).toBeCloseTo(2.4)
+    expect(Math.max(...xs)).toBeCloseTo(2.8)
+    expect(Math.min(...ys)).toBeCloseTo(0.3)
+    expect(Math.max(...ys)).toBeCloseTo(0.9)
+    expect(Math.min(...zs)).toBeCloseTo(0.1)
+    expect(Math.max(...zs)).toBeCloseTo(0.7)
+    expect(movedFace?.surface.materialRef).toBe('material:oak')
+    expect(movedFace?.surface.uvOrigin[0]).toBeCloseTo(2.4)
+    expect(movedFace?.surface.uvOrigin[1]).toBeCloseTo(0.3)
+    expect(movedFace?.surface.uvOrigin[2]).toBeCloseTo(0.7)
+    expect(movedFace?.surface.uvU).toEqual([0, 0, -1])
+    expect(movedFace?.surface.uvV).toEqual([1, 0, 0])
+    expect(result.vertices.map((vertex) => vertex.id)).toEqual(
+      source.vertices.map((vertex) => vertex.id),
+    )
+    expect(validateBodyTopology(result)).toEqual({ valid: true, diagnostics: [] })
+  })
+
+  test('rejects an identity transform without mutating the Body', () => {
+    // Given
+    const source = BodyNode.parse({
+      id: 'body_transform_identity',
+      shells: [],
+      vertices: [],
+      halfEdges: [],
+      loops: [],
+      faces: [],
+    })
+    const before = getBodySemanticHash(source)
+
+    // When / Then
+    expect(() =>
+      transformBody(source, {
+        translation: [0, 0, 0],
+        rotationAxis: [0, 1, 0],
+        rotationAngle: 0,
+        scale: [1, 1, 1],
+        pivot: [0, 0, 0],
+      }),
+    ).toThrow('requires a change')
+    expect(getBodySemanticHash(source)).toBe(before)
+  })
+
+  test('normalizes arbitrary rotation axes and applies non-uniform scale around the pivot', () => {
+    const source = BodyNode.parse({
+      id: 'body_transform_arbitrary_axis',
+      shells: [],
+      vertices: [{ id: 'vertex:0', position: [2, 3, 4] }],
+      halfEdges: [],
+      loops: [],
+      faces: [],
+    })
+
+    const result = transformBody(source, {
+      translation: [1, -1, 2],
+      rotationAxis: [0, 0, 4],
+      rotationAngle: Math.PI / 2,
+      scale: [2, 3, 4],
+      pivot: [1, 1, 1],
+    })
+
+    expect(result.vertices[0]?.position[0]).toBeCloseTo(-4)
+    expect(result.vertices[0]?.position[1]).toBeCloseTo(2)
+    expect(result.vertices[0]?.position[2]).toBeCloseTo(15)
+  })
+
+  test('preserves circular arcs for uniform scale and rotates center and normal', () => {
+    const source = BodyNode.parse({
+      id: 'body_transform_arc',
+      shells: [],
+      vertices: [],
+      halfEdges: [],
+      loops: [],
+      faces: [],
+      curves: [
+        {
+          id: 'curve:0',
+          kind: 'circular-arc',
+          center: [1, 0, 0],
+          normal: [0, 1, 0],
+          radius: 0.5,
+          startAngle: 0,
+          endAngle: Math.PI,
+        },
+      ],
+    })
+
+    const result = transformBody(source, {
+      translation: [0, 0, 2],
+      rotationAxis: [0, 1, 0],
+      rotationAngle: Math.PI / 2,
+      scale: [2, 2, 2],
+      pivot: [0, 0, 0],
+    })
+
+    expect(result.curves[0]).toMatchObject({
+      center: [0, 0, 0],
+      normal: [0, 1, 0],
+      radius: 1,
+    })
+  })
+
+  test('rejects non-uniform scale when circular arcs are present', () => {
+    const source = BodyNode.parse({
+      id: 'body_transform_arc_non_uniform',
+      shells: [],
+      vertices: [],
+      halfEdges: [],
+      loops: [],
+      faces: [],
+      curves: [
+        {
+          id: 'curve:0',
+          kind: 'circular-arc',
+          center: [0, 0, 0],
+          normal: [0, 1, 0],
+          radius: 1,
+          startAngle: 0,
+          endAngle: 1,
+        },
+      ],
+    })
+
+    expect(() =>
+      transformBody(source, {
+        translation: [0, 0, 0],
+        rotationAxis: [1, 0, 0],
+        rotationAngle: 0.25,
+        scale: [1, 2, 1],
+        pivot: [0, 0, 0],
+      }),
+    ).toThrow('circular arcs')
+  })
+
+  test('rebases circular-arc angles after arbitrary-axis rotation and uniform scale', () => {
+    const source = createCircularArcFaceBody([1, 0, 0], [0, 0, 1], [-1, 0, 0])
+    const transform = {
+      translation: [0.4, 1.2, -0.6],
+      rotationAxis: [0.4, 1.2, -0.8],
+      rotationAngle: 0.7,
+      scale: [1.75, 1.75, 1.75],
+      pivot: [-0.3, 0.2, 0.5],
+    } as const
+    const expected = getBodyLoopBoundaryPoints(source, 'loop:0', 8).map((point) =>
+      transformPoint(
+        point,
+        transform.translation,
+        transform.rotationAxis,
+        transform.rotationAngle,
+        transform.scale,
+        transform.pivot,
+      ),
+    )
+    const result = transformBody(source, transform)
+    const actual = getBodyLoopBoundaryPoints(result, 'loop:0', 8)
+
+    expect(actual).toHaveLength(expected.length)
+    for (const [index, point] of actual.entries()) {
+      expect(point[0]).toBeCloseTo(expected[index]![0], 8)
+      expect(point[1]).toBeCloseTo(expected[index]![1], 8)
+      expect(point[2]).toBeCloseTo(expected[index]![2], 8)
+    }
+    expect(validateBodyTopology(result)).toEqual({ valid: true, diagnostics: [] })
+  })
+
+  test('transforms only a persistent feature and its fully moved UV frame', () => {
+    const source = BodyNode.parse({
+      id: 'body_feature_transform',
+      shells: [{ id: 'shell:0', faceIds: ['face:0'] }],
+      vertices: [
+        { id: 'vertex:0', position: [0, 0, 0] },
+        { id: 'vertex:1', position: [2, 0, 0] },
+        { id: 'vertex:2', position: [2, 0, 2] },
+        { id: 'vertex:3', position: [0, 0, 2] },
+      ],
+      halfEdges: [
+        { id: 'edge:0', vertexId: 'vertex:0', nextId: 'edge:1', loopId: 'loop:0' },
+        { id: 'edge:1', vertexId: 'vertex:1', nextId: 'edge:2', loopId: 'loop:0' },
+        { id: 'edge:2', vertexId: 'vertex:2', nextId: 'edge:3', loopId: 'loop:0' },
+        { id: 'edge:3', vertexId: 'vertex:3', nextId: 'edge:0', loopId: 'loop:0' },
+      ],
+      loops: [{ id: 'loop:0', faceId: 'face:0', kind: 'outer' }],
+      faces: [{ id: 'face:0', outerLoopId: 'loop:0', surface: { uvOrigin: [0, 0, 0] } }],
+    })
+    const result = transformBody(source, {
+      translation: [0, 0, 0],
+      rotationAxis: [0, 1, 0],
+      rotationAngle: 0,
+      scale: [2, 1, 1],
+      pivot: [0, 0, 0],
+      feature: { kind: 'edge', featureId: 'edge:0' },
+    })
+
+    expect(result.vertices.find(({ id }) => id === 'vertex:0')?.position).toEqual([0, 0, 0])
+    expect(result.vertices.find(({ id }) => id === 'vertex:1')?.position).toEqual([4, 0, 0])
+    expect(result.vertices.find(({ id }) => id === 'vertex:2')?.position).toEqual(
+      source.vertices.find(({ id }) => id === 'vertex:2')?.position,
+    )
+    expect(result.faces[0]?.surface.uvOrigin).toEqual(source.faces[0]?.surface.uvOrigin)
+  })
+
+  test('rejects stale and non-planar feature transforms atomically', () => {
+    const source = createRectangleBody({ width: 2, depth: 2 })
+    const before = structuredClone(source)
+    expect(() =>
+      transformBody(source, {
+        ...transform,
+        feature: { kind: 'vertex', featureId: 'vertex:missing' },
+      }),
+    ).toThrow('not found')
+    expect(source).toEqual(before)
+    expect(() =>
+      transformBody(source, {
+        translation: [0, 0.5, 0],
+        rotationAxis: [0, 1, 0],
+        rotationAngle: 0,
+        scale: [1, 1, 1],
+        pivot: [0, 0, 0],
+        feature: { kind: 'vertex', featureId: 'vertex:0' },
+      }),
+    ).toThrow('non-planar')
+    expect(source).toEqual(before)
+  })
+})

@@ -58,3 +58,9 @@ warns when it leaves the middle third. ActArtech `hagia-sophia:*` kinds unchange
 
 H16.3 curved solids · H16.4 VR · H16.5 IFC + envelope — see the H16 brief;
 queued notes in `H17-H18-queued.md`.
+
+## H16.3 — Curved solids (body kernel) — in flight
+
+Branch `eco/h16-3-body`. Package `packages/plugin-body`: qurkuid half-edge kernel
+(arcs, sweep, CSG, push-pull, offset) + `body` / `body-group` kinds. Korean design
+notes translated in package README. Core schema untouched beyond plugin registration.

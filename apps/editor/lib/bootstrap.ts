@@ -21,6 +21,7 @@ import {
   geometryPlugin,
   geometryPresentation,
 } from '@pascal-app/plugin-geometry'
+import { bodyPlugin } from '@pascal-app/plugin-body'
 import { poolHostPanel, poolPlugin } from '@pascal-app/plugin-pool'
 import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
 import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'
@@ -143,6 +144,7 @@ registerEditorHostPanel(templeHostPanel)
 extendPluginDiscovery(async () => [geometryPlugin])
 registerEditorHostPanel(geometryHostPanel)
 registerViewerPresentation(geometryPresentation)
+extendPluginDiscovery(async () => [bodyPlugin])
 extendPluginDiscovery(async () => [bonesPlugin])
 // Opt-in: Bones ships uninstalled ÔÇö users enable it per scene from the
 // Plugins panel (engineering X-ray is a specialist view, not a default).

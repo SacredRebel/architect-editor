@@ -36,6 +36,7 @@
         "@pascal-app/editor": "*",
         "@pascal-app/mcp": "*",
         "@pascal-app/nodes": "*",
+        "@pascal-app/plugin-body": "*",
         "@pascal-app/plugin-bones": "github:pascalorg/plugin-bones#5679260261ee1c733656ff6dfb99e30bb24b58a7",
         "@pascal-app/plugin-environment": "github:AxiomeCG/environment#1aa0bc3cbed273dbf751e9af79e446f6de105c90",
         "@pascal-app/plugin-geometry": "*",
@@ -293,6 +294,29 @@
         "react-dom": "^18 || ^19",
         "three": "^0.186",
         "zustand": "^5",
+      },
+    },
+    "packages/plugin-body": {
+      "name": "@pascal-app/plugin-body",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@pascal-app/core": "^1.0.1",
+        "@pascal-app/editor": "^1.0.1",
+        "@pascal-app/viewer": "^1.0.1",
+        "@types/bun": "^1.3.0",
+        "@types/react": "19.2.2",
+        "@types/three": "^0.184.0",
+        "three": "^0.186.0",
+        "typescript": "6.0.3",
+        "zod": ">=4.5.4 <4.6",
+      },
+      "peerDependencies": {
+        "@pascal-app/core": "^1.0.1",
+        "@pascal-app/editor": "^1.0.1",
+        "@pascal-app/viewer": "^1.0.1",
+        "react": "^18 || ^19",
+        "three": "^0.186",
+        "zod": ">=4.5.4 <4.6",
       },
     },
     "packages/plugin-eco": {
@@ -838,6 +862,8 @@
     "@pascal-app/mcp": ["@pascal-app/mcp@workspace:packages/mcp"],
 
     "@pascal-app/nodes": ["@pascal-app/nodes@workspace:packages/nodes"],
+
+    "@pascal-app/plugin-body": ["@pascal-app/plugin-body@workspace:packages/plugin-body"],
 
     "@pascal-app/plugin-bones": ["@pascal-app/plugin-bones@github:pascalorg/plugin-bones#5679260", { "peerDependencies": { "@pascal-app/core": ">=0.9.1 <1", "@pascal-app/editor": ">=0.9.1 <1", "@pascal-app/viewer": ">=0.9.1 <1", "@react-three/fiber": "^9", "react": "^18 || ^19", "three": "^0.185", "zod": "^4", "zustand": "^5" } }, "pascalorg-plugin-bones-5679260", "sha512-uQkyHHOl/VuYx2+d/MmcJui/KEAQZ2UUnO4ywp1XaopmD2YfN+Yx/fR/lS/VL2joEoyyZeBLC3KaXK1Sx5qEvg=="],
 
