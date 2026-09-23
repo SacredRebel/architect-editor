@@ -75,3 +75,23 @@ export const ecoImage3dHostPanel: EditorHostPanel = {
   component: () => import('./eco-image3d-panel'),
   defaultInstalled: true,
 }
+
+export const ecoOrganicHostPanel: EditorHostPanel = {
+  id: 'eco:plugin-eco:organic',
+  label: 'Organic',
+  icon: { kind: 'url', src: '/icons/mesh.webp' },
+  description: 'H15 organic building + smooth multi-arc walls',
+  pluginId: 'eco:plugin-eco',
+  component: () => import('./eco-organic-building-panel'),
+  defaultInstalled: true,
+}
+
+export const ecoMinimalHostPanel: EditorHostPanel = {
+  id: 'eco:plugin-eco:minimal',
+  label: 'Minimal surface',
+  icon: { kind: 'url', src: '/icons/mesh.webp' },
+  description: 'H15 soap-film / minimal surface from a closed curve',
+  pluginId: 'eco:plugin-eco',
+  component: () => import('./eco-minimal-panel'),
+  defaultInstalled: true,
+}

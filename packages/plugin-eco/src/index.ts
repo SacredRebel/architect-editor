@@ -45,10 +45,12 @@ export {
   ecoHostPanel,
   ecoImage3dHostPanel,
   ecoMaterialsHostPanel,
+  ecoMinimalHostPanel,
+  ecoOrganicHostPanel,
   ecoPresentation,
   ecoShellHostPanel,
 } from './eco-ui'
-export { exportEcoGlb, stampWalkExtras } from './export-glb'
+export { exportEcoGlb, stampGlbExtras, stampWalkExtras } from './export-glb'
 export {
   assertHardGlbAudit,
   auditGlb,
@@ -105,6 +107,7 @@ export type { EcoShell, LeafShellParams } from './eco-shell-store'
 export {
   addEcoCatenary,
   addEcoLoft,
+  addEcoMinimal,
   addEcoVault,
   clearEcoOrganic,
   getEcoOrganicState,
@@ -112,7 +115,43 @@ export {
   makeDefaultCatenary,
   makeDefaultLeafLoft,
   subscribeEcoOrganic,
+  updateEcoCatenary,
+  updateEcoLoft,
+  updateEcoVault,
 } from './eco-organic-store'
+export {
+  cleanSpec,
+  ORGANIC_DEFAULTS,
+  parseOrganicWords,
+} from './eco-organic-spec'
+export type { OrganicSpec } from './eco-organic-spec'
+export { organicPlan, organicShellHeight, solarSpots } from './eco-organic-plan'
+export {
+  addMinimalFromClosedCurve,
+  addSmoothWall,
+  applyOrganicWords,
+  clearEcoOrganicBuildings,
+  generateOrganicBuilding,
+  getEcoOrganicBuildingState,
+  restoreOrganicBuildings,
+  serializeOrganicBuildings,
+  subscribeEcoOrganicBuilding,
+  undoEcoOrganicBuilding,
+  updateOrganicSpecField,
+} from './eco-organic-building-store'
+export {
+  formatArea,
+  formatLength,
+  parseLengthInput,
+  computeAnsiAreas,
+  snapAngleDeg,
+} from './eco-true-size'
+export {
+  makeDemoSmoothWall,
+  sampleSmoothWall,
+  smoothWallLength,
+  bulgeSmoothWall,
+} from './eco-smooth-wall'
 export { tessellateLoft } from './eco-loft'
 export type { EcoLoft } from './eco-loft'
 export { tessellateVault } from './eco-vault'
@@ -210,9 +249,11 @@ export type {
   Image3dTier,
 } from './eco-image3d'
 export {
+  applyGroundSeat,
   applyUniformScale,
   applyZForwardToWorldZSouth,
   guessServiceHeightM,
+  measureGlbAabb,
   measureGlbExtents,
   prepareImage3dGlb,
   scaleFactorForKnownDimension,

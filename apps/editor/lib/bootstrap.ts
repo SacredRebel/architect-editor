@@ -41,7 +41,7 @@ function isDev(): boolean {
 /**
  * Synchronously register every built-in node kind. Runs as a side
  * effect at module import time so the registry is populated *before*
- * any downstream React tree renders — the previous async kick-off
+ * any downstream React tree renders ÔÇö the previous async kick-off
  * (`void loadBuiltinNodes()`) only registered in a microtask, letting
  * the first SSR / hydration pass see an empty registry. The mismatch
  * surfaced as a hydration error at the `<html>` element and every
@@ -56,7 +56,7 @@ function loadBuiltinsSync(): void {
   for (const def of builtinPlugin.nodes ?? []) {
     // Skip kinds the registry already has. The module-closure flag
     // above resets on HMR, but the registry singleton (in @pascal-app/core)
-    // persists — without this guard we'd throw on the first duplicate.
+    // persists ÔÇö without this guard we'd throw on the first duplicate.
     if (nodeRegistry.has((def as AnyNodeDefinition).kind)) continue
     registerNode(def as AnyNodeDefinition)
   }
@@ -65,7 +65,7 @@ function loadBuiltinsSync(): void {
     const kinds = Array.from(nodeRegistry.entries(), ([k]) => k)
     if (typeof console !== 'undefined') {
       console.info(
-        `[pascal:registry] loaded ${builtinPlugin.id} v${builtinPlugin.apiVersion} (${kinds.length} kinds: ${kinds.join(', ') || '∅'})`,
+        `[pascal:registry] loaded ${builtinPlugin.id} v${builtinPlugin.apiVersion} (${kinds.length} kinds: ${kinds.join(', ') || 'Ôêà'})`,
       )
     }
     // Expose the registry on globalThis for ad-hoc dev inspection. In
@@ -79,7 +79,7 @@ function loadBuiltinsSync(): void {
 }
 
 /**
- * Phase 6 plugin discovery hook — runs once, asynchronously, after the
+ * Phase 6 plugin discovery hook ÔÇö runs once, asynchronously, after the
  * synchronous builtins are already registered. Apps that ship external
  * node packs override the discovery via `setPluginDiscovery(...)`
  * before this module loads. See `wiki/architecture/plugin-authoring.md`.
@@ -115,6 +115,8 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
       ecoHostPanel,
       ecoImage3dHostPanel,
       ecoMaterialsHostPanel,
+      ecoMinimalHostPanel,
+      ecoOrganicHostPanel,
       ecoPresentation,
       ecoShellHostPanel,
     }) => {
@@ -125,6 +127,8 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
       registerEditorHostPanel(ecoConstructionHostPanel)
       registerEditorHostPanel(ecoShellHostPanel)
       registerEditorHostPanel(ecoImage3dHostPanel)
+      registerEditorHostPanel(ecoOrganicHostPanel)
+      registerEditorHostPanel(ecoMinimalHostPanel)
       registerViewerPresentation(ecoPresentation)
     },
   )
@@ -140,7 +144,7 @@ extendPluginDiscovery(async () => [geometryPlugin])
 registerEditorHostPanel(geometryHostPanel)
 registerViewerPresentation(geometryPresentation)
 extendPluginDiscovery(async () => [bonesPlugin])
-// Opt-in: Bones ships uninstalled — users enable it per scene from the
+// Opt-in: Bones ships uninstalled ÔÇö users enable it per scene from the
 // Plugins panel (engineering X-ray is a specialist view, not a default).
 registerEditorHostPanel({ ...bonesHostPanel, defaultInstalled: false })
 extendPluginDiscovery(async () => [mintPlugin])

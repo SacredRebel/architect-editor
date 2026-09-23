@@ -83,8 +83,11 @@ function transformPoint(m: number[], p: number[]): number[] {
   ]
 }
 
-/** World-space AABB size of all mesh positions (metres if already scaled). */
-export function measureGlbExtents(doc: Document): [number, number, number] {
+/** World-space AABB min/max of all mesh positions. */
+export function measureGlbAabb(doc: Document): {
+  min: [number, number, number]
+  max: [number, number, number]
+} {
   const root = doc.getRoot()
   const min = [Infinity, Infinity, Infinity]
   const max = [-Infinity, -Infinity, -Infinity]
@@ -112,8 +115,19 @@ export function measureGlbExtents(doc: Document): [number, number, number] {
     for (const child of scene.listChildren()) walk(child, [...IDENTITY])
   }
 
-  if (!Number.isFinite(min[0])) return [0, 0, 0]
-  return [max[0]! - min[0]!, max[1]! - min[1]!, max[2]! - min[2]!]
+  if (!Number.isFinite(min[0])) {
+    return { min: [0, 0, 0], max: [0, 0, 0] }
+  }
+  return {
+    min: [min[0]!, min[1]!, min[2]!],
+    max: [max[0]!, max[1]!, max[2]!],
+  }
+}
+
+/** World-space AABB size of all mesh positions (metres if already scaled). */
+export function measureGlbExtents(doc: Document): [number, number, number] {
+  const { min, max } = measureGlbAabb(doc)
+  return [max[0] - min[0], max[1] - min[1], max[2] - min[2]]
 }
 
 export function scaleFactorForKnownDimension(
@@ -173,6 +187,29 @@ export function applyUniformScale(doc: Document, factor: number): void {
   }
 }
 
+/**
+ * Translate so the AABB sits on y=0 (no under-ground). Mid-base centred on XZ.
+ */
+export function applyGroundSeat(doc: Document): void {
+  const root = doc.getRoot()
+  const scenes = root.listScenes()
+  if (scenes.length === 0) return
+  const { min, max } = measureGlbAabb(doc)
+  if (!Number.isFinite(min[0])) return
+  const midX = (min[0] + max[0]) / 2
+  const midZ = (min[2] + max[2]) / 2
+  const wrapper = doc.createNode('eco-image3d-ground')
+  wrapper.setTranslation([-midX, -min[1], -midZ])
+  for (const scene of scenes) {
+    const children = [...scene.listChildren()]
+    for (const child of children) {
+      scene.removeChild(child)
+      wrapper.addChild(child)
+    }
+    scene.addChild(wrapper)
+  }
+}
+
 async function writeBinary(io: NodeIO, doc: Document): Promise<ArrayBuffer> {
   const out = await io.writeBinary(doc)
   const copy = new Uint8Array(out.byteLength)
@@ -203,6 +240,8 @@ export async function prepareImage3dGlb(
   if (sourceFrame === 'z-forward-y-up') {
     applyZForwardToWorldZSouth(doc)
   }
+  // Sit on the ground plane and centre mid-base — fixes under-ground / wrong origin.
+  applyGroundSeat(doc)
 
   const extentAfter = measureGlbExtents(doc)
   const scaled = await writeBinary(io, doc)
