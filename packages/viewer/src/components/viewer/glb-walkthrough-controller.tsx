@@ -25,6 +25,7 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-
 import { useGLTFKTX2 } from '../../hooks/use-gltf-ktx2'
 import { SCENE_LAYER } from '../../lib/layers'
 import useViewer from '../../store/use-viewer'
+import { RUN_SPEED_MS, WALK_SPEED_MS } from '../../lib/walk-speeds'
 import BVHEcctrl, { type BVHEcctrlApi, type MovementInput } from './bvh-ecctrl'
 
 // First-person FOV. The orbit camera is 50° (set on the Canvas), which feels
@@ -495,9 +496,9 @@ export function GlbWalkthroughController({ url }: { url: string }) {
         floatSpringK={1200}
         gravity={9.81}
         jumpVel={5}
-        maxRunSpeed={crouched ? CROUCH_RUN_SPEED : 5}
+        maxRunSpeed={crouched ? CROUCH_RUN_SPEED : RUN_SPEED_MS}
         maxSlope={1.2}
-        maxWalkSpeed={crouched ? CROUCH_WALK_SPEED : 2}
+        maxWalkSpeed={crouched ? CROUCH_WALK_SPEED : WALK_SPEED_MS}
         position={start.position}
         ref={setControllerApi}
       />

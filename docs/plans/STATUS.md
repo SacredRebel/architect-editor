@@ -1,19 +1,14 @@
 # STATUS — Agent A
 updated: 2026-09-23
-phase: H17.1 merged — next H18 (walk-mode feel)
-state: H17.1 AdaptiveDpr + detect-gpu + shadow discipline on main. Queue H18.
+phase: H18 shipping
+state: H17.0 + H17.1 on production. H18 walk-mode feel on `eco/h18-walk` (build green, check-h18-walk OK).
 
 | Phase | Status | Finishing commit | Known missing |
 |---|---|---|---|
-| H16.4 | **done** | merge `31ff0a89` | physical headset optional |
-| H16.5 | **done** | merge `da991314` | Blender/Bonsai deferred |
-| H17.0 | **done** | merge `972886b6` (feature `be461a2b`) | optional richer 20s eco capture |
-| H17.1 | **done** | merge `cf50c731` (feature `dadd9a83`) | LOD Detailed, comlink workers, panel code-split, WebP≤2048, post-fix FPS re-capture |
-| H18 | next | — | walk-mode feel |
+| H17.0 | **done** | merge `972886b6` | optional richer 20s eco capture |
+| H17.1 | **done** | merge `cf50c731` / stamp `f0f3fe5f` | LOD Detailed, comlink workers, panel code-split, WebP≤2048, post-fix FPS re-capture |
+| H18 | shipping | — | full recast navmesh bake; Quaternius/KayKit pack; foot IK polish |
 
-commit: main `cf50c731`
-checks: `check-h17-1` OK; editor build green
-deployment:
-- H17.1 preview READY https://architect-editor-fwj2u3xz0-pauls-projects-af8162cc.vercel.app (`dadd9a83`)
-- production READY https://architect-editor-snowy.vercel.app (`cf50c731` / health ok)
-queue: H18
+commit: branch `eco/h18-walk`
+checks: `check-h18-walk` OK; editor build green
+queue: merge H18 → production READY → one-page residual summary

@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../lib/utils'
 import type { WalkthroughInteract } from '../store/use-first-person-hud'
+import { useWalkSettings } from '../store/use-walk-settings'
 
 export type { WalkthroughInteract } from '../store/use-first-person-hud'
 
@@ -35,6 +36,70 @@ export function WalkthroughCrosshair({ interact }: { interact: WalkthroughIntera
   )
 }
 
+const HELP_ROWS: Array<[string, string]> = [
+  ['WASD / arrows', 'Move'],
+  ['Shift', 'Run · double-tap sprint'],
+  ['F', 'Fly / drone · wheel = speed'],
+  ['V', 'First / third person'],
+  ['T + click', 'Teleport'],
+  ['Click ground', 'Walk to point'],
+  ['Ctrl', 'Crouch'],
+  ['Space', 'Jump / ascend (fly)'],
+  ['H', 'This help'],
+  ['P', 'Free cursor'],
+  ['Esc', 'Exit walk'],
+]
+
+export function WalkthroughHelpCard() {
+  const showHelp = useWalkSettings((s) => s.showHelp)
+  if (!showHelp) return null
+  return (
+    <div className="pointer-events-none absolute top-20 right-6 z-40 max-w-[260px] rounded-xl border border-border/50 bg-background/85 p-3 text-xs shadow-elevation-3 backdrop-blur-xl">
+      <div className="mb-2 font-medium text-foreground">Walk controls</div>
+      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-muted-foreground">
+        {HELP_ROWS.map(([key, label]) => (
+          <div className="contents" key={key}>
+            <kbd className="rounded border border-border/60 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+              {key}
+            </kbd>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Mobile / tablet on-screen stick — writes into a shared callback. */
+export function WalkTouchJoystick({
+  onChange,
+}: {
+  onChange: (x: number, y: number) => void
+}) {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-auto absolute bottom-24 left-6 z-40 h-28 w-28 rounded-full border border-border/40 bg-background/40 backdrop-blur-md"
+      onPointerCancel={() => onChange(0, 0)}
+      onPointerDown={(e) => {
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+        const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1
+        const ny = -(((e.clientY - rect.top) / rect.height) * 2 - 1)
+        onChange(Math.max(-1, Math.min(1, nx)), Math.max(-1, Math.min(1, ny)))
+      }}
+      onPointerMove={(e) => {
+        if (!(e.buttons & 1)) return
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+        const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1
+        const ny = -(((e.clientY - rect.top) / rect.height) * 2 - 1)
+        onChange(Math.max(-1, Math.min(1, nx)), Math.max(-1, Math.min(1, ny)))
+      }}
+      onPointerUp={() => onChange(0, 0)}
+    />
+  )
+}
+
 export function WalkthroughHud({
   floorLabel,
   zoneLabel,
@@ -43,6 +108,7 @@ export function WalkthroughHud({
   onExit,
   children,
 }: WalkthroughHudProps) {
+  const showHud = useWalkSettings((s) => s.showHud)
   const kbdClass = 'rounded border border-border/60 bg-white/10 px-1.5 py-0.5 font-mono text-[10px]'
   const pillClass =
     'flex items-center gap-1.5 rounded-full border border-border/40 bg-background/70 px-3 py-1 text-muted-foreground text-xs backdrop-blur-xl'
@@ -52,6 +118,14 @@ export function WalkthroughHud({
       to exit
     </>
   )
+
+  if (!showHud && !suspended) {
+    return (
+      <div className="dark pointer-events-none absolute inset-0 z-30">
+        <WalkthroughHelpCard />
+      </div>
+    )
+  }
 
   return (
     <div className="dark pointer-events-none absolute inset-0 z-30 text-foreground">
@@ -70,6 +144,7 @@ export function WalkthroughHud({
       </div>
 
       <WalkthroughCrosshair interact={interact} />
+      <WalkthroughHelpCard />
 
       <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2">
         {suspended ? (
@@ -83,6 +158,10 @@ export function WalkthroughHud({
           </div>
         ) : (
           <>
+            <div className={pillClass}>
+              <kbd className={kbdClass}>H</kbd>
+              help
+            </div>
             <div className={pillClass}>
               <kbd className={kbdClass}>P</kbd>
               free cursor

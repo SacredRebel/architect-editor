@@ -43,6 +43,13 @@ import {
   setSurfaceRaycastLayers,
   useViewer,
   WALKTHROUGH_FOV,
+  WALK_SPEED_MS,
+  RUN_SPEED_MS,
+  SPRINT_SPEED_MS,
+  SPRINT_DOUBLE_TAP_MS,
+  FLY_SPEED_DEFAULT_MS,
+  FLY_SPEED_MIN_MS,
+  FLY_SPEED_MAX_MS,
 } from '@pascal-app/viewer'
 import { KeyboardControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -79,7 +86,10 @@ import {
 } from '../../lib/window-interaction'
 import useEditor from '../../store/use-editor'
 import { useFirstPersonHud, type WalkthroughInteract } from '../../store/use-first-person-hud'
-import { WalkthroughHud } from '../walkthrough-hud'
+import { useWalkSettings } from '../../store/use-walk-settings'
+import { createCc0WalkCharacter } from '../../lib/h18-cc0-character'
+import { buildGroundPath, raycastGround, snapToGround } from '../../lib/walk-ground-path'
+import { WalkthroughHud, WalkTouchJoystick } from '../walkthrough-hud'
 import {
   buildFirstPersonColliderWorldFromRegistry,
   deriveFirstPersonSpawn,
@@ -90,11 +100,8 @@ import {
 
 const CAMERA_EYE_OFFSET = 0.45
 const LOOK_SENSITIVITY = 0.002
-// Drone mode: metres per second, and how hard Shift boosts it. The smoothing
-// constant is an exponential approach rate, not a linear acceleration.
-const DRONE_SPEED = 7
-const DRONE_RUN_MULTIPLIER = 3
-const DRONE_SLOW_MULTIPLIER = 0.2
+// H18 — fly / drone: scroll-wheel speed between FLY_SPEED_MIN/MAX; Shift no longer
+// multiplies (sprint is walk-mode only). Smooth exponential approach.
 const DRONE_SMOOTHING = 12
 const CONTROLLER_CENTER_FROM_EYE = 0.85
 const DOOR_INTERACTION_DISTANCE = 2.5
@@ -679,6 +686,15 @@ export const FirstPersonControls = () => {
   const droneSlowKeyRef = useRef(false)
   const droneDescendKeyRef = useRef(false)
   const droneVelocityRef = useRef(new Vector3())
+  const flySpeedRef = useRef(FLY_SPEED_DEFAULT_MS)
+  const lastShiftTapRef = useRef(0)
+  const sprintingRef = useRef(false)
+  const teleportArmedRef = useRef(false)
+  const clickWalkPathRef = useRef<Vector3[] | null>(null)
+  const clickWalkIndexRef = useRef(0)
+  const joystickRef = useRef(new Vector2(0, 0))
+  const characterRootRef = useRef<Group | null>(null)
+  const [sprinting, setSprinting] = useState(false)
   const suspendRef = useRef(false)
   const eyeOffsetRef = useRef(CAMERA_EYE_OFFSET)
   const [crouched, setCrouched] = useState(false)
@@ -720,7 +736,7 @@ export const FirstPersonControls = () => {
     if (!perspectiveCamera.isPerspectiveCamera) return
     if (useEditor.getState().isCaptureMode) return
     const previousFov = perspectiveCamera.fov
-    perspectiveCamera.fov = WALKTHROUGH_FOV
+    perspectiveCamera.fov = useWalkSettings.getState().fov || WALKTHROUGH_FOV
     perspectiveCamera.updateProjectionMatrix()
     return () => {
       if (useEditor.getState().isCaptureMode) return
@@ -728,6 +744,49 @@ export const FirstPersonControls = () => {
       perspectiveCamera.updateProjectionMatrix()
     }
   }, [camera])
+
+  // Sync FOV when the walk setting changes.
+  const walkFov = useWalkSettings((s) => s.fov)
+  useEffect(() => {
+    const perspectiveCamera = camera as PerspectiveCamera
+    if (!perspectiveCamera.isPerspectiveCamera) return
+    if (useEditor.getState().isCaptureMode) return
+    perspectiveCamera.fov = walkFov
+    perspectiveCamera.updateProjectionMatrix()
+  }, [camera, walkFov])
+
+  // Mount CC0 procedural character for third-person (excluded from GLB export).
+  useEffect(() => {
+    const character = createCc0WalkCharacter()
+    characterRootRef.current = character
+    return () => {
+      character.traverse((obj) => {
+        const mesh = obj as Mesh
+        if (mesh.isMesh) {
+          mesh.geometry?.dispose()
+          const mat = mesh.material
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
+          else mat?.dispose?.()
+        }
+      })
+      characterRootRef.current = null
+    }
+  }, [])
+
+  // H18 — touch joystick from overlay (coarse pointers).
+  useEffect(() => {
+    const onJoy = (event: Event) => {
+      const detail = (event as CustomEvent<{ x: number; y: number }>).detail
+      if (!detail) return
+      joystickRef.current.set(detail.x, detail.y)
+      controllerRef.current?.setMovement({
+        ...movementInputRef.current,
+        joystick: { x: detail.x, y: detail.y },
+      })
+    }
+    window.addEventListener('pascal-walk-joystick', onJoy)
+    return () => window.removeEventListener('pascal-walk-joystick', onJoy)
+  }, [])
 
   useEffect(() => {
     useFirstPersonHud.getState().reset()
@@ -1166,15 +1225,18 @@ export const FirstPersonControls = () => {
       // Shutter hold: the shot is rendering — a mouse twitch must not pan it.
       if (useEditor.getState().captureShutterHold) return
 
+      const walk = useWalkSettings.getState()
       const lookSensitivity =
         LOOK_SENSITIVITY *
+        walk.mouseSensitivity *
         (useEditor.getState().firstPersonMovementMode === 'drone' && droneSlowKeyRef.current
-          ? DRONE_SLOW_MULTIPLIER
+          ? 0.2
           : 1)
       yawRef.current -= e.movementX * lookSensitivity
+      const pitchDelta = e.movementY * lookSensitivity * (walk.invertY ? -1 : 1)
       pitchRef.current = Math.max(
         -(Math.PI / 2 - 0.05),
-        Math.min(Math.PI / 2 - 0.05, pitchRef.current - e.movementY * lookSensitivity),
+        Math.min(Math.PI / 2 - 0.05, pitchRef.current - pitchDelta),
       )
     }
 
@@ -1197,6 +1259,31 @@ export const FirstPersonControls = () => {
 
       event.preventDefault()
       event.stopPropagation()
+
+      // H18 — T+click teleports; plain click walks to ground hit (or interacts).
+      const meshes: Mesh[] = []
+      if (worldRef.current) meshes.push(worldRef.current.mesh)
+      const cam = camera as PerspectiveCamera
+      const origin = cam.getWorldPosition(new Vector3())
+      const dir = cam.getWorldDirection(new Vector3())
+      const ground = raycastGround(meshes, origin, dir, 80)
+
+      if (teleportArmedRef.current && ground && controllerRef.current?.group) {
+        const snapped = snapToGround(meshes, ground) ?? ground
+        const group = controllerRef.current.group
+        group.position.set(snapped.x, snapped.y + CONTROLLER_CENTER_FROM_EYE, snapped.z)
+        controllerRef.current.resetLinVel?.()
+        clickWalkPathRef.current = null
+        return
+      }
+
+      if (ground && controllerRef.current?.group && !interactableTargetRef.current) {
+        const from = controllerRef.current.group.position.clone()
+        clickWalkPathRef.current = buildGroundPath(meshes, from, ground)
+        clickWalkIndexRef.current = 0
+        return
+      }
+
       toggleInteractableTargetRef.current()
     }
 
@@ -1249,6 +1336,22 @@ export const FirstPersonControls = () => {
     }
   }, [gl])
 
+  // H18 — scroll wheel sets fly speed while in drone mode (10–40 m/s).
+  useEffect(() => {
+    if (!isDroneMode) return
+    const canvas = gl.domElement
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const delta = event.deltaY > 0 ? -1.5 : 1.5
+      flySpeedRef.current = Math.min(
+        FLY_SPEED_MAX_MS,
+        Math.max(FLY_SPEED_MIN_MS, flySpeedRef.current + delta),
+      )
+    }
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+    return () => canvas.removeEventListener('wheel', onWheel)
+  }, [gl, isDroneMode])
+
   useEffect(() => {
     const canvas = gl.domElement
 
@@ -1259,6 +1362,28 @@ export const FirstPersonControls = () => {
 
       const movement = getMovementInputForKey(event.code, active)
       if (!movement) return false
+
+      // H18 — double-tap Shift → sprint (7 m/s) while Shift is held.
+      if (
+        active &&
+        (event.code === 'ShiftLeft' || event.code === 'ShiftRight') &&
+        !event.repeat &&
+        !isDroneMode
+      ) {
+        const now = performance.now()
+        if (now - lastShiftTapRef.current <= SPRINT_DOUBLE_TAP_MS) {
+          sprintingRef.current = true
+          setSprinting(true)
+        }
+        lastShiftTapRef.current = now
+      }
+      if (
+        !active &&
+        (event.code === 'ShiftLeft' || event.code === 'ShiftRight')
+      ) {
+        sprintingRef.current = false
+        setSprinting(false)
+      }
 
       event.preventDefault()
       Object.assign(movementInputRef.current, movement)
@@ -1278,6 +1403,22 @@ export const FirstPersonControls = () => {
         // While paused (P), crouch is frozen as-is — ⌃⇧⌘4 (clipboard
         // screenshot) must not toggle it under the user.
         if (!suspendRef.current) crouchKeyRef.current = true
+      } else if (event.code === 'KeyF' && !event.repeat) {
+        // H18 — F toggles fly / drone mode (10–40 m/s, scroll to set speed).
+        event.preventDefault()
+        event.stopPropagation()
+        const editor = useEditor.getState()
+        editor.setFirstPersonMovementMode(
+          editor.firstPersonMovementMode === 'drone' ? 'walk' : 'drone',
+        )
+      } else if (event.code === 'KeyH' && !event.repeat) {
+        event.preventDefault()
+        event.stopPropagation()
+        useWalkSettings.getState().toggleHelp()
+      } else if (event.code === 'KeyV' && !event.repeat) {
+        event.preventDefault()
+        event.stopPropagation()
+        useWalkSettings.getState().toggleCameraMode()
       } else if (event.code === 'KeyQ') {
         // Drone descend. Space (already bound to jump) and E are the matching ascend.
         event.preventDefault()
@@ -1317,9 +1458,10 @@ export const FirstPersonControls = () => {
         event.stopPropagation()
         toggleInteractableTarget()
       } else if (event.code === 'KeyT') {
+        // H18 — hold T for teleport-on-click (door close moved off T).
         event.preventDefault()
         event.stopPropagation()
-        closeInteractableTarget()
+        teleportArmedRef.current = true
       } else if (event.code === 'KeyP') {
         // P toggles a cursor pause (advertised in the HUD): frees the pointer
         // without leaving first person — e.g. for an OS screenshot, which
@@ -1349,6 +1491,9 @@ export const FirstPersonControls = () => {
       }
       if ((event.code === 'AltLeft' || event.code === 'AltRight') && !suspendRef.current) {
         droneSlowKeyRef.current = false
+      }
+      if (event.code === 'KeyT') {
+        teleportArmedRef.current = false
       }
       applyMovementKey(event, false)
     }
@@ -1630,16 +1775,9 @@ export const FirstPersonControls = () => {
     if (movement.jump || droneAscendKeyRef.current) droneDesiredVelocity.y += 1
     if (droneDescendKeyRef.current || crouchKeyRef.current) droneDesiredVelocity.y -= 1
     if (droneDesiredVelocity.lengthSq() > 0) {
-      droneDesiredVelocity
-        .normalize()
-        .multiplyScalar(
-          DRONE_SPEED *
-            (droneSlowKeyRef.current
-              ? DRONE_SLOW_MULTIPLIER
-              : movement.run
-                ? DRONE_RUN_MULTIPLIER
-                : 1),
-        )
+      droneDesiredVelocity.normalize().multiplyScalar(
+        flySpeedRef.current * (droneSlowKeyRef.current ? 0.35 : 1),
+      )
     }
 
     droneVelocityRef.current.lerp(droneDesiredVelocity, 1 - Math.exp(-step * DRONE_SMOOTHING))
@@ -1687,13 +1825,101 @@ export const FirstPersonControls = () => {
     }
 
     group.rotation.y = 0
-    camera.position.copy(group.position).add(cameraOffset)
-    cameraEuler.set(pitchRef.current, yawRef.current, 0, 'YXZ')
-    camera.quaternion.setFromEuler(cameraEuler)
+
+    // H18 — gamepad (standard mapping) + touch joystick → movement.
+    const pads = typeof navigator !== 'undefined' ? navigator.getGamepads?.() : null
+    const pad = pads?.[0]
+    if (pad && !suspendRef.current) {
+      const lx = pad.axes[0] ?? 0
+      const ly = pad.axes[1] ?? 0
+      const dead = 0.18
+      joystickRef.current.set(
+        Math.abs(lx) > dead ? lx : 0,
+        Math.abs(ly) > dead ? -ly : 0,
+      )
+      if (pad.buttons[0]?.pressed) movementInputRef.current.jump = true
+      if (pad.buttons[1]?.pressed) movementInputRef.current.run = true
+    }
+    if (joystickRef.current.lengthSq() > 0.01) {
+      controllerRef.current.setMovement({
+        ...movementInputRef.current,
+        joystick: joystickRef.current.clone(),
+      })
+    }
+
+    // Click-to-walk: steer toward next ground waypoint.
+    const path = clickWalkPathRef.current
+    if (path && path.length > 0) {
+      let idx = clickWalkIndexRef.current
+      while (idx < path.length - 1 && group.position.distanceTo(path[idx]!) < 0.45) idx++
+      clickWalkIndexRef.current = idx
+      const target = path[idx]!
+      const to = target.clone().sub(group.position)
+      to.y = 0
+      if (to.lengthSq() < 0.04 || idx >= path.length - 1) {
+        clickWalkPathRef.current = null
+        controllerRef.current.setMovement({ ...inactiveMovementInput })
+      } else {
+        to.normalize()
+        // Camera-relative stick so BVHEcctrl steers correctly.
+        const fwd = new Vector3()
+        camera.getWorldDirection(fwd)
+        fwd.y = 0
+        if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1)
+        else fwd.normalize()
+        const right = new Vector3().crossVectors(fwd, new Vector3(0, 1, 0)).normalize()
+        joystickRef.current.set(to.dot(right), to.dot(fwd))
+        controllerRef.current.setMovement({
+          ...inactiveMovementInput,
+          joystick: { x: joystickRef.current.x, y: joystickRef.current.y },
+        })
+      }
+    }
+
+    const cameraMode = useWalkSettings.getState().cameraMode
+    const character = characterRootRef.current
+    if (character) {
+      character.position.copy(group.position)
+      character.position.y -= CONTROLLER_CENTER_FROM_EYE
+      character.rotation.y = yawRef.current
+      character.visible = cameraMode === 'third'
+      if (!character.parent && group.parent) group.parent.add(character)
+    }
+
+    if (cameraMode === 'third') {
+      // Third-person follow with simple wall collision (ray back from player).
+      const back = new Vector3(0, 0, 1).applyEuler(new Euler(0, yawRef.current, 0, 'YXZ'))
+      const desired = group.position
+        .clone()
+        .add(new Vector3(0, 1.4, 0))
+        .addScaledVector(back, 3.2)
+      const meshes: Mesh[] = []
+      if (worldRef.current) meshes.push(worldRef.current.mesh)
+      const from = group.position.clone().add(new Vector3(0, 1.2, 0))
+      const toCam = desired.clone().sub(from)
+      const dist = toCam.length()
+      if (dist > 0.01) {
+        const hit = raycastGround(meshes, from, toCam.clone().normalize(), dist)
+        if (hit) {
+          camera.position.lerp(hit.clone().addScaledVector(toCam.normalize(), -0.2), 0.5)
+        } else {
+          camera.position.lerp(desired, 1 - Math.exp(-delta * 10))
+        }
+      } else {
+        camera.position.copy(desired)
+      }
+      camera.lookAt(group.position.x, group.position.y + 1.1, group.position.z)
+    } else {
+      camera.position.copy(group.position).add(cameraOffset)
+      cameraEuler.set(pitchRef.current, yawRef.current, 0, 'YXZ')
+      camera.quaternion.setFromEuler(cameraEuler)
+    }
     camera.updateMatrixWorld(true)
     syncElevatorRide(group)
-    camera.position.copy(group.position).add(cameraOffset)
-    camera.updateMatrixWorld(true)
+    if (cameraMode === 'first') {
+      camera.position.copy(group.position).add(cameraOffset)
+      camera.updateMatrixWorld(true)
+    }
 
     const nextInteractableTarget = resolveInteractableTarget()
     const previousInteractableTarget = interactableTargetRef.current
@@ -1759,9 +1985,15 @@ export const FirstPersonControls = () => {
             gravity={9.81}
             jumpVel={5}
             key="first-person-controller"
-            maxRunSpeed={crouched ? CROUCH_RUN_SPEED : 5}
+            maxRunSpeed={
+              (crouched ? CROUCH_RUN_SPEED : sprinting ? SPRINT_SPEED_MS : RUN_SPEED_MS) *
+              useWalkSettings.getState().speedMultiplier
+            }
             maxSlope={1.2}
-            maxWalkSpeed={crouched ? CROUCH_WALK_SPEED : 2}
+            maxWalkSpeed={
+              (crouched ? CROUCH_WALK_SPEED : WALK_SPEED_MS) *
+              useWalkSettings.getState().speedMultiplier
+            }
             paused={isElevatorRideLocked || captureShutterHold}
             position={controllerStart.position}
             ref={setControllerApi}
@@ -1780,6 +2012,8 @@ export const FirstPersonOverlay = ({ onExit }: { onExit: () => void }) => {
   const zoneLabel = useFirstPersonHud((state) => state.zoneLabel)
   const interact = useFirstPersonHud((state) => state.interact)
   const suspended = useViewer((state) => state.walkthroughSuspended)
+  const coarse =
+    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
   const handleExit = useCallback(() => {
     if (document.pointerLockElement) {
@@ -1801,6 +2035,16 @@ export const FirstPersonOverlay = ({ onExit }: { onExit: () => void }) => {
           Place a spawn point from the Build tab to control where walkthrough starts.
         </div>
       )}
+      {coarse ? (
+        <WalkTouchJoystick
+          onChange={(x, y) => {
+            // Touch stick is consumed by FirstPersonControls via a custom event.
+            window.dispatchEvent(
+              new CustomEvent('pascal-walk-joystick', { detail: { x, y } }),
+            )
+          }}
+        />
+      ) : null}
     </WalkthroughHud>
   )
 }

@@ -107,6 +107,16 @@ export {
   type GpuQualityPreference,
 } from './lib/gpu-quality'
 export {
+  FLY_SPEED_DEFAULT_MS,
+  FLY_SPEED_MAX_MS,
+  FLY_SPEED_MIN_MS,
+  RUN_SPEED_MS,
+  SPRINT_DOUBLE_TAP_MS,
+  SPRINT_SPEED_MS,
+  WALK_SPEED_MS,
+  WALK_SPEEDS,
+} from './lib/walk-speeds'
+export {
   computeHeroFraming,
   DEFAULT_FRAMING_EXCLUDED_TYPES,
   type HeroFraming,
