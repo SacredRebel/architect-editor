@@ -30,6 +30,7 @@ import {
   type DomedBayOptions,
   measureDomedBay,
 } from './proportions'
+import { archThrustAnalysis } from '../math/arch-profile'
 
 type Units = 'ft' | 'm'
 
@@ -91,7 +92,15 @@ export default function TemplePanel() {
     : null
   const m = opts ? measureDomedBay(opts) : null
 
-  type Loose = { id: string; type: string; span?: number; metadata?: { templeBay?: string } }
+  type Loose = {
+    id: string
+    type: string
+    span?: number
+    rise?: number
+    thickness?: number
+    profileType?: string
+    metadata?: { templeBay?: string }
+  }
   const byId = nodes as unknown as Record<string, Loose>
   const selected = selectedIds.map((id) => byId[id as string]).filter(Boolean) as Loose[]
   const arch = selected.find((n) => n.type === 'hagia-sophia:arch')
@@ -99,6 +108,16 @@ export default function TemplePanel() {
   const bay = selected
     .map((n) => (n as { metadata?: { templeBay?: string } }).metadata?.templeBay)
     .find(Boolean)
+
+  const thrust =
+    arch && arch.span && arch.rise && arch.thickness && arch.profileType
+      ? archThrustAnalysis({
+          profileType: arch.profileType as 'round' | 'pointed' | 'segmental' | 'catenary',
+          span: arch.span,
+          rise: arch.rise,
+          thickness: arch.thickness,
+        })
+      : null
 
   const place = (o: DomedBayOptions, label: string) => {
     if (!levelId) {
@@ -137,6 +156,79 @@ export default function TemplePanel() {
     if (!domeNode) return
     const riseRatio = DOME_SHAPES.find((s) => s.id === shape)?.riseRatio ?? 0.5
     useScene.getState().updateNode(domeNode.id as AnyNodeId, { riseRatio } as Partial<AnyNode>)
+  }
+
+  const placeCatenaryVault = () => {
+    if (!levelId) {
+      setNote('Pick a level first.')
+      return
+    }
+    const S = span ?? 20 * FT
+    const { rise } = archFor('catenary', S)
+    const target = useEditor.getState().navigationSyncPose?.target ?? [0, 0, 0]
+    const all = useScene.getState().nodes as Record<string, AnyNode>
+    const base = levelBaseElevationAt(all, levelId, target[0], target[2])
+    const def = nodeRegistry.get('hagia-sophia:arch')
+    const raw = {
+      object: 'node',
+      type: 'hagia-sophia:arch',
+      name: 'Catenary vault',
+      parentId: levelId,
+      visible: true,
+      metadata: { templePart: 'catenary-vault' },
+      position: [target[0], Number.isFinite(base) ? base + 2.4 : 2.4, target[2]],
+      rotation: [0, 0, 0],
+      span: S,
+      rise,
+      depth: S * 0.75,
+      profileType: 'catenary',
+      thickness: Math.max(0.2, S * 0.06),
+      showThrust: true,
+    }
+    const node = (def ? def.schema.parse(raw) : raw) as AnyNode
+    useScene.getState().createNodes([{ node, parentId: levelId as AnyNodeId }])
+    useViewer.getState().setSelection({ selectedIds: [node.id as AnyNodeId] })
+    triggerSFX('sfx:item-place')
+    setNote(`Catenary vault: span ${both(S, units)}, extruded ${both(S * 0.75, units)}. Green thrust line = Poleni middle third.`)
+  }
+
+  const placeCatenaryDome = () => {
+    if (!levelId) {
+      setNote('Pick a level first.')
+      return
+    }
+    const R = (span ?? 20 * FT) / 2
+    const target = useEditor.getState().navigationSyncPose?.target ?? [0, 0, 0]
+    const all = useScene.getState().nodes as Record<string, AnyNode>
+    const base = levelBaseElevationAt(all, levelId, target[0], target[2])
+    const def = nodeRegistry.get('hagia-sophia:dome')
+    const raw = {
+      object: 'node',
+      type: 'hagia-sophia:dome',
+      name: 'Catenary dome',
+      parentId: levelId,
+      visible: true,
+      metadata: { templePart: 'catenary-dome' },
+      position: [target[0], Number.isFinite(base) ? base + 3 : 3, target[2]],
+      rotation: [0, 0, 0],
+      radius: R,
+      riseRatio: 0.4,
+      meridian: 'catenary',
+      shellThickness: Math.max(0.1, R * 0.04),
+      drumHeight: 0,
+      drumRadius: R,
+      windowCount: 0,
+      windowWidth: 0.4,
+      windowHeight: 0.9,
+      oculusRadius: 0,
+      sectorStart: 0,
+      sectorAngle: Math.PI * 2,
+    }
+    const node = (def ? def.schema.parse(raw) : raw) as AnyNode
+    useScene.getState().createNodes([{ node, parentId: levelId as AnyNodeId }])
+    useViewer.getState().setSelection({ selectedIds: [node.id as AnyNodeId] })
+    triggerSFX('sfx:item-place')
+    setNote(`Catenary dome of revolution: diameter ${both(R * 2, units)}, rise ${both(R * 2 * 0.4, units)}.`)
   }
 
   return (
@@ -227,6 +319,19 @@ export default function TemplePanel() {
             ))}
           </div>
         ) : null}
+        {arch && thrust ? (
+          <div
+            style={{
+              ...muted,
+              color: thrust.withinMiddleThird ? undefined : '#c92a2a',
+              opacity: 1,
+            }}
+          >
+            {thrust.withinMiddleThird
+              ? 'Poleni’s test (1748): line of thrust stays in the middle third of the ring.'
+              : `Warning — line of thrust leaves the middle third (offset ${(thrust.maxOffset * 1000).toFixed(0)} mm > ${(thrust.middleThirdHalf * 1000).toFixed(0)} mm).`}
+          </div>
+        ) : null}
         {domeNode ? (
           <div style={row}>
             {DOME_SHAPES.map((s) => (
@@ -234,6 +339,18 @@ export default function TemplePanel() {
                 {s.label} dome
               </button>
             ))}
+            <button
+              style={btn}
+              onClick={() =>
+                useScene.getState().updateNode(domeNode.id as AnyNodeId, {
+                  meridian: 'catenary',
+                } as Partial<AnyNode>)
+              }
+              title="Meridian is an inverted hanging chain, spun into a dome"
+              type="button"
+            >
+              Catenary meridian
+            </button>
           </div>
         ) : null}
         {bay ? (
@@ -248,6 +365,22 @@ export default function TemplePanel() {
         {!arch && !domeNode && !bay ? (
           <div style={muted}>Select an arch or a dome to give it a classic proportion. The single pieces are in Build.</div>
         ) : null}
+      </div>
+
+      <div style={box}>
+        <div style={{ fontWeight: 600, fontSize: 13 }}>Hanging-chain vault &amp; dome</div>
+        <div style={muted}>
+          Inverted catenary y = a·cosh(x/a), fitted to the clear span. The vault extrudes it; the dome
+          spins the same curve. Hooke 1675; Poleni’s hanging-chain test 1748.
+        </div>
+        <div style={row}>
+          <button style={on} onClick={placeCatenaryVault} type="button">
+            Place catenary vault
+          </button>
+          <button style={btn} onClick={placeCatenaryDome} type="button">
+            Place catenary dome
+          </button>
+        </div>
       </div>
 
       <div style={muted}>

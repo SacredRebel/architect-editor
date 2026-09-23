@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { buildArchOuterPoints } from './geometry'
+import { fitCatenary, fitEndpointError } from '../../math/catenary'
+import { buildArchOuterPoints } from '../../math/arch-profile'
 
 describe('buildArchOuterPoints', () => {
   const span = 7.62
@@ -39,5 +40,19 @@ describe('buildArchOuterPoints', () => {
     const segApex = Math.max(...segPts.map((p) => p.y))
     expect(segApex).toBeLessThan(roundApex)
     expect(roundApex).toBeCloseTo(rise, 5)
+  })
+
+  test('catenary profile passes springings and crown within 1 mm', () => {
+    const pts = buildArchOuterPoints('catenary', span, rise, 64)
+    const first = pts[0]!
+    const last = pts[pts.length - 1]!
+    expect(Math.abs(first.x + span / 2)).toBeLessThanOrEqual(0.001)
+    expect(Math.abs(first.y)).toBeLessThanOrEqual(0.001)
+    expect(Math.abs(last.x - span / 2)).toBeLessThanOrEqual(0.001)
+    expect(Math.abs(last.y)).toBeLessThanOrEqual(0.001)
+    const apex = pts.reduce((best, p) => (p.y > best.y ? p : best), pts[0]!)
+    expect(Math.abs(apex.x)).toBeLessThanOrEqual(0.001)
+    expect(Math.abs(apex.y - rise)).toBeLessThanOrEqual(0.001)
+    expect(fitEndpointError(fitCatenary(span, rise))).toBeLessThanOrEqual(0.001)
   })
 })

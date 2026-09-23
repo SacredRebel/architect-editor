@@ -16,6 +16,13 @@ export const domeParametrics: ParametricDescriptor<HsDomeNode> = {
       fields: [
         { key: 'radius', label: 'Radius', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
         { key: 'riseRatio', label: 'Height ÷ width', kind: 'number', min: 0.05, max: 1, step: 0.01 },
+        {
+          key: 'meridian',
+          label: 'Meridian',
+          kind: 'enum',
+          options: ['circular', 'catenary'],
+          display: 'segmented',
+        },
         { key: 'shellThickness', label: 'Rim band', kind: 'number', unit: 'm', min: 0.02, max: 3, step: 0.01 },
         { key: 'oculusRadius', label: 'Oculus radius', kind: 'number', unit: 'm', min: 0, max: 10, step: 0.05 },
       ],
@@ -52,19 +59,27 @@ export const archParametrics: ParametricDescriptor<HsArchNode> = {
     {
       label: 'Arch',
       fields: [
-        { key: 'profileType', label: 'Profile', kind: 'enum', options: ['round', 'pointed', 'segmental'], display: 'segmented' },
+        {
+          key: 'profileType',
+          label: 'Profile',
+          kind: 'enum',
+          options: ['round', 'pointed', 'segmental', 'catenary'],
+          display: 'segmented',
+        },
         { key: 'span', label: 'Span', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
         { key: 'rise', label: 'Rise', kind: 'number', unit: 'm', min: 0.1, max: 60, step: 0.05 },
-        { key: 'depth', label: 'Depth (wall)', kind: 'number', unit: 'm', min: 0.05, max: 20, step: 0.05 },
+        { key: 'depth', label: 'Depth (vault)', kind: 'number', unit: 'm', min: 0.05, max: 40, step: 0.05 },
         { key: 'thickness', label: 'Ring', kind: 'number', unit: 'm', min: 0.05, max: 5, step: 0.01 },
+        { key: 'showThrust', label: 'Show line of thrust (Poleni)', kind: 'boolean' },
       ],
     },
   ],
-  // a round arch stays a semicircle; a pointed one keeps its rise-to-span proportion
+  // a round arch stays a semicircle; a pointed/catenary one keeps its rise-to-span proportion
   derive: (next, patch, prev) => {
     if (patch.span === undefined || !prev || prev.span <= 0) return {}
     if (next.profileType === 'round') return { rise: next.span / 2 }
-    if (next.profileType === 'pointed') return { rise: (prev.rise / prev.span) * next.span }
+    if (next.profileType === 'pointed' || next.profileType === 'catenary')
+      return { rise: (prev.rise / prev.span) * next.span }
     return {}
   },
   invariants: [
@@ -72,6 +87,19 @@ export const archParametrics: ParametricDescriptor<HsArchNode> = {
       n.profileType === 'pointed' && n.rise <= n.span / 2
         ? [{ field: 'rise', msg: 'a pointed arch needs a rise above half its span', severity: 'warning' as const }]
         : [],
+    (n) => {
+      // Lazy import avoided: inline middle-third check via geometry helper would cycle;
+      // panel shows the Poleni warning. Keep a cheap thickness sanity here.
+      if (n.thickness > n.rise * 0.5)
+        return [
+          {
+            field: 'thickness',
+            msg: 'ring thicker than half the rise — check the line of thrust',
+            severity: 'warning' as const,
+          },
+        ]
+      return []
+    },
   ],
 }
 

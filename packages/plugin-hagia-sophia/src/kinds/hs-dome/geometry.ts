@@ -10,7 +10,8 @@ import {
   MeshStandardMaterial,
   Vector2,
 } from 'three'
-import type { HsDomeNode } from './schema'
+import { sampleCatenaryMeridian } from '../../math/catenary'
+import type { HsDomeMeridian, HsDomeNode } from './schema'
 
 /** LOD distances (m): L0 full, L1 shell+drum, L2 low lathe. */
 export const DOME_LOD_DISTANCES = [0, 80, 220] as const
@@ -20,13 +21,19 @@ export type DomeProfilePoint = { x: number; y: number }
 /**
  * Dome meridian profile: rim (radius, 0) → crown (≈0, height).
  * height = riseRatio × diameter; hemisphere when riseRatio ≈ 0.5.
- * r(t)=radius·cos(t·riseAngle), y(t)=radius·sin(t·riseAngle)·riseFactor
+ * circular: r(t)=radius·cos(t·riseAngle), y(t)=radius·sin(t·riseAngle)·riseFactor
+ * catenary: inverted hanging chain of revolution (same span=2·radius, rise=height)
  */
 export function buildDomeProfile(
   radius: number,
   riseRatio: number,
   segments: number,
+  meridian: HsDomeMeridian = 'circular',
 ): DomeProfilePoint[] {
+  const height = Math.max(1e-6, riseRatio * 2 * radius)
+  if (meridian === 'catenary') {
+    return sampleCatenaryMeridian(radius, height, segments)
+  }
   const segs = Math.max(2, segments)
   const riseAngle = Math.PI / 2
   // height = riseRatio * 2 * radius ⇒ riseFactor scales the unit hemisphere
@@ -102,12 +109,13 @@ function buildDomeShell(
   material: MeshStandardMaterial,
   sectorStart: number,
   sectorAngle: number,
+  meridian: HsDomeMeridian = 'circular',
 ): Mesh {
-  const profile = buildDomeProfile(radius, riseRatio, segments)
+  const profile = buildDomeProfile(radius, riseRatio, segments, meridian)
   const vecs = profile.map((p) => new Vector2(p.x, p.y))
   const radial = Math.max(12, segments * 2)
   const mesh = new Mesh(new LatheGeometry(vecs, radial, sectorStart, sectorAngle), material)
-  mesh.name = 'hs-dome-shell'
+  mesh.name = meridian === 'catenary' ? 'hs-dome-shell-catenary' : 'hs-dome-shell'
   return mesh
 }
 
@@ -190,6 +198,7 @@ function buildDetailLevel(
     shellMat,
     sectorStart,
     sectorAngle,
+    node.meridian ?? 'circular',
   )
   group.add(shell)
 
@@ -204,7 +213,7 @@ function buildDetailLevel(
   }
 
   if (node.oculusRadius > 0) {
-    const crownY = node.radius * Math.sin(Math.PI / 2) * Math.max(1e-6, 2 * node.riseRatio)
+    const crownY = Math.max(1e-6, node.riseRatio * 2 * node.radius)
     group.add(buildOculus(node.oculusRadius, dark, crownY))
   }
 

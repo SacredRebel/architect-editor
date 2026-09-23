@@ -38,7 +38,22 @@ place / bearing / lock, plan-snap, walls-from-figure, user forms, 3D constructio
 No “sacred”, “divine”, Flower of Life, Metatron, Seed of Life, vesica piscis, or Platonic as labels
 (keywords only). Enforced by `check-h16-geometry`.
 
-## Later (after H15)
+## H16.2 — Hanging-chain arches and vaults
 
-H16.2 catenary arches · H16.3 curved solids · H16.4 VR · H16.5 IFC + envelope — see the H16 brief;
+Branch `eco/h16-2-catenary`.
+
+Catenary arch profile (`y = a·cosh(x/a)` fitted to span + rise), vault = extruded profile,
+dome of revolution with catenary meridian. Poleni’s line of thrust drawn in the ring; panel
+warns when it leaves the middle third. ActArtech `hagia-sophia:*` kinds unchanged.
+
+| Check | Result |
+|---|---|
+| `bun test` in plugin-hagia-sophia | **81 pass** |
+| `bun test/check-h16-2.mjs` | **OK** (springings + crown ≤ 1 mm; Poleni middle third) |
+| `bun install --frozen-lockfile` + `bun run build --filter=editor` | green (local bun; npx bun@1.3.14 TLS-blocked on agent) |
+| preview / production | pending push |
+
+## Later
+
+H16.3 curved solids · H16.4 VR · H16.5 IFC + envelope — see the H16 brief;
 queued notes in `H17-H18-queued.md`.

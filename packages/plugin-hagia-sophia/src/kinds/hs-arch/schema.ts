@@ -1,7 +1,7 @@
 import { BaseNode, nodeType, objectId } from '@pascal-app/core'
 import { z } from 'zod'
 
-export const HsArchProfileTypeSchema = z.enum(['round', 'segmental', 'pointed'])
+export const HsArchProfileTypeSchema = z.enum(['round', 'segmental', 'pointed', 'catenary'])
 
 export const HsArchNode = BaseNode.extend({
   id: objectId('hs-arch'),
@@ -13,6 +13,8 @@ export const HsArchNode = BaseNode.extend({
   depth: z.number().positive().default(1.2),
   profileType: HsArchProfileTypeSchema.default('round'),
   thickness: z.number().positive().default(0.6),
+  /** Draw Poleni's line of thrust (inverted hanging chain) inside the ring. */
+  showThrust: z.boolean().default(true),
 })
 
 export type HsArchNode = z.infer<typeof HsArchNode>

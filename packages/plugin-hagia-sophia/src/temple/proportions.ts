@@ -22,17 +22,18 @@ export const FT = 0.3048
 
 // ---- arches --------------------------------------------------------------------------------------
 
-export type ArchForm = 'roman' | 'gothic' | 'golden' | 'segmental'
+export type ArchForm = 'roman' | 'gothic' | 'golden' | 'segmental' | 'catenary'
 
 export const ARCH_FORMS: ReadonlyArray<{ id: ArchForm; label: string; note: string }> = [
   { id: 'roman', label: 'Roman — round', note: 'rise is half the span (a semicircle)' },
   { id: 'gothic', label: 'Gothic — equilateral', note: 'rise is span × √3/2; each arc is centred on the other springing' },
   { id: 'golden', label: 'Golden — pointed', note: 'rise to half-span is φ : 1 (rise = span × 0.809)' },
   { id: 'segmental', label: 'Segmental', note: 'a flat arc of a large circle' },
+  { id: 'catenary', label: 'Catenary — hanging chain', note: 'inverted chain y = a·cosh(x/a); Hooke 1675 / Poleni 1748' },
 ]
 
 /** the profile and the rise (to the outer curve) of an arch of this form and span */
-export function archFor(form: ArchForm, span: number): { profileType: 'round' | 'pointed' | 'segmental'; rise: number } {
+export function archFor(form: ArchForm, span: number): { profileType: 'round' | 'pointed' | 'segmental' | 'catenary'; rise: number } {
   switch (form) {
     case 'roman':
       return { profileType: 'round', rise: span / 2 }
@@ -43,6 +44,9 @@ export function archFor(form: ArchForm, span: number): { profileType: 'round' | 
     case 'segmental':
       // ActArtech's segmental profile draws a sagitta of rise × 0.55; this gives a quarter-span sagitta
       return { profileType: 'segmental', rise: span / 4 / 0.55 }
+    case 'catenary':
+      // Comfortable masonry rise ≈ 0.4 · span (shallower than a semicircle)
+      return { profileType: 'catenary', rise: span * 0.4 }
   }
 }
 

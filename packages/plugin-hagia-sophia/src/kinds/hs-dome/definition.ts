@@ -37,6 +37,7 @@ export const hsDomeDefinition: HsDomeDefinition = {
     rotation: [0, 0, 0],
     radius: 15.55,
     riseRatio: 0.55,
+    meridian: 'circular',
     shellThickness: 0.8,
     drumHeight: 5.5,
     drumRadius: 15.55 * 0.92,
@@ -60,7 +61,7 @@ export const hsDomeDefinition: HsDomeDefinition = {
 
   geometry: (node) => buildDomeGeometry(node),
   geometryKey: (n) =>
-    `${n.radius}|${n.riseRatio}|${n.shellThickness}|${n.drumHeight}|${n.drumRadius}|${n.windowCount}|${n.windowWidth}|${n.windowHeight}|${n.oculusRadius}|${n.sectorStart}|${n.sectorAngle}`,
+    `${n.radius}|${n.riseRatio}|${n.meridian}|${n.shellThickness}|${n.drumHeight}|${n.drumRadius}|${n.windowCount}|${n.windowWidth}|${n.windowHeight}|${n.oculusRadius}|${n.sectorStart}|${n.sectorAngle}`,
   floorplan: buildDomeFloorplan,
 
   parametrics: domeParametrics,

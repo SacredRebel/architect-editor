@@ -1,6 +1,8 @@
 import { BaseNode, nodeType, objectId } from '@pascal-app/core'
 import { z } from 'zod'
 
+export const HsDomeMeridianSchema = z.enum(['circular', 'catenary'])
+
 export const HsDomeNode = BaseNode.extend({
   id: objectId('hs-dome'),
   type: nodeType('hagia-sophia:dome'),
@@ -9,6 +11,8 @@ export const HsDomeNode = BaseNode.extend({
   radius: z.number().positive().default(15.55),
   /** Fraction of diameter → dome height (≈0.5 = hemisphere). */
   riseRatio: z.number().min(0).max(1).default(0.55),
+  /** Meridian: circular arc (default) or inverted hanging chain of revolution. */
+  meridian: HsDomeMeridianSchema.default('circular'),
   /** Visual rim band thickness (not a boolean shell). */
   shellThickness: z.number().positive().default(0.8),
   /** 0 = no drum ring (semi-domes springing off an arch). */
@@ -36,3 +40,4 @@ export const HsDomeNode = BaseNode.extend({
 })
 
 export type HsDomeNode = z.infer<typeof HsDomeNode>
+export type HsDomeMeridian = z.infer<typeof HsDomeMeridianSchema>

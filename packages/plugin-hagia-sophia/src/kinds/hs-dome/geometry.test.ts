@@ -22,6 +22,17 @@ describe('buildDomeProfile', () => {
       expect(pts[i]!.y).toBeGreaterThanOrEqual(pts[i - 1]!.y - 1e-12)
     }
   })
+
+  test('catenary meridian rim and crown within 1 mm', () => {
+    const radius = 10
+    const riseRatio = 0.4
+    const pts = buildDomeProfile(radius, riseRatio, 48, 'catenary')
+    expect(pts[0]!.x).toBeCloseTo(radius, 6)
+    expect(Math.abs(pts[0]!.y)).toBeLessThanOrEqual(0.001)
+    const last = pts[pts.length - 1]!
+    expect(Math.abs(last.x)).toBeLessThanOrEqual(0.001)
+    expect(Math.abs(last.y - riseRatio * 2 * radius)).toBeLessThanOrEqual(0.001)
+  })
 })
 
 describe('windowAngle', () => {

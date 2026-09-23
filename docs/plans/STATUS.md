@@ -1,7 +1,7 @@
 # STATUS — Agent A
 updated: 2026-09-22
-phase: H15 merged — next H16.2 (catenary arches)
-state: H15 organic / minimal / true size on main. H16.0+H16.1 production READY earlier. Soap-film (H15.3) now available for H16.1 form #19 follow-up if needed. Queue continues H16.2→H16.5 → H17 → H18.
+phase: H16.2 in flight — catenary arches
+state: H16.2 feature on `eco/h16-2-catenary` (checks green). H15 + H16.0+H16.1 production READY. Queue continues H16.3→H16.5 → H17 → H18 after merge.
 
 | Phase | Status | Finishing commit | Known missing |
 |---|---|---|---|
@@ -9,12 +9,12 @@ state: H15 organic / minimal / true size on main. H16.0+H16.1 production READY e
 | H15 | **done** | merge `97e5ff19` (feature `5d3f6370`) | live atlas still owner-side; freehand smooth-wall canvas later |
 | H16.0 | **done** | merge `b611ed8a` | — |
 | H16.1 | **done** | merge `46ca57b9` | wire soap-film into geometry kit (optional polish) |
-| H16.2–H16.5 | next | — | catenary → body kernel → VR → IFC/envelope |
+| H16.2 | **in flight** | `eco/h16-2-catenary` | preview → merge → production |
+| H16.3–H16.5 | next | — | body kernel → VR → IFC/envelope |
 | H17–H18 | queued after H16.5 | — | `H17-H18-queued.md` |
 
-commit: main `97e5ff19`
-checks: `check-h15` OK; `check-h15-size` OK; `check-h16-geometry` OK; editor build green
+commit: branch `eco/h16-2-catenary` (main still `625e1ac0` / H15 stamp)
+checks: `check-h16-2` OK; plugin-hagia-sophia 81 pass; editor build green
 deployment:
-- H15 preview READY https://architect-editor-git-eco-h15-pauls-projects-af8162cc.vercel.app (`5d3f6370`)
-- production READY https://architect-editor-snowy.vercel.app (`97e5ff19` / health ok; STATUS stamp `82df4afe`)
+- production READY https://architect-editor-snowy.vercel.app (H15 / H16.1 era; awaiting H16.2 merge)
 queue: H16.2 → H16.3 → H16.4 → H16.5 → H17 → H18

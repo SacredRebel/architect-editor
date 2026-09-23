@@ -39,6 +39,7 @@ export const hsArchDefinition: HsArchDefinition = {
     depth: 1.2,
     profileType: 'round',
     thickness: 0.6,
+    showThrust: true,
   }),
 
   capabilities: {
@@ -53,7 +54,7 @@ export const hsArchDefinition: HsArchDefinition = {
 
   geometry: (node) => buildArchGeometry(node),
   geometryKey: (n) =>
-    `${n.span}|${n.rise}|${n.depth}|${n.profileType}|${n.thickness}`,
+    `${n.span}|${n.rise}|${n.depth}|${n.profileType}|${n.thickness}|${n.showThrust}`,
   floorplan: buildArchFloorplan,
 
   parametrics: archParametrics,
@@ -72,7 +73,7 @@ export const hsArchDefinition: HsArchDefinition = {
 
   presentation: {
     label: 'Arch',
-    description: 'A masonry arch — round, pointed or segmental. From ActArtech.',
+    description: 'A masonry arch — round, pointed, segmental or catenary. From ActArtech.',
     icon: { kind: 'url', src: '/icons/temple-arch.svg' },
     paletteSection: 'structure',
     paletteOrder: 132,
@@ -80,6 +81,6 @@ export const hsArchDefinition: HsArchDefinition = {
 
   mcp: {
     description:
-      'Parametric arch block: span, rise, depth, profileType (round|segmental|pointed), thickness. Origin at springing midpoint.',
+      'Parametric arch block: span, rise, depth, profileType (round|segmental|pointed|catenary), thickness, Poleni thrust line. Origin at springing midpoint. Depth extrudes a vault.',
   },
 }
