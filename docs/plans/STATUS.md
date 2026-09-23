@@ -16,5 +16,5 @@ commit: main `97e5ff19`
 checks: `check-h15` OK; `check-h15-size` OK; `check-h16-geometry` OK; editor build green
 deployment:
 - H15 preview READY https://architect-editor-git-eco-h15-pauls-projects-af8162cc.vercel.app (`5d3f6370`)
-- production READY https://architect-editor-snowy.vercel.app (polling after `97e5ff19`)
+- production READY https://architect-editor-snowy.vercel.app (`97e5ff19` / health ok; STATUS stamp `82df4afe`)
 queue: H16.2 → H16.3 → H16.4 → H16.5 → H17 → H18
