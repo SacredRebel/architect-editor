@@ -8,6 +8,9 @@ const ecoStatic = process.env.ECO_STATIC === '1'
 const ecoBasePath = process.env.ECO_BASE_PATH || '/builder'
 // SacredRebel fork: Eco bridge is the product. Default on unless explicitly disabled.
 const ecoPublic = process.env.NEXT_PUBLIC_ECO ?? '1'
+// SacredRebel eco fork ships VR. Set NEXT_PUBLIC_WEBXR=0 to disable registration.
+// Runtime still requires installing the WebXR plugin on the scene.
+const webxrPublic = process.env.NEXT_PUBLIC_WEBXR ?? '1'
 
 if (ecoStatic && portableBuild) {
   throw new Error('ECO_STATIC and PASCAL_PORTABLE_BUILD cannot both be set')
@@ -16,6 +19,7 @@ if (ecoStatic && portableBuild) {
 const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_ECO: ecoPublic,
+    NEXT_PUBLIC_WEBXR: webxrPublic,
   },
   ...(ecoStatic
     ? {
@@ -65,6 +69,7 @@ const nextConfig: NextConfig = {
     '@pascal-app/plugin-hagia-sophia',
     '@pascal-app/plugin-geometry',
     '@pascal-app/plugin-body',
+    '@webxr/plugin',
     '@dgreenheck/ez-tree',
   ],
   // Node Draco WASM bindings require `fs`; keep them off the client graph.

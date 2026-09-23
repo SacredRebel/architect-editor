@@ -49,7 +49,7 @@ export { FloatingActionMenu as FloatingMenu } from './components/editor/floating
 // camera controls via the `useViewer.inputDragging` / `useEditor.movingNode`
 // flags. Tools place onto `useViewer.selection.levelId`, so the host must set a
 // building + level selection first.
-export { Grid } from './components/editor/grid'
+export { Grid, EDITOR_GRID_INPUT_NAME } from './components/editor/grid'
 export {
   DimensionPill,
   type DimensionPillPart,
@@ -562,7 +562,7 @@ export { hasRoofFaceChildOverlap, type RoofWallHit, resolveRoofWallHit } from '.
 export type { SceneGraph } from './lib/scene'
 export { applySceneGraphToEditor } from './lib/scene'
 export { movementSfxStepKey } from './lib/sfx/movement-tick'
-export { triggerSFX } from './lib/sfx-bus'
+export { emitDeleteSFX, triggerSFX } from './lib/sfx-bus'
 export { playSFX, type SFXName, type SFXPlaybackOptions } from './lib/sfx-player'
 export {
   clearSlabSnapFeedback,
@@ -575,6 +575,7 @@ export {
   type SlabPlanSnapResult,
 } from './lib/slab-plan-snap'
 export {
+  cycleSnappingModeIn,
   getSnappingModeLabel,
   resolveSnapFlags,
   type SnapContext,
@@ -599,11 +600,14 @@ export {
   type SurfacePlanSnapResult,
 } from './lib/surface-plan-snap'
 export {
+  clipTerrainPatchToSite,
+  commitStroke,
   fieldExtentForSite,
   flattenSite,
   resetSiteTerrain,
   resolveFlattenTarget,
   sculptFieldForSite,
+  terrainPointInsideSite,
 } from './lib/terrain-sculpt'
 export { exportSceneToUsdz, type UsdzExportOptions } from './lib/usdz-export'
 // `cn` (twMerge + clsx) — used by kind-owned panels in `@pascal-app/
@@ -729,3 +733,28 @@ export {
   type WallSnapKind,
   type WallSnapPoint,
 } from './store/use-wall-snap-indicator'
+
+// WebXR plugin surface — symbols consumed by `@webxr/plugin` wand/input adapters.
+export { furnishTools } from './components/ui/action-menu/furnish-tools'
+export { applyMultiHeightMode } from './components/ui/panels/multi-height-mode'
+export {
+  commitMultiNodeFields,
+  fieldVisibleForAll,
+  reduceFieldValue,
+  reduceHeightBoundMode,
+} from './components/ui/panels/multi-field-value'
+export {
+  resolveHomogeneousSelection,
+  resolveUniqueSelectionIds,
+} from './components/ui/panels/homogeneous-selection'
+export { canDirectMoveNode } from './lib/direct-manipulation'
+export { activateCatalogItem, filterCatalogItems } from './lib/catalog-panel-model'
+export { isCatalogItemSelected } from './lib/catalog-selection'
+export { getNodePanelModel } from './lib/panel-rows'
+export { type PanelToolOption, usePanelToolHints } from './lib/panel-tool-options'
+export { commitParametricNodeFields } from './lib/parametric-node-update'
+export { getSpatialPointerId, spatialPointerInput } from './lib/spatial-pointer-input'
+export { useMaterialCatalogModel } from './lib/material-catalog-model'
+export { useMaterialPaintPanelModel } from './lib/material-paint-panel-model'
+export { useTerrainPanelRows } from './lib/terrain-panel-model'
+export { cyclePaintScope, paintScopeLabel } from './lib/paint-scope'

@@ -1,7 +1,12 @@
 'use client'
 
 import { type AnyNodeId, emitter, type GridEvent, sceneRegistry } from '@pascal-app/core'
-import { GRID_LAYER, getSceneTheme, useViewer } from '@pascal-app/viewer'
+import {
+  GRID_LAYER,
+  getSceneTheme,
+  useImmersiveXRPresentation,
+  useViewer,
+} from '@pascal-app/viewer'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DoubleSide, type Mesh, PlaneGeometry, Quaternion, Vector2, Vector3 } from 'three'
@@ -10,13 +15,15 @@ import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { useCeilingEvents } from '../../hooks/use-ceiling-events'
 import { useGridEvents } from '../../hooks/use-grid-events'
 import { getPlacementSurface, usesOrientedPlacementPlane } from '../../lib/active-placement-surface'
-import useEditor, { isGridSnapActive } from '../../store/use-editor'
+import useEditor, { getActiveSnapContext, isGridSnapActive } from '../../store/use-editor'
 import { getMovingNode } from '../../store/use-interaction-scope'
 
 // Reveal radius (m) of the cursor-local grid patch shown while placing/moving in
 // grid-snap mode — much tighter than the idle reveal so only the area you're
 // about to snap into lights up.
 const PLACEMENT_REVEAL_RADIUS = 12
+
+export const EDITOR_GRID_INPUT_NAME = 'pascal-editor-grid-input'
 
 const UP = new Vector3(0, 1, 0)
 // PlaneGeometry faces +Z; this is the orientation that lays it flat (its normal
@@ -45,6 +52,8 @@ export const Grid = ({
   fadeStrength?: number
   revealRadius?: number
 }) => {
+  const immersive = useImmersiveXRPresentation()
+
   const isDark = useViewer((state) => getSceneTheme(state.sceneTheme).appearance === 'dark')
 
   // Use slightly lighter colors for dark themes' grid to make it apparent
@@ -293,7 +302,7 @@ export const Grid = ({
     // from the interaction scope OR the armed build tool and is true only when
     // that context resolves to grid, so it IS the gate. (Previously this also
     // required a ghost in flight, so a merely-armed draft tool showed nothing.)
-    const snapPatchVisible = isGridSnapActive()
+    const snapPatchVisible = isGridSnapActive() || (immersive && getActiveSnapContext() !== null)
     revealRadiusUniform.value = PLACEMENT_REVEAL_RADIUS
     baseAlphaUniform.value = 0
     cellSizeUniform.value = useEditor.getState().gridSnapStep
@@ -320,6 +329,7 @@ export const Grid = ({
       geometry={geometry}
       layers={GRID_LAYER}
       material={material}
+      name={EDITOR_GRID_INPUT_NAME}
       ref={gridRef}
       renderOrder={1}
     />

@@ -18,6 +18,7 @@ import {
   horizonHazeColor,
   NodeRenderer,
   useNodeEvents,
+  useImmersiveXRPresentation,
   useSceneAtmosphere,
   useSceneGroundReplacement,
   useViewer,
@@ -136,6 +137,7 @@ function addSlabHoles(
 }
 
 export const SiteRenderer = ({ node }: { node: SiteNode }) => {
+  const immersiveXR = useImmersiveXRPresentation()
   const ref = useRef<Group>(null!)
   const atmosphere = useSceneAtmosphere()
   const groundReplaced = useSceneGroundReplacement()
@@ -407,7 +409,7 @@ export const SiteRenderer = ({ node }: { node: SiteNode }) => {
       )}
 
       {/* Infinite-ground presentation disc fading into the sky at the horizon */}
-      {horizonGeometry && horizonMaterial && fadeBounds && (
+      {!immersiveXR && horizonGeometry && horizonMaterial && fadeBounds && (
         <mesh
           geometry={horizonGeometry}
           material={horizonMaterial}

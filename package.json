@@ -63,5 +63,8 @@
     "apps/*",
     "packages/*",
     "tooling/*"
-  ]
+  ],
+  "patchedDependencies": {
+    "iwer@2.3.0": "patches/iwer@2.3.0.patch"
+  }
 }
