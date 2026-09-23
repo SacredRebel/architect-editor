@@ -51,7 +51,8 @@ warns when it leaves the middle third. ActArtech `hagia-sophia:*` kinds unchange
 | `bun test` in plugin-hagia-sophia | **81 pass** |
 | `bun test/check-h16-2.mjs` | **OK** (springings + crown ≤ 1 mm; Poleni middle third) |
 | `bun install --frozen-lockfile` + `bun run build --filter=editor` | green (local bun; npx bun@1.3.14 TLS-blocked on agent) |
-| preview / production | pending push |
+| preview (`aa5a96d2`) | READY https://architect-editor-git-eco-h16-2-catenary-pauls-projects-af8162cc.vercel.app |
+| production | READY https://architect-editor-snowy.vercel.app (`aa5a96d2`) |
 
 ## Later
 
