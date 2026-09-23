@@ -447,6 +447,18 @@ export function EditorCommands() {
           ]
         : []),
       {
+        id: 'editor.export.ifc',
+        label: 'Export IFC 4.3 (BIM)',
+        group: 'Export & Share',
+        icon: <Building2 className="h-4 w-4" />,
+        keywords: ['export', 'ifc', 'bim', 'step', 'download'],
+        execute: () =>
+          run(async () => {
+            const { exportIfcModel } = await import('../../../lib/ifc-export')
+            await exportIfcModel()
+          }),
+      },
+      {
         id: 'editor.export.share-link',
         label: 'Copy Share Link',
         group: 'Export & Share',

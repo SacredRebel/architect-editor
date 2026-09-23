@@ -35,6 +35,7 @@ export {
   setEcoSite,
   setGuideVisible,
   setShowCompass,
+  setShowEnvelope,
   setShowGhost,
   subscribeEcoSite,
 } from './eco-site-store'
@@ -224,6 +225,10 @@ export type {
   TakeoffBasis,
 } from './eco-construction'
 export { VENTURA_COUNTY_JURISDICTION } from './eco-jurisdiction-ventura'
+export { deriveBuildableEnvelope, classifyEdgeRoles } from './envelope/buildable-envelope'
+export type { BuildableEnvelope, EdgeRole, Point2D } from './envelope/buildable-envelope'
+export { VENTURA_ENVELOPE } from './envelope/ventura-envelope'
+export { EcoBuildableEnvelope } from './eco-buildable-envelope'
 export {
   IMAGE3D_BANNED_IDS,
   IMAGE3D_DEFAULT_TIER,

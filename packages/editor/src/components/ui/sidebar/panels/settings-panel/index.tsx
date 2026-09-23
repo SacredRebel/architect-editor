@@ -273,6 +273,8 @@ export function SettingsPanel({
     null,
   )
   const [floorplanExportError, setFloorplanExportError] = useState<string | null>(null)
+  const [activeIfcExport, setActiveIfcExport] = useState(false)
+  const [ifcExportError, setIfcExportError] = useState<string | null>(null)
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null)
   const [projectIdCopyState, setProjectIdCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
   const exportableNodeTypes = useMemo(() => {
@@ -590,6 +592,22 @@ export function SettingsPanel({
     }
   }
 
+  const handleIfcExport = async () => {
+    if (activeIfcExport) return
+    setActiveIfcExport(true)
+    setIfcExportError(null)
+    try {
+      const { exportIfcModel } = await import('../../../../../lib/ifc-export')
+      await exportIfcModel()
+    } catch (error) {
+      setIfcExportError(
+        `Couldn’t export IFC. ${error instanceof Error ? error.message : 'Try again.'}`,
+      )
+    } finally {
+      setActiveIfcExport(false)
+    }
+  }
+
   return (
     <div className="subtle-scrollbar min-h-0 flex-1 space-y-6 overflow-x-hidden overflow-y-auto overscroll-contain p-3">
       {projectId && (
@@ -855,6 +873,22 @@ export function SettingsPanel({
           ) : null}
 
           <PrintExportButton onlyVisible={exportOnlyVisible} />
+
+          <Button
+            aria-busy={activeIfcExport}
+            className="w-full justify-start gap-2"
+            disabled={activeIfcExport}
+            onClick={() => void handleIfcExport()}
+            variant="outline"
+          >
+            <Download aria-hidden="true" className="size-4" />
+            {activeIfcExport ? 'Exporting IFC…' : 'Export IFC 4.3'}
+          </Button>
+          {ifcExportError ? (
+            <p className="text-destructive text-xs" role="alert">
+              {ifcExportError}
+            </p>
+          ) : null}
         </div>
 
         <div className="space-y-2">

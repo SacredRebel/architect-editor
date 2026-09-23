@@ -37,6 +37,7 @@
     "check:h14": "bun test/check-h14.mjs",
     "check:h15": "bun test/check-h15.mjs",
     "check:h15-size": "bun test/check-h15-size.mjs",
+    "check:h16-5": "bun test/check-h16-5.mjs",
     "render:h12": "bun test/render-h12-baseline.mjs",
     "render:h14": "bun test/render-h14-flows.mjs",
     "render:h15": "bun test/render-h15-flows.mjs"

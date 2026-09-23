@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useSyncExternalStore } from 'react'
 import { emitter } from '@pascal-app/core'
+import { EcoBuildableEnvelope } from './eco-buildable-envelope'
 import { EcoCompass } from './eco-compass'
 import { EcoGhost } from './eco-ghost'
 import { ensureEcoPlanSnapInstalled } from './eco-ghost-snap'
@@ -85,6 +86,7 @@ export default function EcoPresentation() {
       <EcoSiteLighting />
       <EcoPresentationFraming />
       {!presentation && <EcoGuides />}
+      {!presentation && <EcoBuildableEnvelope />}
       {!presentation && (
         <Suspense fallback={null}>
           <EcoGhost />

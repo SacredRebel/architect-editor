@@ -7,6 +7,8 @@ type EcoSiteStore = {
   guideVisibility: GuideVisibility
   showGhost: boolean
   showCompass: boolean
+  /** Ventura buildable envelope translucent volume (H16.5). */
+  showEnvelope: boolean
 }
 
 const listeners = new Set<() => void>()
@@ -16,6 +18,7 @@ let state: EcoSiteStore = {
   guideVisibility: {},
   showGhost: true,
   showCompass: true,
+  showEnvelope: true,
 }
 
 function emit() {
@@ -62,5 +65,10 @@ export function setShowGhost(showGhost: boolean): void {
 
 export function setShowCompass(showCompass: boolean): void {
   state = { ...state, showCompass }
+  emit()
+}
+
+export function setShowEnvelope(showEnvelope: boolean): void {
+  state = { ...state, showEnvelope }
   emit()
 }

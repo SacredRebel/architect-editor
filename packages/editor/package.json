@@ -59,7 +59,8 @@
     "three-bvh-csg": "^0.0.18",
     "three-mesh-bvh": "~0.9.8",
     "zod": ">=4.5.4 <4.6",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.11",
+    "@pascal-app/ifc-exporter": "*"
   },
   "devDependencies": {
     "@pascal-app/core": "^1.0.1",
