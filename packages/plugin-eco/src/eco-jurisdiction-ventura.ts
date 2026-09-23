@@ -12,6 +12,25 @@ export const VENTURA_COUNTY_JURISDICTION = {
   electricalCode: '2025 California Electrical Code (2023 NEC base)',
   wuiCode:
     '2025 California Wildland-Urban Interface Code (CWUIC) + Ventura County Fire Protection District Hazardous Fire Area / VCWUIC amendments',
+  /**
+   * Typical unincorporated Ventura County residential (RE/AE) yards used for
+   * the translucent buildable envelope (H16.5). Confirm with AHJ — no Turkish zoning ratios.
+   */
+  envelope: {
+    /** Front yard setback (m) — ~20 ft common RE front. */
+    frontSetbackM: 6.1,
+    /** Side yard setback (m) — ~5 ft. */
+    sideSetbackM: 1.52,
+    /** Rear yard setback (m) — ~15 ft. */
+    rearSetbackM: 4.57,
+    /** Max building height (m) — ~35 ft wall/ceiling top, excludes roof. */
+    maxHeightM: 10.67,
+    /** Default front edge index on the parcel polygon (user can override). */
+    frontEdgeIndex: 0,
+    sources: [
+      'Ventura County Zoning Ordinance — typical RE/AE residential yards (confirm AHJ)',
+    ],
+  },
   climate: {
     frostLineIn: 0,
     frostLineNote:

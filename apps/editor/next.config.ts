@@ -69,6 +69,7 @@ const nextConfig: NextConfig = {
     '@pascal-app/plugin-hagia-sophia',
     '@pascal-app/plugin-geometry',
     '@pascal-app/plugin-body',
+    '@pascal-app/ifc-exporter',
     '@webxr/plugin',
     '@dgreenheck/ez-tree',
   ],

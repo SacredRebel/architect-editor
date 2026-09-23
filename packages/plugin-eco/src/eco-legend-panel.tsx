@@ -43,6 +43,7 @@ import {
   getEcoSiteState,
   setGuideVisible,
   setShowCompass,
+  setShowEnvelope,
   setShowGhost,
   subscribeEcoSite,
 } from './eco-site-store'
@@ -80,7 +81,7 @@ function useEcoExport() {
  * Legend + visibility toggles for Eco site overlays, Walk, and world export.
  */
 export default function EcoLegendPanel() {
-  const { site, guideVisibility, showGhost, showCompass } = useEcoSiteStore()
+  const { site, guideVisibility, showGhost, showCompass, showEnvelope } = useEcoSiteStore()
   const { enabled: walkEnabled, firstPerson } = useWalkStore()
   const { shells } = useShells()
   const organic = useOrganic()
@@ -261,6 +262,19 @@ export default function EcoLegendPanel() {
       {exportUi.status === 'error' && exportUi.error ? (
         <div style={{ color: '#b42318', lineHeight: 1.35 }}>{exportUi.error}</div>
       ) : null}
+
+      <div style={{ fontWeight: 600 }}>Ventura envelope</div>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input
+          checked={showEnvelope}
+          onChange={(e) => setShowEnvelope(e.target.checked)}
+          type="checkbox"
+        />
+        Buildable volume (setbacks + height limit)
+      </label>
+      <div style={{ opacity: 0.65, lineHeight: 1.35 }}>
+        Front ~20 ft / side ~5 ft / rear ~15 ft / height ~35 ft. Confirm with AHJ — Ventura yards only.
+      </div>
 
       {!site ? (
         <div style={{ opacity: 0.7 }}>
