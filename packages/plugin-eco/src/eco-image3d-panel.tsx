@@ -36,7 +36,16 @@ export default function EcoImage3dPanel() {
   const clientRef = useRef<AtlasImage3dClient | null>(null)
 
   const client = () => {
-    if (!clientRef.current) clientRef.current = createAtlasImage3dClient()
+    if (!clientRef.current) {
+      // H15.1 — local mocked atlas when ?mockAtlas=1 (or next public flag).
+      const mock =
+        (typeof window !== 'undefined' &&
+          new URLSearchParams(window.location.search).get('mockAtlas') === '1') ||
+        process.env.NEXT_PUBLIC_ECO_MOCK_ATLAS === '1'
+      clientRef.current = createAtlasImage3dClient(
+        mock ? { baseUrl: '', sleep: (ms) => new Promise((r) => setTimeout(r, Math.min(ms, 80))) } : undefined,
+      )
+    }
     return clientRef.current
   }
 
@@ -142,7 +151,7 @@ export default function EcoImage3dPanel() {
         Runs through the Eco atlas (Meshy). Ask for a PIN every time — ~30 credits/job. Free-tier
         Meshy outputs are <strong>CC BY 4.0</strong>; paid keeps rights. Sketch massing is a locked
         semi-transparent reference for tracing walls — <strong>not walkable</strong>, excluded from
-        walk export.
+        walk export. Local mock: open the editor with <code>?mockAtlas=1</code> and any PIN.
       </div>
 
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

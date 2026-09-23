@@ -59,9 +59,48 @@ export type EcoMinimalPatch = {
   iterations: number
 }
 
+function boundaryPointAt(boundary: Vec3[], t01: number): Vec3 {
+  if (boundary.length === 0) return [0, 0, 0]
+  if (boundary.length === 1) return boundary[0]!
+  let total = 0
+  const lens: number[] = []
+  for (let i = 0; i < boundary.length - 1; i++) {
+    const a = boundary[i]!
+    const b = boundary[i + 1]!
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
+    lens.push(len)
+    total += len
+  }
+  // Closed: also last→first if not already closed
+  const first = boundary[0]!
+  const last = boundary[boundary.length - 1]!
+  const closedGap = Math.hypot(first[0] - last[0], first[1] - last[1], first[2] - last[2])
+  if (closedGap > 1e-4) {
+    lens.push(closedGap)
+    total += closedGap
+  }
+  let target = Math.max(0, Math.min(1, t01)) * (total || 1)
+  const pts = closedGap > 1e-4 ? [...boundary, first] : boundary
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i]!
+    const b = pts[i + 1]!
+    const len = lens[i] ?? Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
+    if (target <= len || i === pts.length - 2) {
+      const u = len < 1e-9 ? 0 : target / len
+      return [
+        a[0] + (b[0] - a[0]) * u,
+        a[1] + (b[1] - a[1]) * u,
+        a[2] + (b[2] - a[2]) * u,
+      ]
+    }
+    target -= len
+  }
+  return last
+}
+
 /**
- * Build a ruled grid from a rectangular boundary estimate, then relax interior
- * vertices (discrete minimal surface). Boundary stays fixed — parametric.
+ * Build a grid from a closed boundary curve, then relax interior vertices
+ * (discrete minimal surface / soap film). Boundary stays fixed — parametric.
  */
 export function tessellateMinimalPatch(patch: EcoMinimalPatch): {
   positions: number[]
@@ -69,48 +108,57 @@ export function tessellateMinimalPatch(patch: EcoMinimalPatch): {
 } {
   const nu = Math.max(2, patch.gridU)
   const nv = Math.max(2, patch.gridV)
-  // Expect boundary ordered: 4 corners at least — sample bbox
-  let minX = Infinity
-  let maxX = -Infinity
-  let minZ = Infinity
-  let maxZ = -Infinity
-  let minY = Infinity
-  let maxY = -Infinity
-  for (const p of patch.boundary) {
-    minX = Math.min(minX, p[0])
-    maxX = Math.max(maxX, p[0])
-    minZ = Math.min(minZ, p[2])
-    maxZ = Math.max(maxZ, p[2])
-    minY = Math.min(minY, p[1])
-    maxY = Math.max(maxY, p[1])
+  const boundary = patch.boundary
+  let cx = 0
+  let cy = 0
+  let cz = 0
+  for (const p of boundary) {
+    cx += p[0]
+    cy += p[1]
+    cz += p[2]
   }
+  const n = Math.max(1, boundary.length)
+  cx /= n
+  cy /= n
+  cz /= n
+
   const grid: Vec3[][] = []
   for (let i = 0; i <= nu; i++) {
     const row: Vec3[] = []
     const u = i / nu
     for (let j = 0; j <= nv; j++) {
       const v = j / nv
-      const x = minX + (maxX - minX) * u
-      const z = minZ + (maxZ - minZ) * v
-      // Boundary height from bilinear corners of boundary bbox mid
-      const y = minY + (maxY - minY) * (1 - Math.hypot(u - 0.5, v - 0.5) * 1.2)
+      // Polar-ish: edge of grid maps to boundary by angle; interior blends to centre
+      const edgeT = j / nv
+      const edge = boundaryPointAt(boundary, edgeT)
+      const x = cx + (edge[0] - cx) * u
+      const y = cy + (edge[1] - cy) * u
+      const z = cz + (edge[2] - cz) * u
       row.push([x, y, z])
+      void v
     }
     grid.push(row)
   }
-  // Pin boundary; relax interior
+  // Pin outer ring (i === nu); relax interior
   for (let iter = 0; iter < patch.iterations; iter++) {
     for (let i = 1; i < nu; i++) {
-      for (let j = 1; j < nv; j++) {
+      for (let j = 0; j <= nv; j++) {
+        const j0 = (j + nv) % (nv + 1)
+        const j1 = (j + 1) % (nv + 1)
+        // For open V use neighbours; treat j as circular when boundary is closed
         const a = grid[i - 1]![j]!
         const b = grid[i + 1]![j]!
-        const c = grid[i]![j - 1]!
-        const d = grid[i]![j + 1]!
+        const c = grid[i]![j0 === j ? Math.max(0, j - 1) : j0]!
+        const d = grid[i]![j1 === j ? Math.min(nv, j + 1) : j1]!
+        const left = grid[i]![Math.max(0, j - 1)]!
+        const right = grid[i]![Math.min(nv, j + 1)]!
         grid[i]![j] = [
-          (a[0] + b[0] + c[0] + d[0]) / 4,
-          (a[1] + b[1] + c[1] + d[1]) / 4,
-          (a[2] + b[2] + c[2] + d[2]) / 4,
+          (a[0] + b[0] + left[0] + right[0]) / 4,
+          (a[1] + b[1] + left[1] + right[1]) / 4,
+          (a[2] + b[2] + left[2] + right[2]) / 4,
         ]
+        void c
+        void d
       }
     }
   }

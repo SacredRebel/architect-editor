@@ -22,6 +22,12 @@ import {
   buildVaultObject3D,
 } from './eco-organic-geometry'
 import { getEcoOrganicState } from './eco-organic-store'
+import {
+  buildOrganicBuildingObject3D,
+  buildSmoothWallObject3D,
+} from './eco-organic-building-geometry'
+import { getEcoOrganicBuildingState } from './eco-organic-building-store'
+import { computeAnsiAreas, type AnsiAreaExtras } from './eco-true-size'
 import { buildEcoTreeObject3D } from './eco-tree-mesh'
 import { getEcoTreesState } from './eco-trees-store'
 import {
@@ -263,6 +269,33 @@ export function buildDesignGroup(nodes: NodeMap): THREE.Group {
     group.add(buildMinimalObject3D(patch, mat, materialId))
   }
 
+  const buildings = getEcoOrganicBuildingState()
+  for (const plan of buildings.buildings) {
+    const materialId = resolveEcoMaterialId(`organic:${plan.id}`, 'wall')
+    const mat = createEcoThreeMaterial(materialId, { doubleSide: true })
+    const obj = buildOrganicBuildingObject3D(plan, mat, materialId)
+    // Recipe on floor mesh for GLB extras round-trip
+    obj.traverse((child) => {
+      if (child.name.startsWith('eco-organic-floor:')) {
+        child.userData.organic = { ...plan.spec, perimeter: plan.perimeter }
+      }
+      if (child.name.startsWith('eco-smooth-wall:') || child.name.startsWith('eco-organic-roof:')) {
+        child.userData.assembly =
+          child.name.includes('roof')
+            ? { roof_structure: plan.spec.structure, insulation: plan.spec.insulation }
+            : plan.wall.assembly
+      }
+    })
+    group.add(obj)
+  }
+  for (const wall of buildings.smoothWalls) {
+    const materialId = resolveEcoMaterialId(`sw:${wall.id}`, 'wall')
+    const mat = createEcoThreeMaterial(materialId, { doubleSide: true })
+    const obj = buildSmoothWallObject3D(wall, mat, materialId)
+    obj.userData.assembly = wall.assembly
+    group.add(obj)
+  }
+
   return group
 }
 
@@ -367,10 +400,16 @@ export async function exportEcoGlb(options: {
     )
   })
 
-  // Optimise first (gltf-transform), then stamp walk extras so they survive.
+  // Optimise first (gltf-transform), then stamp walk + area + organic extras so they survive.
   const profile = options.optimiseProfile ?? 'compat'
   const optimised = await optimiseGlb(result, profile)
-  const stamped = await stampWalkExtras(optimised.buffer, walk)
+  const area = collectAreaExtras(options.nodes)
+  const organicExtras = collectOrganicExtras()
+  const stamped = await stampGlbExtras(optimised.buffer, {
+    walk,
+    area,
+    organic: organicExtras,
+  })
   const report = await auditGlb(stamped)
   assertHardGlbAudit(report, { maxBytes: options.maxBytes ?? ECO_GLB_MAX_BYTES })
 
@@ -389,41 +428,122 @@ export async function exportEcoGlb(options: {
   }
 }
 
-/** Patch glTF JSON chunk inside a GLB so scene + nodes[0] carry extras.walk. */
+function collectAreaExtras(nodes: NodeMap): AnsiAreaExtras {
+  const buildings = getEcoOrganicBuildingState().buildings
+  if (buildings.length) {
+    const floors: { area_m2: number; ceiling_m: number }[] = []
+    for (const b of buildings) {
+      for (let i = 0; i < b.floors; i++) {
+        floors.push({ area_m2: b.quantities.floor_m2, ceiling_m: b.spec.height })
+      }
+    }
+    return computeAnsiAreas(floors)
+  }
+  // Fallback: slab polygons
+  const slabs: { area_m2: number; ceiling_m: number }[] = []
+  for (const node of Object.values(nodes)) {
+    if (node?.type !== 'slab' || !Array.isArray(node.polygon)) continue
+    const poly = node.polygon as [number, number][]
+    let a = 0
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i]!
+      const q = poly[(i + 1) % poly.length]!
+      a += p[0] * q[1] - q[0] * p[1]
+    }
+    slabs.push({ area_m2: Math.abs(a) / 2, ceiling_m: 2.7 })
+  }
+  if (slabs.length) return computeAnsiAreas(slabs)
+  return computeAnsiAreas([])
+}
+
+function collectOrganicExtras(): {
+  buildings: ReturnType<typeof getEcoOrganicBuildingState>['buildings']
+  smoothWalls: ReturnType<typeof getEcoOrganicBuildingState>['smoothWalls']
+} {
+  const s = getEcoOrganicBuildingState()
+  return { buildings: s.buildings, smoothWalls: s.smoothWalls }
+}
+
+/** @deprecated Prefer stampGlbExtras — kept for H0/H1 callers. */
 export async function stampWalkExtras(glb: ArrayBuffer, walk: EcoWalk): Promise<ArrayBuffer> {
+  return stampGlbExtras(glb, { walk })
+}
+
+/** Patch glTF JSON chunk: extras.walk, extras.area, organic recipe. */
+export async function stampGlbExtras(
+  glb: ArrayBuffer,
+  extras: {
+    walk?: EcoWalk
+    area?: AnsiAreaExtras
+    organic?: ReturnType<typeof collectOrganicExtras>
+  },
+): Promise<ArrayBuffer> {
   const dataView = new DataView(glb)
   if (dataView.getUint32(0, true) !== 0x46546c67) {
     throw new Error('Not a GLB')
   }
   const totalFromHeader = dataView.getUint32(8, true)
   const bytes = new Uint8Array(glb, 0, Math.min(totalFromHeader, glb.byteLength))
-  // header 12 + chunk0 length + chunk0 type
   const jsonChunkLen = dataView.getUint32(12, true)
   const jsonChunkType = dataView.getUint32(16, true)
   if (jsonChunkType !== 0x4e4f534a) throw new Error('GLB missing JSON chunk')
   const jsonStart = 20
   const jsonBytes = bytes.subarray(jsonStart, jsonStart + jsonChunkLen)
-  // trim padding nulls
   let end = jsonBytes.length
   while (end > 0 && jsonBytes[end - 1] === 0) end--
   const json = JSON.parse(new TextDecoder().decode(jsonBytes.subarray(0, end))) as {
-    scenes?: { extras?: { walk?: EcoWalk } }[]
-    nodes?: { extras?: { walk?: EcoWalk } }[]
-    extras?: { walk?: EcoWalk }
+    scenes?: { extras?: Record<string, unknown> }[]
+    nodes?: { name?: string; extras?: Record<string, unknown> }[]
+    extras?: Record<string, unknown>
   }
   if (!json.scenes?.[0]) throw new Error('GLB has no scenes')
-  json.scenes[0].extras = { ...(json.scenes[0].extras ?? {}), walk }
+
+  const rootExtras: Record<string, unknown> = { ...(json.extras ?? {}) }
+  if (extras.walk) rootExtras.walk = extras.walk
+  if (extras.area) rootExtras.area = extras.area
+  if (extras.organic) rootExtras.organicBuildings = extras.organic
+  json.extras = rootExtras
+  json.scenes[0].extras = { ...(json.scenes[0].extras ?? {}), ...rootExtras }
+
   if (json.nodes?.[0]) {
-    json.nodes[0].extras = { ...(json.nodes[0].extras ?? {}), walk }
+    json.nodes[0].extras = { ...(json.nodes[0].extras ?? {}), ...rootExtras }
   }
-  json.extras = { ...(json.extras ?? {}), walk }
+
+  // Stamp organic + assembly onto matching named nodes when present
+  if (extras.organic?.buildings?.length && json.nodes) {
+    for (const node of json.nodes) {
+      const name = node.name ?? ''
+      for (const plan of extras.organic.buildings) {
+        if (name.includes(`eco-organic-floor:${plan.id}`) || name === `eco-organic:${plan.id}`) {
+          node.extras = {
+            ...(node.extras ?? {}),
+            organic: { ...plan.spec, perimeter: plan.perimeter },
+          }
+        }
+        if (name.includes(`eco-smooth-wall:${plan.wall.id}`) || name.includes(`eco-organic:${plan.id}`)) {
+          node.extras = {
+            ...(node.extras ?? {}),
+            assembly: plan.wall.assembly,
+          }
+        }
+        if (name.includes(`eco-organic-roof:${plan.id}`)) {
+          node.extras = {
+            ...(node.extras ?? {}),
+            assembly: {
+              roof_structure: plan.spec.structure,
+              insulation: plan.spec.insulation,
+            },
+          }
+        }
+      }
+    }
+  }
 
   const jsonStr = JSON.stringify(json)
   const jsonAligned = new TextEncoder().encode(jsonStr)
   const pad = (4 - (jsonAligned.length % 4)) % 4
   const jsonPadded = new Uint8Array(jsonAligned.length + pad)
   jsonPadded.set(jsonAligned)
-  // glTF JSON chunk MUST be padded with spaces (0x20), not nulls.
   for (let i = 0; i < pad; i++) jsonPadded[jsonAligned.length + i] = 0x20
 
   const binChunkStart = jsonStart + jsonChunkLen
@@ -432,11 +552,11 @@ export async function stampWalkExtras(glb: ArrayBuffer, walk: EcoWalk): Promise<
   const out = new ArrayBuffer(totalLen)
   const outBytes = new Uint8Array(out)
   const outView = new DataView(out)
-  outView.setUint32(0, 0x46546c67, true) // glTF
+  outView.setUint32(0, 0x46546c67, true)
   outView.setUint32(4, 2, true)
   outView.setUint32(8, totalLen, true)
   outView.setUint32(12, jsonPadded.length, true)
-  outView.setUint32(16, 0x4e4f534a, true) // JSON
+  outView.setUint32(16, 0x4e4f534a, true)
   outBytes.set(jsonPadded, 20)
   outBytes.set(rest, 20 + jsonPadded.length)
   return out
