@@ -73,7 +73,7 @@ full modeling UI / SketchUp import glue.
 
 ## Later
 
-H16.5 IFC + envelope — see the H16 brief; queued notes in `H17-H18-queued.md`.
+H17.0 perf baseline — see `H17-H18-queued.md`.
 
 ## H16.4 — Walk the design in VR
 
@@ -90,3 +90,21 @@ scene BVH / human collider re-scan so eco terrain is walkable.
 | `bun install --frozen-lockfile` + `bun run build --filter=editor` | green (local bun; npx bun@1.3.14 TLS-blocked on agent) |
 | preview (`cfdf7662`) | READY https://architect-editor-git-eco-h16-4-xr-pauls-projects-af8162cc.vercel.app |
 | production | READY https://architect-editor-snowy.vercel.app (`31ff0a89`) |
+
+## H16.5 — IFC 4.3 export + Ventura buildable envelope
+
+Branch `eco/h16-5-ifc`.
+
+`@pascal-app/ifc-exporter` (IFC 4.3 via unmodified `web-ifc` MPL-2.0) with Turkish
+zoning Psets stripped. Ventura setbacks + height as a translucent volume in
+`@eco/plugin-eco` (numbers on `VENTURA_COUNTY_JURISDICTION.envelope`). IFC
+download wired in editor command palette + settings; wasm copied for browser Init.
+
+| Check | Result |
+|---|---|
+| `bun packages/plugin-eco/test/check-h16-5.mjs` | **OK** |
+| `bun test packages/plugin-eco/src/envelope` | **3 pass** |
+| `bun test packages/ifc-exporter` | **7 pass** |
+| `bun install --frozen-lockfile` + `bun run build --filter=editor` | green (local bun; npx bun@1.3.14 TLS-blocked on agent) |
+| preview (`aa932538`) | READY https://architect-editor-git-eco-h16-5-ifc-pauls-projects-af8162cc.vercel.app |
+| production | READY https://architect-editor-snowy.vercel.app (`da991314`) |
