@@ -1,0 +1,41 @@
+{
+  "phase": "H17.0",
+  "capturedAt": "2026-09-23T02:22:04.948Z",
+  "sourceUrl": "https://architect-editor-snowy.vercel.app/?perf",
+  "sampleCount": 60,
+  "sampleWindowMs": 4000,
+  "cameraPath": {
+    "durationMs": 4000,
+    "kind": "raf-idle-sample",
+    "note": "Initial H17.0 capture: 4s rAF deltas on production ?perf (default editor scene). Prefer re-run of capture-h17-baseline.mjs for full 20s orbital path + interaction probes when CDP is available."
+  },
+  "fps": {
+    "median": 14.99,
+    "p1": 12,
+    "min": 12,
+    "max": 19.96
+  },
+  "frameMs": {
+    "median": 66.7,
+    "p99": 83.3,
+    "max": 83.3
+  },
+  "hud": null,
+  "navigation": null,
+  "interaction": {
+    "pointerToHighlightMs": null,
+    "clickToSelectMs": null,
+    "wallDragFrameMs": null,
+    "undoMs": null,
+    "note": "Interaction probes require capture-h17-baseline.mjs re-run; fps/frameMs baseline above is authoritative for H17.0 ship."
+  },
+  "targets": {
+    "fpsMedian": 60,
+    "fpsP1": 45,
+    "pointerToHighlightMs": 50,
+    "wallDragFrameMs": 16,
+    "loadToInteractiveMs": 4000
+  },
+  "optimisationsApplied": false,
+  "note": "Pre-optimisation baseline for H17.1. Captured via CDP rAF deltas on the production editor with ?perf. HUD is the in-repo PerfPanel (FPS, frame, draws, tris, textures, geometries, heap) gated by ?perf. Do not tune until this artifact exists and check-h17-perf passes."
+}

@@ -42,6 +42,11 @@ export function publishPerfStats(stats: PerfStats): void {
   for (const listener of listeners) listener()
 }
 
+/** Snapshot for CDP / `window.__pascalPerf` probes (H17 baseline harness). */
+export function readPerfStats(): PerfStats | null {
+  return current
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)

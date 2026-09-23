@@ -1,7 +1,7 @@
 # STATUS — Agent A
-updated: 2026-09-22
-phase: H16.5 merged — next H17.0 (perf baseline)
-state: H16.5 IFC + Ventura envelope on main. Queue continues H17 → H18.
+updated: 2026-09-23
+phase: H17.0 shipping — next H17.1 (perf fixes)
+state: H17.0 perf baseline recorded (measure before fixes). Queue continues H17.1 → H18.
 
 | Phase | Status | Finishing commit | Known missing |
 |---|---|---|---|
@@ -13,12 +13,11 @@ state: H16.5 IFC + Ventura envelope on main. Queue continues H17 → H18.
 | H16.3 | **done** | merge `17a45121` | body-containers/array + full modeling UI deferred |
 | H16.4 | **done** | merge `31ff0a89` (feature `cfdf7662`) | physical headset regression optional |
 | H16.5 | **done** | merge `da991314` (feature `aa932538`) | Blender/Bonsai local render path deferred |
-| H17.0 | next | — | perf baseline only (measure before fixes) |
+| H17.0 | shipping | — | re-run 20s path + interaction probes when CDP stable; eco-seeded scene optional |
 | H17.1–H18 | queued after H17.0 | — | `H17-H18-queued.md` |
 
-commit: main `da991314`
-checks: `check-h16-5` OK; envelope tests 3 pass; ifc-exporter tests 7 pass; editor build green
+commit: branch `eco/h17-0-perf-baseline`
+checks: `check-h17-perf` OK; editor build green (local bun; npx bun@1.3.14 TLS-blocked on agent)
 deployment:
-- H16.5 preview READY https://architect-editor-git-eco-h16-5-ifc-pauls-projects-af8162cc.vercel.app (`aa932538`)
-- production READY https://architect-editor-snowy.vercel.app (`da991314` / health ok)
-queue: H17.0 → H17.1 → H18
+- production (pre-H17.0) READY https://architect-editor-snowy.vercel.app (`e529ab70` / H16.5 stamp)
+queue: H17.0 merge → H17.1 → H18
