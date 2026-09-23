@@ -332,6 +332,9 @@ function DisplayMenu() {
   const setEdges = useViewer((state) => state.setEdges)
   const shadows = useViewer((state) => state.shadows)
   const setShadows = useViewer((state) => state.setShadows)
+  const gpuQuality = useViewer((state) => state.gpuQuality)
+  const setGpuQuality = useViewer((state) => state.setGpuQuality)
+  const detectedGpuQuality = useViewer((state) => state.detectedGpuQuality)
   const magneticSnap = useEditor((state) => state.magneticSnap)
   const setMagneticSnap = useEditor((state) => state.setMagneticSnap)
   const annotationVisibility = useFloorplanAnnotationVisibility((state) => state.visibility)
@@ -498,6 +501,25 @@ function DisplayMenu() {
           <Contrast className="h-4 w-4" />
           <span>Shadows</span>
           <span className="ml-auto text-muted-foreground text-xs">{shadows ? 'On' : 'Off'}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={(e) =>
+            keepOpen(e, () => {
+              const order = ['auto', 'high', 'medium', 'low'] as const
+              const i = order.indexOf(gpuQuality)
+              setGpuQuality(order[(i + 1) % order.length]!)
+            })
+          }
+        >
+          <span className="flex h-4 w-4 items-center justify-center font-semibold text-[10px]">
+            GPU
+          </span>
+          <span>Quality</span>
+          <span className="ml-auto text-muted-foreground text-xs">
+            {gpuQuality === 'auto'
+              ? `Auto${detectedGpuQuality ? ` (${detectedGpuQuality})` : ''}`
+              : gpuQuality}
+          </span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={(e) =>

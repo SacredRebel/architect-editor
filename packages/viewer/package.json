@@ -41,6 +41,7 @@
     "three": "^0.186"
   },
   "dependencies": {
+    "detect-gpu": "^5.0.70",
     "three-bvh-csg": "^0.0.18",
     "three-mesh-bvh": "^0.9.8",
     "zustand": "^5",

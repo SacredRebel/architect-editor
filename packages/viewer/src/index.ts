@@ -98,6 +98,15 @@ export { disposeObject3DResources } from './lib/dispose-object3d'
 export type { EdgeMode } from './lib/edge-style'
 export { PERF_OVERLAY_ENABLED } from './lib/gpu-perf'
 export {
+  detectGpuQuality,
+  maxDprForQuality,
+  peekDetectedGpuQuality,
+  resolveGpuQuality,
+  shadowMapSizeForQuality,
+  type GpuQuality,
+  type GpuQualityPreference,
+} from './lib/gpu-quality'
+export {
   computeHeroFraming,
   DEFAULT_FRAMING_EXCLUDED_TYPES,
   type HeroFraming,
