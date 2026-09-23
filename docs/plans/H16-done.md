@@ -88,5 +88,5 @@ scene BVH / human collider re-scan so eco terrain is walkable.
 | `bun packages/viewer/test/check-h16-4.mjs` | **OK** |
 | `bun test packages/viewer/src/xr` (+ viewer-camera) | **49 pass** |
 | `bun install --frozen-lockfile` + `bun run build --filter=editor` | green (local bun; npx bun@1.3.14 TLS-blocked on agent) |
-| preview | pending |
-| production | pending |
+| preview (`cfdf7662`) | READY https://architect-editor-git-eco-h16-4-xr-pauls-projects-af8162cc.vercel.app |
+| production | READY https://architect-editor-snowy.vercel.app (`31ff0a89`) |
