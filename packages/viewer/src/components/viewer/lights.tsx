@@ -1,6 +1,6 @@
 import { sceneRegistry } from '@pascal-app/core'
-import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
+import { useEffect, useMemo, useRef } from 'react'
 import type {
   AmbientLight,
   DirectionalLight,
@@ -8,6 +8,7 @@ import type {
   OrthographicCamera,
 } from 'three/webgpu'
 import * as THREE from 'three/webgpu'
+import { type GpuQuality, shadowMapSizeForQuality } from '../../lib/gpu-quality'
 import { SHADOW_ONLY_LAYER } from '../../lib/layers'
 import { getSceneTheme } from '../../lib/scene-themes'
 import useViewer from '../../store/use-viewer'
@@ -75,11 +76,14 @@ const SHADOW_BACKOFF = 10
 // Fallback radius when the scene has no building geometry yet (empty scene).
 const SHADOW_FALLBACK_RADIUS = 30
 
-export function Lights() {
+export function Lights({ quality = 'medium' }: { quality?: GpuQuality }) {
   const sceneTheme = useViewer((state) => state.sceneTheme)
   const theme = getSceneTheme(sceneTheme)
   const shadows = useViewer((state) => state.shadows)
+  const geometryRevision = useViewer((state) => state.geometryRevision)
   const atmosphere = useSceneAtmosphere()
+  const gl = useThree((s) => s.gl)
+  const shadowMapSize = shadowMapSizeForQuality(quality)
   const lightSlots = useMemo(
     () => Array.from({ length: atmosphere ? 2 : theme.lights.length }, (_, index) => index),
     [atmosphere, theme.lights.length],
@@ -89,6 +93,22 @@ export function Lights() {
   const shadowCamera = useRef<OrthographicCamera>(null)
   // Initial ortho half-size; overridden each refresh to fit the building.
   const shadowCameraSize = 50
+  const lastSunDir = useRef(new THREE.Vector3(NaN, NaN, NaN))
+  const shadowsDirty = useRef(true)
+
+  // H17.1 — update the shadow map only when the sun or scene geometry moves.
+  useEffect(() => {
+    const map = gl.shadowMap
+    if (!map) return
+    map.autoUpdate = false
+    map.needsUpdate = true
+    shadowsDirty.current = true
+  }, [gl])
+
+  useEffect(() => {
+    shadowsDirty.current = true
+    if (gl.shadowMap) gl.shadowMap.needsUpdate = true
+  }, [geometryRevision, shadows, quality, gl])
 
   // Building bounds the shadow frustum is fit to, recomputed on an interval.
   const shadowFocus = useRef(new THREE.Vector3()) // sphere centre
@@ -130,6 +150,10 @@ export function Lights() {
         light.target.position.set(0, 0, 0)
         light.target.updateMatrixWorld()
       }
+      if (atmosphere.sunDirection.distanceToSquared(lastSunDir.current) > 1e-8) {
+        lastSunDir.current.copy(atmosphere.sunDirection)
+        shadowsDirty.current = true
+      }
     }
 
     // Fit the single key-light shadow frustum to the BUILDING geometry rather
@@ -154,6 +178,12 @@ export function Lights() {
           Number.isFinite(center.z) &&
           Number.isFinite(radius)
         if (finiteBounds) {
+          if (
+            shadowFocus.current.distanceToSquared(center) > 1e-4 ||
+            Math.abs(shadowRadius.current - radius) > 0.05
+          ) {
+            shadowsDirty.current = true
+          }
           shadowFocus.current.copy(center)
           shadowRadius.current = radius
         } else {
@@ -204,6 +234,10 @@ export function Lights() {
             helper.update()
           }
         }
+      }
+      if (shadowsDirty.current && state.gl.shadowMap) {
+        state.gl.shadowMap.needsUpdate = true
+        shadowsDirty.current = false
       }
     }
 
@@ -312,7 +346,7 @@ export function Lights() {
               lightRefs.current[index] = light
             }}
             shadow-bias={SHADOW_DEPTH_BIAS}
-            shadow-mapSize={[1024, 1024]}
+            shadow-mapSize={[shadowMapSize, shadowMapSize]}
             shadow-normalBias={SHADOW_NORMAL_BIAS}
             shadow-radius={2}
           >

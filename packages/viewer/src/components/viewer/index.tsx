@@ -43,6 +43,7 @@ import type { ViewerXRStore } from '../../xr/store'
 import { ErrorBoundary } from '../error-boundary'
 import { SceneRenderer } from '../renderers/scene-renderer'
 import { BATCH_SPIKE_ENABLED, BatchedMeshSpike } from './batched-mesh-spike'
+import { AdaptiveDpr } from './adaptive-dpr'
 import FrameLimiter from './frame-limiter'
 import { Lights } from './lights'
 import { PerfMonitor } from './perf-monitor'
@@ -55,6 +56,11 @@ import { SceneBvh } from './scene-bvh'
 import { SelectionManager } from './selection-manager'
 import { UnsupportedGpuViewerFallback } from './unsupported-gpu-fallback'
 import { ViewerCamera } from './viewer-camera'
+import {
+  detectGpuQuality,
+  maxDprForQuality,
+  resolveGpuQuality,
+} from '../../lib/gpu-quality'
 
 // Must be in place before any node material builds — a null texture pulled by
 // a shared override-material pass otherwise kills the render pass outright.
@@ -549,11 +555,26 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
     }
   }, [defaultColorPreset, defaultShading, defaultTextures, hasDefaultRender, renderContext])
 
-  // Coarse-pointer devices (phones/tablets) get a tighter DPR ceiling to keep
-  // fragment-shader cost down — saves another ~30% over 1.5x on high-DPI mobile.
-  // Desktops (fine pointer) keep the original 1.5 cap.
-  const maxDpr =
-    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5
+  // H17.1 — detect-gpu once; preference `auto` follows the detected tier.
+  useEffect(() => {
+    let cancelled = false
+    detectGpuQuality().then((q) => {
+      if (!cancelled) useViewer.getState().setDetectedGpuQuality(q)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const gpuQualityPref = useViewer((s) => s.gpuQuality)
+  const detectedGpuQuality = useViewer((s) => s.detectedGpuQuality)
+  const resolvedQuality = resolveGpuQuality(gpuQualityPref, detectedGpuQuality)
+
+  // Coarse-pointer devices get a tighter DPR ceiling; quality tier caps the rest (max 2).
+  const maxDpr = maxDprForQuality(
+    resolvedQuality,
+    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
+  )
   const showGpuFallback = rendererInitFailed
   // When we can't mount the GPU canvas, the SceneReadyTracker never mounts and
   // the host editor would otherwise wait on its scene-readiness timeout. Signal
@@ -748,6 +769,10 @@ function ViewerScene({
   SceneWrapper?: ViewerImmersiveSession['Scene']
   onRenderError?: (cause: unknown) => void
 }) {
+  const gpuQualityPref = useViewer((s) => s.gpuQuality)
+  const detectedGpuQuality = useViewer((s) => s.detectedGpuQuality)
+  const resolvedQuality = resolveGpuQuality(gpuQualityPref, detectedGpuQuality)
+
   const renderedScene = useBvh ? (
     <SceneBvh>
       <SceneRenderer />
@@ -798,7 +823,8 @@ function ViewerScene({
       <ErrorBoundary fallback={null} scope="viewer-scene" onError={onRenderError}>
         {/* <directionalLight position={[10, 10, 5]} intensity={0.5} castShadow
           /> */}
-        <Lights />
+        <Lights quality={resolvedQuality} />
+        <AdaptiveDpr quality={resolvedQuality} />
         {SceneWrapper ? (
           <SceneWrapper>{spatialScene}</SceneWrapper>
         ) : playerModes && xrStore ? (

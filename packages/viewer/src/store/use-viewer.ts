@@ -13,6 +13,7 @@ import type { Object3D } from 'three'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { EdgeMode } from '../lib/edge-style'
+import type { GpuQualityPreference } from '../lib/gpu-quality'
 import type { ColorPreset, RenderShading } from '../lib/materials'
 import { SCENE_THEME_IDS } from '../lib/scene-themes'
 
@@ -91,6 +92,13 @@ type ViewerState = {
 
   shadows: boolean
   setShadows: (shadows: boolean) => void
+
+  /** H17.1 — detect-gpu tier preference (`auto` uses detected tier). */
+  gpuQuality: GpuQualityPreference
+  setGpuQuality: (quality: GpuQualityPreference) => void
+  /** Resolved tier after detect-gpu (null until first probe). */
+  detectedGpuQuality: import('../lib/gpu-quality').GpuQuality | null
+  setDetectedGpuQuality: (quality: import('../lib/gpu-quality').GpuQuality) => void
 
   unit: 'metric' | 'imperial'
   setUnit: (unit: 'metric' | 'imperial') => void
@@ -198,6 +206,7 @@ type PersistedViewerState = Partial<
     | 'colorPreset'
     | 'edges'
     | 'shadows'
+    | 'gpuQuality'
     | 'unit'
     | 'metricNotation'
     | 'unitExplicit'
@@ -215,6 +224,7 @@ const UNITS = ['metric', 'imperial'] as const
 const METRIC_NOTATIONS = ['meters', 'millimeters'] as const
 const LEVEL_MODES = ['stacked', 'exploded', 'solo', 'manual'] as const
 const WALL_MODES = ['up', 'cutaway', 'down', 'translucent'] as const
+const GPU_QUALITIES = ['auto', 'high', 'medium', 'low'] as const
 
 // Countries still on imperial/US customary units: United States, Liberia, Myanmar.
 const IMPERIAL_REGIONS = ['US', 'LR', 'MM']
@@ -323,6 +333,7 @@ function normalizePersistedViewerState(value: unknown): PersistedViewerState {
     colorPreset: pickString<ColorPreset>(state.colorPreset, COLOR_PRESETS, 'clay'),
     edges: pickString<EdgeMode>(state.edges, EDGE_MODES, 'soft'),
     shadows: typeof state.shadows === 'boolean' ? state.shadows : true,
+    gpuQuality: pickString<GpuQualityPreference>(state.gpuQuality, GPU_QUALITIES, 'auto'),
     unit: pickString<ViewerState['unit']>(state.unit, UNITS, detectDefaultUnit()),
     metricNotation: pickString<MetricNotation>(state.metricNotation, METRIC_NOTATIONS, 'meters'),
     unitExplicit:
@@ -407,6 +418,11 @@ const useViewer = create<ViewerState>()(
 
       shadows: true,
       setShadows: (shadows) => set({ shadows }),
+
+      gpuQuality: 'auto',
+      setGpuQuality: (gpuQuality) => set({ gpuQuality }),
+      detectedGpuQuality: null,
+      setDetectedGpuQuality: (detectedGpuQuality) => set({ detectedGpuQuality }),
 
       unit: detectDefaultUnit(),
       metricNotation: 'meters',
@@ -565,6 +581,7 @@ const useViewer = create<ViewerState>()(
         colorPreset: state.colorPreset,
         edges: state.edges,
         shadows: state.shadows,
+        gpuQuality: state.gpuQuality,
         ...(state.unitExplicit ? { unit: state.unit } : {}),
         metricNotation: state.metricNotation,
         levelMode: state.levelMode,
