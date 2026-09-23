@@ -5,6 +5,35 @@ export type RoofFeatureIdentity = {
   kind?: string
 }
 
+const ROOF_FOOTPRINT_SOURCES = [
+  { label: 'Room', value: 'room' },
+  { label: 'Wall', value: 'walls' },
+  { label: 'Draw', value: 'draw' },
+] as const
+
+export type RoofFootprintSource = (typeof ROOF_FOOTPRINT_SOURCES)[number]['value']
+
+const CONICAL_ROOF_FOOTPRINT_SOURCES = [ROOF_FOOTPRINT_SOURCES[1]] as const
+
+const STANDARD_ROOF_FOOTPRINT_SOURCES = [
+  ROOF_FOOTPRINT_SOURCES[2],
+  ROOF_FOOTPRINT_SOURCES[0],
+] as const
+
+export function getRoofFootprintSources(roofType: import('@pascal-app/core').RoofType) {
+  return roofType === 'conical' ? CONICAL_ROOF_FOOTPRINT_SOURCES : STANDARD_ROOF_FOOTPRINT_SOURCES
+}
+
+export function getRoofFootprintSource(
+  roofType: import('@pascal-app/core').RoofType,
+  value: unknown,
+): RoofFootprintSource {
+  const sources = getRoofFootprintSources(roofType)
+  return sources.some((source) => source.value === value)
+    ? (value as RoofFootprintSource)
+    : sources[0].value
+}
+
 export const ROOF_TYPE_OPTIONS: ReadonlyArray<{ label: string; value: RoofType }> = [
   { label: 'Hip', value: 'hip' },
   { label: 'Gable', value: 'gable' },

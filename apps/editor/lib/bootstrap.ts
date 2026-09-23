@@ -145,6 +145,12 @@ extendPluginDiscovery(async () => [geometryPlugin])
 registerEditorHostPanel(geometryHostPanel)
 registerViewerPresentation(geometryPresentation)
 extendPluginDiscovery(async () => [bodyPlugin])
+if (process.env.NEXT_PUBLIC_WEBXR === '1') {
+  void import('@webxr/plugin').then(({ webXRHostPanel, webXRPlugin }) => {
+    extendPluginDiscovery(async () => [webXRPlugin])
+    registerEditorHostPanel(webXRHostPanel)
+  })
+}
 extendPluginDiscovery(async () => [bonesPlugin])
 // Opt-in: Bones ships uninstalled ÔÇö users enable it per scene from the
 // Plugins panel (engineering X-ray is a specialist view, not a default).

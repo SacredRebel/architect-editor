@@ -73,4 +73,20 @@ full modeling UI / SketchUp import glue.
 
 ## Later
 
-H16.4 VR · H16.5 IFC + envelope — see the H16 brief; queued notes in `H17-H18-queued.md`.
+H16.5 IFC + envelope — see the H16 brief; queued notes in `H17-H18-queued.md`.
+
+## H16.4 — Walk the design in VR
+
+Branch `eco/h16-4-xr`.
+
+Port of pascalorg WebXR (`packages/viewer/src/xr/**`, `@webxr/plugin`) behind
+`NEXT_PUBLIC_WEBXR` + scene plugin install. Human mode resets scene scale to 1:1;
+scene BVH / human collider re-scan so eco terrain is walkable.
+
+| Check | Result |
+|---|---|
+| `bun packages/viewer/test/check-h16-4.mjs` | **OK** |
+| `bun test packages/viewer/src/xr` (+ viewer-camera) | **49 pass** |
+| `bun install --frozen-lockfile` + `bun run build --filter=editor` | green (local bun; npx bun@1.3.14 TLS-blocked on agent) |
+| preview | pending |
+| production | pending |

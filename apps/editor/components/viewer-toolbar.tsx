@@ -695,7 +695,49 @@ export function CommunityViewerToolbarLeft() {
   )
 }
 
-export function CommunityViewerToolbarRight() {
+function VRButton({
+  active,
+  disabled,
+  label,
+  onToggle,
+}: {
+  active: boolean
+  disabled: boolean
+  label: string
+  onToggle: () => void
+}) {
+  return (
+    <ToolbarTooltip label={label}>
+      <button
+        aria-label={label}
+        aria-pressed={active}
+        className={cn(TOOLBAR_BTN, active && 'bg-sky-500/15 text-sky-400 hover:bg-sky-500/20')}
+        disabled={disabled}
+        onClick={onToggle}
+        type="button"
+      >
+        <IconifyIcon
+          className={cn('h-4 w-4', disabled && 'animate-pulse opacity-45')}
+          icon="mdi:virtual-reality"
+        />
+      </button>
+    </ToolbarTooltip>
+  )
+}
+
+export function CommunityViewerToolbarRight({
+  onVRToggle,
+  vrButton,
+  vrActive = false,
+  vrDisabled = false,
+  vrLabel = vrActive ? 'Exit VR' : 'Enter VR',
+}: {
+  onVRToggle?: () => void
+  vrButton?: ReactNode
+  vrActive?: boolean
+  vrDisabled?: boolean
+  vrLabel?: string
+} = {}) {
   return (
     <div className={TOOLBAR_CONTAINER}>
       <LevelModeToggle />
@@ -704,6 +746,17 @@ export function CommunityViewerToolbarRight() {
       <DisplayMenu />
       <div className="my-1.5 w-px bg-border/50" />
       <WalkthroughButton />
+      {onVRToggle || vrButton
+        ? (vrButton ??
+          (onVRToggle ? (
+            <VRButton
+              active={vrActive}
+              disabled={vrDisabled}
+              label={vrLabel}
+              onToggle={onVRToggle}
+            />
+          ) : null))
+        : null}
       <PreviewButton />
     </div>
   )

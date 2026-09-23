@@ -70,44 +70,49 @@ export const SceneBvh = forwardRef<Group, SceneBvhProps>(
       const group = ref.current
       const acceleratedMeshes = new Set<Mesh>()
       const computedGeometries = new Set<BufferGeometry>()
+      let cancelled = false
+      let passes = 0
 
       ;(raycaster as any).firstHitOnly = firstHitOnly
 
-      group.traverse((child) => {
-        if (!isMesh(child)) return
-        if (isSceneBvhExcluded(child)) return
+      const scan = () => {
+        if (cancelled || !ref.current) return
+        group.traverse((child) => {
+          if (!isMesh(child)) return
+          if (isSceneBvhExcluded(child)) return
 
-        if (child.raycast === Mesh.prototype.raycast) {
-          child.raycast = acceleratedRaycast
-          acceleratedMeshes.add(child)
-        }
+          if (child.raycast === Mesh.prototype.raycast) {
+            child.raycast = acceleratedRaycast
+            acceleratedMeshes.add(child)
+          }
 
-        if (child.raycast !== acceleratedRaycast) return
+          if (child.raycast !== acceleratedRaycast) return
 
-        const geometry = child.geometry
-        if (geometry.boundsTree || !hasBvhCompatibleGeometry(geometry)) return
+          const geometry = child.geometry
+          if (geometry.boundsTree || !hasBvhCompatibleGeometry(geometry)) return
 
-        try {
-          // The three-mesh-bvh + @types/three combo doesn't agree on
-          // BVH option / class identity (ComputeBVHOptions vs
-          // MeshBVHOptions, GeometryBVH vs MeshBVH) — cast through
-          // `unknown` to bypass the structural mismatch. Runtime is
-          // fine; we're just calling the library's own helpers.
-          ;(geometry as { computeBoundsTree?: unknown }).computeBoundsTree =
-            computeBoundsTree as unknown as typeof geometry.computeBoundsTree
-          ;(geometry as { disposeBoundsTree?: unknown }).disposeBoundsTree =
-            disposeBoundsTree as unknown as typeof geometry.disposeBoundsTree
-          geometry.computeBoundsTree(options)
-          computedGeometries.add(geometry)
-        } catch (error) {
-          console.warn('[viewer] Skipping BVH for incompatible mesh geometry.', {
-            mesh: child.name || child.type,
-            error,
-          })
-        }
-      })
+          try {
+            ;(geometry as { computeBoundsTree?: unknown }).computeBoundsTree =
+              computeBoundsTree as unknown as typeof geometry.computeBoundsTree
+            ;(geometry as { disposeBoundsTree?: unknown }).disposeBoundsTree =
+              disposeBoundsTree as unknown as typeof geometry.disposeBoundsTree
+            geometry.computeBoundsTree(options)
+            computedGeometries.add(geometry)
+          } catch (error) {
+            console.warn('[viewer] Skipping BVH for incompatible mesh geometry.', {
+              mesh: child.name || child.type,
+              error,
+            })
+          }
+        })
+        passes += 1
+        // Eco terrain often arrives after the first paint; keep scanning briefly.
+        if (passes < 8) window.setTimeout(scan, 250)
+      }
+      scan()
 
       return () => {
+        cancelled = true
         delete (raycaster as any).firstHitOnly
 
         for (const geometry of computedGeometries) {
