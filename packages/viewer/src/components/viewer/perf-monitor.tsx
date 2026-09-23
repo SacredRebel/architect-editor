@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Vector3 } from 'three'
 import { initPerfObservers } from '../../lib/perf-observers'
-import { publishPerfStats, readPerfBatchStats } from '../../lib/perf-panel-store'
+import { publishPerfStats, readPerfBatchStats, readPerfStats } from '../../lib/perf-panel-store'
 import { clearPerfMeasures, drainPerfCounters, type PerfCounterBucket } from '../../lib/perf-tracks'
 
 const SAMPLE_INTERVAL = 0.5 // seconds between display updates
@@ -75,6 +75,8 @@ export const PerfMonitor = () => {
   useEffect(() => {
     const probe = {
       batchStats: readPerfBatchStats,
+      /** Latest HUD window — FPS, draws, tris, textures, geometries, heap. */
+      stats: readPerfStats,
       listNodes(type: string): string[] {
         return Object.values(useScene.getState().nodes)
           .filter((n) => n.type === type)
