@@ -46,4 +46,11 @@ bun packages/plugin-eco/test/render-h15-flows.mjs
 
 ## Commit
 
-`eco(H15): …`
+Feature `5d3f6370` · merge `97e5ff19`
+
+## Deployment
+
+| Role | State | URL / SHA |
+|---|---|---|
+| Preview (`eco/h15`) | READY | https://architect-editor-git-eco-h15-pauls-projects-af8162cc.vercel.app (`5d3f6370`) |
+| Production | READY | https://architect-editor-snowy.vercel.app (`97e5ff19`) |
