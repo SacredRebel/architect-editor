@@ -1,7 +1,7 @@
 # STATUS — Agent A
 updated: 2026-09-22
-phase: H16.3 in flight — body kernel
-state: H16.2 catenary on production. H16.3 plugin-body (qurkuid half-edge kernel) on `eco/h16-3-body`. Queue continues H16.4→H16.5 → H17 → H18 after merge.
+phase: H16.3 merged — next H16.4 (VR)
+state: H16.3 body kernel on main. H16.2 catenary production earlier. Queue continues H16.4→H16.5 → H17 → H18.
 
 | Phase | Status | Finishing commit | Known missing |
 |---|---|---|---|
@@ -10,12 +10,13 @@ state: H16.2 catenary on production. H16.3 plugin-body (qurkuid half-edge kernel
 | H16.0 | **done** | merge `b611ed8a` | — |
 | H16.1 | **done** | merge `46ca57b9` | wire soap-film into geometry kit (optional polish) |
 | H16.2 | **done** | merge `aa5a96d2` (stamp `7c21db9e`) | — |
-| H16.3 | **in flight** | `eco/h16-3-body` | preview → merge → production |
+| H16.3 | **done** | merge `17a45121` | body-containers/array + full modeling UI deferred |
 | H16.4–H16.5 | next | — | VR → IFC/envelope |
 | H17–H18 | queued after H16.5 | — | `H17-H18-queued.md` |
 
-commit: branch `eco/h16-3-body` (main `7c21db9e`)
-checks: `check-h16-2` OK; `check-h16-3` OK; plugin-body 88 pass; editor build pending push
+commit: main `17a45121`
+checks: `check-h16-2` OK; `check-h16-3` OK; plugin-body 88 pass; editor build green
 deployment:
-- H16.2 production READY https://architect-editor-snowy.vercel.app (`aa5a96d2`)
-queue: H16.3 → H16.4 → H16.5 → H17 → H18
+- H16.3 preview READY https://architect-editor-git-eco-h16-3-body-pauls-projects-af8162cc.vercel.app (`17a45121`)
+- production READY https://architect-editor-snowy.vercel.app (`17a45121` / health ok)
+queue: H16.4 → H16.5 → H17 → H18
