@@ -5,11 +5,11 @@
 
 import { cleanSpec, type OrganicSpec } from './eco-organic-spec'
 import {
+  type EcoSmoothWall,
   offsetPolyline,
+  type SmoothWallOpening,
   sampleSmoothWall,
   simplifyPolyline,
-  type EcoSmoothWall,
-  type SmoothWallOpening,
   type Vec2,
 } from './eco-smooth-wall'
 
@@ -61,7 +61,12 @@ const KWH_PER_KWP = 1650
 function ringArea(ring: Vec2[]): number {
   if (ring.length < 3) return 0
   let a = 0
-  const n = ring.length - (Math.hypot(ring[0]![0] - ring[ring.length - 1]![0], ring[0]![1] - ring[ring.length - 1]![1]) < 1e-6 ? 1 : 0)
+  const n =
+    ring.length -
+    (Math.hypot(ring[0]![0] - ring[ring.length - 1]![0], ring[0]![1] - ring[ring.length - 1]![1]) <
+    1e-6
+      ? 1
+      : 0)
   for (let i = 0; i < n; i++) {
     const p = ring[i]!
     const q = ring[(i + 1) % n]!
@@ -120,7 +125,12 @@ function distToRing(px: number, pz: number, ring: Vec2[]): number {
 
 function pointInRing(px: number, pz: number, ring: Vec2[]): boolean {
   let inside = false
-  const n = ring.length - (Math.hypot(ring[0]![0] - ring[ring.length - 1]![0], ring[0]![1] - ring[ring.length - 1]![1]) < 1e-6 ? 1 : 0)
+  const n =
+    ring.length -
+    (Math.hypot(ring[0]![0] - ring[ring.length - 1]![0], ring[0]![1] - ring[ring.length - 1]![1]) <
+    1e-6
+      ? 1
+      : 0)
   for (let i = 0, j = n - 1; i < n; j = i++) {
     const xi = ring[i]![0]
     const zi = ring[i]![1]
@@ -240,7 +250,14 @@ function lobedPerimeter(
   return closeRing(pts)
 }
 
-function leafPerimeter(cx: number, cz: number, len: number, width: number, turnDeg: number, n = 40): Vec2[] {
+function leafPerimeter(
+  cx: number,
+  cz: number,
+  len: number,
+  width: number,
+  turnDeg: number,
+  n = 40,
+): Vec2[] {
   const pts: Vec2[] = []
   for (let i = 0; i < n; i++) {
     const t = i / n
@@ -248,7 +265,13 @@ function leafPerimeter(cx: number, cz: number, len: number, width: number, turnD
     // Tear / leaf: longer along +x
     const rx = (len / 2) * (0.55 + 0.45 * Math.cos(ang))
     const rz = (width / 2) * Math.sin(ang) * (0.7 + 0.3 * Math.cos(ang))
-    pts.push(rotate([cx + rx * Math.cos(0) - rz * 0 + (len / 4) * (Math.cos(ang) > 0 ? 0 : 0), cz + rz], turnDeg, [cx, cz]))
+    pts.push(
+      rotate(
+        [cx + rx * Math.cos(0) - rz * 0 + (len / 4) * (Math.cos(ang) > 0 ? 0 : 0), cz + rz],
+        turnDeg,
+        [cx, cz],
+      ),
+    )
     // simpler parametric leaf
   }
   // Rebuild clean leaf
@@ -262,7 +285,14 @@ function leafPerimeter(cx: number, cz: number, len: number, width: number, turnD
   return closeRing(out)
 }
 
-function shellPerimeter(cx: number, cz: number, radius: number, depth: number, turnDeg: number, n = 48): Vec2[] {
+function shellPerimeter(
+  cx: number,
+  cz: number,
+  radius: number,
+  depth: number,
+  turnDeg: number,
+  n = 48,
+): Vec2[] {
   // Nautilus-ish spiral closed by connecting end
   const pts: Vec2[] = []
   const turns = 1.15 + depth
@@ -372,7 +402,11 @@ export function solarSpots(
   return spots.slice(0, keep).map(({ x, y, z, tilt_deg }) => ({ x, y, z, tilt_deg }))
 }
 
-export function defaultPerimeterForSpec(spec: OrganicSpec, centre: Vec2 = [0, 0], radius = 8): Vec2[] {
+export function defaultPerimeterForSpec(
+  spec: OrganicSpec,
+  centre: Vec2 = [0, 0],
+  radius = 8,
+): Vec2[] {
   const s = cleanSpec(spec)
   switch (s.form) {
     case 'oval':
@@ -413,7 +447,9 @@ export function organicPlan(options: {
       if (Math.abs(err) <= 1) break
       const scale = Math.sqrt(options.targetGrossSqft / Math.max(1, grossSqft))
       perimeter = closeRing(
-        perimeter.slice(0, -1).map(([x, z]) => [c[0] + (x - c[0]) * scale, c[1] + (z - c[1]) * scale] as Vec2),
+        perimeter
+          .slice(0, -1)
+          .map(([x, z]) => [c[0] + (x - c[0]) * scale, c[1] + (z - c[1]) * scale] as Vec2),
       )
     }
   }
@@ -510,7 +546,8 @@ function buildPlan(
   const infill_m3 = wall_net_m2 * spec.thick
   const roof_plan_m2 = ringArea(eaveRing)
   // Surface ≈ plan * factor from rise
-  const roof_surface_m2 = roof_plan_m2 * (1 + 0.35 * (spec.rise / Math.max(1, Math.sqrt(roof_plan_m2 / Math.PI))))
+  const roof_surface_m2 =
+    roof_plan_m2 * (1 + 0.35 * (spec.rise / Math.max(1, Math.sqrt(roof_plan_m2 / Math.PI))))
   const insulation_m3 = roof_surface_m2 * insulationThick(spec.insulation)
   const frame_kg = wall_length_m * structureKgPerM(spec.structure) * (spec.height / 3)
   const spots = solarSpots(pole, wallControls, spec.height, spec.rise, spec.facing, spec.solar)

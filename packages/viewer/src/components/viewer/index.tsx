@@ -21,6 +21,7 @@ import {
 import * as THREE from 'three/webgpu'
 import { hasDrawableGeometry } from '../../lib/drawable-geometry'
 import { PERF_OVERLAY_ENABLED } from '../../lib/gpu-perf'
+import { detectGpuQuality, maxDprForQuality, resolveGpuQuality } from '../../lib/gpu-quality'
 import { applyIsolation, clearIsolation } from '../../lib/isolation'
 import { ensureKtx2Support } from '../../lib/ktx2-loader'
 import type { ColorPreset, RenderShading } from '../../lib/materials'
@@ -42,8 +43,8 @@ import { ViewerXRSessionRoot } from '../../xr/session-root'
 import type { ViewerXRStore } from '../../xr/store'
 import { ErrorBoundary } from '../error-boundary'
 import { SceneRenderer } from '../renderers/scene-renderer'
-import { BATCH_SPIKE_ENABLED, BatchedMeshSpike } from './batched-mesh-spike'
 import { AdaptiveDpr } from './adaptive-dpr'
+import { BATCH_SPIKE_ENABLED, BatchedMeshSpike } from './batched-mesh-spike'
 import FrameLimiter from './frame-limiter'
 import { Lights } from './lights'
 import { PerfMonitor } from './perf-monitor'
@@ -56,11 +57,6 @@ import { SceneBvh } from './scene-bvh'
 import { SelectionManager } from './selection-manager'
 import { UnsupportedGpuViewerFallback } from './unsupported-gpu-fallback'
 import { ViewerCamera } from './viewer-camera'
-import {
-  detectGpuQuality,
-  maxDprForQuality,
-  resolveGpuQuality,
-} from '../../lib/gpu-quality'
 
 // Must be in place before any node material builds — a null texture pulled by
 // a shared override-material pass otherwise kills the render pass outright.

@@ -5,11 +5,12 @@ export const geometryPlugin: Plugin = {
   apiVersion: 1,
 }
 
-export { geometryFloorplanOverlay, geometryHostPanel, geometryPresentation } from './host-panel'
-export { FORMS, formById } from './catalog'
-export type { FormDef, FormId } from './catalog'
-export * from './forms'
 export { buildForm } from './build'
+export type { FormDef, FormId } from './catalog'
+export { FORMS, formById } from './catalog'
+export * from './forms'
+export { geometryFloorplanOverlay, geometryHostPanel, geometryPresentation } from './host-panel'
+export { BANNED_UI_LABELS, PHI, parseLengthInput, SQRT2, SQRT3 } from './math'
 export { ensureGeometryPlanSnapInstalled } from './snap'
 export {
   addPlacedFigure,
@@ -17,4 +18,3 @@ export {
   getGeometryState,
   subscribeGeometry,
 } from './store'
-export { BANNED_UI_LABELS, PHI, SQRT2, SQRT3, parseLengthInput } from './math'

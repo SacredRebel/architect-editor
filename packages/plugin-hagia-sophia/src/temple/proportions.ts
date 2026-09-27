@@ -26,14 +26,29 @@ export type ArchForm = 'roman' | 'gothic' | 'golden' | 'segmental' | 'catenary'
 
 export const ARCH_FORMS: ReadonlyArray<{ id: ArchForm; label: string; note: string }> = [
   { id: 'roman', label: 'Roman — round', note: 'rise is half the span (a semicircle)' },
-  { id: 'gothic', label: 'Gothic — equilateral', note: 'rise is span × √3/2; each arc is centred on the other springing' },
-  { id: 'golden', label: 'Golden — pointed', note: 'rise to half-span is φ : 1 (rise = span × 0.809)' },
+  {
+    id: 'gothic',
+    label: 'Gothic — equilateral',
+    note: 'rise is span × √3/2; each arc is centred on the other springing',
+  },
+  {
+    id: 'golden',
+    label: 'Golden — pointed',
+    note: 'rise to half-span is φ : 1 (rise = span × 0.809)',
+  },
   { id: 'segmental', label: 'Segmental', note: 'a flat arc of a large circle' },
-  { id: 'catenary', label: 'Catenary — hanging chain', note: 'inverted chain y = a·cosh(x/a); Hooke 1675 / Poleni 1748' },
+  {
+    id: 'catenary',
+    label: 'Catenary — hanging chain',
+    note: 'inverted chain y = a·cosh(x/a); Hooke 1675 / Poleni 1748',
+  },
 ]
 
 /** the profile and the rise (to the outer curve) of an arch of this form and span */
-export function archFor(form: ArchForm, span: number): { profileType: 'round' | 'pointed' | 'segmental' | 'catenary'; rise: number } {
+export function archFor(
+  form: ArchForm,
+  span: number,
+): { profileType: 'round' | 'pointed' | 'segmental' | 'catenary'; rise: number } {
   switch (form) {
     case 'roman':
       return { profileType: 'round', rise: span / 2 }
@@ -55,7 +70,12 @@ export function archFor(form: ArchForm, span: number): { profileType: 'round' | 
 export type DomeShape = 'hemisphere' | 'saucer' | 'golden'
 
 /** height of the dome over its diameter */
-export const DOME_SHAPES: ReadonlyArray<{ id: DomeShape; label: string; riseRatio: number; note: string }> = [
+export const DOME_SHAPES: ReadonlyArray<{
+  id: DomeShape
+  label: string
+  riseRatio: number
+  note: string
+}> = [
   { id: 'hemisphere', label: 'Hemisphere', riseRatio: 0.5, note: 'height is half the width' },
   { id: 'saucer', label: 'Saucer', riseRatio: 0.25, note: 'height is a quarter of the width' },
   { id: 'golden', label: 'Golden', riseRatio: 1 / PHI, note: 'height to width is 1 : φ' },
@@ -251,7 +271,9 @@ export function composeDomedBay(opts: DomedBayOptions): BayPart[] {
     })
   }
 
-  const windows = opts.drum ? 4 * Math.max(2, Math.round((10 * S) / DOME_AXIS_CONSTANTS.PIER_SQUARE)) : 0
+  const windows = opts.drum
+    ? 4 * Math.max(2, Math.round((10 * S) / DOME_AXIS_CONSTANTS.PIER_SQUARE))
+    : 0
   const k31 = S / DOME_AXIS_CONSTANTS.PIER_SQUARE
   parts.push({
     object: 'node',

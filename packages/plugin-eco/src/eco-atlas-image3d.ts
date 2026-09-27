@@ -34,11 +34,7 @@ export type AtlasImage3dSubmitResult = {
   error?: string
 }
 
-export type AtlasImage3dStatus =
-  | 'pending'
-  | 'running'
-  | 'done'
-  | 'failed'
+export type AtlasImage3dStatus = 'pending' | 'running' | 'done' | 'failed'
 
 export type AtlasImage3dStatusResult = {
   ok: boolean
@@ -49,12 +45,7 @@ export type AtlasImage3dStatusResult = {
   error?: string
 }
 
-export type AtlasHttpErrorCode =
-  | 'bad_pin'
-  | 'no_3d_key'
-  | 'bad_image'
-  | 'provider_error'
-  | string
+export type AtlasHttpErrorCode = 'bad_pin' | 'no_3d_key' | 'bad_image' | 'provider_error' | string
 
 export class AtlasImage3dError extends Error {
   readonly code: AtlasHttpErrorCode
@@ -297,8 +288,6 @@ export class AtlasImage3dClient {
   }
 }
 
-export function createAtlasImage3dClient(
-  options?: AtlasImage3dClientOptions,
-): AtlasImage3dClient {
+export function createAtlasImage3dClient(options?: AtlasImage3dClientOptions): AtlasImage3dClient {
   return new AtlasImage3dClient(options)
 }

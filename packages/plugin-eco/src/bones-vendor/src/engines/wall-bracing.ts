@@ -195,8 +195,7 @@ export function crossReferenceHoldDowns(members: Member[]): number {
     (m) => m.system === 'wall-framing' && POST_ROLES.has(m.role) && m.dims[1] > 1,
   )
   const near = (a: Member, b: Member): boolean =>
-    Math.hypot(a.position[0] - b.position[0], a.position[2] - b.position[2]) <=
-    HOLD_DOWN_POST_TOL
+    Math.hypot(a.position[0] - b.position[0], a.position[2] - b.position[2]) <= HOLD_DOWN_POST_TOL
   let flagged = 0
   for (const hd of holdDowns) {
     if (verticals.some((v) => near(hd, v))) continue

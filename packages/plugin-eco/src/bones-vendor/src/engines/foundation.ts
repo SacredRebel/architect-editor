@@ -552,7 +552,10 @@ export function buildFoundation(
       // The thickened section IS slab concrete poured monolithically — the
       // field strips stop at its faces (booked once, drawn once).
       carveBands.push(bandOf(iCenter, iLen, spec.footingWidth))
-      pourBands.push({ band: bandOf(iCenter, iLen, spec.footingWidth), memberIdx: members.length - 1 })
+      pourBands.push({
+        band: bandOf(iCenter, iLen, spec.footingWidth),
+        memberIdx: members.length - 1,
+      })
       // Rebar rides "every footing run" — including interior thickened ones.
       emitFootingBars(iCenter, iLen, -INTERIOR_FOOTING_DEPTH, spec.footingWidth)
       // Interior CMU bearing walls anchor through their cells too (B18b).
@@ -613,7 +616,11 @@ export function buildFoundation(
         if (segLen >= 2 * MIN_BOLT_EDGE) boltUs.push(seg.a + segLen / 2)
         continue
       }
-      for (const u of anchorBoltPositions(segLen, spec.anchorBoltSpacing, spec.anchorBoltEndDistance)) {
+      for (const u of anchorBoltPositions(
+        segLen,
+        spec.anchorBoltSpacing,
+        spec.anchorBoltEndDistance,
+      )) {
         boltUs.push(seg.a + u)
       }
     }
@@ -643,7 +650,10 @@ export function buildFoundation(
     if (-spec.footingDepth + FOOTING_HEIGHT > -SLAB_THICKNESS + EPS) {
       carveBands.push(bandOf(runCenterU, runLen, spec.footingWidth))
     }
-    pourBands.push({ band: bandOf(runCenterU, runLen, spec.footingWidth), memberIdx: members.length - 1 })
+    pourBands.push({
+      band: bandOf(runCenterU, runLen, spec.footingWidth),
+      memberIdx: members.length - 1,
+    })
 
     // ---- footing rebar (LOD 350) ----
     if (fabDetail) {

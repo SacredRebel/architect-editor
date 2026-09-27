@@ -1,12 +1,4 @@
-import {
-  BoxGeometry,
-  ExtrudeGeometry,
-  Group,
-  LOD,
-  Mesh,
-  MeshStandardMaterial,
-  Shape,
-} from 'three'
+import { BoxGeometry, ExtrudeGeometry, Group, LOD, Mesh, MeshStandardMaterial, Shape } from 'three'
 import type { HsPierNode } from './schema'
 
 /** LOD distances (m): L0 full footprint, L1 simplified, L2 bbox box. */
@@ -100,7 +92,11 @@ function footprintShape(points: readonly PierPoint[]): Shape {
   return shape
 }
 
-function buildShaft(points: readonly PierPoint[], height: number, material: MeshStandardMaterial): Mesh {
+function buildShaft(
+  points: readonly PierPoint[],
+  height: number,
+  material: MeshStandardMaterial,
+): Mesh {
   const geom = new ExtrudeGeometry(footprintShape(points), {
     depth: height,
     bevelEnabled: false,

@@ -29,6 +29,7 @@ import { DEFAULT_SPEC, type FramingSpec } from '../core/spec'
 import type { Member, MemberRole, RoomSlice, SlabSlice, WallSlice } from '../core/types'
 import { inches } from '../core/units'
 import { LUMBER_CROSS_SECTIONS } from '../lumber'
+import { LGS_JACKS_PER_SIDE, LGS_STUD_THICKNESS, LGS_TRACK_FLANGE } from './lgs-wall-framing'
 import {
   DOUBLE_TRIMMER_SPAN,
   FIRE_BLOCK_HEIGHT,
@@ -39,11 +40,6 @@ import {
   studSizeFor,
   type WallFramingOverride,
 } from './wall-framing'
-import {
-  LGS_JACKS_PER_SIDE,
-  LGS_STUD_THICKNESS,
-  LGS_TRACK_FLANGE,
-} from './lgs-wall-framing'
 
 type Pt = readonly [number, number]
 
@@ -87,10 +83,7 @@ function pointInPolygon(p: Pt, polygon: readonly (readonly [number, number])[]):
 }
 
 /** Plan normal of a wall for side +1: rotate dir by -90° (matches faceOf). */
-const normalOf = (wall: WallSlice, side: 1 | -1): Pt => [
-  -wall.dir[1] * side,
-  wall.dir[0] * side,
-]
+const normalOf = (wall: WallSlice, side: 1 | -1): Pt => [-wall.dir[1] * side, wall.dir[0] * side]
 
 /** Which side (+1/−1) of an exterior wall faces OUTDOORS. FLOORING is the
  * automatic signal (round-13 user feedback): the side standing over a slab
@@ -316,7 +309,11 @@ export function layoutWallLayers(
         }
         const center = offset + t / 2
         for (const band of bands) {
-          const len = band.u1 - band.u0 - (band.u0 < 0.02 ? inset.start : 0) - (band.u1 > wall.length - 0.02 ? inset.end : 0)
+          const len =
+            band.u1 -
+            band.u0 -
+            (band.u0 < 0.02 ? inset.start : 0) -
+            (band.u1 > wall.length - 0.02 ? inset.end : 0)
           if (len < 0.02) continue
           const u0 = band.u0 + (band.u0 < 0.02 ? inset.start : 0)
           const uMid = u0 + len / 2
@@ -356,23 +353,18 @@ export function layoutWallLayers(
       const vapor = zoneKey
         ? DATA.exterior.vaporRetarderClassByZone?.[zoneKey]?.required
         : undefined
-      emitStack(
-        (-extSide) as 1 | -1,
-        gypsum,
-        vapor ? ` — vapor retarder ${vapor}, R702.7` : '',
-      )
+      emitStack(-extSide as 1 | -1, gypsum, vapor ? ` — vapor retarder ${vapor}, R702.7` : '')
       // exterior face, inside→out: sheathing → WRB (×2 under stucco) → cladding
       const wrbLayers = [...DATA.exterior.wrb.layers]
       if (claddingKey === 'stucco' && wrbLayers[0]) {
-        wrbLayers.push({ ...wrbLayers[0], material: `${wrbLayers[0].material} (2nd layer under stucco)` })
+        wrbLayers.push({
+          ...wrbLayers[0],
+          material: `${wrbLayers[0].material} (2nd layer under stucco)`,
+        })
       }
       emitStack(
         extSide,
-        [
-          ...DATA.exterior.sheathing.layers,
-          ...wrbLayers,
-          ...(cladding?.layers ?? []),
-        ],
+        [...DATA.exterior.sheathing.layers, ...wrbLayers, ...(cladding?.layers ?? [])],
         rValue ? ` — cavity ${rValue} (zone ${zone})` : '',
       )
     }

@@ -215,10 +215,7 @@ export function sharedBoundaryLength(a: Polygon, b: Polygon): number {
  * a garden sharing the bedroom's exterior wall is open air, not a proxy
  * (M4). Deterministic: shared length desc, ties by id.
  */
-function bedroomAdjacentProxy(
-  bedrooms: RoomSlice[],
-  rooms: RoomSlice[],
-): RoomSlice | undefined {
+function bedroomAdjacentProxy(bedrooms: RoomSlice[], rooms: RoomSlice[]): RoomSlice | undefined {
   const AVOID = new Set<RoomSlice['category']>(['garage', 'bathroom'])
   let best: { room: RoomSlice; shared: number; avoided: boolean } | undefined
   for (const room of rooms) {
@@ -733,7 +730,8 @@ export function layoutElectrical(
         position: [ax, outsideHost.ceilingHeight, az],
         rotationY: 0,
         sourceId: outsideHost.id,
-        label: 'CO alarm — outside sleeping area (IRC R315.3: attached garage / fuel-fired appliance)',
+        label:
+          'CO alarm — outside sleeping area (IRC R315.3: attached garage / fuel-fired appliance)',
       })
     } else {
       warnings?.push(
@@ -886,9 +884,7 @@ export function placePanelSpot(
  * schema default [0,0,0] (within 1e-6). The default means "never moved";
  * NaN/Infinity components make the position unusable (never trust it).
  */
-function movedOverridePosition(
-  o: ServicePointOverride,
-): readonly [number, number, number] | null {
+function movedOverridePosition(o: ServicePointOverride): readonly [number, number, number] | null {
   const p = o.position
   if (!p || p.length < 3) return null
   if (!p.every((v) => Number.isFinite(v))) return null
@@ -898,9 +894,7 @@ function movedOverridePosition(
 /** The override's usable wall: straight, non-degenerate, in this level's
  * walls list (missing/curved/foreign ids resolve to nothing). */
 function overrideWall(walls: WallSlice[], o: ServicePointOverride): WallSlice | undefined {
-  return o.wallId
-    ? walls.find((w) => w.id === o.wallId && !w.curved && w.length >= 0.1)
-    : undefined
+  return o.wallId ? walls.find((w) => w.id === o.wallId && !w.curved && w.length >= 0.1) : undefined
 }
 
 const overrideT = (o: ServicePointOverride): number =>
@@ -1206,7 +1200,6 @@ function placeOutdoorReceptacles(
   return out
 }
 
-
 // ---------------------------------------------------------------------------
 // Kitchen counter runs (LOD-400 B14c, NEC 210.52(C))
 // ---------------------------------------------------------------------------
@@ -1467,7 +1460,6 @@ function placeCounterReceptacles(
   return out
 }
 
-
 // ---------------------------------------------------------------------------
 // Bathroom basin receptacles (LOD-400 B14d, NEC 210.52(D))
 // ---------------------------------------------------------------------------
@@ -1489,9 +1481,7 @@ function placeBasinReceptacles(
   placed: PlacedFixtureSlice[],
   warnings?: string[],
 ): Fixture[] {
-  const lavs = placed
-    .filter((p) => p.kind === 'lavatory')
-    .sort((a, b) => a.id.localeCompare(b.id))
+  const lavs = placed.filter((p) => p.kind === 'lavatory').sort((a, b) => a.id.localeCompare(b.id))
   if (lavs.length === 0) return []
   const straight = walls.filter((w) => !w.curved && w.length >= 0.1)
   const out: Fixture[] = []
@@ -1823,9 +1813,7 @@ export function applyDeviceOverrides(
     // ---- (a) never inside a rough opening — snap out + warn ----
     const roSnapped = snapBoxClearOfRo(wall, u, y0, y1)
     if (Math.abs(roSnapped - u) > 1e-9) {
-      warnings.push(
-        `device “${deviceId}” sits in a door/window rough opening — snapped clear`,
-      )
+      warnings.push(`device “${deviceId}” sits in a door/window rough opening — snapped clear`)
       u = roSnapped
     }
 
@@ -1896,7 +1884,12 @@ export function applyDeviceOverrides(
             }
             members.push(block)
             // later devices in the same bay mount to THIS block
-            rowList.push({ u0: left.u + left.halfT, u1: right.u - right.halfT, y0: h - t / 2, y1: h + t / 2 })
+            rowList.push({
+              u0: left.u + left.halfT,
+              u1: right.u - right.halfT,
+              y0: h - t / 2,
+              y1: h + t / 2,
+            })
             rows.set(wall.id, rowList)
           }
         }
@@ -1916,7 +1909,8 @@ export function applyDeviceOverrides(
     // so the device manifest (deviceWallOf) mounts the node where the box
     // stands. Switches keep their OPENING/room key: a moved switch still
     // controls the same light.
-    const sourceId = !isSwitch && derivedWall && wall.id !== derivedWall.id ? wall.id : fixture.sourceId
+    const sourceId =
+      !isSwitch && derivedWall && wall.id !== derivedWall.id ? wall.id : fixture.sourceId
     // F4 (round 3): the WR glazing ⚠ was computed at AUTO placement and a
     // user move never re-ran it — a box dragged to a clear wall kept the
     // stale flag (and one dragged INTO glazing gained none). Recompute at
@@ -1938,7 +1932,13 @@ export function applyDeviceOverrides(
         flagPatch = { label: base, meta: restMeta }
       }
     }
-    out[idx] = { ...fixture, ...flagPatch, position: [x, h, z], rotationY: face.rotationY, sourceId }
+    out[idx] = {
+      ...fixture,
+      ...flagPatch,
+      position: [x, h, z],
+      rotationY: face.rotationY,
+      sourceId,
+    }
 
     if (!isSwitch) {
       if (derivedWall) spacingWalls.add(derivedWall.id)
@@ -2066,8 +2066,7 @@ export function assignCircuits(fixtures: Fixture[], rooms: RoomSlice[]): void {
       ...(flags.gfci ? { gfci: true } : {}),
     }
   }
-  const roomAt = (p: Pt): RoomSlice | undefined =>
-    rooms.find((r) => pointInPolygon(p, r.polygon))
+  const roomAt = (p: Pt): RoomSlice | undefined => rooms.find((r) => pointInPolygon(p, r.polygon))
 
   // Lighting circuits: pack rooms in order until ~1200 VA of 220.12 load.
   // OUTDOOR zones pack no lighting load: they carry no ceiling light (M4 —
@@ -2079,7 +2078,10 @@ export function assignCircuits(fixtures: Fixture[], rooms: RoomSlice[]): void {
   let ltgVa = 0
   for (const room of rooms) {
     if (room.category === 'outdoor') continue
-    const va = Math.max(60, Math.round(polygonArea(room.polygon) * SQFT_PER_M2 * LIGHTING_VA_PER_SQFT))
+    const va = Math.max(
+      60,
+      Math.round(polygonArea(room.polygon) * SQFT_PER_M2 * LIGHTING_VA_PER_SQFT),
+    )
     if (ltgVa > 0 && ltgVa + va > MAX_LIGHTING_VA) {
       ltgIndex += 1
       ltgVa = 0
@@ -2103,7 +2105,10 @@ export function assignCircuits(fixtures: Fixture[], rooms: RoomSlice[]): void {
       switch (room?.category) {
         case 'kitchen':
           // both required SABCs get used — straps alternate 210.11(C)(1)
-          tag(fixture, `SA-${1 + (kitchenFlip++ % 2)}`, 20, 12, RECEPTACLE_VA, { afci: true, gfci: true })
+          tag(fixture, `SA-${1 + (kitchenFlip++ % 2)}`, 20, 12, RECEPTACLE_VA, {
+            afci: true,
+            gfci: true,
+          })
           break
         case 'bathroom':
           tag(fixture, 'BA-1', 20, 12, RECEPTACLE_VA, { gfci: true })
@@ -2133,7 +2138,8 @@ export function assignCircuits(fixtures: Fixture[], rooms: RoomSlice[]): void {
       fixture.meta = { ...fixture.meta, interconnected: true }
     } else if (fixture.kind === 'light') {
       const home = rooms.find((r) => r.id === fixture.sourceId)
-      const lighting = (home && lightingOf.get(home.id)) ?? (room && lightingOf.get(room.id)) ?? lightingFallback
+      const lighting =
+        (home && lightingOf.get(home.id)) ?? (room && lightingOf.get(room.id)) ?? lightingFallback
       tag(fixture, lighting.circuit, 15, 14, lighting.va, { afci: true })
     } else if (fixture.kind === 'switch') {
       const lighting = (room && lightingOf.get(room.id)) ?? lightingFallback
@@ -2273,7 +2279,10 @@ export function nearestWallPoint(walls: WallSlice[], p: Pt, yTop = RUN_ZONE_TOP)
   for (const wall of walls) {
     if (wall.curved || wall.length < 0.1) continue
     const [ax, az] = wall.start
-    const raw = Math.max(0, Math.min(wall.length, (p[0] - ax) * wall.dir[0] + (p[1] - az) * wall.dir[1]))
+    const raw = Math.max(
+      0,
+      Math.min(wall.length, (p[0] - ax) * wall.dir[0] + (p[1] - az) * wall.dir[1]),
+    )
     const u = clearOfOpenings(wall, raw, 0, Math.max(yTop, RUN_ZONE_TOP))
     const q = wallPlan({ wall, u })
     const d = Math.hypot(q[0] - p[0], q[1] - p[1])
@@ -2659,8 +2668,22 @@ export function routeWiring(
         // (E4): cross at a nominal ceiling height, drop at the device.
         const yC = 2.4
         const note = ' (ceiling crossing — no walls)'
-        emitWire(circuit, gauge, [cursorPlan[0], runY, cursorPlan[1]], [cursorPlan[0], yC, cursorPlan[1]], `${legNote}${note}`, legCond)
-        emitWire(circuit, gauge, [cursorPlan[0], yC, cursorPlan[1]], [x, yC, cursorPlan[1]], `${legNote}${note}`, legCond)
+        emitWire(
+          circuit,
+          gauge,
+          [cursorPlan[0], runY, cursorPlan[1]],
+          [cursorPlan[0], yC, cursorPlan[1]],
+          `${legNote}${note}`,
+          legCond,
+        )
+        emitWire(
+          circuit,
+          gauge,
+          [cursorPlan[0], yC, cursorPlan[1]],
+          [x, yC, cursorPlan[1]],
+          `${legNote}${note}`,
+          legCond,
+        )
         emitWire(circuit, gauge, [x, yC, cursorPlan[1]], [x, yC, z], `${legNote}${note}`, legCond)
         emitWire(circuit, gauge, [x, yC, z], [x, y, z], legNote, legCond)
         cursorPlan = [x, z]
@@ -2710,15 +2733,37 @@ export function routeWiring(
     for (let i = 0; i + 1 < chain.length; i++) {
       const a = chain[i] as Fixture
       const b = chain[i + 1] as Fixture
-      const aAnchor = nearestWallPoint(walls, [a.position[0], a.position[2]], Math.max(RUN_ZONE_TOP, a.position[1] + inches(6)))
-      const bAnchor = nearestWallPoint(walls, [b.position[0], b.position[2]], Math.max(RUN_ZONE_TOP, b.position[1] + inches(6)))
+      const aAnchor = nearestWallPoint(
+        walls,
+        [a.position[0], a.position[2]],
+        Math.max(RUN_ZONE_TOP, a.position[1] + inches(6)),
+      )
+      const bAnchor = nearestWallPoint(
+        walls,
+        [b.position[0], b.position[2]],
+        Math.max(RUN_ZONE_TOP, b.position[1] + inches(6)),
+      )
       if (!aAnchor || !bAnchor) continue
       const pa = wallPlan(aAnchor)
       const pb = wallPlan(bAnchor)
       emitWire(circuit, gauge, a.position, [pa[0], a.position[1], pa[1]], TRAVELER_NOTE, 3)
-      emitWire(circuit, gauge, [pa[0], a.position[1], pa[1]], [pa[0], TRAVELER_RUN_Y, pa[1]], TRAVELER_NOTE, 3)
+      emitWire(
+        circuit,
+        gauge,
+        [pa[0], a.position[1], pa[1]],
+        [pa[0], TRAVELER_RUN_Y, pa[1]],
+        TRAVELER_NOTE,
+        3,
+      )
       routeHop(circuit, gauge, aAnchor, bAnchor, TRAVELER_RUN_Y, 3, TRAVELER_NOTE)
-      emitWire(circuit, gauge, [pb[0], TRAVELER_RUN_Y, pb[1]], [pb[0], b.position[1], pb[1]], TRAVELER_NOTE, 3)
+      emitWire(
+        circuit,
+        gauge,
+        [pb[0], TRAVELER_RUN_Y, pb[1]],
+        [pb[0], b.position[1], pb[1]],
+        TRAVELER_NOTE,
+        3,
+      )
       emitWire(circuit, gauge, [pb[0], b.position[1], pb[1]], b.position, TRAVELER_NOTE, 3)
     }
   }
@@ -2999,8 +3044,16 @@ export function routeServiceCable(
   // Underground lateral (Manhattan), then the riser up into the socket —
   // sampled against the RO boxes (a meter dragged under full-height glazing
   // gets a flag, never a silent crossing).
-  flagged([street[0], SERVICE_LATERAL_Y, street[1]], [mx, SERVICE_LATERAL_Y, street[1]], 'street lateral (NEC 300.5)')
-  flagged([mx, SERVICE_LATERAL_Y, street[1]], [mx, SERVICE_LATERAL_Y, mz], 'street lateral (NEC 300.5)')
+  flagged(
+    [street[0], SERVICE_LATERAL_Y, street[1]],
+    [mx, SERVICE_LATERAL_Y, street[1]],
+    'street lateral (NEC 300.5)',
+  )
+  flagged(
+    [mx, SERVICE_LATERAL_Y, street[1]],
+    [mx, SERVICE_LATERAL_Y, mz],
+    'street lateral (NEC 300.5)',
+  )
   flagged([mx, SERVICE_LATERAL_Y, mz], [mx, my, mz], 'riser to meter')
 
   // Meter → panel feed (NEC 230.66/230.70): socket → wall centerline, down
@@ -3218,9 +3271,7 @@ export function routeServiceCable(
     )
     panelStrap = strapAt([px, pz], panelStrapDir, panelMul ?? 1)
     const waterMul = STRAP_MULS.find((m) =>
-      bondElsClear(
-        waterEls(panelStrap, strapAt([waterEntry[0], waterEntry[2]], waterStrapDir, m)),
-      ),
+      bondElsClear(waterEls(panelStrap, strapAt([waterEntry[0], waterEntry[2]], waterStrapDir, m))),
     )
     waterStrap = strapAt([waterEntry[0], waterEntry[2]], waterStrapDir, waterMul ?? 1)
     bondEmbedConfessed = panelMul === undefined || waterMul === undefined
@@ -3244,14 +3295,29 @@ export function routeServiceCable(
   // bore a rigid rod any more than the SE cable can. Verticals scan as
   // degenerate point-segs (rods are vertical too — parallel pairs).
   const lateralSegs: [PlanPt, PlanPt][] = [
-    [[street[0], street[1]], [mx, street[1]]],
-    [[mx, street[1]], [mx, mz]],
+    [
+      [street[0], street[1]],
+      [mx, street[1]],
+    ],
+    [
+      [mx, street[1]],
+      [mx, mz],
+    ],
   ]
   if (!routed) {
     lateralSegs.push(
-      [[mx, mz], [px, mz]],
-      [[px, mz], [px, pz]],
-      [[px, pz], [px, pz]], // the feed fallback rise at the panel
+      [
+        [mx, mz],
+        [px, mz],
+      ],
+      [
+        [px, mz],
+        [px, pz],
+      ],
+      [
+        [px, pz],
+        [px, pz],
+      ], // the feed fallback rise at the panel
     )
   }
   if (waterEntry && waterStrap && !bondRouted) {
@@ -3294,7 +3360,11 @@ export function routeServiceCable(
   let rodFlag: string | undefined
   if (!rodPairClear(rodPair)) {
     let found = false
-    for (let step = ROD_SLIDE_STEP; step <= ROD_SLIDE_MAX + 1e-9 && !found; step += ROD_SLIDE_STEP) {
+    for (
+      let step = ROD_SLIDE_STEP;
+      step <= ROD_SLIDE_MAX + 1e-9 && !found;
+      step += ROD_SLIDE_STEP
+    ) {
       for (const slide of [step, -step]) {
         const candidate = rodPairAt(slide)
         if (rodPairClear(candidate)) {

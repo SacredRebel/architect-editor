@@ -95,8 +95,7 @@ export const IMAGE3D_BANNED_IDS = [
   'stable-point-aware-3d',
 ] as const
 
-export const IMAGE3D_SCOPE_NOTE =
-  'props / furniture / vegetation / massing only — not walk'
+export const IMAGE3D_SCOPE_NOTE = 'props / furniture / vegetation / massing only — not walk'
 
 export type Image3dKnownDimension = {
   /** Which AABB axis carries the known real-world length. */

@@ -8,12 +8,7 @@
  * jurisdiction changes; they are not on the default load path.
  */
 
-import {
-  DEFAULT_SPEC,
-  type FramingSpec,
-  headerBandForSnow,
-  rafterSpansForSnow,
-} from '../core/spec'
+import { DEFAULT_SPEC, type FramingSpec, headerBandForSnow, rafterSpansForSnow } from '../core/spec'
 import { feet, inches } from '../core/units'
 
 export type JurisdictionProfile = {
@@ -82,12 +77,7 @@ export const INTL_PROFILE: JurisdictionProfile = {
 /** Eco default: Ventura County. US-CA / CA aliases map here (no national table). */
 export function profileFor(code: string): JurisdictionProfile {
   if (code === 'INTL' || code === 'AUTO') return INTL_PROFILE
-  if (
-    code === 'US-CA-VENTURA' ||
-    code === 'US-CA' ||
-    code === 'CA' ||
-    code === 'VENTURA'
-  ) {
+  if (code === 'US-CA-VENTURA' || code === 'US-CA' || code === 'CA' || code === 'VENTURA') {
     return VENTURA_PROFILE
   }
   // Unknown codes: stamp the code on INTL defaults — do not pull national JSON.
@@ -132,10 +122,7 @@ export function jurisdictionOptions(): { code: string; name: string }[] {
  * Apply a jurisdiction to the framing spec (LOD 300). Pure — returns a new
  * spec; LOD 200 skips this and frames with generic defaults.
  */
-export function applyJurisdiction(
-  spec: FramingSpec,
-  profile: JurisdictionProfile,
-): FramingSpec {
+export function applyJurisdiction(spec: FramingSpec, profile: JurisdictionProfile): FramingSpec {
   const next: FramingSpec = { ...spec }
   // Footings chase the frost line (IRC R403.1.4.1), never shallower than 12".
   next.footingDepth = Math.max(inches(12), inches(profile.frostLineIn))

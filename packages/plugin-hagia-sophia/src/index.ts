@@ -47,7 +47,6 @@ export type { HsPendentiveQuadrant } from './kinds/hs-pendentive/schema'
 export { HsPendentiveNode, HsPendentiveQuadrantSchema } from './kinds/hs-pendentive/schema'
 export { hsPierDefinition } from './kinds/hs-pier/definition'
 export { HsPierNode } from './kinds/hs-pier/schema'
-export { DOME_AXIS_CONSTANTS, GALLERY_CONSTANTS, GALLERY_FLOOR_H } from './math/constants'
 export type { CatenaryFit, ThrustAnalysis } from './math/catenary'
 export {
   analyseThrust,
@@ -58,6 +57,7 @@ export {
   sampleCatenary,
   sampleCatenaryMeridian,
 } from './math/catenary'
+export { DOME_AXIS_CONSTANTS, GALLERY_CONSTANTS, GALLERY_FLOOR_H } from './math/constants'
 export type { RefineStore, SceneOps } from './refine'
 export { applyRefine, planRefine } from './refine'
 export { HsColumnNode, HsColumnVariantSchema } from './schema'

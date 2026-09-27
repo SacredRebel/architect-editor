@@ -6,12 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'r
 import { figureBounds } from './archimedean'
 import { buildForm } from './build'
 import { ensureGeometryPlanSnapInstalled } from './snap'
-import {
-  getGeometryState,
-  setSelectedFigure,
-  subscribeGeometry,
-  updatePlacedFigure,
-} from './store'
+import { getGeometryState, setSelectedFigure, subscribeGeometry, updatePlacedFigure } from './store'
 
 const LINE = '#94a3b8'
 const SOLID = '#64748b'
@@ -44,8 +39,7 @@ function ScaleHandle3D({
       const fig = getGeometryState().figures.find((f) => f.id === figId)
       if (!fig) return
       setSelectedFigure(figId)
-      const dist =
-        Math.hypot(position[0] - fig.origin[0], position[2] - fig.origin[1]) || fig.size
+      const dist = Math.hypot(position[0] - fig.origin[0], position[2] - fig.origin[1]) || fig.size
       drag.current = { startSize: fig.size, startDist: dist, origin: fig.origin }
       gl.domElement.setPointerCapture(e.pointerId)
     },

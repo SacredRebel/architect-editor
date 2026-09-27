@@ -18,19 +18,19 @@ import {
 import { triggerSFX, useEditor } from '@pascal-app/editor'
 import { useViewer } from '@pascal-app/viewer'
 import { useState } from 'react'
+import { archThrustAnalysis } from '../math/arch-profile'
 import {
   ARCH_FORMS,
   type ArchForm,
   archFor,
   composeDomedBay,
   DOME_SHAPES,
+  type DomedBayOptions,
   type DomeShape,
   FT,
   feet,
-  type DomedBayOptions,
   measureDomedBay,
 } from './proportions'
-import { archThrustAnalysis } from '../math/arch-profile'
 
 type Units = 'ft' | 'm'
 
@@ -88,7 +88,13 @@ export default function TemplePanel() {
   const springing = ownSpring ? toM(springText) : null
   const bearing = Number.parseFloat(bearingText)
   const opts: DomedBayOptions | null = span
-    ? { span, dome, drum, springing: springing ?? undefined, bearingDeg: Number.isFinite(bearing) ? bearing : 0 }
+    ? {
+        span,
+        dome,
+        drum,
+        springing: springing ?? undefined,
+        bearingDeg: Number.isFinite(bearing) ? bearing : 0,
+      }
     : null
   const m = opts ? measureDomedBay(opts) : null
 
@@ -131,7 +137,13 @@ export default function TemplePanel() {
     const all = useScene.getState().nodes as Record<string, AnyNode>
     // stand the bay on the lowest ground under it, so no pier floats
     let base = Number.POSITIVE_INFINITY
-    for (const [dx, dz] of [[0, 0], [reach, reach], [reach, -reach], [-reach, reach], [-reach, -reach]] as const) {
+    for (const [dx, dz] of [
+      [0, 0],
+      [reach, reach],
+      [reach, -reach],
+      [-reach, reach],
+      [-reach, -reach],
+    ] as const) {
       base = Math.min(base, levelBaseElevationAt(all, levelId, center[0] + dx, center[1] + dz))
     }
     const bayId = generateId('temple-bay')
@@ -144,7 +156,9 @@ export default function TemplePanel() {
     useScene.getState().createNodes(ops)
     useViewer.getState().setSelection({ selectedIds: ops.map((op) => op.node.id as AnyNodeId) })
     triggerSFX('sfx:item-place')
-    setNote(`${label}: ${ops.length} parts placed, crown at ${both(meas.crown, units)}. Ctrl+Z takes it back.`)
+    setNote(
+      `${label}: ${ops.length} parts placed, crown at ${both(meas.crown, units)}. Ctrl+Z takes it back.`,
+    )
   }
 
   const setArch = (form: ArchForm) => {
@@ -189,7 +203,9 @@ export default function TemplePanel() {
     useScene.getState().createNodes([{ node, parentId: levelId as AnyNodeId }])
     useViewer.getState().setSelection({ selectedIds: [node.id as AnyNodeId] })
     triggerSFX('sfx:item-place')
-    setNote(`Catenary vault: span ${both(S, units)}, extruded ${both(S * 0.75, units)}. Green thrust line = Poleni middle third.`)
+    setNote(
+      `Catenary vault: span ${both(S, units)}, extruded ${both(S * 0.75, units)}. Green thrust line = Poleni middle third.`,
+    )
   }
 
   const placeCatenaryDome = () => {
@@ -228,7 +244,9 @@ export default function TemplePanel() {
     useScene.getState().createNodes([{ node, parentId: levelId as AnyNodeId }])
     useViewer.getState().setSelection({ selectedIds: [node.id as AnyNodeId] })
     triggerSFX('sfx:item-place')
-    setNote(`Catenary dome of revolution: diameter ${both(R * 2, units)}, rise ${both(R * 2 * 0.4, units)}.`)
+    setNote(
+      `Catenary dome of revolution: diameter ${both(R * 2, units)}, rise ${both(R * 2 * 0.4, units)}.`,
+    )
   }
 
   return (
@@ -237,23 +255,38 @@ export default function TemplePanel() {
         <div style={{ ...row, justifyContent: 'space-between' }}>
           <div style={{ fontWeight: 600, fontSize: 13 }}>Domed bay</div>
           <div style={row}>
-            <button style={units === 'ft' ? on : btn} onClick={() => setUnits('ft')} type="button">ft</button>
-            <button style={units === 'm' ? on : btn} onClick={() => setUnits('m')} type="button">m</button>
+            <button style={units === 'ft' ? on : btn} onClick={() => setUnits('ft')} type="button">
+              ft
+            </button>
+            <button style={units === 'm' ? on : btn} onClick={() => setUnits('m')} type="button">
+              m
+            </button>
           </div>
         </div>
         <div style={muted}>
-          Four piers, four round arches, four pendentives and a dome — cut from one sphere, the way the
-          Byzantine builders did it. Every part scales with the span.
+          Four piers, four round arches, four pendentives and a dome — cut from one sphere, the way
+          the Byzantine builders did it. Every part scales with the span.
         </div>
         <label style={row}>
           <span style={{ width: 92 }}>Clear span</span>
-          <input style={input} value={spanText} onChange={(e) => setSpanText(e.target.value)} inputMode="decimal" />
+          <input
+            style={input}
+            value={spanText}
+            onChange={(e) => setSpanText(e.target.value)}
+            inputMode="decimal"
+          />
           <span>{units}</span>
         </label>
         <div style={row}>
           <span style={{ width: 92 }}>Dome</span>
           {DOME_SHAPES.map((s) => (
-            <button key={s.id} style={dome === s.id ? on : btn} onClick={() => setDome(s.id)} title={s.note} type="button">
+            <button
+              key={s.id}
+              style={dome === s.id ? on : btn}
+              onClick={() => setDome(s.id)}
+              title={s.note}
+              type="button"
+            >
               {s.label}
             </button>
           ))}
@@ -265,40 +298,81 @@ export default function TemplePanel() {
         </label>
         <div style={row}>
           <span style={{ width: 92 }}>Arches spring</span>
-          <button style={!ownSpring ? on : btn} onClick={() => setOwnSpring(false)} type="button">Byzantine</button>
-          <button style={ownSpring ? on : btn} onClick={() => setOwnSpring(true)} type="button">at</button>
+          <button style={!ownSpring ? on : btn} onClick={() => setOwnSpring(false)} type="button">
+            Byzantine
+          </button>
+          <button style={ownSpring ? on : btn} onClick={() => setOwnSpring(true)} type="button">
+            at
+          </button>
           {ownSpring ? (
             <>
-              <input style={input} value={springText} onChange={(e) => setSpringText(e.target.value)} inputMode="decimal" />
+              <input
+                style={input}
+                value={springText}
+                onChange={(e) => setSpringText(e.target.value)}
+                inputMode="decimal"
+              />
               <span>{units}</span>
             </>
           ) : null}
         </div>
         <label style={row}>
           <span style={{ width: 92 }}>Axis bearing</span>
-          <input style={input} value={bearingText} onChange={(e) => setBearingText(e.target.value)} inputMode="decimal" />
+          <input
+            style={input}
+            value={bearingText}
+            onChange={(e) => setBearingText(e.target.value)}
+            inputMode="decimal"
+          />
           <span>°</span>
-          <button style={btn} onClick={() => setBearingText('0')} type="button">N–S</button>
-          <button style={btn} onClick={() => setBearingText('90')} type="button">E–W</button>
+          <button style={btn} onClick={() => setBearingText('0')} type="button">
+            N–S
+          </button>
+          <button style={btn} onClick={() => setBearingText('90')} type="button">
+            E–W
+          </button>
         </label>
         {m ? (
-          <div style={{ ...muted, opacity: 0.85, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 10 }}>
-            <span>arches spring at</span><span>{both(m.springing, units)}</span>
-            <span>dome stands at</span><span>{both(m.ring + m.drum, units)}</span>
-            <span>crown</span><span>{both(m.crown, units)}</span>
-            <span>outside, pier to pier</span><span>{both(m.outside, units)}</span>
-            <span>the one sphere</span><span>radius {both(m.sphere, units)} (span ÷ √2)</span>
+          <div
+            style={{
+              ...muted,
+              opacity: 0.85,
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr',
+              columnGap: 10,
+            }}
+          >
+            <span>arches spring at</span>
+            <span>{both(m.springing, units)}</span>
+            <span>dome stands at</span>
+            <span>{both(m.ring + m.drum, units)}</span>
+            <span>crown</span>
+            <span>{both(m.crown, units)}</span>
+            <span>outside, pier to pier</span>
+            <span>{both(m.outside, units)}</span>
+            <span>the one sphere</span>
+            <span>radius {both(m.sphere, units)} (span ÷ √2)</span>
           </div>
         ) : (
           <div style={muted}>Type a span.</div>
         )}
         <div style={row}>
-          <button style={on} disabled={!opts} onClick={() => opts && place(opts, 'Domed bay')} type="button">
+          <button
+            style={on}
+            disabled={!opts}
+            onClick={() => opts && place(opts, 'Domed bay')}
+            type="button"
+          >
             Place it where the view is centred
           </button>
           <button
             style={btn}
-            onClick={() => place({ span: 31.2, dome: 'hemisphere', drum: true, bearingDeg: opts?.bearingDeg ?? 0 }, 'Hagia Sophia core')}
+            onClick={() =>
+              place(
+                { span: 31.2, dome: 'hemisphere', drum: true, bearingDeg: opts?.bearingDeg ?? 0 },
+                'Hagia Sophia core',
+              )
+            }
             title="31.2 m square, arches springing at 23.14 m — ActArtech's figures"
             type="button"
           >
@@ -313,7 +387,13 @@ export default function TemplePanel() {
         {arch ? (
           <div style={row}>
             {ARCH_FORMS.map((f) => (
-              <button key={f.id} style={btn} onClick={() => setArch(f.id)} title={f.note} type="button">
+              <button
+                key={f.id}
+                style={btn}
+                onClick={() => setArch(f.id)}
+                title={f.note}
+                type="button"
+              >
                 {f.label}
               </button>
             ))}
@@ -335,16 +415,25 @@ export default function TemplePanel() {
         {domeNode ? (
           <div style={row}>
             {DOME_SHAPES.map((s) => (
-              <button key={s.id} style={btn} onClick={() => setDomeShape(s.id)} title={s.note} type="button">
+              <button
+                key={s.id}
+                style={btn}
+                onClick={() => setDomeShape(s.id)}
+                title={s.note}
+                type="button"
+              >
                 {s.label} dome
               </button>
             ))}
             <button
               style={btn}
               onClick={() =>
-                useScene.getState().updateNode(domeNode.id as AnyNodeId, {
-                  meridian: 'catenary',
-                } as Partial<AnyNode>)
+                useScene.getState().updateNode(
+                  domeNode.id as AnyNodeId,
+                  {
+                    meridian: 'catenary',
+                  } as Partial<AnyNode>,
+                )
               }
               title="Meridian is an inverted hanging chain, spun into a dome"
               type="button"
@@ -356,22 +445,29 @@ export default function TemplePanel() {
         {bay ? (
           <button
             style={btn}
-            onClick={() => useViewer.getState().setSelection({ selectedIds: partsOfBay(nodes as unknown as Record<string, AnyNode>, bay) })}
+            onClick={() =>
+              useViewer.getState().setSelection({
+                selectedIds: partsOfBay(nodes as unknown as Record<string, AnyNode>, bay),
+              })
+            }
             type="button"
           >
             Select the whole bay
           </button>
         ) : null}
         {!arch && !domeNode && !bay ? (
-          <div style={muted}>Select an arch or a dome to give it a classic proportion. The single pieces are in Build.</div>
+          <div style={muted}>
+            Select an arch or a dome to give it a classic proportion. The single pieces are in
+            Build.
+          </div>
         ) : null}
       </div>
 
       <div style={box}>
         <div style={{ fontWeight: 600, fontSize: 13 }}>Hanging-chain vault &amp; dome</div>
         <div style={muted}>
-          Inverted catenary y = a·cosh(x/a), fitted to the clear span. The vault extrudes it; the dome
-          spins the same curve. Hooke 1675; Poleni’s hanging-chain test 1748.
+          Inverted catenary y = a·cosh(x/a), fitted to the clear span. The vault extrudes it; the
+          dome spins the same curve. Hooke 1675; Poleni’s hanging-chain test 1748.
         </div>
         <div style={row}>
           <button style={on} onClick={placeCatenaryVault} type="button">
@@ -385,8 +481,10 @@ export default function TemplePanel() {
 
       <div style={muted}>
         Dome, arch, pendentive, pier and column by{' '}
-        <a href="https://github.com/ActArtech/editor" target="_blank" rel="noreferrer">ActArtech</a> (MIT), from their
-        Hagia Sophia plugin. The bay arithmetic and true pendentives are ours.
+        <a href="https://github.com/ActArtech/editor" target="_blank" rel="noreferrer">
+          ActArtech
+        </a>{' '}
+        (MIT), from their Hagia Sophia plugin. The bay arithmetic and true pendentives are ours.
       </div>
     </div>
   )

@@ -8,7 +8,12 @@
   },
   "stateAdoption": {
     "asOfDate": "2026-08",
-    "necEditionCounts": { "nec2023": 34, "nec2020": 13, "nec2017OrEarlier": 3, "noStatewideAdoption": 1 },
+    "necEditionCounts": {
+      "nec2023": 34,
+      "nec2020": 13,
+      "nec2017OrEarlier": 3,
+      "noStatewideAdoption": 1
+    },
     "nec2020States": ["AL", "AK", "CT", "KY", "LA", "MT", "NH", "NM", "NC", "PA", "SC", "UT", "VA"],
     "nec2017States": ["IN", "KS", "WI"],
     "noStatewideAdoptionStates": ["MO"],
@@ -20,13 +25,36 @@
     "maxFromOpeningFt": 6,
     "minWallWidthFt": 2,
     "measuredAlongFloorLine": true,
-    "wallSpaceBrokenBy": ["doorways", "fireplaces", "stationary appliances", "fixed cabinets without countertops or work surfaces"],
+    "wallSpaceBrokenBy": [
+      "doorways",
+      "fireplaces",
+      "stationary appliances",
+      "fixed cabinets without countertops or work surfaces"
+    ],
     "wallSpaceBrokenByNote": "NEC 2023 210.52(A)(2)(1) added 'stationary appliances' and 'fixed cabinets without countertops or work surfaces' as breaks; under 2017/2020 only doorways, fireplaces and similar openings break the wall line.",
     "fixedPanelsCountAsWallSpace": true,
     "fixedRoomDividersCountAsWallSpace": true,
     "floorReceptacleCountsIfWithinIn": 18,
-    "doNotCountTowardWallSpacing": ["receptacles part of a luminaire or appliance", "receptacles controlled by a listed wall-mounted control device per 210.70(A)(1) Ex 1", "receptacles inside cabinets or cupboards", "receptacles more than 5.5 ft above the floor", "countertop receptacles per 210.52(C)"],
-    "roomsRequiringWallReceptacles": ["kitchen", "family room", "dining room", "living room", "sunroom", "parlor", "library", "den", "bedroom", "recreation room", "similar room or area"],
+    "doNotCountTowardWallSpacing": [
+      "receptacles part of a luminaire or appliance",
+      "receptacles controlled by a listed wall-mounted control device per 210.70(A)(1) Ex 1",
+      "receptacles inside cabinets or cupboards",
+      "receptacles more than 5.5 ft above the floor",
+      "countertop receptacles per 210.52(C)"
+    ],
+    "roomsRequiringWallReceptacles": [
+      "kitchen",
+      "family room",
+      "dining room",
+      "living room",
+      "sunroom",
+      "parlor",
+      "library",
+      "den",
+      "bedroom",
+      "recreation room",
+      "similar room or area"
+    ],
     "hallwayOver10FtNeedsOne": true,
     "hallwayMeasureNote": "Hallway length measured along the centerline without passing through a doorway [210.52(H)].",
     "foyerOver60SqftRule": {
@@ -39,7 +67,10 @@
     "counterMinWidthRequiringReceptacleIn": 12,
     "counterMeasuredAlongWallLine": true,
     "counterReceptacleMaxAboveCounterIn": 20,
-    "counterBehindSinkOrRangeExemptIfDepthLessThanIn": { "straightRun": 12, "cornerInstallation": 18 },
+    "counterBehindSinkOrRangeExemptIfDepthLessThanIn": {
+      "straightRun": 12,
+      "cornerInstallation": 18
+    },
     "counterApplianceGarageDoesNotCount": true,
     "islandRule": "NEC 2023 change: a receptacle outlet is NOT required at island or peninsular countertops. If none is provided, provisions (e.g., a junction box / raceway) must be installed to allow future addition of one [210.52(C)(2)]. Where receptacles ARE installed at islands/peninsulas they must be located on or not more than 20 in above the countertop, or be a receptacle assembly listed for in-countertop use — receptacles below the overhang are no longer permitted [210.52(C)(3)]. Under NEC 2017/2020, at least one receptacle was required per island/peninsula (2020: one per 9 sq ft of surface).",
     "bathroomWithin3FtOfBasin": true,
@@ -47,7 +78,12 @@
     "bathroomNote": "At least one 15A or 20A, 125V receptacle within 3 ft of the outside edge of each basin, on an adjacent wall/partition or on the side/face of the basin cabinet; never more than 12 in below the countertop. One receptacle may serve two basins if within 3 ft of each [210.52(D)].",
     "outdoorFrontAndBack": true,
     "outdoorMaxAboveGradeFt": 6.5,
-    "outdoorBalconyDeckPorch": { "required": true, "maxAboveSurfaceFt": 6.5, "maxHorizontalFromDwellingIn": 4, "note": "Applies to balconies/decks/porches accessible from inside the dwelling [210.52(E)(3)]." },
+    "outdoorBalconyDeckPorch": {
+      "required": true,
+      "maxAboveSurfaceFt": 6.5,
+      "maxHorizontalFromDwellingIn": 4,
+      "note": "Applies to balconies/decks/porches accessible from inside the dwelling [210.52(E)(3)]."
+    },
     "garageOnePerBay": true,
     "garageMaxHeightAffFt": 5.5,
     "accessoryBuildingWithPowerNeedsOne": true,
@@ -59,7 +95,19 @@
   "gfci": {
     "necSection": "210.8(A)",
     "scope": "All 125V-through-250V receptacles supplied by single-phase branch circuits rated 150V or less to ground (2023; earlier editions were 125V/15-20A only)",
-    "gfciLocations": ["bathroom", "kitchen", "garage", "accessory buildings", "outdoors", "crawlspace at or below grade", "basement (finished and unfinished, 2020+)", "laundry", "within 6ft of sink", "within 6ft of bathtub or shower stall", "indoor damp or wet locations"],
+    "gfciLocations": [
+      "bathroom",
+      "kitchen",
+      "garage",
+      "accessory buildings",
+      "outdoors",
+      "crawlspace at or below grade",
+      "basement (finished and unfinished, 2020+)",
+      "laundry",
+      "within 6ft of sink",
+      "within 6ft of bathtub or shower stall",
+      "indoor damp or wet locations"
+    ],
     "sinkRuleFt": 6,
     "sinkRuleNote": "Measured from the top inside edge of the bowl of the sink [210.8(A)(7)]; same 6 ft rule for bathtubs/shower stalls [210.8(A)(9)].",
     "kitchen2023Change": "2023 removed 'installed to serve the countertop surfaces' from 210.8(A)(6): ALL receptacles in a dwelling kitchen now require GFCI protection, not just countertop ones (includes range, dishwasher, refrigerator receptacles up to 250V). Under 2017/2020, only countertop-serving and within-6-ft-of-sink receptacles needed GFCI."
@@ -68,7 +116,22 @@
     "afciMostHabitableRooms": true,
     "necSection": "210.12(B)",
     "circuitScope": "All 120V, single-phase, 10A/15A/20A branch circuits supplying outlets or devices (10A added in 2023)",
-    "areas": ["kitchen", "family room", "dining room", "living room", "parlor", "library", "den", "bedroom", "sunroom", "recreation room", "closet", "hallway", "laundry area", "similar rooms or areas"],
+    "areas": [
+      "kitchen",
+      "family room",
+      "dining room",
+      "living room",
+      "parlor",
+      "library",
+      "den",
+      "bedroom",
+      "sunroom",
+      "recreation room",
+      "closet",
+      "hallway",
+      "laundry area",
+      "similar rooms or areas"
+    ],
     "note": "Effectively every branch circuit in a dwelling except bathrooms, garages, unfinished basements/utility, and outdoors needs AFCI; many of those need GFCI instead, and kitchen/laundry circuits need BOTH (dual-function breakers are common practice)."
   },
   "switches": {
@@ -85,7 +148,14 @@
     "necSection": "210.70",
     "switchedLightingOutletEveryHabitableRoom": true,
     "habitableRoomReceptacleException": "In habitable rooms other than kitchens and bathrooms, one or more switched receptacles may substitute for the lighting outlet [210.70(A)(1) Ex 1]; kitchens and bathrooms must have an actual lighting outlet.",
-    "additionalRequiredLightingOutlets": ["hallways", "interior stairways", "attached garages", "detached garages with electric power", "outdoor entrances/exits with grade-level access", "storage or equipment spaces (attics, underfloor, utility, basements) used for storage or containing equipment requiring servicing"],
+    "additionalRequiredLightingOutlets": [
+      "hallways",
+      "interior stairways",
+      "attached garages",
+      "detached garages with electric power",
+      "outdoor entrances/exits with grade-level access",
+      "storage or equipment spaces (attics, underfloor, utility, basements) used for storage or containing equipment requiring servicing"
+    ],
     "stairwaySwitchTopAndBottom": true,
     "stairwayRiserThreshold": 6,
     "stairwayNote": "Where the stairway between floor levels has >= 6 risers, a wall switch is required at each floor level and each landing level that includes an entryway [210.70(A)(2)(3)].",
@@ -96,7 +166,11 @@
       "recessedFluorescent": 6,
       "surfaceFluorescentOrLedIdentifiedForStorageSpace": 0
     },
-    "closetProhibited": ["incandescent with open or partially enclosed lamps", "pendant luminaires", "pendant lampholders"],
+    "closetProhibited": [
+      "incandescent with open or partially enclosed lamps",
+      "pendant luminaires",
+      "pendant lampholders"
+    ],
     "closetStorageSpaceGeometryIn": {
       "depthFromWallsOrRod": 24,
       "lowerZoneHeightFt": 6,

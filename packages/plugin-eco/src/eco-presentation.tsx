@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useEffect, useSyncExternalStore } from 'react'
 import { emitter } from '@pascal-app/core'
+import { Suspense, useEffect, useSyncExternalStore } from 'react'
 import { EcoBuildableEnvelope } from './eco-buildable-envelope'
 import { EcoCompass } from './eco-compass'
 import { EcoGhost } from './eco-ghost'
@@ -9,10 +9,7 @@ import { ensureEcoPlanSnapInstalled } from './eco-ghost-snap'
 import { EcoGuides } from './eco-guides'
 import { EcoOrganics } from './eco-organics'
 import { EcoPlacedAssets } from './eco-placed-assets'
-import {
-  getEcoPresentationState,
-  subscribeEcoPresentation,
-} from './eco-presentation-store'
+import { getEcoPresentationState, subscribeEcoPresentation } from './eco-presentation-store'
 import { EcoShells } from './eco-shells'
 import { EcoSiteLighting } from './eco-site-lighting'
 import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
@@ -20,7 +17,11 @@ import { EcoTrees } from './eco-trees'
 import { EcoWalk } from './eco-walk'
 
 function usePres() {
-  return useSyncExternalStore(subscribeEcoPresentation, getEcoPresentationState, getEcoPresentationState)
+  return useSyncExternalStore(
+    subscribeEcoPresentation,
+    getEcoPresentationState,
+    getEcoPresentationState,
+  )
 }
 
 function useSite() {

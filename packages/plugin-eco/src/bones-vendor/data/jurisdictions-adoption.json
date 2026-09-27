@@ -117,9 +117,7 @@
       "ircBase": 2021,
       "adoptionLevel": "state",
       "amendmentFlavor": "Moderately amended 2021 IRC issued by the State Fire Marshal as the AFPC Vol. III; local enforcement capacity varies widely",
-      "specialRegimes": [
-        "Arkansas Energy Code for New Building Construction"
-      ]
+      "specialRegimes": ["Arkansas Energy Code for New Building Construction"]
     },
     "CA": {
       "name": "California",
@@ -153,9 +151,7 @@
       "ircBase": 2021,
       "adoptionLevel": "state",
       "amendmentFlavor": "Statewide code that cannot be amended locally; moderate CT amendments",
-      "specialRegimes": [
-        "Coastal high-wind / flood zones along Long Island Sound"
-      ]
+      "specialRegimes": ["Coastal high-wind / flood zones along Long Island Sound"]
     },
     "DE": {
       "name": "Delaware",
@@ -175,10 +171,7 @@
       "ircBase": 2015,
       "adoptionLevel": "state",
       "amendmentFlavor": "Heavily amended via DCMR Title 12; a 2021-I-code-based update has been in rulemaking — verify status",
-      "specialRegimes": [
-        "DC Energy Conservation Code",
-        "DC Green Construction Code"
-      ]
+      "specialRegimes": ["DC Energy Conservation Code", "DC Green Construction Code"]
     },
     "FL": {
       "name": "Florida",
@@ -224,9 +217,7 @@
       "ircBase": 2018,
       "adoptionLevel": "state",
       "amendmentFlavor": "Legislature restricts updates; energy chapters frozen/rolled back; local jurisdictions enforce",
-      "specialRegimes": [
-        "High snow-load mountain jurisdictions amend ground snow values"
-      ]
+      "specialRegimes": ["High snow-load mountain jurisdictions amend ground snow values"]
     },
     "IL": {
       "name": "Illinois",
@@ -247,9 +238,7 @@
       "ircBase": 2018,
       "adoptionLevel": "state",
       "amendmentFlavor": "Statewide, cannot be amended locally; notable deletions (sprinklers) and Indiana-specific administrative chapters",
-      "specialRegimes": [
-        "Indiana energy code (amended IECC)"
-      ]
+      "specialRegimes": ["Indiana energy code (amended IECC)"]
     },
     "IA": {
       "name": "Iowa",
@@ -268,9 +257,7 @@
       "ircBase": 2018,
       "adoptionLevel": "local",
       "amendmentFlavor": "Only the Kansas Fire Prevention Code is mandatory statewide; a 2018 IRC reference exists for certain state programs",
-      "specialRegimes": [
-        "Kansas Fire Prevention Code (statewide)"
-      ],
+      "specialRegimes": ["Kansas Fire Prevention Code (statewide)"],
       "note": "ircBase 2018 is representative of Wichita/Johnson County-area jurisdictions; many rural counties have no code."
     },
     "KY": {
@@ -279,9 +266,7 @@
       "ircBase": 2015,
       "adoptionLevel": "state",
       "amendmentFlavor": "Kentucky publishes its own editions on a 2015 IRC base with successive KY amendment editions; statewide, administered by DHBC",
-      "specialRegimes": [
-        "2023 NEC adopted statewide effective 2025-01-01"
-      ],
+      "specialRegimes": ["2023 NEC adopted statewide effective 2025-01-01"],
       "note": "The 'edition year' in Kentucky code titles (2018 KRC) is the KY publication year, not the IRC base year."
     },
     "LA": {
@@ -335,9 +320,7 @@
       "ircBase": 2021,
       "adoptionLevel": "state",
       "amendmentFlavor": "Statewide code under the Stille-DeRossett-Hale act; LARA rules amend the IRC moderately; local units enforce but cannot amend technical provisions",
-      "specialRegimes": [
-        "Michigan Uniform Energy Code"
-      ],
+      "specialRegimes": ["Michigan Uniform Energy Code"],
       "note": "Replaced the long-running 2015 Michigan Residential Code (eff. 2016-02-08)."
     },
     "MN": {
@@ -369,9 +352,7 @@
       "ircBase": 2018,
       "adoptionLevel": "local",
       "amendmentFlavor": "Local editions and amendments vary widely; only state modular-housing program references the IRC (2021 IRC eff. 2024-11-30)",
-      "specialRegimes": [
-        "State modular residential program (2021 IRC base)"
-      ],
+      "specialRegimes": ["State modular residential program (2021 IRC base)"],
       "note": "ircBase 2018 is representative of metro jurisdictions; many rural counties have no residential code."
     },
     "MT": {
@@ -392,9 +373,7 @@
       "ircBase": 2018,
       "adoptionLevel": "state",
       "amendmentFlavor": "Statute adopts the IRC with few amendments; cities like Omaha/Lincoln amend locally; enforcement is local",
-      "specialRegimes": [
-        "NEC 2023 statewide effective 2024-08-01"
-      ]
+      "specialRegimes": ["NEC 2023 statewide effective 2024-08-01"]
     },
     "NV": {
       "name": "Nevada",
@@ -414,9 +393,7 @@
       "ircBase": 2024,
       "adoptionLevel": "state",
       "amendmentFlavor": "Biennial legislative updates (2021 base ran 2024-07-01 to 2026-06-30); municipalities may adopt more-stringent local amendments with state approval; enforcement local",
-      "specialRegimes": [
-        "NH energy code amendments (reduced from model IECC)"
-      ]
+      "specialRegimes": ["NH energy code amendments (reduced from model IECC)"]
     },
     "NJ": {
       "name": "New Jersey",
@@ -471,9 +448,7 @@
       "ircBase": 2024,
       "adoptionLevel": "state",
       "amendmentFlavor": "State publishes the code with ND amendments; jurisdictions that enforce a building code must use it (may add local modifications); many rural areas do not enforce",
-      "specialRegimes": [
-        "Deep frost depths (~48+ in) and high snow loads"
-      ],
+      "specialRegimes": ["Deep frost depths (~48+ in) and high snow loads"],
       "note": "Prior edition: 2021 IRC base, effective 2023-01-01 to 2025-12-31."
     },
     "OH": {
@@ -482,9 +457,7 @@
       "ircBase": 2018,
       "adoptionLevel": "state",
       "amendmentFlavor": "Statewide RCO (OAC 4101:8) with Ohio amendments; note it covers three-family dwellings too; local building departments enforce",
-      "specialRegimes": [
-        "Ohio residential energy provisions (amended IECC)"
-      ],
+      "specialRegimes": ["Ohio residential energy provisions (amended IECC)"],
       "note": "An RCO update (2021/2024 base) was under committee review — verify current rule status at codes.ohio.gov."
     },
     "OK": {
@@ -515,9 +488,7 @@
       "ircBase": 2021,
       "adoptionLevel": "state",
       "amendmentFlavor": "UCC statewide; ~90% of municipalities administer it locally (opt-in), others use state enforcement; RAC filters which model-code changes are adopted",
-      "specialRegimes": [
-        "PA alternative residential energy provisions"
-      ],
+      "specialRegimes": ["PA alternative residential energy provisions"],
       "note": "2018 IRC base governed 2022-02-14 through 2025-12-31."
     },
     "RI": {
@@ -526,9 +497,7 @@
       "ircBase": 2021,
       "adoptionLevel": "state",
       "amendmentFlavor": "Statewide, no local amendments; note the prior 'SBC-2-2021' edition (eff. 2022-02-01) was actually based on the 2018 IRC",
-      "specialRegimes": [
-        "Coastal wind/flood provisions (hurricane exposure)"
-      ]
+      "specialRegimes": ["Coastal wind/flood provisions (hurricane exposure)"]
     },
     "SC": {
       "name": "South Carolina",
@@ -548,9 +517,7 @@
       "ircBase": 2021,
       "adoptionLevel": "local",
       "amendmentFlavor": "State designates editions but does not mandate residential enforcement; rural areas largely uninspected",
-      "specialRegimes": [
-        "NEC statewide (2023 NEC eff. 2024-11-12)"
-      ],
+      "specialRegimes": ["NEC statewide (2023 NEC eff. 2024-11-12)"],
       "note": "ircBase 2021 is representative of the larger cities."
     },
     "TN": {
@@ -605,9 +572,7 @@
       "ircBase": 2021,
       "adoptionLevel": "state",
       "amendmentFlavor": "Uniform statewide; no local technical amendments allowed; VA amendments moderate; triennial cycle (2024-base update expected ~2027)",
-      "specialRegimes": [
-        "Coastal wind zones (Hampton Roads / Eastern Shore)"
-      ]
+      "specialRegimes": ["Coastal wind zones (Hampton Roads / Eastern Shore)"]
     },
     "WA": {
       "name": "Washington",
@@ -628,9 +593,7 @@
       "ircBase": 2018,
       "adoptionLevel": "local",
       "amendmentFlavor": "State Fire Commission promulgates the code content; counties/municipalities choose whether to adopt and enforce it; many do not",
-      "specialRegimes": [
-        "State Fire Code (87 CSR 1) statewide"
-      ]
+      "specialRegimes": ["State Fire Code (87 CSR 1) statewide"]
     },
     "WI": {
       "name": "Wisconsin",
@@ -650,9 +613,7 @@
       "ircBase": 2018,
       "adoptionLevel": "local",
       "amendmentFlavor": "State Fire Marshal adopts codes for state buildings only; local editions range roughly 2015-2024",
-      "specialRegimes": [
-        "High snow loads and frost depths in mountain jurisdictions"
-      ],
+      "specialRegimes": ["High snow loads and frost depths in mountain jurisdictions"],
       "note": "ircBase 2018 is representative; many rural counties have no residential code."
     },
     "CA-ON-S": {

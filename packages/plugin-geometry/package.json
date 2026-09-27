@@ -12,7 +12,12 @@
       "default": "./src/index.ts"
     }
   },
-  "files": ["src", "NOTICE", "README.md", "test"],
+  "files": [
+    "src",
+    "NOTICE",
+    "README.md",
+    "test"
+  ],
   "scripts": {
     "check-types": "tsc --noEmit",
     "test": "bun test",

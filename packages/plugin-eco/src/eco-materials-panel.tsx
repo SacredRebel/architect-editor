@@ -91,21 +91,27 @@ export default function EcoMaterialsPanel() {
       </div>
 
       <div style={{ fontWeight: 600 }}>Defaults</div>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+      <label
+        style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}
+      >
         Walls
         <MatSelect
           onChange={(id) => setEcoMaterialDefaults({ defaultWall: id })}
           value={state.defaultWall}
         />
       </label>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+      <label
+        style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}
+      >
         Slabs
         <MatSelect
           onChange={(id) => setEcoMaterialDefaults({ defaultSlab: id })}
           value={state.defaultSlab}
         />
       </label>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+      <label
+        style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}
+      >
         Shells
         <MatSelect
           onChange={(id) => setEcoMaterialDefaults({ defaultShell: id })}
@@ -130,10 +136,7 @@ export default function EcoMaterialsPanel() {
                 }}
               >
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
-                <MatSelect
-                  onChange={(id) => setEcoMaterialAssignment(key, id)}
-                  value={value}
-                />
+                <MatSelect onChange={(id) => setEcoMaterialAssignment(key, id)} value={value} />
               </label>
             )
           })}

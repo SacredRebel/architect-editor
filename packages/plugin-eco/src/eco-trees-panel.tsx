@@ -2,14 +2,14 @@
 
 import { useSyncExternalStore } from 'react'
 import {
+  addEcoTree,
   ECO_TREE_VARIANT_IDS,
   ECO_TREE_VARIANTS,
-  addEcoTree,
+  type EcoTreeVariantId,
   getEcoTreesState,
   makeEcoTreePlacement,
   removeEcoTree,
   subscribeEcoTrees,
-  type EcoTreeVariantId,
 } from './eco-trees-store'
 
 function useEcoTrees() {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { fitCatenary, fitEndpointError } from '../../math/catenary'
 import { buildArchOuterPoints } from '../../math/arch-profile'
+import { fitCatenary, fitEndpointError } from '../../math/catenary'
 
 describe('buildArchOuterPoints', () => {
   const span = 7.62

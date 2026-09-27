@@ -87,11 +87,7 @@ function boundaryPointAt(boundary: Vec3[], t01: number): Vec3 {
     const len = lens[i] ?? Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
     if (target <= len || i === pts.length - 2) {
       const u = len < 1e-9 ? 0 : target / len
-      return [
-        a[0] + (b[0] - a[0]) * u,
-        a[1] + (b[1] - a[1]) * u,
-        a[2] + (b[2] - a[2]) * u,
-      ]
+      return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]
     }
     target -= len
   }

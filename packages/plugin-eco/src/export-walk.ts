@@ -1,4 +1,9 @@
-import { getWallArcData, getWallChordFrame, getWallCurveFrameAt, simplifyClosedPolygon } from '@pascal-app/core'
+import {
+  getWallArcData,
+  getWallChordFrame,
+  getWallCurveFrameAt,
+  simplifyClosedPolygon,
+} from '@pascal-app/core'
 import type { EcoWalk } from './bridge-types'
 import {
   adaptiveArcSampleStepM,

@@ -152,9 +152,7 @@ export function getLeafShellParams(shell: EcoShell): LeafShellParams {
     spineLength: shell.spineLength ?? DEFAULT_LEAF_SHELL_PARAMS.spineLength,
     rise: shell.rise > 0 ? shell.rise : DEFAULT_LEAF_SHELL_PARAMS.rise,
     curvature:
-      typeof shell.curvature === 'number'
-        ? shell.curvature
-        : DEFAULT_LEAF_SHELL_PARAMS.curvature,
+      typeof shell.curvature === 'number' ? shell.curvature : DEFAULT_LEAF_SHELL_PARAMS.curvature,
   }
 }
 

@@ -103,8 +103,14 @@ import {
   wallPath,
   wallPlan,
 } from './electrical'
-import { MANUAL_S_MAX, MANUAL_S_MIN, manualJLite, manualSTons, type ManualJLiteLoad } from './manual-j'
-import { routePipe, type PipeSpec } from './plumbing'
+import {
+  MANUAL_S_MAX,
+  MANUAL_S_MIN,
+  type ManualJLiteLoad,
+  manualJLite,
+  manualSTons,
+} from './manual-j'
+import { type PipeSpec, routePipe } from './plumbing'
 
 type Pt = readonly [number, number]
 
@@ -452,7 +458,10 @@ export function roomInteriorPoint(polygon: readonly Pt[], walls: WallSlice[]): P
     const mid: Pt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
     const n = Math.max(1e-6, Math.hypot(b[0] - a[0], b[1] - a[1]))
     for (const s of [1, -1] as const) {
-      const q: Pt = [mid[0] + (-(b[1] - a[1]) / n) * 0.3 * s, mid[1] + ((b[0] - a[0]) / n) * 0.3 * s]
+      const q: Pt = [
+        mid[0] + (-(b[1] - a[1]) / n) * 0.3 * s,
+        mid[1] + ((b[0] - a[0]) / n) * 0.3 * s,
+      ]
       if (ok(q)) return q
     }
   }
@@ -774,7 +783,12 @@ function minWallHeightAlong(
 }
 
 /** Axis-aligned bounds of a polygon. */
-function bounds(polygon: readonly Pt[]): { minX: number; maxX: number; minZ: number; maxZ: number } {
+function bounds(polygon: readonly Pt[]): {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+} {
   let minX = Number.POSITIVE_INFINITY
   let maxX = Number.NEGATIVE_INFINITY
   let minZ = Number.POSITIVE_INFINITY
@@ -1063,10 +1077,7 @@ export function placeThermostatSpot(
   // The tstat reads MIXED return air — target the actual central return
   // grille (B19: no longer glued to the air handler; it may sit in the
   // hallway while the AH lives in the laundry or, worst case, the garage).
-  const target: Pt = placeReturnGrilleSpot(walls, rooms)?.at ?? [
-    equipAt[0] + 0.5,
-    equipAt[1] + 0.5,
-  ]
+  const target: Pt = placeReturnGrilleSpot(walls, rooms)?.at ?? [equipAt[0] + 0.5, equipAt[1] + 0.5]
   const straight = walls.filter((w) => !w.curved && w.length >= 0.1)
   const pick = (candidates: WallSlice[]): { wall: WallSlice; u: number } | null => {
     let best: { wall: WallSlice; u: number } | null = null
@@ -1326,7 +1337,13 @@ function condenserRow(
     return { wall: null, slots, warnings, unit1Presnap: slots[0]?.at ?? null, unit1OffGrid: false }
   }
   const wall = exit.wall
-  const u0 = Math.max(0, Math.min(wall.length, (anchor[0] - wall.start[0]) * wall.dir[0] + (anchor[1] - wall.start[1]) * wall.dir[1]))
+  const u0 = Math.max(
+    0,
+    Math.min(
+      wall.length,
+      (anchor[0] - wall.start[0]) * wall.dir[0] + (anchor[1] - wall.start[1]) * wall.dir[1],
+    ),
+  )
   // Out-normal foot from the SAME clamped-u lerp the slide/penetration math
   // uses — NOT exit.at: projectOnto's dot·axis/len² form drifts one ULP on
   // non-dyadic coordinates (e.g. a slid anchor at u = 6.15…95 footed back
@@ -1376,15 +1393,18 @@ function condenserRow(
     const fwd = slide(u0, 1)
     const bwd = slide(u0, -1)
     const cands = [fwd, bwd].filter((c) => inRange(c))
-    u1 = cands.length > 0
-      ? (cands.reduce((best, c) => (Math.abs(c - u0) < Math.abs(best - u0) ? c : best)) as number)
-      : fwd
+    u1 =
+      cands.length > 0
+        ? (cands.reduce((best, c) => (Math.abs(c - u0) < Math.abs(best - u0) ? c : best)) as number)
+        : fwd
   }
   const unit1Presnap: Pt =
-    anchorVerbatim || u1 === u0 ? anchor : (() => {
-      const p = wallPointAt(wall, u1)
-      return [p[0] + out[0] * rowOff, p[1] + out[1] * rowOff] as Pt
-    })()
+    anchorVerbatim || u1 === u0
+      ? anchor
+      : (() => {
+          const p = wallPointAt(wall, u1)
+          return [p[0] + out[0] * rowOff, p[1] + out[1] * rowOff] as Pt
+        })()
   // GRID SNAP — AUTO anchors only (HP polish, Julien: "let's make sure it's
   // aligned normally"; verify round F1 corrected the FRAME): the machine's
   // unit-#1 spot lands on **WORLD XZ** grid multiples
@@ -1432,8 +1452,7 @@ function condenserRow(
     for (let i = -COND_GRID_WINDOW_STEPS; i <= COND_GRID_WINDOW_STEPS; i++) {
       for (let j = -COND_GRID_WINDOW_STEPS; j <= COND_GRID_WINDOW_STEPS; j++) {
         const g: Pt = [gx0 + i * h, gz0 + j * h]
-        const uG =
-          (g[0] - wall.start[0]) * wall.dir[0] + (g[1] - wall.start[1]) * wall.dir[1]
+        const uG = (g[0] - wall.start[0]) * wall.dir[0] + (g[1] - wall.start[1]) * wall.dir[1]
         if (!inRange(uG) || inKeepout(uG)) continue
         // perpendicular offset from the wall LINE (out ⊥ dir ⇒ constant
         // along the wall) — the away-only floor, with 1e-9 float grace so
@@ -1623,9 +1642,7 @@ export function layoutHvac(
       `Air handler — ${tons} ton (${plan.sizingNote}; Manual J/S govern)` +
       (plan.count > 1
         ? ` — serves ${plan.count} condensers (${plan.count} × ${plan.unitTons} t installed${
-            plan.installedTons !== plan.totalTons
-              ? ` vs ${plan.totalTons} t selected`
-              : ''
+            plan.installedTons !== plan.totalTons ? ` vs ${plan.totalTons} t selected` : ''
           }), single indoor coil assumption`
         : ''),
     meta: {
@@ -1692,9 +1709,7 @@ export function layoutHvac(
   // recessed light) so it's visible from inside the room.
   const registers: { room: RoomSlice; at: Pt; cfm: number; transferAssumed: boolean }[] =
     spine.registerAts.map(({ room, at }) => {
-      const cfm = Math.round(
-        (totalCfm * polygonArea(room.polygon)) / Math.max(1e-6, habitableArea),
-      )
+      const cfm = Math.round((totalCfm * polygonArea(room.polygon)) / Math.max(1e-6, habitableArea))
       // TRANSFER-AIR honesty (M1602.2): a room whose door can close cuts its
       // supply cfm off from the central return — v1 doesn't invent jumper-duct
       // geometry, it LABELS the assumption on the room's register. The grille
@@ -1822,15 +1837,7 @@ export function layoutHvac(
   // attic), then a drop boot carries the air through the CEILING plane.
   for (const { room, at, cfm, transferAssumed } of registers) {
     const branch = doorwayCheck(
-      duct(
-        onAxis(u(at)),
-        at,
-        trunkY,
-        BRANCH_SIDE,
-        BRANCH_SIDE,
-        room.id,
-        `6" branch — ${cfm} cfm`,
-      ),
+      duct(onAxis(u(at)), at, trunkY, BRANCH_SIDE, BRANCH_SIDE, room.id, `6" branch — ${cfm} cfm`),
       onAxis(u(at)),
       at,
       'supply',
@@ -1891,10 +1898,12 @@ export function layoutHvac(
     // bearing (the drop wants to face the trunk leg it terminates).
     const dropCands: Pt[] = [0, 1, -1, 2, -2, 3, -3, 4]
       .map((k) => grilleBearing + (k * Math.PI) / 4)
-      .map((ang): Pt => [
-        equipAt[0] + Math.cos(ang) * RETURN_DROP_OFFSET,
-        equipAt[1] + Math.sin(ang) * RETURN_DROP_OFFSET,
-      ])
+      .map(
+        (ang): Pt => [
+          equipAt[0] + Math.cos(ang) * RETURN_DROP_OFFSET,
+          equipAt[1] + Math.sin(ang) * RETURN_DROP_OFFSET,
+        ],
+      )
     // Intrusion metric: how deep a vertical at q sinks into wall bands +
     // supply footprints (0 = fully clear).
     const intrusion = (q: Pt): number => {
@@ -2244,8 +2253,7 @@ export function layoutHvac(
         const dz = p[1] - equipAt[1]
         const d = Math.hypot(dx, dz)
         const off = condenserStandoff(near.wall.thickness)
-        anchor =
-          d > 1e-6 ? [p[0] + (dx / d) * off, p[1] + (dz / d) * off] : [p[0] + off, p[1]]
+        anchor = d > 1e-6 ? [p[0] + (dx / d) * off, p[1] + (dz / d) * off] : [p[0] + off, p[1]]
       } else {
         anchor = [equipAt[0] + PAD_OFFSET_NO_WALL(), equipAt[1]]
       }
@@ -2320,8 +2328,7 @@ export function layoutHvac(
         if (row.wall) {
           const foot = wallPointAt(row.wall, slot.u)
           const standOff = (at[0] - foot[0]) * slot.out[0] + (at[1] - foot[1]) * slot.out[1]
-          const needed =
-            row.wall.thickness / 2 + PAD_CLADDING_ALLOW + (COND_PAD_SIDE / 2) * obliq
+          const needed = row.wall.thickness / 2 + PAD_CLADDING_ALLOW + (COND_PAD_SIDE / 2) * obliq
           const push = Math.max(0, needed - standOff)
           if (push > 0) {
             padCenter = [at[0] + slot.out[0] * push, at[1] + slot.out[1] * push]
@@ -2369,7 +2376,8 @@ export function layoutHvac(
           // (outward ceil — HP polish item 3), so 24" is a floor, not the
           // exact figure; a verbatim drag can still stand closer (S1 slide
           // + overhang honesty above).
-          label: 'Condenser pad 4" — concrete (≥ 24" face clearance basis; per mfr clearance + IRC M1403)',
+          label:
+            'Condenser pad 4" — concrete (≥ 24" face clearance basis; per mfr clearance + IRC M1403)',
           ...(padCabinetFlag ? { flag: padCabinetFlag } : {}),
         })
         members.push({
@@ -2402,9 +2410,7 @@ export function layoutHvac(
               ? {
                   sensibleTons: Math.round(plan.load.sensibleTons * 100) / 100,
                   latentFactor: plan.load.latentFactor,
-                  ...(plan.load.moistureRegime
-                    ? { moistureRegime: plan.load.moistureRegime }
-                    : {}),
+                  ...(plan.load.moistureRegime ? { moistureRegime: plan.load.moistureRegime } : {}),
                 }
               : {}),
           },
@@ -2467,8 +2473,13 @@ export function layoutHvac(
           }
           const ref: Member[] = []
           routePipe(
-            ref, refSpec, linesetGraph,
-            { wall: row.wall, u: penU }, ahAnchor, LINESET_Y, walls,
+            ref,
+            refSpec,
+            linesetGraph,
+            { wall: row.wall, u: penU },
+            ahAnchor,
+            LINESET_Y,
+            walls,
             LINESET_PAIR_OFFSET + LINESET_SUCTION_DIA / 2,
           )
           // Cross-trade LATERAL for this run: plumbing rides the wall
@@ -2482,19 +2493,15 @@ export function layoutHvac(
             (min2, l) => Math.min(min2, l.wall.thickness / 2),
             penWall.thickness / 2,
           )
-          const maxLateral =
-            minHalfT - LINESET_PAIR_OFFSET - LINESET_SUCTION_DIA / 2 - 0.002
+          const maxLateral = minHalfT - LINESET_PAIR_OFFSET - LINESET_SUCTION_DIA / 2 - 0.002
           const lateral = Math.min(LINESET_LATERAL, Math.max(0, maxLateral))
           const lateralClamped = lateral < LINESET_LATERAL - 1e-9
           // Outside stubs cross ROs as a PAIR too: either pipe's height
           // clipping an RO volume flags BOTH (one shared decision, one
           // shared honesty — E1, same contract as the service laterals).
           const stubCrosses = (a: Pt, b: Pt): boolean =>
-            pipes.some((p) =>
-              segmentCrossesRo(walls, [a[0], p.y, a[1]], [b[0], p.y, b[1]]),
-            )
-          const isVertical = (m: Member): boolean =>
-            m.rotation[1] === 0 && m.dims[1] === m.length
+            pipes.some((p) => segmentCrossesRo(walls, [a[0], p.y, a[1]], [b[0], p.y, b[1]]))
+          const isVertical = (m: Member): boolean => m.rotation[1] === 0 && m.dims[1] === m.length
           // CORNER CANCEL: ROs hugging BOTH sides of a shared junction make
           // the reference route drop to the run plane AT the corner and
           // immediately re-ascend — pipeWallLeg emits two byte-identical
@@ -2534,8 +2541,7 @@ export function layoutHvac(
             const r = ref[i] as Member
             const top = r.position[1] + r.dims[1] / 2
             const bot = r.position[1] - r.dims[1] / 2
-            const detourEnd =
-              Math.abs(top - LINESET_Y) >= Math.abs(bot - LINESET_Y) ? top : bot
+            const detourEnd = Math.abs(top - LINESET_Y) >= Math.abs(bot - LINESET_Y) ? top : bot
             for (const j of [i + 1, i - 1]) {
               const h = ref[j]
               if (!h || isVertical(h)) continue
@@ -2559,10 +2565,7 @@ export function layoutHvac(
           const MITER_CAP = 0.15
           const ext = new Map<number, { minus: number; plus: number }>()
           const bridges: { a: Pt; b: Pt }[] = []
-          const planAxisOf = (m: Member): Pt => [
-            Math.cos(m.rotation[1]),
-            -Math.sin(m.rotation[1]),
-          ]
+          const planAxisOf = (m: Member): Pt => [Math.cos(m.rotation[1]), -Math.sin(m.rotation[1])]
           const endsAt = (m: Member): [Pt, Pt] => {
             const ax = planAxisOf(m)
             return [
@@ -2654,8 +2657,16 @@ export function layoutHvac(
               [elbowOut, pen],
             ] as const) {
               const seg = duct(
-                a, b, pipe.y, pipe.dia, pipe.dia, pipe.sourceId, pipe.label,
-                'copper', 'pipe-run', 0.02,
+                a,
+                b,
+                pipe.y,
+                pipe.dia,
+                pipe.dia,
+                pipe.sourceId,
+                pipe.label,
+                'copper',
+                'pipe-run',
+                0.02,
               )
               if (!seg) continue
               if (stubCrosses(a, b)) {
@@ -2708,8 +2719,16 @@ export function layoutHvac(
             // centerline jumper convention, shifted with the run)
             for (const br of bridges) {
               const seg = duct(
-                br.a, br.b, pipe.y, pipe.dia, pipe.dia, pipe.sourceId,
-                pipe.label, 'copper', 'pipe-run', 0.005,
+                br.a,
+                br.b,
+                pipe.y,
+                pipe.dia,
+                pipe.dia,
+                pipe.sourceId,
+                pipe.label,
+                'copper',
+                'pipe-run',
+                0.005,
               )
               if (seg) {
                 if (lateralClamped) seg.flag = composeFlag(seg.flag, LINESET_THIN_WALL_FLAG)
@@ -2719,8 +2738,16 @@ export function layoutHvac(
             // coil stub: wall anchor → the air handler
             const ap = wallPlan(ahAnchor)
             const stub = duct(
-              [ap[0], ap[1]], equipAt, pipe.y, pipe.dia, pipe.dia,
-              pipe.sourceId, pipe.label, 'copper', 'pipe-run', 0.02,
+              [ap[0], ap[1]],
+              equipAt,
+              pipe.y,
+              pipe.dia,
+              pipe.dia,
+              pipe.sourceId,
+              pipe.label,
+              'copper',
+              'pipe-run',
+              0.02,
             )
             if (stub) runMembers.push(stub)
           }
@@ -2734,9 +2761,16 @@ export function layoutHvac(
               [elbow, equipAt],
             ] as const) {
               const seg = duct(
-                a, b, pipe.y, pipe.dia, pipe.dia, pipe.sourceId,
+                a,
+                b,
+                pipe.y,
+                pipe.dia,
+                pipe.dia,
+                pipe.sourceId,
                 `${pipe.label} (air run — no wall path, verify)`,
-                'copper', 'pipe-run', 0.02,
+                'copper',
+                'pipe-run',
+                0.02,
               )
               if (!seg) continue
               seg.flag = 'AIR RUN: line-set found no wall path — route along a wall'
@@ -2782,9 +2816,10 @@ export function layoutHvac(
               }
             }
             if (best !== null) discU = best
-            else warnings.push(
-              `AC disconnect #${n} sits in a door/window rough opening — move the unit clear (NEC 440.14)`,
-            )
+            else
+              warnings.push(
+                `AC disconnect #${n} sits in a door/window rough opening — move the unit clear (NEC 440.14)`,
+              )
           }
           const discFoot = wallPointAt(row.wall, discU)
           const face: Pt = [
@@ -2821,13 +2856,27 @@ export function layoutHvac(
           // the top is buried in the disconnect box, the bottom sits on the
           // run's center plane — 8 mm from either run face, never coplanar.
           const drop = ductDrop(
-            face, whipY, discY,
-            0.016 + 2 * DUCT_JUNCTION_BURY, 0.016 + 2 * DUCT_JUNCTION_BURY,
-            `ac-whip-${n}`, whipLabel, 'steel', 'wire-run',
+            face,
+            whipY,
+            discY,
+            0.016 + 2 * DUCT_JUNCTION_BURY,
+            0.016 + 2 * DUCT_JUNCTION_BURY,
+            `ac-whip-${n}`,
+            whipLabel,
+            'steel',
+            'wire-run',
           )
           if (drop) members.push(drop)
           const run = duct(
-            face, at, whipY, 0.016, 0.016, `ac-whip-${n}`, whipLabel, 'steel', 'wire-run',
+            face,
+            at,
+            whipY,
+            0.016,
+            0.016,
+            `ac-whip-${n}`,
+            whipLabel,
+            'steel',
+            'wire-run',
           )
           if (run) members.push(run)
         }
@@ -2885,10 +2934,7 @@ const TRADE_SKIN = 0.002
 
 /** A world point in `m`'s local frame (euler XYZ: world = Rx·Ry·Rz·local,
  * the repo's member convention — see plan-set's projection notes). */
-function memberLocal(
-  m: Member,
-  p: readonly [number, number, number],
-): [number, number, number] {
+function memberLocal(m: Member, p: readonly [number, number, number]): [number, number, number] {
   let x = p[0] - m.position[0]
   let y = p[1] - m.position[1]
   let z = p[2] - m.position[2]
@@ -2942,15 +2988,12 @@ export function flagLinesetTradeCrossings(members: Member[]): void {
     const vertical = ls.rotation[1] === 0 && ls.dims[1] === ls.length
     const half = ls.length / 2
     const yaw = ls.rotation[1]
-    const axis: [number, number, number] = vertical
-      ? [0, 1, 0]
-      : [Math.cos(yaw), 0, -Math.sin(yaw)]
+    const axis: [number, number, number] = vertical ? [0, 1, 0] : [Math.cos(yaw), 0, -Math.sin(yaw)]
     const radius = Math.max(ls.dims[vertical ? 0 : 1], ls.dims[2]) / 2
     const steps = Math.max(1, Math.ceil(ls.length / TRADE_SAMPLE_STEP))
     const classes = new Set<string>()
     for (const { p, r } of bounds) {
-      const cls =
-        p.role === 'vent-stack' || p.sourceId.startsWith('dwv-') ? STACK_FLAG : PIPE_FLAG
+      const cls = p.role === 'vent-stack' || p.sourceId.startsWith('dwv-') ? STACK_FLAG : PIPE_FLAG
       if (classes.has(cls)) continue
       const dc = Math.hypot(
         p.position[0] - ls.position[0],

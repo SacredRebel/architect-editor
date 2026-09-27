@@ -78,6 +78,15 @@ export {
   type WallExtent,
 } from './opening-guides'
 export {
+  clearPlanSnapProviders,
+  type PlanSnapContribution,
+  type PlanSnapHorizontal,
+  type PlanSnapProvider,
+  type PlanSnapSegment,
+  registerPlanSnapProvider,
+  snapToPlanContributions,
+} from './plan-snap-contributions'
+export {
   analyzePortConnectivity,
   type PortConnection,
   type PortConnectivity,
@@ -104,15 +113,6 @@ export {
   snapVec3ToGrid,
   snapWorldXZToBuildingLocal,
 } from './snap'
-export {
-  clearPlanSnapProviders,
-  type PlanSnapContribution,
-  type PlanSnapHorizontal,
-  type PlanSnapProvider,
-  type PlanSnapSegment,
-  registerPlanSnapProvider,
-  snapToPlanContributions,
-} from './plan-snap-contributions'
 export {
   CEILING_CLAMP_MARGIN,
   findLevelAboveId,

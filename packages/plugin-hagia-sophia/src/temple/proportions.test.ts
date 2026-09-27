@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
+import { buildArchOuterPoints } from '../kinds/hs-arch/geometry'
 import { HsArchNode } from '../kinds/hs-arch/schema'
 import { HsDomeNode } from '../kinds/hs-dome/schema'
 import { buildTruePendentiveGeometry } from '../kinds/hs-pendentive/geometry'
 import { HsPendentiveNode } from '../kinds/hs-pendentive/schema'
 import { HsPierNode } from '../kinds/hs-pier/schema'
-import { buildArchOuterPoints } from '../kinds/hs-arch/geometry'
 import {
   archFor,
   composeDomedBay,
@@ -105,7 +105,11 @@ describe('the domed bay', () => {
     // north (−z) turned 90° clockwise is east (+x)
     expect(north.position[0]).toBeGreaterThan(100)
     expect(north.position[2]).toBeCloseTo(-50, 9)
-    for (const p of turned) expect(p.rotation[1] - (p.name.startsWith('Arch E') || p.name.startsWith('Arch W') ? Math.PI / 2 : 0)).toBeCloseTo(-Math.PI / 2, 12)
+    for (const p of turned)
+      expect(
+        p.rotation[1] -
+          (p.name.startsWith('Arch E') || p.name.startsWith('Arch W') ? Math.PI / 2 : 0),
+      ).toBeCloseTo(-Math.PI / 2, 12)
   })
 
   test('a custom springing height is honoured', () => {

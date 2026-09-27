@@ -8,7 +8,8 @@ export const templeHostPanel: EditorHostPanel = {
   component: () => import('./panel'),
   kinds: ['hagia-sophia:dome', 'hagia-sophia:arch', 'hagia-sophia:pendentive', 'hagia-sophia:pier'],
   pluginId: 'pascal:hagia-sophia',
-  description: 'Domes, arches, pendentives, piers and columns; a domed bay at any size, cut from one sphere.',
+  description:
+    'Domes, arches, pendentives, piers and columns; a domed bay at any size, cut from one sphere.',
   creator: { name: 'ActArtech', url: 'https://github.com/ActArtech/editor' },
   defaultInstalled: true,
 }

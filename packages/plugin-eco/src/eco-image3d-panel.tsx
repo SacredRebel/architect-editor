@@ -2,20 +2,20 @@
 
 import { type ChangeEvent, useCallback, useRef, useState, useSyncExternalStore } from 'react'
 import {
-  AtlasImage3dClient,
-  AtlasImage3dError,
-  createAtlasImage3dClient,
-  shrinkImageToDataUri,
-  type AtlasImage3dKind,
-  type AtlasImage3dStatusResult,
-} from './eco-atlas-image3d'
-import {
   addEcoAsset,
   bytesToBase64,
+  type EcoAsset,
   hashBytes,
   placeEcoAsset,
-  type EcoAsset,
 } from './eco-assets-store'
+import {
+  AtlasImage3dClient,
+  AtlasImage3dError,
+  type AtlasImage3dKind,
+  type AtlasImage3dStatusResult,
+  createAtlasImage3dClient,
+  shrinkImageToDataUri,
+} from './eco-atlas-image3d'
 import { guessServiceHeightM, prepareImage3dGlb } from './eco-image3d-export'
 
 type FlowKind = 'photo' | 'sketch'
@@ -43,7 +43,9 @@ export default function EcoImage3dPanel() {
           new URLSearchParams(window.location.search).get('mockAtlas') === '1') ||
         process.env.NEXT_PUBLIC_ECO_MOCK_ATLAS === '1'
       clientRef.current = createAtlasImage3dClient(
-        mock ? { baseUrl: '', sleep: (ms) => new Promise((r) => setTimeout(r, Math.min(ms, 80))) } : undefined,
+        mock
+          ? { baseUrl: '', sleep: (ms) => new Promise((r) => setTimeout(r, Math.min(ms, 80))) }
+          : undefined,
       )
     }
     return clientRef.current
@@ -61,7 +63,8 @@ export default function EcoImage3dPanel() {
       }
 
       const kind: AtlasImage3dKind = flow === 'photo' ? 'object' : 'building'
-      const name = file.name.replace(/\.(png|jpe?g|webp)$/i, '') || (flow === 'photo' ? 'prop' : 'massing')
+      const name =
+        file.name.replace(/\.(png|jpe?g|webp)$/i, '') || (flow === 'photo' ? 'prop' : 'massing')
 
       setBusy(flow)
       try {
@@ -82,16 +85,16 @@ export default function EcoImage3dPanel() {
           name,
           onStatus: (s: AtlasImage3dStatusResult) => {
             setProgress(typeof s.progress === 'number' ? s.progress : null)
-            setStatus(`${s.status ?? '…'}${s.progress != null ? ` ${Math.round(s.progress)}%` : ''}`)
+            setStatus(
+              `${s.status ?? '…'}${s.progress != null ? ` ${Math.round(s.progress)}%` : ''}`,
+            )
           },
         })
 
         setStatus('Preparing GLB (scale / axis / meshopt)…')
         const knownMeters = Number(heightM)
         const meters =
-          Number.isFinite(knownMeters) && knownMeters > 0
-            ? knownMeters
-            : guessServiceHeightM(kind)
+          Number.isFinite(knownMeters) && knownMeters > 0 ? knownMeters : guessServiceHeightM(kind)
         const prepared = await prepareImage3dGlb(glb, {
           knownDimension: { axis: 'y', meters },
           optimiseProfile: 'image3d',
@@ -211,9 +214,7 @@ export default function EcoImage3dPanel() {
         />
       </div>
 
-      {progress != null && (
-        <div style={{ opacity: 0.7 }}>Progress {Math.round(progress)}%</div>
-      )}
+      {progress != null && <div style={{ opacity: 0.7 }}>Progress {Math.round(progress)}%</div>}
       {status && <div style={{ opacity: 0.85 }}>{status}</div>}
       {error && <div style={{ color: '#f87171' }}>{error}</div>}
     </div>

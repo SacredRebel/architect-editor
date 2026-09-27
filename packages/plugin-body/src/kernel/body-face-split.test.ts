@@ -2,11 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { splitBodyFace } from './body-face-split'
 import { pushPullBodyFace } from './body-push-pull'
 import { inspectBodySolid } from './body-solid'
-import {
-  createRectangleBody,
-  getBodyFaceFrame,
-  validateBodyTopology,
-} from './body-topology'
+import { createRectangleBody, getBodyFaceFrame, validateBodyTopology } from './body-topology'
 
 describe('splitBodyFace', () => {
   test('splits a planar host face with an open seam and preserves one side ids', () => {

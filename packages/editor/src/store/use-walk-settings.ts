@@ -47,8 +47,7 @@ export const useWalkSettings = create<WalkSettingsState>()(
       setCameraMode: (cameraMode) => set({ cameraMode }),
       setShadowsInWalk: (shadowsInWalk) => set({ shadowsInWalk }),
       toggleHelp: () => set({ showHelp: !get().showHelp }),
-      toggleCameraMode: () =>
-        set({ cameraMode: get().cameraMode === 'first' ? 'third' : 'first' }),
+      toggleCameraMode: () => set({ cameraMode: get().cameraMode === 'first' ? 'third' : 'first' }),
     }),
     { name: 'pascal-walk-settings' },
   ),

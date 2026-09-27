@@ -1,13 +1,6 @@
-import {
-  makeDefaultLeafLoft,
-  type EcoLoft,
-} from './eco-loft'
-import {
-  makeDefaultCatenary,
-  type EcoCatenary,
-  type EcoMinimalPatch,
-} from './eco-catenary'
-import { makeDefaultBarrelVault, type EcoVault } from './eco-vault'
+import { type EcoCatenary, type EcoMinimalPatch, makeDefaultCatenary } from './eco-catenary'
+import { type EcoLoft, makeDefaultLeafLoft } from './eco-loft'
+import { type EcoVault, makeDefaultBarrelVault } from './eco-vault'
 
 export type EcoOrganicState = {
   lofts: EcoLoft[]
@@ -112,8 +105,4 @@ export function clearEcoOrganic(): void {
   emit()
 }
 
-export {
-  makeDefaultLeafLoft,
-  makeDefaultBarrelVault,
-  makeDefaultCatenary,
-}
+export { makeDefaultBarrelVault, makeDefaultCatenary, makeDefaultLeafLoft }

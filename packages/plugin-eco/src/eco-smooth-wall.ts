@@ -188,9 +188,7 @@ export function bulgeSmoothWall(
 }
 
 /** Continuous solid runs with openings cut as gaps (absence). */
-export function smoothWallSolidRuns(
-  wall: EcoSmoothWall,
-): { startM: number; endM: number }[] {
+export function smoothWallSolidRuns(wall: EcoSmoothWall): { startM: number; endM: number }[] {
   const total = smoothWallLength(wall)
   const cuts = wall.openings
     .map((o) => ({

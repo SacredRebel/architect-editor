@@ -1,16 +1,14 @@
 import type { AnyNode, NodeDefinition } from '@pascal-app/core'
 import type { FloorplanNodeExtension } from '@pascal-app/editor'
 import { DEFAULT_PIER_FOOTPRINT, PIER_HEIGHT } from '../../math/constants'
+import { pierParametrics } from '../../temple/parametrics'
 import { buildPierFloorplan } from './floorplan'
 import { buildPierGeometry, footprintBounds } from './geometry'
 import { HsPierNode } from './schema'
-import { pierParametrics } from '../../temple/parametrics'
 
 type HsPierDefinition = NodeDefinition<typeof HsPierNode> & Record<string, unknown>
 
-const defaultFootprint = DEFAULT_PIER_FOOTPRINT.map(
-  ([x, z]) => [x, z] as [number, number],
-)
+const defaultFootprint = DEFAULT_PIER_FOOTPRINT.map(([x, z]) => [x, z] as [number, number])
 
 const hsPierFloorPlacement = {
   footprint: (node: unknown) => {

@@ -97,8 +97,8 @@ export default function EcoAssetsPanel() {
           borderRadius: 6,
         }}
       >
-        Image→3D (H14): use the <strong>Photo → 3D</strong> panel for atlas Meshy
-        (props / massing only — not walk). Upload GLB here for already-baked models.
+        Image→3D (H14): use the <strong>Photo → 3D</strong> panel for atlas Meshy (props / massing
+        only — not walk). Upload GLB here for already-baked models.
       </div>
       <div
         onDragOver={(e) => e.preventDefault()}

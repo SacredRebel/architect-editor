@@ -5,12 +5,7 @@ import { FloorplanGeometryRenderer, useFloorplanRender } from '@pascal-app/edito
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { figureBounds } from './archimedean'
 import { buildForm } from './build'
-import {
-  getGeometryState,
-  setSelectedFigure,
-  subscribeGeometry,
-  updatePlacedFigure,
-} from './store'
+import { getGeometryState, setSelectedFigure, subscribeGeometry, updatePlacedFigure } from './store'
 
 const STROKE = '#94a3b8'
 const SELECTED = '#38bdf8'

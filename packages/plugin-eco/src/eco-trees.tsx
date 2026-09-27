@@ -4,17 +4,14 @@ import { TransformControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import * as THREE from 'three'
-import {
-  getEcoTreeMeshBundle,
-  type EcoTreeMeshBundle,
-} from './eco-tree-mesh'
+import { type EcoTreeMeshBundle, getEcoTreeMeshBundle } from './eco-tree-mesh'
 import {
   ECO_TREE_VARIANT_IDS,
+  type EcoTreePlacement,
+  type EcoTreeVariantId,
   getEcoTreesState,
   subscribeEcoTrees,
   updateEcoTree,
-  type EcoTreePlacement,
-  type EcoTreeVariantId,
 } from './eco-trees-store'
 
 /** Impostor / low detail beyond this distance (metres) — Notion H2 note. */
@@ -81,9 +78,7 @@ function VariantInstances({
       const far = dist > ECO_TREE_IMPOSTOR_DISTANCE_M
       dummy.position.set(...t.position)
       dummy.rotation.set(...t.rotation)
-      const s = far
-        ? ([t.scale[0] * 1.1, t.scale[1] * 0.85, t.scale[2] * 1.1] as const)
-        : t.scale
+      const s = far ? ([t.scale[0] * 1.1, t.scale[1] * 0.85, t.scale[2] * 1.1] as const) : t.scale
       dummy.scale.set(...s)
       dummy.updateMatrix()
       barkRef.current.setMatrixAt(visible, dummy.matrix)

@@ -109,10 +109,7 @@ function interpolateProfile(profiles: EcoLoftProfile[], t: number): Vec2[] {
   const n = Math.min(a.points.length, b.points.length)
   const out: Vec2[] = []
   for (let k = 0; k < n; k++) {
-    out.push([
-      lerp(a.points[k]![0], b.points[k]![0], u),
-      lerp(a.points[k]![1], b.points[k]![1], u),
-    ])
+    out.push([lerp(a.points[k]![0], b.points[k]![0], u), lerp(a.points[k]![1], b.points[k]![1], u)])
   }
   return out
 }
@@ -120,8 +117,10 @@ function interpolateProfile(profiles: EcoLoftProfile[], t: number): Vec2[] {
 function resampleProfile(points: Vec2[], segments: number): Vec2[] {
   if (segments <= 0 || points.length < 2) return points.map((p) => [...p] as Vec2)
   const closed =
-    Math.hypot(points[0]![0] - points[points.length - 1]![0], points[0]![1] - points[points.length - 1]![1]) <
-    1e-6
+    Math.hypot(
+      points[0]![0] - points[points.length - 1]![0],
+      points[0]![1] - points[points.length - 1]![1],
+    ) < 1e-6
   const poly = closed ? points.slice(0, -1) : points
   const L = polylineLength2(poly.length ? [...poly, poly[0]!] : points) || 1
   // Open length

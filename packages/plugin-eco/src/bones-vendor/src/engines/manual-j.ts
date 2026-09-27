@@ -98,11 +98,25 @@ export const INDOOR_DESIGN_C = MJ?.indoorDesignC ?? 24
 /** Outdoor cooling design dry-bulb DEFAULT per IECC zone digit, °C —
  * ASHRAE/ACCA-style; verify local design conditions (Table R301.2(1)). */
 export const OUTDOOR_DESIGN_C_BY_ZONE: Record<string, number> = MJ?.outdoorDesignCByZone ?? {
-  '1': 33, '2': 35, '3': 34, '4': 33, '5': 33, '6': 31, '7': 29, '8': 26,
+  '1': 33,
+  '2': 35,
+  '3': 34,
+  '4': 33,
+  '5': 33,
+  '6': 31,
+  '7': 29,
+  '8': 26,
 }
 /** 2021 IECC Table R402.1.3 prescriptive ceiling R by zone digit. */
 export const CEILING_R_BY_ZONE: Record<string, number> = MJ?.ceilingRByZone ?? {
-  '1': 30, '2': 49, '3': 49, '4': 60, '5': 60, '6': 60, '7': 60, '8': 60,
+  '1': 30,
+  '2': 49,
+  '3': 49,
+  '4': 60,
+  '5': 60,
+  '6': 60,
+  '7': 60,
+  '8': 60,
 }
 /** Peak cooling-design solar proxies per m² of glass by facade orientation. */
 export const SOLAR_W_PER_M2: Record<'N' | 'E' | 'S' | 'W', number> = {
@@ -315,10 +329,7 @@ export function manualJLite(
   // ---- term 1: envelope UA × ΔT ----
   const wallR =
     Number.parseInt(
-      (ASSEMBLIES.exterior?.insulationByClimateZone?.[zone.key]?.value ?? 'R13').replace(
-        /^R/i,
-        '',
-      ),
+      (ASSEMBLIES.exterior?.insulationByClimateZone?.[zone.key]?.value ?? 'R13').replace(/^R/i, ''),
       10,
     ) || 13
   const ceilingR = CEILING_R_BY_ZONE[digit] ?? 49
@@ -345,8 +356,7 @@ export function manualJLite(
   const internalW = occupants * OCCUPANT_SENSIBLE_W + APPLIANCES_SENSIBLE_W
 
   // ---- term 4: infiltration ----
-  const infiltrationW =
-    AIR_SENSIBLE_WH_PER_M3K * INFILTRATION_ACH * conditionedVolumeM3 * deltaTK
+  const infiltrationW = AIR_SENSIBLE_WH_PER_M3K * INFILTRATION_ACH * conditionedVolumeM3 * deltaTK
 
   const totalW = envelopeW + solarW + internalW + infiltrationW
   const totalBtuH = totalW * BTUH_PER_W

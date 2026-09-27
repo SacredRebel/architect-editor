@@ -24,11 +24,7 @@
       "designThicknessIn": 0.0346,
       "designThicknessMm": 0.879,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230", "sfia-guide"]
     },
     "350S162-43": {
       "section": "S",
@@ -43,11 +39,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230", "sfia-guide"]
     },
     "350S162-54": {
       "section": "S",
@@ -62,11 +54,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230", "sfia-guide"]
     },
     "350S162-68": {
       "section": "S",
@@ -81,10 +69,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "550S162-33": {
       "section": "S",
@@ -99,11 +84,7 @@
       "designThicknessIn": 0.0346,
       "designThicknessMm": 0.879,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230", "sfia-guide"]
     },
     "550S162-43": {
       "section": "S",
@@ -118,11 +99,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230", "sfia-guide"]
     },
     "550S162-54": {
       "section": "S",
@@ -137,11 +114,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230", "sfia-guide"]
     },
     "550S162-68": {
       "section": "S",
@@ -156,11 +129,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230", "sfia-guide"]
     },
     "800S162-33": {
       "section": "S",
@@ -175,10 +144,7 @@
       "designThicknessIn": 0.0346,
       "designThicknessMm": 0.879,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "800S162-43": {
       "section": "S",
@@ -193,10 +159,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "800S162-54": {
       "section": "S",
@@ -211,10 +174,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "800S162-68": {
       "section": "S",
@@ -229,10 +189,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "800S162-97": {
       "section": "S",
@@ -247,10 +204,7 @@
       "designThicknessIn": 0.1017,
       "designThicknessMm": 2.583,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1000S162-43": {
       "section": "S",
@@ -265,10 +219,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1000S162-54": {
       "section": "S",
@@ -283,10 +234,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1000S162-68": {
       "section": "S",
@@ -301,10 +249,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1000S162-97": {
       "section": "S",
@@ -319,10 +264,7 @@
       "designThicknessIn": 0.1017,
       "designThicknessMm": 2.583,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1200S162-43": {
       "section": "S",
@@ -337,10 +279,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1200S162-54": {
       "section": "S",
@@ -355,10 +294,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1200S162-68": {
       "section": "S",
@@ -373,10 +309,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "1200S162-97": {
       "section": "S",
@@ -391,10 +324,7 @@
       "designThicknessIn": 0.1017,
       "designThicknessMm": 2.583,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s230",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s230", "sfia-guide"]
     },
     "350T125-33": {
       "section": "T",
@@ -407,10 +337,7 @@
       "designThicknessIn": 0.0346,
       "designThicknessMm": 0.879,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "350T125-43": {
@@ -424,10 +351,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "350T125-54": {
@@ -441,10 +365,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "350T125-68": {
@@ -458,10 +379,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "550T125-33": {
@@ -475,10 +393,7 @@
       "designThicknessIn": 0.0346,
       "designThicknessMm": 0.879,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "550T125-43": {
@@ -492,10 +407,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "550T125-54": {
@@ -509,10 +421,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "550T125-68": {
@@ -526,10 +435,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "irc2021-r603",
-        "sfia-guide"
-      ],
+      "sourceRefs": ["irc2021-r603", "sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "800T125-33": {
@@ -543,9 +449,7 @@
       "designThicknessIn": 0.0346,
       "designThicknessMm": 0.879,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "800T125-43": {
@@ -559,9 +463,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "800T125-54": {
@@ -575,9 +477,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "800T125-68": {
@@ -591,9 +491,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "800T125-97": {
@@ -607,9 +505,7 @@
       "designThicknessIn": 0.1017,
       "designThicknessMm": 2.583,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "1000T125-43": {
@@ -623,9 +519,7 @@
       "designThicknessIn": 0.0451,
       "designThicknessMm": 1.146,
       "yieldKsi": 33,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "1000T125-54": {
@@ -639,9 +533,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "1000T125-68": {
@@ -655,9 +547,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "1000T125-97": {
@@ -671,9 +561,7 @@
       "designThicknessIn": 0.1017,
       "designThicknessMm": 2.583,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "1200T125-54": {
@@ -687,9 +575,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "1200T125-68": {
@@ -703,9 +589,7 @@
       "designThicknessIn": 0.0713,
       "designThicknessMm": 1.811,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "1200T125-97": {
@@ -719,9 +603,7 @@
       "designThicknessIn": 0.1017,
       "designThicknessMm": 2.583,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "sfia-guide"
-      ],
+      "sourceRefs": ["sfia-guide"],
       "note": "Track (T) web depth is measured INSIDE-to-inside (SFIA) so the matching stud nests; no lip."
     },
     "150U050-54": {
@@ -735,10 +617,7 @@
       "designThicknessIn": 0.0566,
       "designThicknessMm": 1.438,
       "yieldKsi": 50,
-      "sourceRefs": [
-        "aisi-s240",
-        "sfia-guide"
-      ]
+      "sourceRefs": ["aisi-s240", "sfia-guide"]
     }
   },
   "vendors": {
@@ -753,22 +632,10 @@
             "https://www.framecad.com/steel-framing-machines",
             "https://web.archive.org/web/20210417030526/https://www.framecad.com/media/1020/f325it_english_mar_2020_lr.pdf"
           ],
-          "profileShapes": [
-            "C",
-            "U"
-          ],
-          "webRangeMm": [
-            63,
-            150
-          ],
-          "flangeRangeMm": [
-            34,
-            50
-          ],
-          "thicknessRangeMm": [
-            0.55,
-            1.2
-          ],
+          "profileShapes": ["C", "U"],
+          "webRangeMm": [63, 150],
+          "flangeRangeMm": [34, 50],
+          "thicknessRangeMm": [0.55, 1.2],
           "gaugeText": "24-18 gauge",
           "punchPattern": "framecad-tooling",
           "maxSpeed": "9,950 ft/hr (2,880 m/hr - vendor conversion as printed)",
@@ -776,18 +643,12 @@
           "rollableFamilies": [
             {
               "family": "350S162",
-              "rollableMils": [
-                33,
-                43
-              ],
+              "rollableMils": [33, 43],
               "basis": "derived: family web/flange within published web 63-150mm / flange 34-50mm; 33/43 mil min-base within published 0.55-1.20mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "550S162",
-              "rollableMils": [
-                33,
-                43
-              ],
+              "rollableMils": [33, 43],
               "basis": "derived: family web/flange within published web 63-150mm / flange 34-50mm; 33/43 mil min-base within published 0.55-1.20mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             }
           ]
@@ -799,40 +660,22 @@
             "https://www.framecad.com/steel-framing-machines",
             "https://web.archive.org/web/20210813131625/https://www.framecad.com/media/1037/f325it-l_english_feb-2021_lr.pdf"
           ],
-          "profileShapes": [
-            "C",
-            "U"
-          ],
-          "webRangeMm": [
-            63,
-            150
-          ],
-          "flangeRangeMm": [
-            34,
-            50
-          ],
-          "thicknessRangeMm": [
-            0.55,
-            1.2
-          ],
+          "profileShapes": ["C", "U"],
+          "webRangeMm": [63, 150],
+          "flangeRangeMm": [34, 50],
+          "thicknessRangeMm": [0.55, 1.2],
           "gaugeText": "24-18 gauge",
           "punchPattern": "framecad-tooling",
           "maxSpeed": "9,450 ft/hr (2,880 m/hr - vendor conversion as printed)",
           "rollableFamilies": [
             {
               "family": "350S162",
-              "rollableMils": [
-                33,
-                43
-              ],
+              "rollableMils": [33, 43],
               "basis": "derived: family web/flange within published web 63-150mm / flange 34-50mm; 33/43 mil min-base within published 0.55-1.20mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "550S162",
-              "rollableMils": [
-                33,
-                43
-              ],
+              "rollableMils": [33, 43],
               "basis": "derived: family web/flange within published web 63-150mm / flange 34-50mm; 33/43 mil min-base within published 0.55-1.20mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             }
           ]
@@ -844,42 +687,22 @@
             "https://www.framecad.com/steel-framing-machines",
             "https://web.archive.org/web/20210121075118/https://www.framecad.com/media/1038/f450it_english_dec_2020_lr.pdf"
           ],
-          "profileShapes": [
-            "C",
-            "U"
-          ],
-          "webRangeMm": [
-            75,
-            150
-          ],
-          "flangeRangeMm": [
-            34,
-            50
-          ],
-          "thicknessRangeMm": [
-            0.7,
-            1.6
-          ],
+          "profileShapes": ["C", "U"],
+          "webRangeMm": [75, 150],
+          "flangeRangeMm": [34, 50],
+          "thicknessRangeMm": [0.7, 1.6],
           "gaugeText": "22-16 gauge",
           "punchPattern": "framecad-tooling",
           "maxSpeed": "7,090 ft/hr (2,160 m/hr)",
           "rollableFamilies": [
             {
               "family": "350S162",
-              "rollableMils": [
-                33,
-                43,
-                54
-              ],
+              "rollableMils": [33, 43, 54],
               "basis": "derived: family web/flange within published web 75-150mm / flange 34-50mm; 33/43/54 mil min-base within published 0.70-1.6mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "550S162",
-              "rollableMils": [
-                33,
-                43,
-                54
-              ],
+              "rollableMils": [33, 43, 54],
               "basis": "derived: family web/flange within published web 75-150mm / flange 34-50mm; 33/43/54 mil min-base within published 0.70-1.6mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             }
           ]
@@ -891,22 +714,10 @@
             "https://www.framecad.com/steel-framing-machines",
             "https://web.archive.org/web/20220128162214/https://www.framecad.com/media/1040/tf550h_english_lr_jul-2020.pdf"
           ],
-          "profileShapes": [
-            "C",
-            "U"
-          ],
-          "webRangeMm": [
-            89,
-            150
-          ],
-          "flangeRangeMm": [
-            34,
-            63
-          ],
-          "thicknessRangeMm": [
-            0.95,
-            2
-          ],
+          "profileShapes": ["C", "U"],
+          "webRangeMm": [89, 150],
+          "flangeRangeMm": [34, 63],
+          "thicknessRangeMm": [0.95, 2],
           "gaugeText": "20-14 gauge",
           "punchPattern": "framecad-tooling",
           "maxSpeed": "4,430 ft/hr (1,350 m/hr)",
@@ -914,20 +725,12 @@
           "rollableFamilies": [
             {
               "family": "350S162",
-              "rollableMils": [
-                43,
-                54,
-                68
-              ],
+              "rollableMils": [43, 54, 68],
               "basis": "derived: family web/flange within published web 89-150mm (88.9 within 0.5mm tolerance) / flange 34-63mm; 43/54/68 mil min-base within published 0.95-2.0mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "550S162",
-              "rollableMils": [
-                43,
-                54,
-                68
-              ],
+              "rollableMils": [43, 54, 68],
               "basis": "derived: family web/flange within published web 89-150mm / flange 34-63mm; 43/54/68 mil min-base within published 0.95-2.0mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             }
           ]
@@ -939,22 +742,10 @@
             "https://www.framecad.com/steel-framing-machines",
             "https://web.archive.org/web/20210508103803/https://www.framecad.com/media/1990/st825it_english_mar_2020_lr.pdf"
           ],
-          "profileShapes": [
-            "C",
-            "U"
-          ],
-          "webRangeMm": [
-            60,
-            152
-          ],
-          "flangeRangeMm": [
-            33.9,
-            50.8
-          ],
-          "thicknessRangeMm": [
-            0.75,
-            1.6
-          ],
+          "profileShapes": ["C", "U"],
+          "webRangeMm": [60, 152],
+          "flangeRangeMm": [33.9, 50.8],
+          "thicknessRangeMm": [0.75, 1.6],
           "gaugeText": "22-16 gauge",
           "punchPattern": "framecad-tooling",
           "maxSpeed": "1,680 m/hr",
@@ -979,20 +770,12 @@
           "rollableFamilies": [
             {
               "family": "350S162",
-              "rollableMils": [
-                33,
-                43,
-                54
-              ],
+              "rollableMils": [33, 43, 54],
               "basis": "derived: family web/flange within published web 60-152mm / flange 1 1/3-2 in (33.9-50.8mm); 33/43/54 mil min-base within published 0.75-1.6mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "550S162",
-              "rollableMils": [
-                33,
-                43,
-                54
-              ],
+              "rollableMils": [33, 43, 54],
               "basis": "derived: family web/flange within published web 60-152mm / flange 1 1/3-2 in (33.9-50.8mm); 33/43/54 mil min-base within published 0.75-1.6mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             }
           ]
@@ -1005,22 +788,10 @@
             "https://web.archive.org/web/20210508105925/https://www.framecad.com/media/1991/st925it_english_mar_2020_lr.pdf",
             "https://web.archive.org/web/20211015120525/https://www.framecad.com/media/2241/st925it_us_aug2021_hr.pdf"
           ],
-          "profileShapes": [
-            "C",
-            "U"
-          ],
-          "webRangeMm": [
-            89,
-            305
-          ],
-          "flangeRangeMm": [
-            35,
-            52
-          ],
-          "thicknessRangeMm": [
-            0.95,
-            2
-          ],
+          "profileShapes": ["C", "U"],
+          "webRangeMm": [89, 305],
+          "flangeRangeMm": [35, 52],
+          "thicknessRangeMm": [0.95, 2],
           "gaugeText": "20-14 gauge",
           "punchPattern": "framecad-tooling",
           "maxSpeed": "5,400 ft/hr (1,680 m/hr)",
@@ -1028,47 +799,27 @@
           "rollableFamilies": [
             {
               "family": "350S162",
-              "rollableMils": [
-                43,
-                54,
-                68
-              ],
+              "rollableMils": [43, 54, 68],
               "basis": "derived: family web/flange within published web 89-305mm (88.9 within 0.5mm tolerance) / flange 35-52mm; 43/54/68 mil min-base within published 0.95-2.0mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "550S162",
-              "rollableMils": [
-                43,
-                54,
-                68
-              ],
+              "rollableMils": [43, 54, 68],
               "basis": "derived: family web/flange within published web 89-305mm / flange 35-52mm; 43/54/68 mil min-base within published 0.95-2.0mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "800S162",
-              "rollableMils": [
-                43,
-                54,
-                68
-              ],
+              "rollableMils": [43, 54, 68],
               "basis": "derived: family web/flange within published web 89-305mm / flange 35-52mm; 43/54/68 mil min-base within published 0.95-2.0mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "1000S162",
-              "rollableMils": [
-                43,
-                54,
-                68
-              ],
+              "rollableMils": [43, 54, 68],
               "basis": "derived: family web/flange within published web 89-305mm / flange 35-52mm; 43/54/68 mil min-base within published 0.95-2.0mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "1200S162",
-              "rollableMils": [
-                43,
-                54,
-                68
-              ],
+              "rollableMils": [43, 54, 68],
               "basis": "derived: family web/flange within published web 89-305mm / flange 35-52mm; 43/54/68 mil min-base within published 0.95-2.0mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             }
           ]
@@ -1080,22 +831,10 @@
             "https://www.framecad.com/steel-framing-machines",
             "https://web.archive.org/web/20221006180546/https://www.framecad.com/media/1941/st950h_english_apr_2021_lr.pdf"
           ],
-          "profileShapes": [
-            "C",
-            "U"
-          ],
-          "webRangeMm": [
-            250,
-            305
-          ],
-          "flangeRangeMm": [
-            38,
-            63
-          ],
-          "thicknessRangeMm": [
-            1.15,
-            2.5
-          ],
+          "profileShapes": ["C", "U"],
+          "webRangeMm": [250, 305],
+          "flangeRangeMm": [38, 63],
+          "thicknessRangeMm": [1.15, 2.5],
           "gaugeText": "18-12 gauge",
           "punchPattern": "framecad-tooling",
           "maxSpeed": "5,400 ft/hr (1,680 m/hr)",
@@ -1120,20 +859,12 @@
           "rollableFamilies": [
             {
               "family": "1000S162",
-              "rollableMils": [
-                54,
-                68,
-                97
-              ],
+              "rollableMils": [54, 68, 97],
               "basis": "derived: family web/flange within published web 250-305mm (conservative) / flange 38-63mm; 54/68/97 mil min-base within published 1.15-2.5mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             },
             {
               "family": "1200S162",
-              "rollableMils": [
-                54,
-                68,
-                97
-              ],
+              "rollableMils": [54, 68, 97],
               "basis": "derived: family web/flange within published web 250-305mm (conservative) / flange 38-63mm; 54/68/97 mil min-base within published 1.15-2.5mm coil range (match tolerance 0.5mm for imperial roundings); lip capability unpublished by FRAMECAD - dims resolve from the generic AISI row"
             }
           ]
@@ -1147,26 +878,11 @@
         "frama3200": {
           "name": "Howick FRAMA 3200",
           "status": "verified",
-          "sourceUrls": [
-            "https://www.howickltd.com/machines/frama-3200"
-          ],
-          "webOptionsMm": [
-            45,
-            63.5,
-            65,
-            70,
-            75,
-            89,
-            92,
-            100,
-            150
-          ],
+          "sourceUrls": ["https://www.howickltd.com/machines/frama-3200"],
+          "webOptionsMm": [45, 63.5, 65, 70, 75, 89, 92, 100, 150],
           "flangeMm": 41,
           "lipMm": 10,
-          "thicknessRangeMm": [
-            0.75,
-            1.15
-          ],
+          "thicknessRangeMm": [0.75, 1.15],
           "gaugeText": "22-18 gauge",
           "punchPattern": "howick-frama-tooling",
           "maxSpeed": "up to 900 m/hr (*varies with component complexity)",
@@ -1177,14 +893,9 @@
               "webMm": 89,
               "flangeMm": 41,
               "lipMm": 10,
-              "rollableMils": [
-                33,
-                43
-              ],
+              "rollableMils": [33, 43],
               "nearestGeneric": "350S162",
-              "sourceUrls": [
-                "https://www.howickltd.com/machines/frama-3200"
-              ],
+              "sourceUrls": ["https://www.howickltd.com/machines/frama-3200"],
               "note": "Howick's own profile geometry: lip 10mm vs AISI S162 12.7mm (1/2 in) - close kin of 350S162, NOT identical. 33/43 mil min-base (0.836/1.087mm) within the published 0.75-1.15mm range."
             }
           ]
@@ -1192,12 +903,8 @@
         "frama4200": {
           "name": "Howick FRAMA 4200",
           "status": "verified",
-          "sourceUrls": [
-            "https://www.howickltd.com/machines/frama-4200"
-          ],
-          "webOptionsMm": [
-            45
-          ],
+          "sourceUrls": ["https://www.howickltd.com/machines/frama-4200"],
+          "webOptionsMm": [45],
           "flangeMm": 65,
           "lipMm": 8,
           "gaugeText": "self-contradicting prints - see discrepancies",
@@ -1226,22 +933,11 @@
         "frama5600": {
           "name": "Howick FRAMA 5600",
           "status": "verified",
-          "sourceUrls": [
-            "https://www.howickltd.com/machines/frama-5600"
-          ],
-          "webOptionsMm": [
-            75,
-            89,
-            92,
-            100,
-            150
-          ],
+          "sourceUrls": ["https://www.howickltd.com/machines/frama-5600"],
+          "webOptionsMm": [75, 89, 92, 100, 150],
           "flangeMm": 45,
           "lipMm": 10,
-          "thicknessRangeMm": [
-            0.95,
-            1.55
-          ],
+          "thicknessRangeMm": [0.95, 1.55],
           "gaugeText": "20-16 gauge",
           "punchPattern": "howick-frama-tooling",
           "maxSpeed": "up to 800 m/hr (*varies with component complexity)",
@@ -1251,20 +947,11 @@
         "frama6800": {
           "name": "Howick FRAMA 6800",
           "status": "verified",
-          "sourceUrls": [
-            "https://www.howickltd.com/machines/frama-6800"
-          ],
-          "webOptionsMm": [
-            200,
-            250,
-            300
-          ],
+          "sourceUrls": ["https://www.howickltd.com/machines/frama-6800"],
+          "webOptionsMm": [200, 250, 300],
           "flangeMm": 50,
           "lipMm": 15,
-          "thicknessRangeMm": [
-            2,
-            2.5
-          ],
+          "thicknessRangeMm": [2, 2.5],
           "gaugeText": "14-13 gauge",
           "punchPattern": "howick-frama-tooling",
           "maxSpeed": "up to 600 m/hr (*varies with component complexity)",
@@ -1274,22 +961,11 @@
         "frama7600": {
           "name": "Howick FRAMA 7600",
           "status": "verified",
-          "sourceUrls": [
-            "https://www.howickltd.com/machines/frama-7600"
-          ],
-          "webOptionsMm": [
-            75,
-            89,
-            100,
-            150,
-            200
-          ],
+          "sourceUrls": ["https://www.howickltd.com/machines/frama-7600"],
+          "webOptionsMm": [75, 89, 100, 150, 200],
           "flangeMm": 45,
           "lipMm": 10,
-          "thicknessRangeMm": [
-            0.95,
-            1.55
-          ],
+          "thicknessRangeMm": [0.95, 1.55],
           "gaugeText": "20-16 gauge",
           "punchPattern": "howick-frama-tooling",
           "maxSpeed": "up to 800 m/hr (*varies with component complexity)",
@@ -1299,22 +975,11 @@
         "frama7800": {
           "name": "Howick FRAMA 7800",
           "status": "verified",
-          "sourceUrls": [
-            "https://www.howickltd.com/machines/frama-7800"
-          ],
-          "webOptionsMm": [
-            150,
-            200,
-            250,
-            300,
-            350
-          ],
+          "sourceUrls": ["https://www.howickltd.com/machines/frama-7800"],
+          "webOptionsMm": [150, 200, 250, 300, 350],
           "flangeMm": 50,
           "lipMm": 15,
-          "thicknessRangeMm": [
-            1.85,
-            2.5
-          ],
+          "thicknessRangeMm": [1.85, 2.5],
           "gaugeText": "16-13 gauge",
           "punchPattern": "howick-frama-tooling",
           "maxSpeed": "up to 750 m/hr (*varies with component complexity)",
@@ -1324,14 +989,8 @@
         "x-tenda3600": {
           "name": "Howick X-TENDA 3600",
           "status": "verified",
-          "sourceUrls": [
-            "https://www.howickltd.com/machines/x-tenda-3600"
-          ],
-          "webOptionsMm": [
-            63.5,
-            92,
-            152.4
-          ],
+          "sourceUrls": ["https://www.howickltd.com/machines/x-tenda-3600"],
+          "webOptionsMm": [63.5, 92, 152.4],
           "flangeMm": 41.3,
           "lipMm": 10,
           "gaugeText": "self-contradicting prints - see discrepancies",
@@ -1366,17 +1025,9 @@
         "scotpanel": {
           "name": "SCOTPANEL series (5090/5140/7063/7070/7076/7090/7140/8140)",
           "status": "verified",
-          "sourceUrls": [
-            "https://scottsdalesteelframes.com/our-system/machines"
-          ],
-          "webRangeMm": [
-            63,
-            140
-          ],
-          "thicknessRangeMm": [
-            0,
-            1.5
-          ],
+          "sourceUrls": ["https://scottsdalesteelframes.com/our-system/machines"],
+          "webRangeMm": [63, 140],
+          "thicknessRangeMm": [0, 1.5],
           "gaugeText": "up to 1.5mm (16 ga)",
           "note": "lineup-level figures only (per-model web/flange/lip not published on the lineup page) - no family derivations claimed",
           "rollableFamilies": []
@@ -1384,34 +1035,18 @@
         "kfs-framemaker": {
           "name": "KFS FRAMEMAKER (1220/1218/1420/1622)",
           "status": "verified",
-          "sourceUrls": [
-            "https://scottsdalesteelframes.com/our-system/machines"
-          ],
-          "webRangeMm": [
-            89,
-            305
-          ],
-          "thicknessRangeMm": [
-            0.75,
-            2.7
-          ],
+          "sourceUrls": ["https://scottsdalesteelframes.com/our-system/machines"],
+          "webRangeMm": [89, 305],
+          "thicknessRangeMm": [0.75, 2.7],
           "note": "lineup-level figures only; Knudson FRAMEMAKER now sells through Scottsdale - no family derivations claimed",
           "rollableFamilies": []
         },
         "kfd-framemaker-2025": {
           "name": "KFD FRAMEMAKER 2025",
           "status": "verified",
-          "sourceUrls": [
-            "https://scottsdalesteelframes.com/our-system/machines"
-          ],
-          "webRangeMm": [
-            40,
-            150
-          ],
-          "thicknessRangeMm": [
-            0,
-            0.85
-          ],
+          "sourceUrls": ["https://scottsdalesteelframes.com/our-system/machines"],
+          "webRangeMm": [40, 150],
+          "thicknessRangeMm": [0, 0.85],
           "gaugeText": "up to 0.85mm; up to 120 ft/min",
           "note": "lineup-level figures only - no family derivations claimed",
           "rollableFamilies": []
@@ -1425,18 +1060,14 @@
         "x1": {
           "name": "Pinnacle X1",
           "status": "unverified — generic AISI fallback",
-          "sourceUrls": [
-            "https://pinnaclelgs.com"
-          ],
+          "sourceUrls": ["https://pinnaclelgs.com"],
           "note": "only thickness options published (1.2 & 1.6mm); web/flange/lip dims NOT publicly verified - resolves generic AISI profiles with the fallback status",
           "rollableFamilies": []
         },
         "x80i": {
           "name": "Pinnacle X80i",
           "status": "unverified — generic AISI fallback",
-          "sourceUrls": [
-            "https://pinnaclelgs.com"
-          ],
+          "sourceUrls": ["https://pinnaclelgs.com"],
           "note": "vendor claims \"80 profile sizes\" up to 2.5mm; dims NOT publicly verified - resolves generic AISI profiles with the fallback status",
           "rollableFamilies": []
         }
@@ -1450,10 +1081,7 @@
       "holeLengthIn": 4.5,
       "minCenterSpacingIn": 24,
       "minEndDistanceIn": 10,
-      "sourceRefs": [
-        "irc2021-r603",
-        "aisi-s230"
-      ]
+      "sourceRefs": ["irc2021-r603", "aisi-s230"]
     },
     "s240-factory-punchout": {
       "description": "AISI S240 A5.9 FACTORY punchouts: web centerline; >=24 in center-to-center; width <= min(0.5 x depth, 2.5 in); length <= 4.5 in; punchout <=12 in from member end is out of spec. THE Phase-2 MEP routing grid: service runs snap to this rhythm instead of drilling members.",
@@ -1461,25 +1089,18 @@
       "holeLengthIn": 4.5,
       "minCenterSpacingIn": 24,
       "minEndDistanceIn": 12,
-      "sourceRefs": [
-        "aisi-s240"
-      ]
+      "sourceRefs": ["aisi-s240"]
     },
     "sfia-standard-punchout": {
       "description": "SFIA standard manufacturing punchout: 1-1/2 x 4 in for member depth > 2.5 in; 3/4 x 4 in for depth <= 2.5 in; >=24 in center-to-center.",
       "holeWidthIn": 1.5,
       "holeLengthIn": 4,
       "minCenterSpacingIn": 24,
-      "sourceRefs": [
-        "sfia-guide"
-      ]
+      "sourceRefs": ["sfia-guide"]
     },
     "framecad-tooling": {
       "description": "FRAMECAD in-line tooling stations (names published, dims NOT): Service Hole, Web Bolt Hole, Dimple, Web Notch, Chamfer, Lip Cut, Flange Holes L&R, Swage, Shear. Punching accuracy claims are per-model; hole DIMENSIONS unpublished - MEP routing against FRAMECAD punches needs the S240/SFIA generic patterns until vendor data lands.",
-      "sourceRefs": [
-        "framecad-f325it-pdf",
-        "framecad-f450it-pdf"
-      ]
+      "sourceRefs": ["framecad-f325it-pdf", "framecad-f450it-pdf"]
     },
     "howick-frama-tooling": {
       "description": "Howick FRAMA in-line tooling (dims published per spec tables): Service Hole 34.1mm, Bolt Hole 13mm (UNVERIFIED on FRAMA 7600 - transposed print), Web Hole 3.5mm, Dimple 3.5mm, Lip Notch, Web Notch, Lip Roller, Swage, End Bearing Cut-off; X-TENDA deflection slot 38.1 x 5mm; FRAMA 6800/7800 swaged service holes 80/140mm.",
@@ -1495,33 +1116,25 @@
     "steelToSteel": {
       "description": "Steel-to-steel: self-drilling tapping screws per ASTM C1513; minimum edge distance AND center-to-center spacing 1/2 in; >=3 threads exposed past the joined steel; corrosion-resistant (IRC R603.2.5).",
       "standard": "ASTM C1513",
-      "sourceRefs": [
-        "irc2021-r603"
-      ]
+      "sourceRefs": ["irc2021-r603"]
     },
     "studToTrack": {
       "description": "Stud to top/bottom track: 2 x No. 8 screws - one through each flange (IRC Table R603.3.2(1) fastening schedule).",
       "minScrewSize": "No. 8",
       "standard": "ASTM C1513",
-      "sourceRefs": [
-        "irc2021-r603"
-      ]
+      "sourceRefs": ["irc2021-r603"]
     },
     "sheathingToSteel": {
       "description": "Structural sheathing to studs: minimum No. 8 C1513, head >=0.292 in, countersunk, edge distance >=3/8 in; spacing 6 in panel edges / 12 in field (IRC R603.2.5, Table R603.3.2(1)).",
       "minScrewSize": "No. 8",
       "standard": "ASTM C1513",
-      "sourceRefs": [
-        "irc2021-r603"
-      ]
+      "sourceRefs": ["irc2021-r603"]
     },
     "gypsumToSteel": {
       "description": "Gypsum board to steel: minimum No. 6 bugle-head (ASTM C954 or C1513), spacing 12 in (IRC R603.2.5, Table R603.3.2(1)).",
       "minScrewSize": "No. 6",
       "standard": "ASTM C954 / C1513",
-      "sourceRefs": [
-        "irc2021-r603"
-      ]
+      "sourceRefs": ["irc2021-r603"]
     }
   },
   "citations": {

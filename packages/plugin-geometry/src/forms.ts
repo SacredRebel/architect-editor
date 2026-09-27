@@ -2,7 +2,7 @@
  * Pure constructions for the geometry kit (H16.1).
  * Each export returns plan figures as polylines / points in metres.
  */
-import { mid, PHI, SQRT2, SQRT3, type Vec2, rot } from './math'
+import { mid, PHI, rot, SQRT2, SQRT3, type Vec2 } from './math'
 
 export type Figure2D = {
   polylines: Vec2[][]
@@ -206,7 +206,12 @@ export function fibonacciSquares(count: number, unit = 1, origin: Vec2 = [0, 0])
 }
 
 /** 10. Logarithmic spiral (default pitch ≠ golden). */
-export function logSpiral(pitch: number, turns = 3, origin: Vec2 = [0, 0], samples = 120): Figure2D {
+export function logSpiral(
+  pitch: number,
+  turns = 3,
+  origin: Vec2 = [0, 0],
+  samples = 120,
+): Figure2D {
   const pts: Vec2[] = []
   const b = Math.log(pitch) / (Math.PI / 2)
   for (let i = 0; i <= samples; i++) {
@@ -280,7 +285,12 @@ export function hexCircleLattice(radius: number, rings: number, origin: Vec2 = [
 }
 
 /** 18. Hanging-chain 2D guide. */
-export function hangingChain(span: number, rise: number, origin: Vec2 = [0, 0], samples = 48): Figure2D {
+export function hangingChain(
+  span: number,
+  rise: number,
+  origin: Vec2 = [0, 0],
+  samples = 48,
+): Figure2D {
   const a = (span * span) / (8 * Math.max(1e-6, rise))
   const pts: Vec2[] = []
   for (let i = 0; i <= samples; i++) {
@@ -301,7 +311,11 @@ function dist3(a: [number, number, number], b: [number, number, number]) {
 export function regularSolid(
   kind: 'tetrahedron' | 'cube' | 'octahedron' | 'dodecahedron' | 'icosahedron',
   edge: number,
-): { vertices: [number, number, number][]; edges: [number, number][]; meta: Record<string, number> } {
+): {
+  vertices: [number, number, number][]
+  edges: [number, number][]
+  meta: Record<string, number>
+} {
   const v: [number, number, number][] = []
   const e: [number, number][] = []
   if (kind === 'tetrahedron') {
@@ -311,9 +325,7 @@ export function regularSolid(
     e.push([0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3])
   } else if (kind === 'cube') {
     const h = edge / 2
-    for (const x of [-h, h])
-      for (const y of [-h, h])
-        for (const z of [-h, h]) v.push([x, y, z])
+    for (const x of [-h, h]) for (const y of [-h, h]) for (const z of [-h, h]) v.push([x, y, z])
     for (let i = 0; i < 8; i++)
       for (let j = i + 1; j < 8; j++) {
         if (Math.abs(dist3(v[i]!, v[j]!) - edge) < 1e-9) e.push([i, j])
@@ -342,9 +354,7 @@ export function regularSolid(
       }
   } else {
     const pts: [number, number, number][] = []
-    for (const x of [-1, 1])
-      for (const y of [-1, 1])
-        for (const z of [-1, 1]) pts.push([x, y, z])
+    for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) pts.push([x, y, z])
     for (const s of [-1, 1])
       for (const t of [-1, 1]) {
         pts.push([0, s / PHI, t * PHI])
@@ -352,7 +362,10 @@ export function regularSolid(
         pts.push([t * PHI, 0, s / PHI])
       }
     const dists = pts.flatMap((p, i) =>
-      pts.slice(i + 1).map((q) => dist3(p, q)).filter((d) => d > 0.1),
+      pts
+        .slice(i + 1)
+        .map((q) => dist3(p, q))
+        .filter((d) => d > 0.1),
     )
     const e0 = Math.min(...dists)
     const sc = edge / e0
@@ -448,12 +461,7 @@ function regularNGon(n: number, cx: number, cy: number, R: number, rot0 = -Math.
  * Returns polylines for each tile outline; meta.maxGap is the largest leftover
  * along the boundary (must be < 1e-6 for acceptance over a closed patch).
  */
-export function tilingFill(
-  id: TilingId,
-  tile: number,
-  area = 20,
-  origin: Vec2 = [0, 0],
-): Figure2D {
+export function tilingFill(id: TilingId, tile: number, area = 20, origin: Vec2 = [0, 0]): Figure2D {
   const lines: Vec2[][] = []
   const ox = origin[0]
   const oy = origin[1]
@@ -555,10 +563,10 @@ export function tilingFill(
 
 /** 16. Archimedean solids — see ./archimedean.ts (fuller coordinate sets). */
 export {
+  type ArchimedeanKind,
   archimedeanKinds,
   archimedeanSolid,
   figureBounds,
-  type ArchimedeanKind,
 } from './archimedean'
 
 /** 17. Alberti nine + Palladio seven room ratios. */
@@ -587,7 +595,13 @@ export const PALLADIO_SHAPES: readonly { name: string; ratio: number }[] = [
 export function roomProportionCheck(
   width: number,
   depth: number,
-): { bestAlberti: string; bestPalladio: string; ratio: number; albertiErr: number; palladioErr: number } {
+): {
+  bestAlberti: string
+  bestPalladio: string
+  ratio: number
+  albertiErr: number
+  palladioErr: number
+} {
   const r = Math.min(width, depth) / Math.max(width, depth)
   let bestA = ALBERTI_RATIOS[0]!
   let bestAe = Infinity

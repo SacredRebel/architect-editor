@@ -111,7 +111,11 @@ export default function EcoMinimalPanel() {
             <span style={{ width: 48, textAlign: 'right' }}>{thick.toFixed(2)}m</span>
           </label>
           <div>Live area {formatArea(area, org.lengthOrder)}</div>
-          <button onClick={() => undoEcoOrganicBuilding()} style={{ padding: '6px 10px' }} type="button">
+          <button
+            onClick={() => undoEcoOrganicBuilding()}
+            style={{ padding: '6px 10px' }}
+            type="button"
+          >
             Undo
           </button>
         </>

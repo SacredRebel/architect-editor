@@ -143,10 +143,7 @@ export type ViewMode = z.infer<typeof ViewMode>
  * the old `seeThrough` boolean (false = the old "solid" mode → 'off';
  * anything else → 'xray', the historical default).
  */
-export function effectiveViewMode(node: {
-  viewMode?: unknown
-  seeThrough?: unknown
-}): ViewMode {
+export function effectiveViewMode(node: { viewMode?: unknown; seeThrough?: unknown }): ViewMode {
   const v = node.viewMode
   if (v === 'off' || v === 'xray' || v === 'basement') return v
   return node.seeThrough === false ? 'off' : 'xray'

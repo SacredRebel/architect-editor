@@ -8,9 +8,9 @@ import {
   ShapeUtils,
   Vector2,
 } from 'three'
-import type { BodyNode } from '../../schema/body'
 import { getBodyLoopBoundaryPoints } from '../../kernel/body-curves'
 import { validateBodyTopology } from '../../kernel/body-topology'
+import type { BodyNode } from '../../schema/body'
 
 type Point3 = [number, number, number]
 

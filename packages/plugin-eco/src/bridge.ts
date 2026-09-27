@@ -4,12 +4,9 @@ import { applyEcoSite } from './apply-site'
 import type { EcoMsg, EcoSite } from './bridge-types'
 import { siteToWorldXz } from './coords'
 import { ecoDebug, ecoDebugWarn } from './eco-debug'
-import {
-  exportEcoScenePayload,
-  restoreEcoSceneExtras,
-} from './eco-scene'
-import { getEcoSiteState } from './eco-site-store'
 import { setEcoExportState } from './eco-export-store'
+import { exportEcoScenePayload, restoreEcoSceneExtras } from './eco-scene'
+import { getEcoSiteState } from './eco-site-store'
 import { arrayBufferToBase64, downloadBytes, exportEcoGlb } from './export-glb'
 
 const PROTOCOL = 'eco/1' as const

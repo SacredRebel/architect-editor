@@ -29,7 +29,10 @@ export function buildPendentiveFloorplan(
     const ry = node.rotation?.[1] ?? 0
     const cos = Math.cos(ry)
     const sin = Math.sin(ry)
-    const at = (lx: number, lz: number): [number, number] => [x + lx * cos + lz * sin, z - lx * sin + lz * cos]
+    const at = (lx: number, lz: number): [number, number] => [
+      x + lx * cos + lz * sin,
+      z - lx * sin + lz * cos,
+    ]
     const pts: [number, number][] = []
     for (let i = 0; i <= 16; i++) {
       const a = (i / 16) * (Math.PI / 2)
