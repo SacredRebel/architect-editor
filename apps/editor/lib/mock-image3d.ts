@@ -138,12 +138,13 @@ export async function handleMockImage3d(
     if (!t || t.status !== 'done') return okJson({ ok: false, error: 'not_ready' }, 409)
     const from = Math.max(0, body.from ?? 0)
     const to = Math.min(t.glb.byteLength, body.to ?? t.glb.byteLength)
-    const slice = t.glb.subarray(from, to)
-    return new Response(slice, {
+    const bytes = new Uint8Array(to - from)
+    bytes.set(t.glb.subarray(from, to))
+    return new Response(bytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Length': String(slice.byteLength),
+        'Content-Length': String(bytes.byteLength),
       },
     })
   }

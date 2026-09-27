@@ -765,7 +765,10 @@ export const FirstPersonControls = () => {
         if (mesh.isMesh) {
           mesh.geometry?.dispose()
           const mat = mesh.material
-          if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
+          if (Array.isArray(mat))
+            mat.forEach((m) => {
+              m.dispose()
+            })
           else mat?.dispose?.()
         }
       })

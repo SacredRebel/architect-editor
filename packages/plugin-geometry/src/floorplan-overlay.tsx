@@ -76,7 +76,7 @@ function figureToGeometry(
  */
 export default function GeometryFloorplanOverlay() {
   const { figures, selectedId } = useGeometry()
-  const { unitsPerPixel } = useFloorplanRender()
+  const unitsPerPixel = useFloorplanRender()?.unitsPerPixel ?? 0.01
   const drag = useRef<{
     id: string
     origin: [number, number]

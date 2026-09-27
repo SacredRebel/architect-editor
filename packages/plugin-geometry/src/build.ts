@@ -122,7 +122,8 @@ export function buildForm(formId: FormId, opts: BuildOpts): Built {
       const sol = regularSolid(kind, s)
       solid = { vertices: sol.vertices, edges: sol.edges }
       raw = { polylines: [], meta: sol.meta }
-      summary = `${kind}: edge≈${sol.meta.edgeMean.toFixed(4)}`
+      const edgeMean = sol.meta.edgeMean
+      summary = `${kind}: edge≈${(edgeMean ?? 0).toFixed(4)}`
       break
     }
     case 'archimedean-solids': {

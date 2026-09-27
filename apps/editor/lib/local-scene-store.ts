@@ -89,6 +89,9 @@ export function saveLocalScene(
     throw new Error(`Local scene not found: ${id}`)
   }
   const prev = scenes[idx]
+  if (!prev) {
+    throw new Error(`Local scene not found: ${id}`)
+  }
   if (expectedVersion !== undefined && prev.version !== expectedVersion) {
     return { conflict: true }
   }

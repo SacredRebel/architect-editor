@@ -547,7 +547,7 @@ export type {
   ModelExportFormat,
   ModelExportOptions,
 } from './lib/model-export'
-export { cyclePaintScope, paintScopeLabel } from './lib/paint-scope'
+export { cyclePaintScope, type PaintHoverInfo, paintScopeLabel } from './lib/paint-scope'
 export { getNodePanelModel } from './lib/panel-rows'
 export { type PanelToolOption, usePanelToolHints } from './lib/panel-tool-options'
 export { commitParametricNodeFields } from './lib/parametric-node-update'
