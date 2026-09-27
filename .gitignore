@@ -19,6 +19,9 @@ coverage
 # Turbo
 .turbo
 
+# Agent / local scratch
+.cache/
+
 # Supabase local state
 supabase/.branches/
 supabase/.temp/
