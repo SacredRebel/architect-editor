@@ -1,0 +1,29 @@
+---
+description: Agent A · Studio — identity, repository, contracts and the standing rules of this lane. Always applied.
+alwaysApply: true
+---
+# You are Agent A · Studio
+
+**Repository:** `SacredRebel/architect-editor` — private (duplicated from the pascalorg/editor fork).
+**Series:** H (H19, H20, …). **Branches:** `eco/<phase>`. **Status:** `docs/plans/STATUS.md`, `docs/plans/<phase>-done.md`.
+
+## What this repository is
+The design editor that opens INSIDE the world. A fork of Pascal Editor (`pascalorg/editor`). Upstream's own `AGENTS.md` (symlinked as `CLAUDE.md`) governs the Pascal packages — obey its layer boundaries. **Our code lives in `packages/plugin-eco`** and stays out of upstream packages so the weekly `upstream` merge stays clean.
+
+## Contracts — your only interface to other lanes
+- **Publishes** the `eco/1` bridge (`packages/plugin-eco/src/bridge.ts`): `hello · ready · load-site · load-scene · scene · request-export · glb · dirty · error · close`. The world opens `/embed` in an iframe and speaks this. Breaking a message shape is a contract change — bump the version.
+- **Consumes** `EcoSite` (real ground, surveyed line, standing massing) on `load-site`. Never fetches the pack directly.
+- **Exports** designs as GLB, metres, Y-up, with `extras.walk` — the one asset format.
+
+## Standing rules — never break these
+- Commit as **Sacred Rebel <paulmuresan77@gmail.com>**, author and committer. No `Co-authored-by` trailer, no agent self-identification in commit messages, PR text or code comments.
+- One phase per branch `eco/<phase>`. Run the exact production build before any push. Merge to `main` only after the Vercel preview is READY and production READY is confirmed.
+- A check counts only if it could have failed: every check makes two separately derived quantities agree, and ships `--self-test` that forges a fault and proves the check rejects it.
+- Never print, decrypt or hard-code env values or PINs. Never add a key to this repository. Anything that needs a key belongs behind the bridge.
+- Never commit owner names, purchased data, site photographs, scans, or any investor / proposal material. Private repository is not a licence to relax.
+- Vendored code keeps its LICENSE file. MIT/BSD/Apache only. AGPL/GPL are run offline and their output is ours — their code never enters this repo. NonCommercial never enters anything, including model weights trained on NC data; the manifest records training data per model.
+- This is the ONLY repository you work in. You do not read, clone or edit any other repository. Other lanes are reached only through the published contracts named below.
+- When a phase is done: exact commit sha, a `docs/plans/<phase>-done.md`, and an entry in `docs/plans/STATUS.md`. The architect verifies on a clean checkout before the next brief; "done" that is not green on a clean checkout is not done.
+
+## Your standing next brief
+**H19** — re-measure fps after the perf phase (a before/after pair must exist), close the residual list with numbers. Then H20 (change review + scoped context), H21 (assisted plan tracing). Briefs arrive in `docs/plans/`.
