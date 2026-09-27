@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { effectiveRidgeHeights, type EcoShell } from './eco-shell-store'
 import { ECO_CURVE_WALK_TOLERANCE_M } from './eco-curve-tolerance'
+import { type EcoShell, effectiveRidgeHeights } from './eco-shell-store'
 
 function dist2(ax: number, az: number, bx: number, bz: number) {
   const dx = bx - ax
@@ -221,10 +221,7 @@ function addRibs(
     const left = rayToOutline(p.x, p.z, perp.x, perp.z, outline)
     const right = rayToOutline(p.x, p.z, -perp.x, -perp.z, outline)
     // Gridshell rib: segment along the tessellated surface, not a chord under the bulge
-    const segs = Math.max(
-      4,
-      Math.ceil(Math.hypot(right.x - left.x, right.z - left.z) / 0.4),
-    )
+    const segs = Math.max(4, Math.ceil(Math.hypot(right.x - left.x, right.z - left.z) / 0.4))
     for (let s = 0; s < segs; s++) {
       const u0 = s / segs
       const u1 = (s + 1) / segs

@@ -65,8 +65,7 @@ function clipHalfPlane(
     const dz = b[1] - a[1]
     const denom = dx * normal[0] + dz * normal[1]
     if (Math.abs(denom) < 1e-12) return a
-    const t =
-      ((pointOnLine[0] - a[0]) * normal[0] + (pointOnLine[1] - a[1]) * normal[1]) / denom
+    const t = ((pointOnLine[0] - a[0]) * normal[0] + (pointOnLine[1] - a[1]) * normal[1]) / denom
     return [a[0] + t * dx, a[1] + t * dz]
   }
 
@@ -113,10 +112,7 @@ export function deriveBuildableEnvelope(
     // Outward normal (right of directed edge when CCW; left when CW).
     const outward: Point2D = ccw ? [dz / len, -dx / len] : [-dz / len, dx / len]
     const inset = setbackForRole(edgeRoles[i]!)
-    const pointOnLine: Point2D = [
-      start[0] - outward[0] * inset,
-      start[1] - outward[1] * inset,
-    ]
+    const pointOnLine: Point2D = [start[0] - outward[0] * inset, start[1] - outward[1] * inset]
     // Keep the half-plane opposite the outward normal (interior).
     const inward: Point2D = [-outward[0], -outward[1]]
     eroded = clipHalfPlane(eroded, pointOnLine, inward)

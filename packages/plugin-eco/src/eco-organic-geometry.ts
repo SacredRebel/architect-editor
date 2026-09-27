@@ -1,7 +1,12 @@
 import * as THREE from 'three'
-import { sampleCatenary, tessellateMinimalPatch, type EcoCatenary, type EcoMinimalPatch } from './eco-catenary'
-import { tessellateLoft, type EcoLoft } from './eco-loft'
-import { tessellateVault, type EcoVault } from './eco-vault'
+import {
+  type EcoCatenary,
+  type EcoMinimalPatch,
+  sampleCatenary,
+  tessellateMinimalPatch,
+} from './eco-catenary'
+import { type EcoLoft, tessellateLoft } from './eco-loft'
+import { type EcoVault, tessellateVault } from './eco-vault'
 
 function meshFromArrays(
   name: string,
@@ -128,9 +133,7 @@ export function buildCatenaryObject3D(
 ): THREE.Group {
   const group = new THREE.Group()
   group.name = `eco-catenary:${cat.id}`
-  const mat =
-    material ??
-    new THREE.MeshStandardMaterial({ color: 0x6a5a4a, roughness: 0.7 })
+  const mat = material ?? new THREE.MeshStandardMaterial({ color: 0x6a5a4a, roughness: 0.7 })
   const pts = sampleCatenary(cat)
   addRibTubes(group, [pts], mat, ecoMaterialId)
   // Also a thin ribbon loft for visibility

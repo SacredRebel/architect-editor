@@ -2,20 +2,16 @@
  * H15 — organic buildings + smooth walls store (one undo step per slider).
  */
 
-import { organicPlan, type OrganicPlan } from './eco-organic-plan'
-import { cleanSpec, parseOrganicWords, type OrganicSpec } from './eco-organic-spec'
+import type { EcoMinimalPatch } from './eco-catenary'
+import { type OrganicPlan, organicPlan } from './eco-organic-plan'
+import { cleanSpec, type OrganicSpec, parseOrganicWords } from './eco-organic-spec'
 import {
   addEcoMinimal,
+  type EcoOrganicState,
   getEcoOrganicState,
   setEcoOrganicState,
-  type EcoOrganicState,
 } from './eco-organic-store'
-import {
-  bulgeSmoothWall,
-  makeDemoSmoothWall,
-  type EcoSmoothWall,
-} from './eco-smooth-wall'
-import type { EcoMinimalPatch } from './eco-catenary'
+import { bulgeSmoothWall, type EcoSmoothWall, makeDemoSmoothWall } from './eco-smooth-wall'
 
 export type EcoOrganicBuildingState = {
   buildings: OrganicPlan[]

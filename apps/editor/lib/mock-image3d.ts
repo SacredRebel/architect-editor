@@ -7,30 +7,64 @@ import { Document, NodeIO } from '@gltf-transform/core'
 
 const tasks = new Map<
   string,
-  { status: 'pending' | 'running' | 'done' | 'failed'; progress: number; glb: Uint8Array; kind: string }
+  {
+    status: 'pending' | 'running' | 'done' | 'failed'
+    progress: number
+    glb: Uint8Array
+    kind: string
+  }
 >()
 
 async function makeBoxGlb(kind: 'object' | 'building'): Promise<Uint8Array> {
   const doc = new Document()
   const buffer = doc.createBuffer()
-  const material = doc.createMaterial(kind === 'building' ? 'massing' : 'prop').setBaseColorFactor([
-    kind === 'building' ? 0.55 : 0.75,
-    kind === 'building' ? 0.5 : 0.65,
-    0.4,
-    1,
-  ])
+  const material = doc
+    .createMaterial(kind === 'building' ? 'massing' : 'prop')
+    .setBaseColorFactor([
+      kind === 'building' ? 0.55 : 0.75,
+      kind === 'building' ? 0.5 : 0.65,
+      0.4,
+      1,
+    ])
   // Unit box centred; prepareImage3dGlb will scale + ground-seat.
   const size = kind === 'building' ? 1 : 0.5
   const positions = new Float32Array([
-    -size, 0, -size, size, 0, -size, size, 0, size, -size, 0, size,
-    -size, size * 2, -size, size, size * 2, -size, size, size * 2, size, -size, size * 2, size,
+    -size,
+    0,
+    -size,
+    size,
+    0,
+    -size,
+    size,
+    0,
+    size,
+    -size,
+    0,
+    size,
+    -size,
+    size * 2,
+    -size,
+    size,
+    size * 2,
+    -size,
+    size,
+    size * 2,
+    size,
+    -size,
+    size * 2,
+    size,
   ])
   const indices = new Uint16Array([
-    0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7, 3, 3, 7, 4, 3, 4, 0,
+    0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7, 3, 3, 7,
+    4, 3, 4, 0,
   ])
   const pos = doc.createAccessor().setType('VEC3').setArray(positions).setBuffer(buffer)
   const idx = doc.createAccessor().setType('SCALAR').setArray(indices).setBuffer(buffer)
-  const prim = doc.createPrimitive().setAttribute('POSITION', pos).setIndices(idx).setMaterial(material)
+  const prim = doc
+    .createPrimitive()
+    .setAttribute('POSITION', pos)
+    .setIndices(idx)
+    .setMaterial(material)
   const mesh = doc.createMesh(kind).addPrimitive(prim)
   const node = doc.createNode(kind).setMesh(mesh)
   const scene = doc.createScene('mock').addChild(node)
@@ -104,12 +138,13 @@ export async function handleMockImage3d(
     if (!t || t.status !== 'done') return okJson({ ok: false, error: 'not_ready' }, 409)
     const from = Math.max(0, body.from ?? 0)
     const to = Math.min(t.glb.byteLength, body.to ?? t.glb.byteLength)
-    const slice = t.glb.subarray(from, to)
-    return new Response(slice, {
+    const bytes = new Uint8Array(to - from)
+    bytes.set(t.glb.subarray(from, to))
+    return new Response(bytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Length': String(slice.byteLength),
+        'Content-Length': String(bytes.byteLength),
       },
     })
   }

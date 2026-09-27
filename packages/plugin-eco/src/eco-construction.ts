@@ -12,13 +12,10 @@
  * Jurisdiction climate is local Ventura JSON (no network).
  */
 
+import { type BonesTakeoffStatus, runBonesMemberTakeoff } from './eco-bones-engines'
 import {
-  runBonesMemberTakeoff,
-  type BonesTakeoffStatus,
-} from './eco-bones-engines'
-import {
-  VENTURA_COUNTY_JURISDICTION,
   type EcoJurisdictionProfile,
+  VENTURA_COUNTY_JURISDICTION,
 } from './eco-jurisdiction-ventura'
 
 export type TakeoffBasis = 'takeoff' | 'estimate' | 'placeholder'
@@ -32,7 +29,7 @@ export type EcoConstructionRow = {
   detail: string
 }
 
-export type { EcoJurisdictionProfile, BonesTakeoffStatus }
+export type { BonesTakeoffStatus, EcoJurisdictionProfile }
 
 export type EcoConstructionResult = {
   jurisdiction: EcoJurisdictionProfile
@@ -60,10 +57,7 @@ function num(v: unknown, fallback: number): number {
 }
 
 function pair(v: unknown): [number, number] | null {
-  return Array.isArray(v) &&
-    v.length >= 2 &&
-    typeof v[0] === 'number' &&
-    typeof v[1] === 'number'
+  return Array.isArray(v) && v.length >= 2 && typeof v[0] === 'number' && typeof v[1] === 'number'
     ? [v[0], v[1]]
     : null
 }
@@ -365,7 +359,8 @@ export async function runEcoConstructionTakeoff(
         quantity: Math.max(0.5, round1(floorAreaM2 / 55)),
         unit: 'tons',
         basis: 'estimate',
-        detail: '1 ton / 55 m² conditioned floor (Bones characteristics COOLING_M2_PER_TON) — not Manual J',
+        detail:
+          '1 ton / 55 m² conditioned floor (Bones characteristics COOLING_M2_PER_TON) — not Manual J',
       })
     }
   }

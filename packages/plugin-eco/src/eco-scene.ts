@@ -3,37 +3,33 @@
  * This is what `eco:scene` / `eco:load-scene` carry. See docs/eco-scene.md.
  */
 
-import type { SceneGraph } from '@pascal-app/editor'
 import { useScene } from '@pascal-app/core'
+import type { SceneGraph } from '@pascal-app/editor'
 import {
+  type EcoAsset,
+  type EcoPlacement,
   restoreEcoAssetsFromScene,
   serializeEcoAssetsForScene,
   totalAssetBytes,
-  type EcoAsset,
-  type EcoPlacement,
 } from './eco-assets-store'
+import type { EcoCatenary, EcoMinimalPatch } from './eco-catenary'
+import type { EcoLoft } from './eco-loft'
 import {
-  getEcoMaterialsState,
   type EcoMaterialId,
+  getEcoMaterialsState,
   resetEcoMaterialsState,
   setEcoMaterialAssignment,
   setEcoMaterialDefaults,
 } from './eco-materials'
-import { getEcoShellsState, setEcoShells, type EcoShell } from './eco-shell-store'
+import { type EcoOrganicState, getEcoOrganicState, setEcoOrganicState } from './eco-organic-store'
+import { type EcoShell, getEcoShellsState, setEcoShells } from './eco-shell-store'
 import {
-  getEcoOrganicState,
-  setEcoOrganicState,
-  type EcoOrganicState,
-} from './eco-organic-store'
-import type { EcoLoft } from './eco-loft'
-import type { EcoVault } from './eco-vault'
-import type { EcoCatenary, EcoMinimalPatch } from './eco-catenary'
-import {
+  type EcoTreePlacement,
   getEcoTreesState,
   isEcoTreeVariantId,
   setEcoTrees,
-  type EcoTreePlacement,
 } from './eco-trees-store'
+import type { EcoVault } from './eco-vault'
 
 const MAX_SCENE_ASSET_BYTES = 20 * 1024 * 1024
 
@@ -168,7 +164,8 @@ export function restoreEcoTreesFromScene(payload: unknown): void {
     if (!raw || typeof raw !== 'object') continue
     const t = raw as Partial<EcoTreePlacement>
     if (typeof t.id !== 'string' || !isEcoTreeVariantId(t.variant)) continue
-    if (!Array.isArray(t.position) || !Array.isArray(t.rotation) || !Array.isArray(t.scale)) continue
+    if (!Array.isArray(t.position) || !Array.isArray(t.rotation) || !Array.isArray(t.scale))
+      continue
     trees.push({
       id: t.id,
       variant: t.variant,

@@ -9,19 +9,19 @@ import {
 } from '@pascal-app/core'
 import { registerEditorHostPanel } from '@pascal-app/editor'
 import { builtinPlugin } from '@pascal-app/nodes'
+import { bodyPlugin } from '@pascal-app/plugin-body'
 import { bonesHostPanel, bonesPlugin } from '@pascal-app/plugin-bones'
 import {
   environmentHostPanel,
   environmentPlugin,
   environmentPresentation,
 } from '@pascal-app/plugin-environment'
-import { hagiaSophiaPlugin, templeHostPanel } from '@pascal-app/plugin-hagia-sophia'
 import {
   geometryHostPanel,
   geometryPlugin,
   geometryPresentation,
 } from '@pascal-app/plugin-geometry'
-import { bodyPlugin } from '@pascal-app/plugin-body'
+import { hagiaSophiaPlugin, templeHostPanel } from '@pascal-app/plugin-hagia-sophia'
 import { poolHostPanel, poolPlugin } from '@pascal-app/plugin-pool'
 import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
 import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'

@@ -8,7 +8,7 @@ function crc32(buf: Uint8Array): number {
   let c = ~0
   for (let i = 0; i < buf.length; i++) {
     c ^= buf[i]!
-    for (let k = 0; k < 8; k++) c = c & 1 ? (0xedb88320 ^ (c >>> 1)) : c >>> 1
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
   }
   return ~c >>> 0
 }
@@ -49,7 +49,12 @@ export function encodePngRgba(
   dv.setUint32(4, height, false)
   ihdr[8] = 8
   ihdr[9] = 6 // RGBA
-  const parts = [sig, pngChunk('IHDR', ihdr), pngChunk('IDAT', deflateSync(raw)), pngChunk('IEND', new Uint8Array(0))]
+  const parts = [
+    sig,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(raw)),
+    pngChunk('IEND', new Uint8Array(0)),
+  ]
   let total = 0
   for (const p of parts) total += p.length
   const out = new Uint8Array(total)

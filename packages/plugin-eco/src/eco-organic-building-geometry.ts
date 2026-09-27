@@ -3,17 +3,13 @@
  */
 
 import * as THREE from 'three'
+import { type OrganicPlan, organicShellHeight, solarSpots } from './eco-organic-plan'
 import {
-  organicShellHeight,
-  solarSpots,
-  type OrganicPlan,
-} from './eco-organic-plan'
-import {
+  type EcoSmoothWall,
   frameAtArcLength,
   offsetPolyline,
   sampleSmoothWall,
   smoothWallSolidRuns,
-  type EcoSmoothWall,
 } from './eco-smooth-wall'
 
 function meshFrom(
@@ -33,7 +29,10 @@ function meshFrom(
   return mesh
 }
 
-function triangulateRing(ring: [number, number][], y: number): { positions: number[]; indices: number[] } {
+function triangulateRing(
+  ring: [number, number][],
+  y: number,
+): { positions: number[]; indices: number[] } {
   const pts = ring.slice()
   if (pts.length > 1) {
     const a = pts[0]!
@@ -55,7 +54,7 @@ function triangulateRing(ring: [number, number][], y: number): { positions: numb
   for (const p of pts) positions.push(p[0], y, p[1])
   for (let i = 0; i < pts.length; i++) {
     const a = i + 1
-    const b = (i + 1) % pts.length + 1
+    const b = ((i + 1) % pts.length) + 1
     indices.push(0, a, b)
   }
   return { positions, indices }
@@ -84,10 +83,7 @@ export function buildSmoothWallObject3D(
       const dz = fb.point[1] - fa.point[1]
       const len = Math.hypot(dx, dz)
       if (len < 1e-4) continue
-      const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(wall.thickness, wall.height, len),
-        mat,
-      )
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(wall.thickness, wall.height, len), mat)
       mesh.position.set(
         (fa.point[0] + fb.point[0]) / 2,
         wall.height / 2,
@@ -106,10 +102,7 @@ export function buildSmoothWallObject3D(
   for (const o of wall.openings) {
     const f = frameAtArcLength(wall, o.alongM)
     const frameH = o.headM - o.sillM
-    const frame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, frameH, o.width + 0.08),
-      mat,
-    )
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.08, frameH, o.width + 0.08), mat)
     frame.position.set(f.point[0], o.sillM + frameH / 2, f.point[1])
     frame.quaternion.setFromUnitVectors(
       new THREE.Vector3(0, 0, 1),
@@ -138,7 +131,9 @@ export function buildOrganicBuildingObject3D(
 
   // Floor
   const floor = triangulateRing(plan.floorRing, 0.05)
-  group.add(meshFrom(`eco-organic-floor:${plan.id}`, floor.positions, floor.indices, mat, ecoMaterialId))
+  group.add(
+    meshFrom(`eco-organic-floor:${plan.id}`, floor.positions, floor.indices, mat, ecoMaterialId),
+  )
 
   // Walls
   group.add(buildSmoothWallObject3D(plan.wall, mat, ecoMaterialId))

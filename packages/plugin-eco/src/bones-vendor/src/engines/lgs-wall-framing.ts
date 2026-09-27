@@ -69,6 +69,7 @@
 import type { FramingSpec } from '../core/spec'
 import type { Member, MemberRole, WallSlice } from '../core/types'
 import { formatFtIn, inches } from '../core/units'
+import { mixedWallInsets } from './cmu'
 import {
   DEFAULT_STRUCTURAL_MILS,
   familyStemFor,
@@ -79,12 +80,11 @@ import {
   parseDesignator,
   profileFor,
 } from './lgs-profiles'
-import { mixedWallInsets } from './cmu'
 import {
   detectTees,
+  type FrameHints,
   fitAcross,
   frameHints,
-  type FrameHints,
   frameOf,
   specForWall,
   studPositions,
@@ -235,10 +235,7 @@ const LGS_MID_HEIGHT_MAX = inches(96) + 0.01
 /** S240 A5.9 factory punchout metadata for a member of cut length L (m):
  * centers ≥ 12" from each end, ≥ 24" c-c, width ≤ min(depth/2, 2.5"),
  * length 4.5". Returns undefined when nothing fits. */
-export function factoryPunchouts(
-  lengthM: number,
-  webIn: number,
-): Member['punchouts'] | undefined {
+export function factoryPunchouts(lengthM: number, webIn: number): Member['punchouts'] | undefined {
   const p = LGS.punchPatterns['s240-factory-punchout']
   if (!p) return undefined
   const spacingIn = p.minCenterSpacingIn ?? 24
@@ -357,7 +354,9 @@ export function lgsFrameWalls(
   if (codeClaims) {
     const reasons: string[] = []
     if (opts?.ultimateWindMph !== undefined && opts.ultimateWindMph >= LGS_MAX_WIND_MPH) {
-      reasons.push(`ultimate wind ${opts.ultimateWindMph} mph ≥ ${LGS_MAX_WIND_MPH} (Vult < 140 B/C)`)
+      reasons.push(
+        `ultimate wind ${opts.ultimateWindMph} mph ≥ ${LGS_MAX_WIND_MPH} (Vult < 140 B/C)`,
+      )
     }
     if (opts?.groundSnowLoadPsf !== undefined && opts.groundSnowLoadPsf > LGS_MAX_SNOW_PSF) {
       reasons.push(`ground snow ${opts.groundSnowLoadPsf} psf > ${LGS_MAX_SNOW_PSF}`)
@@ -507,7 +506,8 @@ function frameLgsWall(
       sourceId: wall.id,
       profile,
       label,
-      flag: flag !== undefined && wallFlag !== undefined ? `${flag} | ${wallFlag}` : (flag ?? wallFlag),
+      flag:
+        flag !== undefined && wallFlag !== undefined ? `${flag} | ${wallFlag}` : (flag ?? wallFlag),
       ...extra,
     })
   }
@@ -519,9 +519,7 @@ function frameLgsWall(
   const runMid = (u0 + u1) / 2
 
   // ---- tracks (R603.3.1 structure; thickness rule R603.3.2 verbatim) ----
-  const trackNote = codeClaims
-    ? ` — R603.3.1; track thickness matches studs (R603.3.2)`
-    : ''
+  const trackNote = codeClaims ? ` — R603.3.1; track thickness matches studs (R603.3.2)` : ''
   const slabNote = ctx.slabBearing ? ' — on slab (anchorage per foundation schedule)' : ''
   const trackDims: [number, number, number] = [runLen, trackFlange, wFit]
   emit(
@@ -569,9 +567,12 @@ function frameLgsWall(
   const spacingIn = Math.round(spacing / 0.0254)
   const punch = (length: number): Partial<Member> => {
     if (spec.detail !== '400') return {}
-    const p = factoryPunchouts(length, studRes.machineProfile?.webMm !== undefined
-      ? (studRes.machineProfile.webMm / 25.4)
-      : studFam.webIn)
+    const p = factoryPunchouts(
+      length,
+      studRes.machineProfile?.webMm !== undefined
+        ? studRes.machineProfile.webMm / 25.4
+        : studFam.webIn,
+    )
     return p && p.count > 0 ? { punchouts: p } : {}
   }
 
@@ -885,7 +886,7 @@ function frameLgsWall(
       strapU0 > u0 + EPS ||
       strapU1 < lenU1 - EPS ||
       spans.length !== 1 ||
-      (spans[0] !== undefined && (spans[0].max - spans[0].min < strapU1 - strapU0 - EPS))
+      (spans[0] !== undefined && spans[0].max - spans[0].min < strapU1 - strapU0 - EPS)
     const rows = H <= LGS_MID_HEIGHT_MAX ? [H / 2] : [H / 3, (2 * H) / 3]
     const rowNote = rows.length === 1 ? 'mid-height' : 'third points'
     for (const sp of spans) {

@@ -138,9 +138,17 @@ function pushUnique(pts: [number, number, number][], p: [number, number, number]
 function scaleToEdge(
   pts: [number, number, number][],
   edge: number,
-): { vertices: [number, number, number][]; edges: [number, number][]; meta: Record<string, number> } {
+): {
+  vertices: [number, number, number][]
+  edges: [number, number][]
+  meta: Record<string, number>
+} {
   if (pts.length < 2) {
-    return { vertices: pts, edges: [], meta: { edgeMean: 0, radiusSpread: 0, vertexCount: pts.length } }
+    return {
+      vertices: pts,
+      edges: [],
+      meta: { edgeMean: 0, radiusSpread: 0, vertexCount: pts.length },
+    }
   }
   const dists: number[] = []
   for (let i = 0; i < pts.length; i++) {
@@ -178,7 +186,11 @@ function scaleToEdge(
 export function archimedeanSolid(
   kind: ArchimedeanKind,
   edge: number,
-): { vertices: [number, number, number][]; edges: [number, number][]; meta: Record<string, number> } {
+): {
+  vertices: [number, number, number][]
+  edges: [number, number][]
+  meta: Record<string, number>
+} {
   const pts: [number, number, number][] = []
   const a = 1 + Math.SQRT2
   const phi = PHI

@@ -1,8 +1,8 @@
 import type { AnyNode, NodeDefinition } from '@pascal-app/core'
+import { pendentiveParametrics } from '../../temple/parametrics'
 import { buildPendentiveFloorplan } from './floorplan'
 import { buildPendentiveGeometry } from './geometry'
 import { HsPendentiveNode } from './schema'
-import { pendentiveParametrics } from '../../temple/parametrics'
 
 type HsPendentiveDefinition = NodeDefinition<typeof HsPendentiveNode> & Record<string, unknown>
 
@@ -55,7 +55,8 @@ export const hsPendentiveDefinition: HsPendentiveDefinition = {
 
   presentation: {
     label: 'Pendentive',
-    description: 'The curved triangle that carries a round dome on a square bay. From ActArtech; true pendentives here.',
+    description:
+      'The curved triangle that carries a round dome on a square bay. From ActArtech; true pendentives here.',
     icon: { kind: 'url', src: '/icons/temple-dome.svg' },
     paletteSection: 'structure',
   },

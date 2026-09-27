@@ -24,8 +24,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { useGLTFKTX2 } from '../../hooks/use-gltf-ktx2'
 import { SCENE_LAYER } from '../../lib/layers'
-import useViewer from '../../store/use-viewer'
 import { RUN_SPEED_MS, WALK_SPEED_MS } from '../../lib/walk-speeds'
+import useViewer from '../../store/use-viewer'
 import BVHEcctrl, { type BVHEcctrlApi, type MovementInput } from './bvh-ecctrl'
 
 // First-person FOV. The orbit camera is 50° (set on the Canvas), which feels

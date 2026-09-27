@@ -49,7 +49,7 @@ export { FloatingActionMenu as FloatingMenu } from './components/editor/floating
 // camera controls via the `useViewer.inputDragging` / `useEditor.movingNode`
 // flags. Tools place onto `useViewer.selection.levelId`, so the host must set a
 // building + level selection first.
-export { Grid, EDITOR_GRID_INPUT_NAME } from './components/editor/grid'
+export { EDITOR_GRID_INPUT_NAME, Grid } from './components/editor/grid'
 export {
   DimensionPill,
   type DimensionPillPart,
@@ -221,6 +221,8 @@ export {
   CameraActions as ToolbarRight,
   CameraActions as ViewerToolbarRight,
 } from './components/ui/action-menu/camera-actions'
+// WebXR plugin surface — symbols consumed by `@webxr/plugin` wand/input adapters.
+export { furnishTools } from './components/ui/action-menu/furnish-tools'
 export {
   ViewToggles as ToolbarLeft,
   ViewToggles as ViewerToolbarLeft,
@@ -247,6 +249,17 @@ export { FloatingLevelSelector } from './components/ui/floating-level-selector'
 export { CATALOG_ITEMS } from './components/ui/item-catalog/catalog-items'
 // Item collections UI — used by the kind-owned ItemPanel in nodes/.
 export { CollectionsPopover } from './components/ui/panels/collections/collections-popover'
+export {
+  resolveHomogeneousSelection,
+  resolveUniqueSelectionIds,
+} from './components/ui/panels/homogeneous-selection'
+export {
+  commitMultiNodeFields,
+  fieldVisibleForAll,
+  reduceFieldValue,
+  reduceHeightBoundMode,
+} from './components/ui/panels/multi-field-value'
+export { applyMultiHeightMode } from './components/ui/panels/multi-height-mode'
 // Phase 5 Stage E — kinds with bespoke editors (slab holes list,
 // ceiling height presets, etc.) use `parametrics.customPanel` to mount
 // a kind-owned panel and need PanelWrapper for the chrome.
@@ -339,6 +352,8 @@ export {
   type PlacementSurface,
   publishPlacementSurface,
 } from './lib/active-placement-surface'
+export { activateCatalogItem, filterCatalogItems } from './lib/catalog-panel-model'
+export { isCatalogItemSelected } from './lib/catalog-selection'
 export {
   CEILING_ALIGNMENT_THRESHOLD_M,
   type CeilingPlanSnapInput,
@@ -361,6 +376,7 @@ export {
   continuationContextOf,
   nextContinuation,
 } from './lib/continuation'
+export { canDirectMoveNode } from './lib/direct-manipulation'
 export { createEditorApi } from './lib/editor-api'
 export {
   clearStructuralElevationGuide,
@@ -474,6 +490,7 @@ export {
   movingNodeOf,
   scopeNodeId,
 } from './lib/interaction/scope'
+export { useMaterialCatalogModel } from './lib/material-catalog-model'
 export {
   type ActivePaintMaterial,
   buildResetSurfaceMaterialUpdates,
@@ -483,6 +500,7 @@ export {
   getActivePaintMaterialLabel,
   hasActivePaintMaterial,
 } from './lib/material-paint'
+export { useMaterialPaintPanelModel } from './lib/material-paint-panel-model'
 export {
   CREATABLE_MEASUREMENT_KINDS,
   type CreatableMeasurementKind,
@@ -529,6 +547,10 @@ export type {
   ModelExportFormat,
   ModelExportOptions,
 } from './lib/model-export'
+export { cyclePaintScope, type PaintHoverInfo, paintScopeLabel } from './lib/paint-scope'
+export { getNodePanelModel } from './lib/panel-rows'
+export { type PanelToolOption, usePanelToolHints } from './lib/panel-tool-options'
+export { commitParametricNodeFields } from './lib/parametric-node-update'
 export { consumePlacementDragRelease } from './lib/placement-drag-release'
 export {
   addFreshPlacementMetadata,
@@ -582,6 +604,7 @@ export {
   type SnapFlags,
   type SnappingMode,
 } from './lib/snapping-mode'
+export { getSpatialPointerId, spatialPointerInput } from './lib/spatial-pointer-input'
 export { duplicateStairSubtree } from './lib/stair-duplication'
 export {
   getBuildingLevelsForLevel,
@@ -599,6 +622,7 @@ export {
   type SurfacePlanSnapInput,
   type SurfacePlanSnapResult,
 } from './lib/surface-plan-snap'
+export { useTerrainPanelRows } from './lib/terrain-panel-model'
 export {
   clipTerrainPatchToSite,
   commitStroke,
@@ -733,28 +757,3 @@ export {
   type WallSnapKind,
   type WallSnapPoint,
 } from './store/use-wall-snap-indicator'
-
-// WebXR plugin surface — symbols consumed by `@webxr/plugin` wand/input adapters.
-export { furnishTools } from './components/ui/action-menu/furnish-tools'
-export { applyMultiHeightMode } from './components/ui/panels/multi-height-mode'
-export {
-  commitMultiNodeFields,
-  fieldVisibleForAll,
-  reduceFieldValue,
-  reduceHeightBoundMode,
-} from './components/ui/panels/multi-field-value'
-export {
-  resolveHomogeneousSelection,
-  resolveUniqueSelectionIds,
-} from './components/ui/panels/homogeneous-selection'
-export { canDirectMoveNode } from './lib/direct-manipulation'
-export { activateCatalogItem, filterCatalogItems } from './lib/catalog-panel-model'
-export { isCatalogItemSelected } from './lib/catalog-selection'
-export { getNodePanelModel } from './lib/panel-rows'
-export { type PanelToolOption, usePanelToolHints } from './lib/panel-tool-options'
-export { commitParametricNodeFields } from './lib/parametric-node-update'
-export { getSpatialPointerId, spatialPointerInput } from './lib/spatial-pointer-input'
-export { useMaterialCatalogModel } from './lib/material-catalog-model'
-export { useMaterialPaintPanelModel } from './lib/material-paint-panel-model'
-export { useTerrainPanelRows } from './lib/terrain-panel-model'
-export { cyclePaintScope, paintScopeLabel } from './lib/paint-scope'

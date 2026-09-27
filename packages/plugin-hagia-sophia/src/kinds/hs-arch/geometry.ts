@@ -11,13 +11,13 @@ import {
   MeshStandardMaterial,
   Shape,
 } from 'three'
-import { analyseThrust } from '../../math/catenary'
 import {
+  type ArchPoint,
   buildArchCentreline,
   buildArchOuterPoints,
   offsetInward,
-  type ArchPoint,
 } from '../../math/arch-profile'
+import { analyseThrust } from '../../math/catenary'
 import type { HsArchNode, HsArchProfileType } from './schema'
 
 export type { ArchPoint }

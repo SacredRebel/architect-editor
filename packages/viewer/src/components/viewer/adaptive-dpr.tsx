@@ -2,7 +2,7 @@
 
 import { useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
-import { maxDprForQuality, type GpuQuality } from '../../lib/gpu-quality'
+import { type GpuQuality, maxDprForQuality } from '../../lib/gpu-quality'
 
 /**
  * H17.1 — demand-friendly AdaptiveDpr for frameloop="never".
@@ -15,8 +15,7 @@ export function AdaptiveDpr({ quality }: { quality: GpuQuality }) {
   const slowStreak = useRef(0)
   const fastStreak = useRef(0)
 
-  const coarse =
-    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+  const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
   const cap = maxDprForQuality(quality, coarse)
 
   useEffect(() => {

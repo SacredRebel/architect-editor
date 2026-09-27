@@ -5,12 +5,7 @@ import { FloorplanGeometryRenderer, useFloorplanRender } from '@pascal-app/edito
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { figureBounds } from './archimedean'
 import { buildForm } from './build'
-import {
-  getGeometryState,
-  setSelectedFigure,
-  subscribeGeometry,
-  updatePlacedFigure,
-} from './store'
+import { getGeometryState, setSelectedFigure, subscribeGeometry, updatePlacedFigure } from './store'
 
 const STROKE = '#94a3b8'
 const SELECTED = '#38bdf8'
@@ -81,7 +76,7 @@ function figureToGeometry(
  */
 export default function GeometryFloorplanOverlay() {
   const { figures, selectedId } = useGeometry()
-  const { unitsPerPixel } = useFloorplanRender()
+  const floorplan = useFloorplanRender()
   const drag = useRef<{
     id: string
     origin: [number, number]
@@ -145,9 +140,10 @@ export default function GeometryFloorplanOverlay() {
     drag.current = null
   }, [])
 
+  if (!floorplan) return null
   if (!figures.length) return null
 
-  const handleR = Math.max(0.08, 6 * unitsPerPixel)
+  const handleR = Math.max(0.08, 6 * floorplan.unitsPerPixel)
 
   return (
     <g data-geometry-floorplan-overlay="true" style={{ pointerEvents: 'auto' }}>

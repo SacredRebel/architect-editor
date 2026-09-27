@@ -6,7 +6,6 @@
  * windows carry their center height in `position[1]`.
  */
 
-import { inches } from './units'
 import type {
   OpeningSlice,
   RoomSlice,
@@ -15,6 +14,7 @@ import type {
   SlabSlice,
   WallSlice,
 } from './types'
+import { inches } from './units'
 
 // Minimal structural views of the host nodes we read — kept local so the
 // extractor compiles against any @pascal-app/core >=0.9 without depending on
@@ -90,12 +90,16 @@ function applyExteriorFallback(
     }
     return
   }
-  const inPoly = (p: readonly [number, number], poly: readonly (readonly [number, number])[]): boolean => {
+  const inPoly = (
+    p: readonly [number, number],
+    poly: readonly (readonly [number, number])[],
+  ): boolean => {
     let inside = false
     for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
       const [xi, zi] = poly[i] as readonly [number, number]
       const [xj, zj] = poly[j] as readonly [number, number]
-      if (zi > p[1] !== zj > p[1] && p[0] < ((xj - xi) * (p[1] - zi)) / (zj - zi) + xi) inside = !inside
+      if (zi > p[1] !== zj > p[1] && p[0] < ((xj - xi) * (p[1] - zi)) / (zj - zi) + xi)
+        inside = !inside
     }
     return inside
   }
@@ -209,7 +213,6 @@ export function extractSlabs(nodes: NodesRecord, levelId: string): SlabSlice[] {
   }
   return slabs
 }
-
 
 // ---------------------------------------------------------------------------
 // Placed sanitary fixtures — the items the USER dropped (toilet, shower…)
@@ -373,7 +376,13 @@ export function extractLevels(nodes: NodesRecord): LevelSlice[] {
     e.baseY = (cumulative.get(e.buildingId) ?? 0) + e.baseElevation
     cumulative.set(e.buildingId, e.baseY + e.height)
   }
-  return sorted.map(({ id, level, height, baseY, buildingId }) => ({ id, level, height, baseY, buildingId }))
+  return sorted.map(({ id, level, height, baseY, buildingId }) => ({
+    id,
+    level,
+    height,
+    baseY,
+    buildingId,
+  }))
 }
 
 /** Sleeping-area name words — the bedroom row below, and exported so the

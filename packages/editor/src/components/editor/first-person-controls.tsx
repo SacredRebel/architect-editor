@@ -36,20 +36,20 @@ import {
   CROUCH_RUN_SPEED,
   CROUCH_WALK_SPEED,
   EYE_LERP_SPEED,
+  FLY_SPEED_DEFAULT_MS,
+  FLY_SPEED_MAX_MS,
+  FLY_SPEED_MIN_MS,
   type MovementInput,
+  RUN_SPEED_MS,
+  SPRINT_DOUBLE_TAP_MS,
+  SPRINT_SPEED_MS,
   STAND_CAPSULE,
   STAND_CLEARANCE,
   STAND_FLOAT_HEIGHT,
   setSurfaceRaycastLayers,
   useViewer,
-  WALKTHROUGH_FOV,
   WALK_SPEED_MS,
-  RUN_SPEED_MS,
-  SPRINT_SPEED_MS,
-  SPRINT_DOUBLE_TAP_MS,
-  FLY_SPEED_DEFAULT_MS,
-  FLY_SPEED_MIN_MS,
-  FLY_SPEED_MAX_MS,
+  WALKTHROUGH_FOV,
 } from '@pascal-app/viewer'
 import { KeyboardControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -78,6 +78,8 @@ import {
   isOperationDoorType,
   toggleDoorOpenState,
 } from '../../lib/door-interaction'
+import { createCc0WalkCharacter } from '../../lib/h18-cc0-character'
+import { buildGroundPath, raycastGround, snapToGround } from '../../lib/walk-ground-path'
 import {
   closeWindowOpenState,
   getDisplayedWindowValue,
@@ -87,9 +89,7 @@ import {
 import useEditor from '../../store/use-editor'
 import { useFirstPersonHud, type WalkthroughInteract } from '../../store/use-first-person-hud'
 import { useWalkSettings } from '../../store/use-walk-settings'
-import { createCc0WalkCharacter } from '../../lib/h18-cc0-character'
-import { buildGroundPath, raycastGround, snapToGround } from '../../lib/walk-ground-path'
-import { WalkthroughHud, WalkTouchJoystick } from '../walkthrough-hud'
+import { WalkTouchJoystick, WalkthroughHud } from '../walkthrough-hud'
 import {
   buildFirstPersonColliderWorldFromRegistry,
   deriveFirstPersonSpawn,
@@ -765,7 +765,10 @@ export const FirstPersonControls = () => {
         if (mesh.isMesh) {
           mesh.geometry?.dispose()
           const mat = mesh.material
-          if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
+          if (Array.isArray(mat))
+            mat.forEach((m) => {
+              m.dispose()
+            })
           else mat?.dispose?.()
         }
       })
@@ -1377,10 +1380,7 @@ export const FirstPersonControls = () => {
         }
         lastShiftTapRef.current = now
       }
-      if (
-        !active &&
-        (event.code === 'ShiftLeft' || event.code === 'ShiftRight')
-      ) {
+      if (!active && (event.code === 'ShiftLeft' || event.code === 'ShiftRight')) {
         sprintingRef.current = false
         setSprinting(false)
       }
@@ -1775,9 +1775,9 @@ export const FirstPersonControls = () => {
     if (movement.jump || droneAscendKeyRef.current) droneDesiredVelocity.y += 1
     if (droneDescendKeyRef.current || crouchKeyRef.current) droneDesiredVelocity.y -= 1
     if (droneDesiredVelocity.lengthSq() > 0) {
-      droneDesiredVelocity.normalize().multiplyScalar(
-        flySpeedRef.current * (droneSlowKeyRef.current ? 0.35 : 1),
-      )
+      droneDesiredVelocity
+        .normalize()
+        .multiplyScalar(flySpeedRef.current * (droneSlowKeyRef.current ? 0.35 : 1))
     }
 
     droneVelocityRef.current.lerp(droneDesiredVelocity, 1 - Math.exp(-step * DRONE_SMOOTHING))
@@ -1833,10 +1833,7 @@ export const FirstPersonControls = () => {
       const lx = pad.axes[0] ?? 0
       const ly = pad.axes[1] ?? 0
       const dead = 0.18
-      joystickRef.current.set(
-        Math.abs(lx) > dead ? lx : 0,
-        Math.abs(ly) > dead ? -ly : 0,
-      )
+      joystickRef.current.set(Math.abs(lx) > dead ? lx : 0, Math.abs(ly) > dead ? -ly : 0)
       if (pad.buttons[0]?.pressed) movementInputRef.current.jump = true
       if (pad.buttons[1]?.pressed) movementInputRef.current.run = true
     }
@@ -2012,8 +2009,7 @@ export const FirstPersonOverlay = ({ onExit }: { onExit: () => void }) => {
   const zoneLabel = useFirstPersonHud((state) => state.zoneLabel)
   const interact = useFirstPersonHud((state) => state.interact)
   const suspended = useViewer((state) => state.walkthroughSuspended)
-  const coarse =
-    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+  const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
   const handleExit = useCallback(() => {
     if (document.pointerLockElement) {
@@ -2039,9 +2035,7 @@ export const FirstPersonOverlay = ({ onExit }: { onExit: () => void }) => {
         <WalkTouchJoystick
           onChange={(x, y) => {
             // Touch stick is consumed by FirstPersonControls via a custom event.
-            window.dispatchEvent(
-              new CustomEvent('pascal-walk-joystick', { detail: { x, y } }),
-            )
+            window.dispatchEvent(new CustomEvent('pascal-walk-joystick', { detail: { x, y } }))
           }}
         />
       ) : null}

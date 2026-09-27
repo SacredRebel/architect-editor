@@ -72,9 +72,7 @@ export function parseLengthInput(raw: string): number | null {
   if (m) return Number(m[1])
 
   // 32'6" / 32′6″ / 32' 6.5" / 32 ft 6 in
-  const fi = s.match(
-    /^(-?\d+)\s*(?:'|′|ft|feet)\s*(-?\d+(?:\.\d+)?)?\s*(?:"|″|in|inches)?$/,
-  )
+  const fi = s.match(/^(-?\d+)\s*(?:'|′|ft|feet)\s*(-?\d+(?:\.\d+)?)?\s*(?:"|″|in|inches)?$/)
   if (fi) {
     const feet = Number(fi[1])
     const inches = fi[2] != null ? Number(fi[2]) : 0
@@ -119,7 +117,9 @@ export type AnsiAreaExtras = {
  * ANSI Z765-ish: gross/net per floor + footprint.
  * Ceiling under 7 ft / 2.13 m → not finished area (excluded from net).
  */
-export function computeAnsiAreas(floors: { area_m2: number; ceiling_m: number; wall_area_m2?: number }[]): AnsiAreaExtras {
+export function computeAnsiAreas(
+  floors: { area_m2: number; ceiling_m: number; wall_area_m2?: number }[],
+): AnsiAreaExtras {
   const rows: FloorAreaRow[] = floors.map((f, i) => {
     const finished = f.ceiling_m >= ANSI_MIN_CEILING_M - 1e-6
     const gross = Math.max(0, f.area_m2)
@@ -157,7 +157,12 @@ export function liveDrawReadout(options: {
     `∠ ${options.segmentAngleDeg.toFixed(1)}°`,
   ]
   if (options.finishedLengthsM.length) {
-    parts.push(`Σ ${formatLength(options.finishedLengthsM.reduce((a, b) => a + b, 0), order)}`)
+    parts.push(
+      `Σ ${formatLength(
+        options.finishedLengthsM.reduce((a, b) => a + b, 0),
+        order,
+      )}`,
+    )
   }
   if (options.closed && options.areaM2 != null && options.perimeterM != null) {
     parts.push(`area ${formatArea(options.areaM2, order)}`)

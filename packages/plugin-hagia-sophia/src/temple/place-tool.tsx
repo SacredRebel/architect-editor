@@ -52,7 +52,9 @@ export function makePlaceTool(spec: PlaceToolSpec) {
       const node = spec.schema.parse({ ...spec.defaults(), ...spec.preset(), name: spec.name })
       const obj = spec.build(node as never)
       obj.traverse((child) => {
-        const mat = (child as { material?: { transparent: boolean; opacity: number; depthWrite: boolean } }).material
+        const mat = (
+          child as { material?: { transparent: boolean; opacity: number; depthWrite: boolean } }
+        ).material
         if (mat) {
           mat.transparent = true
           mat.opacity = GHOST_OPACITY

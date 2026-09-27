@@ -10,7 +10,6 @@ import {
   validateBodyTopology,
 } from './body-topology'
 
-
 describe('Body topology kernel contract', () => {
   test('creates a hollow frame with exact depth and rounded upper corners', () => {
     const body = createRoundedRectangularFrameBody({

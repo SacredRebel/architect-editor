@@ -129,9 +129,7 @@ function EditorShell({
         projectId={PROJECT_ID}
         sidebarTabs={SIDEBAR_TABS}
         viewerToolbarLeft={<CommunityViewerToolbarLeft />}
-        viewerToolbarRight={
-          <CommunityViewerToolbarRight vrButton={vrButton} vrLabel="Enter VR" />
-        }
+        viewerToolbarRight={<CommunityViewerToolbarRight vrButton={vrButton} vrLabel="Enter VR" />}
       />
     </>
   )

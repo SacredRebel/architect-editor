@@ -71,11 +71,7 @@ export function WalkthroughHelpCard() {
 }
 
 /** Mobile / tablet on-screen stick — writes into a shared callback. */
-export function WalkTouchJoystick({
-  onChange,
-}: {
-  onChange: (x: number, y: number) => void
-}) {
+export function WalkTouchJoystick({ onChange }: { onChange: (x: number, y: number) => void }) {
   return (
     <div
       aria-hidden

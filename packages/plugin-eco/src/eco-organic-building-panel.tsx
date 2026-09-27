@@ -2,17 +2,17 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import {
+  addSmoothWall,
   applyOrganicWords,
+  bulgeSelectedWall,
   generateOrganicBuilding,
   getEcoOrganicBuildingState,
+  removeOrganicBuilding,
+  removeSmoothWall,
   setTargetGrossSqft,
   subscribeEcoOrganicBuilding,
   undoEcoOrganicBuilding,
   updateOrganicSpecField,
-  addSmoothWall,
-  bulgeSelectedWall,
-  removeOrganicBuilding,
-  removeSmoothWall,
 } from './eco-organic-building-store'
 import { ORGANIC_DEFAULTS, type OrganicSpec } from './eco-organic-spec'
 import { formatArea, formatLength } from './eco-true-size'
@@ -69,7 +69,8 @@ export default function EcoOrganicBuildingPanel() {
   )
   const [bulgeM, setBulgeM] = useState(1.5)
   const [spanIdx, setSpanIdx] = useState(1)
-  const selected = state.buildings.find((b) => b.id === state.selectedBuildingId) ?? state.buildings[0]
+  const selected =
+    state.buildings.find((b) => b.id === state.selectedBuildingId) ?? state.buildings[0]
   const order = state.lengthOrder
 
   const patch = <K extends keyof OrganicSpec>(key: K, value: OrganicSpec[K]) => {
@@ -94,7 +95,11 @@ export default function EcoOrganicBuildingPanel() {
         >
           Grow 5-lobe building
         </button>
-        <button onClick={() => undoEcoOrganicBuilding()} style={{ padding: '6px 10px' }} type="button">
+        <button
+          onClick={() => undoEcoOrganicBuilding()}
+          style={{ padding: '6px 10px' }}
+          type="button"
+        >
           Undo
         </button>
         <button onClick={() => addSmoothWall()} style={{ padding: '6px 10px' }} type="button">

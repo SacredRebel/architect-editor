@@ -1,5 +1,5 @@
-import { z } from 'zod'
 import { BaseNode, nodeType, objectId } from '@pascal-app/core'
+import { z } from 'zod'
 
 const FeatureId = z.string().trim().min(1)
 const Point3 = z.tuple([z.number().finite(), z.number().finite(), z.number().finite()])

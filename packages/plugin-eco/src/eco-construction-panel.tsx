@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useScene } from '@pascal-app/core'
+import { useEffect, useState } from 'react'
 import {
+  type EcoConstructionResult,
   ecoConstructionCsv,
   getEcoJurisdiction,
   runEcoConstructionTakeoff,
-  type EcoConstructionResult,
   type TakeoffBasis,
 } from './eco-construction'
 
@@ -50,9 +50,7 @@ export default function EcoConstructionPanel() {
 
   if (loading && !result) {
     return (
-      <div style={{ padding: 12, fontSize: 12, opacity: 0.7 }}>
-        Loading construction engines…
-      </div>
+      <div style={{ padding: 12, fontSize: 12, opacity: 0.7 }}>Loading construction engines…</div>
     )
   }
 
@@ -85,8 +83,8 @@ export default function EcoConstructionPanel() {
       <div style={{ fontWeight: 600 }}>Construction takeoff</div>
       <div style={{ opacity: 0.7, lineHeight: 1.4 }}>
         Geometry metrics plus Bones <code>computeLevel</code>/<code>computeTakeoff</code> when
-        Pascal wall/slab/level nodes are present. Every row carries an honest <code>basis</code>{' '}
-        — member counts are <code>takeoff</code>; massing rules of thumb stay <code>estimate</code>.
+        Pascal wall/slab/level nodes are present. Every row carries an honest <code>basis</code> —
+        member counts are <code>takeoff</code>; massing rules of thumb stay <code>estimate</code>.
         {loading ? ' Updating…' : null}
       </div>
 
@@ -105,9 +103,7 @@ export default function EcoConstructionPanel() {
             <code>{result.bones.levelId}</code> → {result.bones.takeoffRowCount} takeoff rows
           </>
         ) : (
-          <>
-            Bones engines not run — {result.bones.reason}. Massing estimates kept.
-          </>
+          <>Bones engines not run — {result.bones.reason}. Massing estimates kept.</>
         )}
       </div>
 

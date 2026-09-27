@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test'
 import {
+  createImage3dBackend,
   IMAGE3D_BANNED_IDS,
   IMAGE3D_MODELS,
   IMAGE3D_QUALITY_FIRST_PICK,
   IMAGE3D_SCOPE_NOTE,
   IMAGE3D_WIRE_FIRST,
-  createImage3dBackend,
   image3dModelForTier,
   isBannedImage3dId,
 } from './eco-image3d'

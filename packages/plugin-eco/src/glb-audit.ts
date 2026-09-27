@@ -5,7 +5,7 @@
  * Node-only deps (draco3dgltf, zlib) are loaded dynamically so the Next.js
  * client / Turbopack graph never statically resolves `fs`.
  */
-import { NodeIO, type Document } from '@gltf-transform/core'
+import { type Document, NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer'
 
@@ -96,9 +96,7 @@ export async function createGlbIo(): Promise<NodeIO> {
       if (isNodeRuntime()) {
         try {
           // turbopackIgnore: keep Node decoder out of the browser graph.
-          const draco3d = (
-            await import(/* turbopackIgnore: true */ 'draco3dgltf')
-          ).default
+          const draco3d = (await import(/* turbopackIgnore: true */ 'draco3dgltf')).default
           deps['draco3d.decoder'] = await draco3d.createDecoderModule()
           deps['draco3d.encoder'] = await draco3d.createEncoderModule()
         } catch {
@@ -112,7 +110,9 @@ export async function createGlbIo(): Promise<NodeIO> {
   return ioPromise
 }
 
-async function compressedSizes(bytes: Uint8Array): Promise<{ gzipBytes: number; brotliBytes: number }> {
+async function compressedSizes(
+  bytes: Uint8Array,
+): Promise<{ gzipBytes: number; brotliBytes: number }> {
   if (!isNodeRuntime()) return { gzipBytes: 0, brotliBytes: 0 }
   try {
     const { brotliCompressSync, constants, gzipSync } = await import(
@@ -378,10 +378,7 @@ export async function auditGlb(input: ArrayBuffer | Uint8Array): Promise<GlbAudi
  * Hard gate — throws on any failure. Used by exportEcoGlb and H1 checks.
  * Deliberately broken models (empty, corrupt, wrong scale) must fail here.
  */
-export function assertHardGlbAudit(
-  report: GlbAuditReport,
-  options: HardAuditOptions = {},
-): void {
+export function assertHardGlbAudit(report: GlbAuditReport, options: HardAuditOptions = {}): void {
   const maxBytes = options.maxBytes ?? ECO_GLB_MAX_BYTES
   const maxExtentM = options.maxExtentM ?? ECO_GLB_MAX_EXTENT_M
   const minExtentM = options.minExtentM ?? ECO_GLB_MIN_EXTENT_M
@@ -400,14 +397,10 @@ export function assertHardGlbAudit(
     for (let i = 0; i < 3; i++) {
       const extent = report.worldBounds.sizeMeters[i] ?? 0
       if (extent < minExtentM) {
-        fails.push(
-          `${axes[i]} extent ${extent} m below min ${minExtentM} m — likely wrong units`,
-        )
+        fails.push(`${axes[i]} extent ${extent} m below min ${minExtentM} m — likely wrong units`)
       }
       if (extent > maxExtentM) {
-        fails.push(
-          `${axes[i]} extent ${extent} m above max ${maxExtentM} m — likely wrong scale`,
-        )
+        fails.push(`${axes[i]} extent ${extent} m above max ${maxExtentM} m — likely wrong scale`)
       }
     }
   }
@@ -431,9 +424,7 @@ export function assertHardGlbAudit(
       fails.push(`texture ${tex.width}×${tex.height} is not power-of-two`)
     }
     if (tex.width > maxTexDim || tex.height > maxTexDim) {
-      fails.push(
-        `texture ${tex.width}×${tex.height} exceeds max ${maxTexDim}px`,
-      )
+      fails.push(`texture ${tex.width}×${tex.height} exceeds max ${maxTexDim}px`)
     }
   }
 
@@ -451,9 +442,7 @@ export function assertHardGlbAudit(
           frame.walkMinZ >= 0 &&
           frame.walkMaxZ > 0
         ) {
-          fails.push(
-            'walk rings all have z≥0 — expected z-south (editor north → world −z)',
-          )
+          fails.push('walk rings all have z≥0 — expected z-south (editor north → world −z)')
         }
       }
       // Y-up: floor tops are metres on Y (positive height above base).

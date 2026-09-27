@@ -45,7 +45,10 @@ type ComputeResult = {
 }
 
 type BonesEngines = {
-  computeLevel: (nodes: Record<string, Record<string, unknown>>, config: FramingNode) => ComputeResult
+  computeLevel: (
+    nodes: Record<string, Record<string, unknown>>,
+    config: FramingNode,
+  ) => ComputeResult
   computeTakeoff: (
     members: unknown[],
     fixtures: unknown[],
@@ -93,10 +96,7 @@ function num(v: unknown, fallback = 0): number {
 }
 
 function pair(v: unknown): [number, number] | null {
-  return Array.isArray(v) &&
-    v.length >= 2 &&
-    typeof v[0] === 'number' &&
-    typeof v[1] === 'number'
+  return Array.isArray(v) && v.length >= 2 && typeof v[0] === 'number' && typeof v[1] === 'number'
     ? [v[0], v[1]]
     : null
 }
@@ -135,7 +135,8 @@ function slabsOnLevel(nodes: NodesRecord, levelId: string): number {
 
 function pickFramingLevel(nodes: NodesRecord): { levelId: string } | { reason: string } {
   const levels = levelIds(nodes)
-  if (levels.length === 0) return { reason: 'no Pascal level node — Bones computeLevel needs a level parent' }
+  if (levels.length === 0)
+    return { reason: 'no Pascal level node — Bones computeLevel needs a level parent' }
 
   let best: { levelId: string; walls: number; slabs: number } | null = null
   let curvedOnly = false
@@ -155,8 +156,7 @@ function pickFramingLevel(nodes: NodesRecord): { levelId: string } | { reason: s
   if (!best) {
     if (curvedOnly) {
       return {
-        reason:
-          'only curved walls on level(s) — Bones skips curved framing; massing adapter kept',
+        reason: 'only curved walls on level(s) — Bones skips curved framing; massing adapter kept',
       }
     }
     return {

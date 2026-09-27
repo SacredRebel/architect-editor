@@ -1,9 +1,9 @@
 import type { AnyNode, NodeDefinition } from '@pascal-app/core'
 import type { FloorplanNodeExtension } from '@pascal-app/editor'
+import { archParametrics } from '../../temple/parametrics'
 import { buildArchFloorplan } from './floorplan'
 import { buildArchGeometry } from './geometry'
 import { HsArchNode } from './schema'
-import { archParametrics } from '../../temple/parametrics'
 
 type HsArchDefinition = NodeDefinition<typeof HsArchNode> & Record<string, unknown>
 

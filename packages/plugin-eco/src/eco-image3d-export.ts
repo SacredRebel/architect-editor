@@ -8,15 +8,15 @@
  *
  * No walk floors/solids are stamped — props / massing only.
  */
-import { NodeIO, type Document } from '@gltf-transform/core'
-import { auditGlb, createGlbIo } from './glb-audit'
+import { type Document, NodeIO } from '@gltf-transform/core'
+import type { Image3dKnownDimension } from './eco-image3d'
 import {
   enforceImage3dExportBudget,
   IMAGE3D_EXPORT_MAX_BYTES,
   IMAGE3D_EXPORT_MAX_TEX_DIM,
 } from './eco-image3d-budget'
-import type { Image3dKnownDimension } from './eco-image3d'
-import { optimiseGlb, type OptimiseProfile, type OptimiseResult } from './glb-optimise'
+import { auditGlb, createGlbIo } from './glb-audit'
+import { type OptimiseProfile, type OptimiseResult, optimiseGlb } from './glb-optimise'
 
 export type Image3dSourceFrame = 'z-forward-y-up'
 
@@ -93,7 +93,10 @@ export function measureGlbAabb(doc: Document): {
   const max = [-Infinity, -Infinity, -Infinity]
 
   const walk = (node: ReturnType<typeof root.listNodes>[number], parent: number[]) => {
-    const world = multiply(parent, fromTRS(node.getTranslation(), node.getRotation(), node.getScale()))
+    const world = multiply(
+      parent,
+      fromTRS(node.getTranslation(), node.getRotation(), node.getScale()),
+    )
     const mesh = node.getMesh()
     if (mesh) {
       for (const prim of mesh.listPrimitives()) {
@@ -249,8 +252,7 @@ export async function prepareImage3dGlb(
   const profile = options.optimiseProfile ?? 'image3d'
   const optimise = await optimiseGlb(scaled, profile)
 
-  const enforce =
-    options.enforceBudget ?? (profile === 'image3d' || profile === 'web')
+  const enforce = options.enforceBudget ?? (profile === 'image3d' || profile === 'web')
   if (enforce) {
     const report = await auditGlb(optimise.buffer)
     enforceImage3dExportBudget(report, {

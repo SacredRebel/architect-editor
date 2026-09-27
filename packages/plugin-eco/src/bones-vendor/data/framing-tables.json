@@ -36,11 +36,7 @@
       "speciesGrade": "No. 2 grade Douglas fir-larch, hem-fir, Southern pine or spruce-pine-fir (table gives one span for all four)",
       "groundSnowPsf": 30,
       "groundSnowNote": "30 psf column also applies where ground snow < 30 psf and roof live load <= 20 psf (table footnote e). The 50/70 psf columns are captured for the roof-and-ceiling 2-ply rows only, under groundSnow50Psf/groundSnow70Psf (LOD-400 B11) - read from the same 2021 UpCodes chapter-6 export as the 30 psf block and matching it cell-for-cell on the shared column.",
-      "buildingWidthsFt": [
-        12,
-        24,
-        36
-      ],
+      "buildingWidthsFt": [12, 24, 36],
       "buildingWidthNote": "2021 table columns are 12/24/36 ft; interpolation between widths is permitted (footnote c). interpolated28ftWidth below is linear interpolation between the 24 and 36 ft columns, floored to the inch, with the more conservative jack-stud count.",
       "topLateralBracing": "Spans assume the top of the header is laterally braced by perpendicular framing; if not (e.g. cripple studs bearing on header), multiply 2x8/2x10/2x12 spans by 0.70 (footnote f).",
       "jackStuds": "jackStudsEachEnd = NJ. Where NJ = 1, an approved framing anchor to the full-height stud may replace the jack stud (footnote d)."
@@ -961,11 +957,7 @@
     "exceptions": "Walls <= 24 in connecting offset braced wall panels: one centered bolt; walls <= 12 in: no bolt required (attach to adjacent panels).",
     "seismicDesignCategoryD": {
       "appliesTo": "SDC D0, D1, D2 (all dwellings) and SDC C townhouses",
-      "plateWasherIn": [
-        3,
-        3,
-        0.229
-      ],
+      "plateWasherIn": [3, 3, 0.229],
       "plateWasherNote": "0.229 x 3 x 3 in plate washers on all anchor bolts along braced wall lines (R602.11.1); diagonal slot up to 3/16 in oversize permitted with a cut washer under the nut.",
       "interiorWallAnchorage": "Interior braced wall plates and interior bearing wall sole plates on continuous foundations: bolts at max 6 ft oc, within 12 in of plate section ends.",
       "maxSpacingOverTwoStoriesFt": 4

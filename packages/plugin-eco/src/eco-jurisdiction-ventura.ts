@@ -27,9 +27,7 @@ export const VENTURA_COUNTY_JURISDICTION = {
     maxHeightM: 10.67,
     /** Default front edge index on the parcel polygon (user can override). */
     frontEdgeIndex: 0,
-    sources: [
-      'Ventura County Zoning Ordinance — typical RE/AE residential yards (confirm AHJ)',
-    ],
+    sources: ['Ventura County Zoning Ordinance — typical RE/AE residential yards (confirm AHJ)'],
   },
   climate: {
     frostLineIn: 0,

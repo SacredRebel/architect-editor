@@ -227,7 +227,11 @@ export function verticalBarPositions(
     consider(o.u0 - CELL_CENTER)
     consider(o.u1 + CELL_CENTER)
   }
-  for (let u = CELL_CENTER + VERT_BAR_SPACING; u < length - CELL_CENTER - inches(8); u += VERT_BAR_SPACING) {
+  for (
+    let u = CELL_CENTER + VERT_BAR_SPACING;
+    u < length - CELL_CENTER - inches(8);
+    u += VERT_BAR_SPACING
+  ) {
     consider(u)
   }
   return accepted.sort((a, b) => a - b)
@@ -280,9 +284,7 @@ export function cmuDowelPositions(
       zoneHeight = seam
       // The CMU zone's openings: fully below the seam or crossing it —
       // exactly the set mixedCmuWall jamb-cuts the blockwork around.
-      openings = wall.openings.filter(
-        (o) => (o.kind === 'door' ? 0 : o.sillHeight) < seam - EPS,
-      )
+      openings = wall.openings.filter((o) => (o.kind === 'door' ? 0 : o.sillHeight) < seam - EPS)
     }
   }
   const len = wall.length - startInset - endInset
@@ -370,7 +372,8 @@ export function cmuWall(wall: WallSlice, spec: FramingSpec, hints: CmuHints = {}
     const cs = cornerAt('start')
     if (cs) lo = (c % 2 === 0) === cs.claimEven ? -cs.otherThickness / 2 : cs.otherThickness / 2
     const ce = cornerAt('end')
-    if (ce) hi = len + ((c % 2 === 0) === ce.claimEven ? ce.otherThickness / 2 : -ce.otherThickness / 2)
+    if (ce)
+      hi = len + ((c % 2 === 0) === ce.claimEven ? ce.otherThickness / 2 : -ce.otherThickness / 2)
     return [lo, hi]
   }
   /** Extend the terminal units through a claimed corner / clip to a yielded one. */
@@ -874,12 +877,17 @@ export function mixedCmuWall(
   const boltSegments: { a: number; b: number }[] = []
   let boltCursor = startInset
   for (const s of sillRoSpans) {
-    if (s.lo > boltCursor + EPS) boltSegments.push({ a: boltCursor, b: Math.min(s.lo, len - endInset) })
+    if (s.lo > boltCursor + EPS)
+      boltSegments.push({ a: boltCursor, b: Math.min(s.lo, len - endInset) })
     boltCursor = Math.max(boltCursor, s.hi)
   }
   if (len - endInset > boltCursor + EPS) boltSegments.push({ a: boltCursor, b: len - endInset })
   for (const seg of boltSegments) {
-    for (const u of anchorBoltPositions(seg.b - seg.a, spec.anchorBoltSpacing, spec.anchorBoltEndDistance)) {
+    for (const u of anchorBoltPositions(
+      seg.b - seg.a,
+      spec.anchorBoltSpacing,
+      spec.anchorBoltEndDistance,
+    )) {
       members.push({
         system: 'wall-framing',
         role: 'anchor-bolt',

@@ -3,19 +3,34 @@
  * keeps a round arch round and a golden dome golden while you change its width.
  */
 import type { ParametricDescriptor } from '@pascal-app/core'
-import type { HsColumnNode } from '../schema'
 import type { HsArchNode } from '../kinds/hs-arch/schema'
 import type { HsDomeNode } from '../kinds/hs-dome/schema'
 import type { HsPendentiveNode } from '../kinds/hs-pendentive/schema'
 import type { HsPierNode } from '../kinds/hs-pier/schema'
+import type { HsColumnNode } from '../schema'
 
 export const domeParametrics: ParametricDescriptor<HsDomeNode> = {
   groups: [
     {
       label: 'Dome',
       fields: [
-        { key: 'radius', label: 'Radius', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
-        { key: 'riseRatio', label: 'Height ÷ width', kind: 'number', min: 0.05, max: 1, step: 0.01 },
+        {
+          key: 'radius',
+          label: 'Radius',
+          kind: 'number',
+          unit: 'm',
+          min: 0.3,
+          max: 60,
+          step: 0.05,
+        },
+        {
+          key: 'riseRatio',
+          label: 'Height ÷ width',
+          kind: 'number',
+          min: 0.05,
+          max: 1,
+          step: 0.01,
+        },
         {
           key: 'meridian',
           label: 'Meridian',
@@ -23,27 +38,89 @@ export const domeParametrics: ParametricDescriptor<HsDomeNode> = {
           options: ['circular', 'catenary'],
           display: 'segmented',
         },
-        { key: 'shellThickness', label: 'Rim band', kind: 'number', unit: 'm', min: 0.02, max: 3, step: 0.01 },
-        { key: 'oculusRadius', label: 'Oculus radius', kind: 'number', unit: 'm', min: 0, max: 10, step: 0.05 },
+        {
+          key: 'shellThickness',
+          label: 'Rim band',
+          kind: 'number',
+          unit: 'm',
+          min: 0.02,
+          max: 3,
+          step: 0.01,
+        },
+        {
+          key: 'oculusRadius',
+          label: 'Oculus radius',
+          kind: 'number',
+          unit: 'm',
+          min: 0,
+          max: 10,
+          step: 0.05,
+        },
       ],
     },
     {
       label: 'Drum and windows',
       defaultExpanded: false,
       fields: [
-        { key: 'drumHeight', label: 'Drum height', kind: 'number', unit: 'm', min: 0, max: 20, step: 0.05 },
-        { key: 'drumRadius', label: 'Drum radius', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
+        {
+          key: 'drumHeight',
+          label: 'Drum height',
+          kind: 'number',
+          unit: 'm',
+          min: 0,
+          max: 20,
+          step: 0.05,
+        },
+        {
+          key: 'drumRadius',
+          label: 'Drum radius',
+          kind: 'number',
+          unit: 'm',
+          min: 0.3,
+          max: 60,
+          step: 0.05,
+        },
         { key: 'windowCount', label: 'Windows', kind: 'number', min: 0, max: 128, step: 1 },
-        { key: 'windowWidth', label: 'Window width', kind: 'number', unit: 'm', min: 0.1, max: 5, step: 0.05 },
-        { key: 'windowHeight', label: 'Window height', kind: 'number', unit: 'm', min: 0.1, max: 8, step: 0.05 },
+        {
+          key: 'windowWidth',
+          label: 'Window width',
+          kind: 'number',
+          unit: 'm',
+          min: 0.1,
+          max: 5,
+          step: 0.05,
+        },
+        {
+          key: 'windowHeight',
+          label: 'Window height',
+          kind: 'number',
+          unit: 'm',
+          min: 0.1,
+          max: 8,
+          step: 0.05,
+        },
       ],
     },
     {
       label: 'Sweep',
       defaultExpanded: false,
       fields: [
-        { key: 'sectorStart', label: 'Start (rad)', kind: 'number', min: -Math.PI * 2, max: Math.PI * 2, step: 0.01 },
-        { key: 'sectorAngle', label: 'Angle (rad) — π is a half dome', kind: 'number', min: 0.1, max: Math.PI * 2, step: 0.01 },
+        {
+          key: 'sectorStart',
+          label: 'Start (rad)',
+          kind: 'number',
+          min: -Math.PI * 2,
+          max: Math.PI * 2,
+          step: 0.01,
+        },
+        {
+          key: 'sectorAngle',
+          label: 'Angle (rad) — π is a half dome',
+          kind: 'number',
+          min: 0.1,
+          max: Math.PI * 2,
+          step: 0.01,
+        },
       ],
     },
   ],
@@ -68,8 +145,24 @@ export const archParametrics: ParametricDescriptor<HsArchNode> = {
         },
         { key: 'span', label: 'Span', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
         { key: 'rise', label: 'Rise', kind: 'number', unit: 'm', min: 0.1, max: 60, step: 0.05 },
-        { key: 'depth', label: 'Depth (vault)', kind: 'number', unit: 'm', min: 0.05, max: 40, step: 0.05 },
-        { key: 'thickness', label: 'Ring', kind: 'number', unit: 'm', min: 0.05, max: 5, step: 0.01 },
+        {
+          key: 'depth',
+          label: 'Depth (vault)',
+          kind: 'number',
+          unit: 'm',
+          min: 0.05,
+          max: 40,
+          step: 0.05,
+        },
+        {
+          key: 'thickness',
+          label: 'Ring',
+          kind: 'number',
+          unit: 'm',
+          min: 0.05,
+          max: 5,
+          step: 0.01,
+        },
         { key: 'showThrust', label: 'Show line of thrust (Poleni)', kind: 'boolean' },
       ],
     },
@@ -85,7 +178,13 @@ export const archParametrics: ParametricDescriptor<HsArchNode> = {
   invariants: [
     (n) =>
       n.profileType === 'pointed' && n.rise <= n.span / 2
-        ? [{ field: 'rise', msg: 'a pointed arch needs a rise above half its span', severity: 'warning' as const }]
+        ? [
+            {
+              field: 'rise',
+              msg: 'a pointed arch needs a rise above half its span',
+              severity: 'warning' as const,
+            },
+          ]
         : [],
     (n) => {
       // Lazy import avoided: inline middle-third check via geometry helper would cycle;
@@ -108,9 +207,33 @@ export const pierParametrics: ParametricDescriptor<HsPierNode> = {
     {
       label: 'Pier',
       fields: [
-        { key: 'height', label: 'Height', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
-        { key: 'impostSize', label: 'Impost overhang', kind: 'number', unit: 'm', min: 0, max: 5, step: 0.01 },
-        { key: 'impostThickness', label: 'Impost height', kind: 'number', unit: 'm', min: 0.02, max: 5, step: 0.01 },
+        {
+          key: 'height',
+          label: 'Height',
+          kind: 'number',
+          unit: 'm',
+          min: 0.3,
+          max: 60,
+          step: 0.05,
+        },
+        {
+          key: 'impostSize',
+          label: 'Impost overhang',
+          kind: 'number',
+          unit: 'm',
+          min: 0,
+          max: 5,
+          step: 0.01,
+        },
+        {
+          key: 'impostThickness',
+          label: 'Impost height',
+          kind: 'number',
+          unit: 'm',
+          min: 0.02,
+          max: 5,
+          step: 0.01,
+        },
       ],
     },
   ],
@@ -121,9 +244,31 @@ export const pendentiveParametrics: ParametricDescriptor<HsPendentiveNode> = {
     {
       label: 'Pendentive',
       fields: [
-        { key: 'quadrant', label: 'Corner', kind: 'enum', options: ['ne', 'nw', 'se', 'sw'], display: 'segmented' },
-        { key: 'squareSide', label: 'Bay side (true pendentive)', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
-        { key: 'sphereRadius', label: 'Sphere radius (octant)', kind: 'number', unit: 'm', min: 0.3, max: 60, step: 0.05 },
+        {
+          key: 'quadrant',
+          label: 'Corner',
+          kind: 'enum',
+          options: ['ne', 'nw', 'se', 'sw'],
+          display: 'segmented',
+        },
+        {
+          key: 'squareSide',
+          label: 'Bay side (true pendentive)',
+          kind: 'number',
+          unit: 'm',
+          min: 0.3,
+          max: 60,
+          step: 0.05,
+        },
+        {
+          key: 'sphereRadius',
+          label: 'Sphere radius (octant)',
+          kind: 'number',
+          unit: 'm',
+          min: 0.3,
+          max: 60,
+          step: 0.05,
+        },
       ],
     },
   ],
@@ -134,12 +279,55 @@ export const columnParametrics: ParametricDescriptor<HsColumnNode> = {
     {
       label: 'Column',
       fields: [
-        { key: 'variant', label: 'Stone', kind: 'enum', options: ['nave_verde', 'porphyry_exedra', 'aisle_verde', 'aisle_pillar', 'gallery_verde'], display: 'select' },
-        { key: 'shaftHeight', label: 'Shaft height', kind: 'number', unit: 'm', min: 0.3, max: 30, step: 0.05 },
-        { key: 'shaftRadius', label: 'Shaft radius', kind: 'number', unit: 'm', min: 0.03, max: 3, step: 0.01 },
-        { key: 'capitalHeight', label: 'Capital height', kind: 'number', unit: 'm', min: 0.05, max: 5, step: 0.01 },
+        {
+          key: 'variant',
+          label: 'Stone',
+          kind: 'enum',
+          options: [
+            'nave_verde',
+            'porphyry_exedra',
+            'aisle_verde',
+            'aisle_pillar',
+            'gallery_verde',
+          ],
+          display: 'select',
+        },
+        {
+          key: 'shaftHeight',
+          label: 'Shaft height',
+          kind: 'number',
+          unit: 'm',
+          min: 0.3,
+          max: 30,
+          step: 0.05,
+        },
+        {
+          key: 'shaftRadius',
+          label: 'Shaft radius',
+          kind: 'number',
+          unit: 'm',
+          min: 0.03,
+          max: 3,
+          step: 0.01,
+        },
+        {
+          key: 'capitalHeight',
+          label: 'Capital height',
+          kind: 'number',
+          unit: 'm',
+          min: 0.05,
+          max: 5,
+          step: 0.01,
+        },
         { key: 'flutes', label: 'Flutes', kind: 'number', min: 0, max: 32, step: 1 },
-        { key: 'entasis', label: 'Entasis (swell)', kind: 'number', min: 0, max: 0.05, step: 0.005 },
+        {
+          key: 'entasis',
+          label: 'Entasis (swell)',
+          kind: 'number',
+          min: 0,
+          max: 0.05,
+          step: 0.005,
+        },
       ],
     },
   ],

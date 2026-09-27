@@ -1,8 +1,8 @@
 'use client'
 
+import { Editor } from '@pascal-app/editor'
 import { PascalWebXRButton } from '@webxr/plugin/pascal-editor'
 import type { ComponentProps, ReactNode } from 'react'
-import { Editor } from '@pascal-app/editor'
 import {
   useWebXRInstalled,
   WebXRFeatureConsumer,
@@ -15,11 +15,7 @@ type ShellProps = {
 }
 
 /** Mounts WebXR only when the WebXR plugin is installed on the scene. */
-export function WebXREditorShell({
-  children,
-}: {
-  children: (props: ShellProps) => ReactNode
-}) {
+export function WebXREditorShell({ children }: { children: (props: ShellProps) => ReactNode }) {
   const webXRInstalled = useWebXRInstalled()
   return (
     <WebXRFeatureRuntime enabled={webXRInstalled}>

@@ -42,7 +42,16 @@
     "typescript": "6.0.3",
     "zod": ">=4.5.4 <4.6"
   },
-  "keywords": ["pascal", "3d", "editor", "plugin", "dome", "arch", "pendentive", "hagia-sophia"],
+  "keywords": [
+    "pascal",
+    "3d",
+    "editor",
+    "plugin",
+    "dome",
+    "arch",
+    "pendentive",
+    "hagia-sophia"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/SacredRebel/architect-editor.git",

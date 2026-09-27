@@ -1,12 +1,7 @@
 /**
  * Pure arch profile curves (no Three.js) — shared by geometry, Poleni checks, and the panel.
  */
-import {
-  analyseThrust,
-  fitCatenary,
-  sampleCatenary,
-  type ThrustAnalysis,
-} from './catenary'
+import { analyseThrust, fitCatenary, sampleCatenary, type ThrustAnalysis } from './catenary'
 
 export type ArchProfileType = 'round' | 'segmental' | 'pointed' | 'catenary'
 export type ArchPoint = { x: number; y: number }
@@ -119,12 +114,6 @@ export function archThrustAnalysis(node: {
   rise: number
   thickness: number
 }): ThrustAnalysis {
-  const centreline = buildArchCentreline(
-    node.profileType,
-    node.span,
-    node.rise,
-    node.thickness,
-    48,
-  )
+  const centreline = buildArchCentreline(node.profileType, node.span, node.rise, node.thickness, 48)
   return analyseThrust(centreline, node.thickness, node.span, node.rise, 48)
 }

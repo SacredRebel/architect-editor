@@ -59,8 +59,7 @@ export function sunPosition(date: Date, lat: number, lng: number): SunPos {
   const latR = lat * D2R
   const declR = decl * D2R
   const haR = hourAngle * D2R
-  const cosZen =
-    Math.sin(latR) * Math.sin(declR) + Math.cos(latR) * Math.cos(declR) * Math.cos(haR)
+  const cosZen = Math.sin(latR) * Math.sin(declR) + Math.cos(latR) * Math.cos(declR) * Math.cos(haR)
   const zenith = Math.acos(Math.min(1, Math.max(-1, cosZen))) * R2D
   let az: number
   const denom = Math.cos(latR) * Math.sin(zenith * D2R)
@@ -121,13 +120,21 @@ export function instantAt(hours: number, timeZone: string, day: Date = new Date(
         +(p.hour ?? '0'),
         +(p.minute ?? '0'),
         +(p.second ?? '0'),
-      ) - Math.floor(d.getTime() / 1000) * 1000
+      ) -
+      Math.floor(d.getTime() / 1000) * 1000
     )
   }
   const today = parts(day)
   const h = Math.floor(hours)
   const m = Math.round((hours - h) * 60)
-  const wall = Date.UTC(+(today.year ?? '0'), +(today.month ?? '1') - 1, +(today.day ?? '1'), h, m, 0)
+  const wall = Date.UTC(
+    +(today.year ?? '0'),
+    +(today.month ?? '1') - 1,
+    +(today.day ?? '1'),
+    h,
+    m,
+    0,
+  )
   let guess = new Date(wall - offsetMs(day))
   guess = new Date(wall - offsetMs(guess))
   return guess

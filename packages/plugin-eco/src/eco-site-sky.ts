@@ -11,9 +11,9 @@ import * as THREE from 'three'
 import {
   ECO_DEFAULT_LAT,
   ECO_DEFAULT_LNG,
+  type SunPos,
   sunPosition,
   sunVector,
-  type SunPos,
 } from './eco-site-sun'
 
 const L = (r: number, g: number, b: number) =>
@@ -67,17 +67,14 @@ export function sunTransmission(
   const c = 0.2 * air.turbidity * 10e-18
   const zenithAngle = Math.acos(Math.max(0, s.y))
   const inverse =
-    1 /
-    (Math.cos(zenithAngle) +
-      0.15 * Math.pow(93.885 - (zenithAngle * 180) / Math.PI, -1.253))
-  return TOTAL_RAYLEIGH.map(
-    (b, i) =>
-      Math.exp(
-        -(
-          b * rayleighCoefficient * RAYLEIGH_ZENITH * inverse +
-          0.434 * c * MIE_CONST[i]! * air.mieCoefficient * MIE_ZENITH * inverse
-        ),
+    1 / (Math.cos(zenithAngle) + 0.15 * Math.pow(93.885 - (zenithAngle * 180) / Math.PI, -1.253))
+  return TOTAL_RAYLEIGH.map((b, i) =>
+    Math.exp(
+      -(
+        b * rayleighCoefficient * RAYLEIGH_ZENITH * inverse +
+        0.434 * c * MIE_CONST[i]! * air.mieCoefficient * MIE_ZENITH * inverse
       ),
+    ),
   ) as [number, number, number]
 }
 
@@ -105,7 +102,10 @@ function colourAt(keys: SkyKeys, dir: THREE.Vector3): THREE.Color {
     .clone()
     .multiplyScalar(keys.glowK * (0.5 * Math.pow(c, 32) + 0.5 * Math.pow(c, 400)))
   if (h < 0) {
-    return horizon.clone().multiplyScalar(0.85).lerp(GROUND, Math.min(1, Math.max(0, -h * 3)))
+    return horizon
+      .clone()
+      .multiplyScalar(0.85)
+      .lerp(GROUND, Math.min(1, Math.max(0, -h * 3)))
   }
   return sky.add(glow)
 }
@@ -138,10 +138,7 @@ function bakeEquirect(keys: SkyKeys, width = 256, height = 128): THREE.DataTextu
   return tex
 }
 
-function toEcoDir(
-  world: { x: number; y: number; z: number },
-  northDeg: number,
-): THREE.Vector3 {
+function toEcoDir(world: { x: number; y: number; z: number }, northDeg: number): THREE.Vector3 {
   const xEast = world.x
   const yUp = world.y
   const zNorth = -world.z
@@ -249,7 +246,12 @@ export class EcoSky {
     const zp = Math.max(this.zenith.r, this.zenith.g, this.zenith.b, 1e-3)
     const hp = Math.max(this.horizon.r, this.horizon.g, this.horizon.b, 1e-3)
     this.ambient.color
-      .setRGB(this.zenith.r / zp, this.zenith.g / zp, this.zenith.b / zp, THREE.LinearSRGBColorSpace)
+      .setRGB(
+        this.zenith.r / zp,
+        this.zenith.g / zp,
+        this.zenith.b / zp,
+        THREE.LinearSRGBColorSpace,
+      )
       .lerp(
         new THREE.Color().setRGB(
           this.horizon.r / hp,

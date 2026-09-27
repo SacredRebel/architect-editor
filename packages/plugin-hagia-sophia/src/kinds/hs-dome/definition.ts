@@ -1,9 +1,9 @@
 import type { AnyNode, NodeDefinition } from '@pascal-app/core'
 import type { FloorplanNodeExtension } from '@pascal-app/editor'
+import { domeParametrics } from '../../temple/parametrics'
 import { buildDomeFloorplan } from './floorplan'
 import { buildDomeGeometry } from './geometry'
 import { HsDomeNode } from './schema'
-import { domeParametrics } from '../../temple/parametrics'
 
 type HsDomeDefinition = NodeDefinition<typeof HsDomeNode> & Record<string, unknown>
 
@@ -80,7 +80,8 @@ export const hsDomeDefinition: HsDomeDefinition = {
 
   presentation: {
     label: 'Dome',
-    description: 'A dome on an optional drum of windows; hemisphere, saucer or golden. From ActArtech.',
+    description:
+      'A dome on an optional drum of windows; hemisphere, saucer or golden. From ActArtech.',
     icon: { kind: 'url', src: '/icons/temple-dome.svg' },
     paletteSection: 'structure',
     paletteOrder: 131,

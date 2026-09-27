@@ -28,14 +28,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint & format check
-        run: bun run check
+      # Named lane gate: format/lint + types together (same as local `bun run checks`).
+      - name: Checks
+        run: bun run checks
 
       - name: Validate agent skills and plugin packages
         run: bun run skills:validate
-
-      - name: Type check
-        run: bun run check-types
 
       - name: Test
         run: bun run test

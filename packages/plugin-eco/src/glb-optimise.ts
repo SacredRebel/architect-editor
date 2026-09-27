@@ -43,7 +43,10 @@ export type OptimiseResult = {
   profile: OptimiseProfile
 }
 
-async function writeBinary(io: NodeIO, doc: Awaited<ReturnType<NodeIO['readBinary']>>): Promise<ArrayBuffer> {
+async function writeBinary(
+  io: NodeIO,
+  doc: Awaited<ReturnType<NodeIO['readBinary']>>,
+): Promise<ArrayBuffer> {
   const out = await io.writeBinary(doc)
   const copy = new Uint8Array(out.byteLength)
   copy.set(out)

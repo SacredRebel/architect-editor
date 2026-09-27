@@ -3,12 +3,7 @@
  * Full recast-navigation-js navmesh bake is queued; until then we sample the
  * existing BVH collider mesh so paths stay on walkable geometry.
  */
-import {
-  type Mesh,
-  Raycaster,
-  Vector3,
-  type Object3D,
-} from 'three'
+import { type Mesh, type Object3D, Raycaster, Vector3 } from 'three'
 
 const DOWN = new Vector3(0, -1, 0)
 const raycaster = new Raycaster()
@@ -59,11 +54,7 @@ export function buildGroundPath(
   const points: Vector3[] = [start]
   for (let i = 1; i <= count; i++) {
     const t = i / count
-    const sample = new Vector3(
-      start.x + delta.x * t,
-      start.y,
-      start.z + delta.z * t,
-    )
+    const sample = new Vector3(start.x + delta.x * t, start.y, start.z + delta.z * t)
     const snapped = snapToGround(meshes, sample)
     points.push(snapped ?? sample)
   }

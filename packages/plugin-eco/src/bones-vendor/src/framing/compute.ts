@@ -22,9 +22,12 @@ import {
   extractServiceOverrides,
   extractSlabs,
   extractWalls,
-  SLEEPING_NAME_RE,
   type LevelSlice,
+  SLEEPING_NAME_RE,
 } from '../core/wall-model'
+import { type DerivedDevice, deriveWallDevices } from '../device/derive'
+import { extractDeviceOverrides } from '../device/overrides'
+import { type BuildingCharacteristics, computeCharacteristics } from '../engines/characteristics'
 import {
   type CmuDowelLayout,
   cmuDowelPositions,
@@ -34,11 +37,6 @@ import {
   snapCmuHeight,
 } from '../engines/cmu'
 import {
-  type BuildingCharacteristics,
-  computeCharacteristics,
-} from '../engines/characteristics'
-import { layoutWallLayers } from '../engines/wall-layers'
-import {
   applyDeviceOverrides,
   layoutElectrical,
   openingSpans,
@@ -46,13 +44,13 @@ import {
   routeWiring,
   wallPlan,
 } from '../engines/electrical'
-import { deriveWallDevices, type DerivedDevice } from '../device/derive'
-import { extractDeviceOverrides } from '../device/overrides'
-import { flagLinesetTradeCrossings, layoutHvac } from '../engines/hvac'
-import { layoutPlumbing, placeMeterSpot } from '../engines/plumbing'
-import { buildFoundation } from '../engines/foundation'
 import { frameFloor } from '../engines/floor-framing'
-import { detectUnframedRoofIntersections, frameRoofs, extractRoofs } from '../engines/roof-framing'
+import { buildFoundation } from '../engines/foundation'
+import { flagLinesetTradeCrossings, layoutHvac } from '../engines/hvac'
+import { lgsFrameWalls } from '../engines/lgs-wall-framing'
+import { layoutPlumbing, placeMeterSpot } from '../engines/plumbing'
+import { detectUnframedRoofIntersections, extractRoofs, frameRoofs } from '../engines/roof-framing'
+import type { TakeoffAreas } from '../engines/takeoff'
 import { bracingWarnings, crossReferenceHoldDowns } from '../engines/wall-bracing'
 import {
   dedupeFoundationStraps,
@@ -62,17 +60,16 @@ import {
   studSizeFor,
   upliftPathWarnings,
 } from '../engines/wall-framing'
-import { LUMBER_CROSS_SECTIONS } from '../lumber'
-import { applyJurisdiction, nonIrcCodeWarning, profileFor } from '../jurisdiction/profiles'
+import { layoutWallLayers } from '../engines/wall-layers'
 import { resolveJurisdiction } from '../jurisdiction/guess'
-import type { TakeoffAreas } from '../engines/takeoff'
+import { applyJurisdiction, nonIrcCodeWarning, profileFor } from '../jurisdiction/profiles'
+import { LUMBER_CROSS_SECTIONS } from '../lumber'
 import {
-  framedAssembly,
   type FramingNode,
+  framedAssembly,
   type WallConstruction,
   type WallEngineeringOverride,
 } from './schema'
-import { lgsFrameWalls } from '../engines/lgs-wall-framing'
 
 export type ComputeResult = {
   members: Member[]
@@ -219,10 +216,7 @@ export function splitBattsAroundBlocking(members: Member[], blocking: Member[]):
       const m = members[i] as Member
       if (m.role !== 'insulation' || m.sourceId !== block.sourceId) continue
       // both boxes are centered on the wall line — colinear overlap test
-      const du = Math.hypot(
-        m.position[0] - block.position[0],
-        m.position[2] - block.position[2],
-      )
+      const du = Math.hypot(m.position[0] - block.position[0], m.position[2] - block.position[2])
       if (du > (m.dims[0] + block.dims[0]) / 2 - 0.005) continue
       const yLo = m.position[1] - m.dims[1] / 2
       const yHi = m.position[1] + m.dims[1] / 2
@@ -263,7 +257,10 @@ const EXTRA_SERVICE_KEY: Record<string, 'thermostat' | 'heatPump' | 'electricMet
 function extractExtraServiceOverrides(
   nodes: Record<string, Record<string, unknown>>,
   levelId: string,
-): { overrides: Pick<ServiceOverrides, 'thermostat' | 'heatPump' | 'electricMeter'>; duplicates: string[] } {
+): {
+  overrides: Pick<ServiceOverrides, 'thermostat' | 'heatPump' | 'electricMeter'>
+  duplicates: string[]
+} {
   const winners = new Map<
     'thermostat' | 'heatPump' | 'electricMeter',
     { id: string; node: Record<string, unknown> }
@@ -427,8 +424,7 @@ export function dedupeColinearWalls(rawWalls: WallSlice[]): {
     for (const o of w.openings) {
       const px = w.start[0] + w.dir[0] * o.u
       const pz = w.start[1] + w.dir[1] * o.u
-      const u =
-        (px - kept.start[0]) * kept.dir[0] + (pz - kept.start[1]) * kept.dir[1]
+      const u = (px - kept.start[0]) * kept.dir[0] + (pz - kept.start[1]) * kept.dir[1]
       if (u < -0.05 || u > kept.length + 0.05) continue
       const twin = merged.some(
         (k) => Math.abs(k.u - u) < 0.15 && Math.abs(k.roughWidth - o.roughWidth) < 0.15,
@@ -672,7 +668,8 @@ function computeLevelUncached(
         const h = hintMap.get(w.id)
         if (!h) continue
         const insetSum = (h.startInset ?? 0) + (h.endInset ?? 0)
-        const minRun = 4 * LUMBER_CROSS_SECTIONS[studSizeFor(w, specForWall(spec, engineering.get(w.id)))][0]
+        const minRun =
+          4 * LUMBER_CROSS_SECTIONS[studSizeFor(w, specForWall(spec, engineering.get(w.id)))][0]
         if (insetSum > 0 && w.length - insetSum < minRun) {
           warnings.push(
             `Wall ${w.id}: run shorter than its junction insets — framing re-extends to the ${(minRun * 100).toFixed(0)}cm minimum, verify`,
@@ -692,8 +689,7 @@ function computeLevelUncached(
     // in the same building is a storey; an attic/roof level (no slabs)
     // is not.
     const levelAbove = levels[levelIndex + 1]
-    const storeyAbove =
-      levelAbove !== undefined && extractSlabs(nodes, levelAbove.id).length > 0
+    const storeyAbove = levelAbove !== undefined && extractSlabs(nodes, levelAbove.id).length > 0
     members.push(
       ...frameWalls(framed, spec, engineering, {
         slabBearing: isGroundLevel,
@@ -733,9 +729,7 @@ function computeLevelUncached(
     // ride the SAME pass: their sheet-goods stack is byte-identical to a
     // framed twin's (F1 — the batt layout is steel-aware via the
     // engineering map's construction).
-    members.push(
-      ...layoutWallLayers(assemblies, activeRooms, spec, code, probeSlabs, engineering),
-    )
+    members.push(...layoutWallLayers(assemblies, activeRooms, spec, code, probeSlabs, engineering))
     members.push(...cmuWalls(masonry, spec))
     for (const { wall, seam } of mixed) {
       const neighbors = activeWalls.filter((w) => w.id !== wall.id && !w.curved)
@@ -764,12 +758,16 @@ function computeLevelUncached(
   // Rooms with no flooring at all deserve a call-out regardless of level
   // (quality round-2: a phantom room had no slab and nothing said so).
   if (slabs.length > 0) {
-    const inPoly = (p: readonly [number, number], poly: readonly (readonly [number, number])[]): boolean => {
+    const inPoly = (
+      p: readonly [number, number],
+      poly: readonly (readonly [number, number])[],
+    ): boolean => {
       let inside = false
       for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
         const [xi, zi] = poly[i] as readonly [number, number]
         const [xj, zj] = poly[j] as readonly [number, number]
-        if (zi > p[1] !== zj > p[1] && p[0] < ((xj - xi) * (p[1] - zi)) / (zj - zi) + xi) inside = !inside
+        if (zi > p[1] !== zj > p[1] && p[0] < ((xj - xi) * (p[1] - zi)) / (zj - zi) + xi)
+          inside = !inside
       }
       return inside
     }
@@ -823,9 +821,7 @@ function computeLevelUncached(
       // Host floor-to-floor is baseY delta (resolveLevelFloorToFloorHeight),
       // not the raw storey height — baseElevation offsets count too.
       const below = levels[levelIndex - 1]
-      const storeyBelowHeight = below
-        ? (levels[levelIndex]?.baseY ?? 0) - below.baseY
-        : 2.4
+      const storeyBelowHeight = below ? (levels[levelIndex]?.baseY ?? 0) - below.baseY : 2.4
       members.push(...frameFloor(slabs, activeWalls, spec, storeyBelowHeight))
     }
   }
@@ -898,9 +894,9 @@ function computeLevelUncached(
                 // stratum. mountLevelId is RENDER-ONLY: the sheets draw these
                 // owner-local (re-verify: the levelId tag double-lifted them
                 // on elevations). A lived storey's porch roof stays flush.
-                (slabs.length === 0 && rooms.length === 0 && hasLowerStorey
-                  ? framed.map((m) => ({ ...m, mountLevelId: level.id, strataAbove: true as const }))
-                  : framed)
+                slabs.length === 0 && rooms.length === 0 && hasLowerStorey
+                ? framed.map((m) => ({ ...m, mountLevelId: level.id, strataAbove: true as const }))
+                : framed
               : framed.map((m) =>
                   level.level > myOrdinal
                     ? { ...m, levelId: level.id, strataAbove: true as const }
@@ -1170,8 +1166,7 @@ function computeLevelUncached(
     const hasLevelAbove =
       levelIndex >= 0 &&
       levels.slice(levelIndex + 1).some((l) => {
-        const lived =
-          extractSlabs(nodes, l.id).length > 0 || extractRooms(nodes, l.id).length > 0
+        const lived = extractSlabs(nodes, l.id).length > 0 || extractRooms(nodes, l.id).length > 0
         if (!lived) return false
         return Object.values(nodes).some(
           (n) => n.type === 'wall' && n.parentId === l.id && n.visible !== false,
@@ -1270,7 +1265,11 @@ function computeLevelUncached(
     if (hvacSilent || plumbingSilent) {
       const indoor = activeRooms.filter((room) => room.category !== 'outdoor')
       const systems =
-        hvacSilent && plumbingSilent ? 'HVAC + plumbing are' : hvacSilent ? 'HVAC is' : 'plumbing is'
+        hvacSilent && plumbingSilent
+          ? 'HVAC + plumbing are'
+          : hvacSilent
+            ? 'HVAC is'
+            : 'plumbing is'
       if (activeRooms.length === 0) {
         warnings.push(
           `no indoor zones on this level — ${systems} derived from rooms; draw zones here or X-ray the storey that has them`,

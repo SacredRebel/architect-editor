@@ -68,7 +68,10 @@ export async function detectGpuQuality(): Promise<GpuQuality> {
   return detecting
 }
 
-export function resolveGpuQuality(preference: GpuQualityPreference, auto: GpuQuality | null): GpuQuality {
+export function resolveGpuQuality(
+  preference: GpuQualityPreference,
+  auto: GpuQuality | null,
+): GpuQuality {
   if (preference !== 'auto') return preference
   return auto ?? 'medium'
 }

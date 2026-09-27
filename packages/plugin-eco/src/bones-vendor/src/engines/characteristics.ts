@@ -21,11 +21,11 @@ import type { RoomSlice, SlabSlice, WallSlice } from '../core/types'
 import { toInches } from '../core/units'
 import { LUMBER_CROSS_SECTIONS } from '../lumber'
 import {
+  manualJLite,
+  parseZone,
   R_IMPERIAL_TO_RSI,
   U_IMPERIAL_TO_SI,
   WINDOW_U_IMPERIAL,
-  manualJLite,
-  parseZone,
 } from './manual-j'
 
 type Pt = readonly [number, number]
@@ -162,9 +162,7 @@ export function computeCharacteristics(
     // 24 m² patio slab printed as 'Floor area 24.0 m²' next to a FALSE
     // 'no rooms/zones drawn' note AND a false exclusion note) lied twice.
     // The figure stays 0 and ONE truthful note says why.
-    notes.push(
-      'No conditioned space on this level — every zone is outdoor (garden/patio/terrace)',
-    )
+    notes.push('No conditioned space on this level — every zone is outdoor (garden/patio/terrace)')
   } else {
     for (const slab of slabs) {
       let area = ringArea(slab.polygon)
@@ -182,8 +180,7 @@ export function computeCharacteristics(
     for (const room of indoorRooms) volumeM3 += ringArea(room.polygon) * room.ceilingHeight
   } else {
     const heights = walls.filter((w) => w.exterior).map((w) => w.height)
-    const avgH =
-      heights.length > 0 ? heights.reduce((a, b) => a + b, 0) / heights.length : 2.4
+    const avgH = heights.length > 0 ? heights.reduce((a, b) => a + b, 0) / heights.length : 2.4
     volumeM3 = floorAreaM2 * avgH
     if (floorAreaM2 > 0) {
       notes.push(

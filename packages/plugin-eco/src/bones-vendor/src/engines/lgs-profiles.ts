@@ -386,10 +386,7 @@ export function profileFor(
         rollable.find((d) => d === designator) ??
         // machine rolls the family but not the requested mils → its
         // thinnest variant at/above the minimum still counts as rolled
-        rollable.find(
-          (d) =>
-            d.startsWith(`${stem}-`) && (parseDesignator(d)?.mils ?? 0) >= minMils,
-        )
+        rollable.find((d) => d.startsWith(`${stem}-`) && (parseDesignator(d)?.mils ?? 0) >= minMils)
       if (pick) {
         const pickFamily = profileFamily(pick)
         if (pickFamily) {

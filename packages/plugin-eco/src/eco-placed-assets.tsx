@@ -4,8 +4,8 @@ import { TransformControls } from '@react-three/drei'
 import { useLoader } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { Group, Material, Mesh, Object3D } from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import {
   assetRole,
   base64ToBytes,

@@ -2,14 +2,8 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import { isEcoBridgeReady, requestEcoGlbExport } from './bridge'
-import {
-  getEcoExportState,
-  subscribeEcoExport,
-} from './eco-export-store'
-import {
-  ECO_CURVE_WALK_TOLERANCE_M,
-  ECO_WALL_SAMPLE_STEP_M,
-} from './eco-curve-tolerance'
+import { ECO_CURVE_WALK_TOLERANCE_M, ECO_WALL_SAMPLE_STEP_M } from './eco-curve-tolerance'
+import { getEcoExportState, subscribeEcoExport } from './eco-export-store'
 import {
   addEcoCatenary,
   addEcoLoft,
@@ -25,6 +19,13 @@ import {
   updateEcoVault,
 } from './eco-organic-store'
 import {
+  getEcoPresentationState,
+  setEcoPresentation,
+  setEcoTimeOfDayHours,
+  subscribeEcoPresentation,
+  toggleEcoPresentation,
+} from './eco-presentation-store'
+import {
   addEcoShell,
   getEcoShellsState,
   makeDefaultLeafShell,
@@ -32,13 +33,6 @@ import {
   setShellRise,
   subscribeEcoShells,
 } from './eco-shell-store'
-import {
-  getEcoPresentationState,
-  setEcoPresentation,
-  setEcoTimeOfDayHours,
-  subscribeEcoPresentation,
-  toggleEcoPresentation,
-} from './eco-presentation-store'
 import {
   getEcoSiteState,
   setGuideVisible,
@@ -273,7 +267,8 @@ export default function EcoLegendPanel() {
         Buildable volume (setbacks + height limit)
       </label>
       <div style={{ opacity: 0.65, lineHeight: 1.35 }}>
-        Front ~20 ft / side ~5 ft / rear ~15 ft / height ~35 ft. Confirm with AHJ — Ventura yards only.
+        Front ~20 ft / side ~5 ft / rear ~15 ft / height ~35 ft. Confirm with AHJ — Ventura yards
+        only.
       </div>
 
       {!site ? (

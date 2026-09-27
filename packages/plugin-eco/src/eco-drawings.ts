@@ -12,7 +12,13 @@ export type OrthoBounds = {
   maxY: number
 }
 
-export type DrawingKind = 'plan' | 'section' | 'elevation-n' | 'elevation-s' | 'elevation-e' | 'elevation-w'
+export type DrawingKind =
+  | 'plan'
+  | 'section'
+  | 'elevation-n'
+  | 'elevation-s'
+  | 'elevation-e'
+  | 'elevation-w'
 
 export type DrawingLayout = {
   kind: DrawingKind
@@ -45,7 +51,9 @@ export function pxToleranceForMm(dpi: number, mm = 1): number {
   return (mm / MM_PER_IN) * dpi
 }
 
-export function boundsFromNodes(nodes: Record<string, Record<string, unknown> | undefined>): OrthoBounds {
+export function boundsFromNodes(
+  nodes: Record<string, Record<string, unknown> | undefined>,
+): OrthoBounds {
   let minX = Infinity
   let maxX = -Infinity
   let minZ = Infinity
@@ -192,8 +200,7 @@ export function paintOrthoDrawing(
 
   function mapElevXZ(along: number, y: number): [number, number] {
     // along is X for N/S elev, Z for E/W
-    const minAlong =
-      kind === 'elevation-e' || kind === 'elevation-w' ? bounds.minZ : bounds.minX
+    const minAlong = kind === 'elevation-e' || kind === 'elevation-w' ? bounds.minZ : bounds.minX
     return [originX + (along - minAlong) * mToPx, originY - (y - bounds.minY) * mToPx]
   }
 
@@ -229,9 +236,7 @@ export function paintOrthoDrawing(
     for (const s of strokes) {
       if (!s.poche) continue
       const along0 =
-        kind === 'elevation-e' || kind === 'elevation-w'
-          ? (s.z0 + s.z1) / 2
-          : (s.x0 + s.x1) / 2
+        kind === 'elevation-e' || kind === 'elevation-w' ? (s.z0 + s.z1) / 2 : (s.x0 + s.x1) / 2
       const [ax, ay] = mapElevXZ(along0 - 0.1, bounds.minY)
       const [, by] = mapElevXZ(along0 + 0.1, bounds.maxY)
       ctx.fillStyle = '#000000'

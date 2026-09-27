@@ -126,8 +126,8 @@ export default function EcoDrawingsPanel() {
       )}
 
       <div style={{ opacity: 0.7 }}>
-        Content {layout.longSideWorldM.toFixed(2)} m → {layout.longSidePaperCm.toFixed(2)} cm paper ·{' '}
-        {layout.widthPx}×{layout.heightPx} px
+        Content {layout.longSideWorldM.toFixed(2)} m → {layout.longSidePaperCm.toFixed(2)} cm paper
+        · {layout.widthPx}×{layout.heightPx} px
       </div>
 
       <button

@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  type AnyNode,
-  type AnyNodeId,
-  generateId,
-  useScene,
-} from '@pascal-app/core'
+import { type AnyNode, type AnyNodeId, generateId, useScene } from '@pascal-app/core'
 import { triggerSFX, useEditor } from '@pascal-app/editor'
 import { useViewer } from '@pascal-app/viewer'
 import { useState, useSyncExternalStore } from 'react'
@@ -98,7 +93,9 @@ export default function GeometryPanel() {
       return
     }
     const closed = fig.figure.polylines.find(
-      (p) => p.length >= 4 && Math.hypot(p[0]![0] - p[p.length - 1]![0], p[0]![1] - p[p.length - 1]![1]) < 1e-6,
+      (p) =>
+        p.length >= 4 &&
+        Math.hypot(p[0]![0] - p[p.length - 1]![0], p[0]![1] - p[p.length - 1]![1]) < 1e-6,
     )
     if (!closed) {
       setNote('Select a closed figure (grid cell, polygon, rectangle).')
@@ -172,7 +169,11 @@ export default function GeometryPanel() {
     )
   }
 
-  const rebuildSelected = (patch: { size?: number; bearingDeg?: number; origin?: [number, number] }) => {
+  const rebuildSelected = (patch: {
+    size?: number
+    bearingDeg?: number
+    origin?: [number, number]
+  }) => {
     const fig = figures.find((f) => f.id === selectedId)
     if (!fig || fig.locked) {
       setNote(fig?.locked ? 'Unlock the figure first.' : 'Select a placed figure.')
@@ -196,9 +197,9 @@ export default function GeometryPanel() {
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
       <div style={{ fontWeight: 600 }}>Geometry</div>
       <div style={{ opacity: 0.7, lineHeight: 1.4 }}>
-        Construction figures with plain geometric names. Type a size in feet-inches or metres.
-        Drag the blue scale handle on a selected figure (2D or 3D). Minimal-surface soap-film
-        awaits H15.3.
+        Construction figures with plain geometric names. Type a size in feet-inches or metres. Drag
+        the blue scale handle on a selected figure (2D or 3D). Minimal-surface soap-film awaits
+        H15.3.
       </div>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span>Form</span>

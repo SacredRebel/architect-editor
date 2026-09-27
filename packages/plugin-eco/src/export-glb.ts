@@ -5,16 +5,20 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { EcoWalk } from './bridge-types'
 import { assetRole, base64ToBytes, getEcoAssetsState } from './eco-assets-store'
+import { ensureGltfExportPolyfills } from './eco-gltf-polyfill'
 import {
   createEcoThreeMaterial,
+  type EcoMaterialId,
   elementKeyForShell,
   elementKeyForSlab,
   elementKeyForWall,
-  type EcoMaterialId,
   resolveEcoMaterialId,
 } from './eco-materials'
-import { buildShellObject3D } from './eco-shell-geometry'
-import { getEcoShellsState } from './eco-shell-store'
+import {
+  buildOrganicBuildingObject3D,
+  buildSmoothWallObject3D,
+} from './eco-organic-building-geometry'
+import { getEcoOrganicBuildingState } from './eco-organic-building-store'
 import {
   buildCatenaryObject3D,
   buildLoftObject3D,
@@ -22,24 +26,15 @@ import {
   buildVaultObject3D,
 } from './eco-organic-geometry'
 import { getEcoOrganicState } from './eco-organic-store'
-import {
-  buildOrganicBuildingObject3D,
-  buildSmoothWallObject3D,
-} from './eco-organic-building-geometry'
-import { getEcoOrganicBuildingState } from './eco-organic-building-store'
-import { computeAnsiAreas, type AnsiAreaExtras } from './eco-true-size'
+import { buildShellObject3D } from './eco-shell-geometry'
+import { getEcoShellsState } from './eco-shell-store'
 import { buildEcoTreeObject3D } from './eco-tree-mesh'
 import { getEcoTreesState } from './eco-trees-store'
-import {
-  assertHardGlbAudit,
-  auditGlb,
-  ECO_GLB_MAX_BYTES,
-  formatExportSizeLabel,
-} from './glb-audit'
-import { optimiseGlb, type OptimiseProfile } from './glb-optimise'
+import { type AnsiAreaExtras, computeAnsiAreas } from './eco-true-size'
 import { buildEcoWalk, ECO_WALL_SAMPLE_STEP_M } from './export-walk'
+import { assertHardGlbAudit, auditGlb, ECO_GLB_MAX_BYTES, formatExportSizeLabel } from './glb-audit'
+import { type OptimiseProfile, optimiseGlb } from './glb-optimise'
 import { levelWorldY } from './level-y'
-import { ensureGltfExportPolyfills } from './eco-gltf-polyfill'
 
 type NodeMap = Record<string, Record<string, unknown> | undefined>
 
@@ -202,9 +197,7 @@ export function consolidateByEcoMaterial(source: THREE.Group): THREE.Group {
     const merged = mergeGeometries(geos, false)
     for (const g of geos) g.dispose()
     if (!merged) {
-      throw new Error(
-        `eco:export mergeGeometries failed for material ${id} (${geos.length} parts)`,
-      )
+      throw new Error(`eco:export mergeGeometries failed for material ${id} (${geos.length} parts)`)
     }
     const mat = createEcoThreeMaterial(id, { doubleSide: id === 'living-roof' || id === 'glass' })
     if (mat.normalMap) {
@@ -280,10 +273,9 @@ export function buildDesignGroup(nodes: NodeMap): THREE.Group {
         child.userData.organic = { ...plan.spec, perimeter: plan.perimeter }
       }
       if (child.name.startsWith('eco-smooth-wall:') || child.name.startsWith('eco-organic-roof:')) {
-        child.userData.assembly =
-          child.name.includes('roof')
-            ? { roof_structure: plan.spec.structure, insulation: plan.spec.insulation }
-            : plan.wall.assembly
+        child.userData.assembly = child.name.includes('roof')
+          ? { roof_structure: plan.spec.structure, insulation: plan.spec.insulation }
+          : plan.wall.assembly
       }
     })
     group.add(obj)
@@ -520,7 +512,10 @@ export async function stampGlbExtras(
             organic: { ...plan.spec, perimeter: plan.perimeter },
           }
         }
-        if (name.includes(`eco-smooth-wall:${plan.wall.id}`) || name.includes(`eco-organic:${plan.id}`)) {
+        if (
+          name.includes(`eco-smooth-wall:${plan.wall.id}`) ||
+          name.includes(`eco-organic:${plan.id}`)
+        ) {
           node.extras = {
             ...(node.extras ?? {}),
             assembly: plan.wall.assembly,

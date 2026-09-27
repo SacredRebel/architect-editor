@@ -42,13 +42,7 @@
 
 import mepRules from '../../data/mep-rules.json'
 import { DEFAULT_SPEC, type FramingSpec } from '../core/spec'
-import type {
-  Fixture,
-  Member,
-  RoomSlice,
-  ServiceOverrides,
-  WallSlice,
-} from '../core/types'
+import type { Fixture, Member, RoomSlice, ServiceOverrides, WallSlice } from '../core/types'
 import { feet, inches, toFeet } from '../core/units'
 import type { PlacedFixtureSlice } from '../core/wall-model'
 import {
@@ -61,9 +55,9 @@ import {
   panelMountU,
   placePanelSpot,
   pointInPolygon,
+  type WallPoint,
   wallPath,
   wallPlan,
-  type WallPoint,
 } from './electrical'
 
 type Pt = readonly [number, number]
@@ -239,8 +233,9 @@ export function placeWhSpot(
   // need ~1.0m of separation; a short garage wall can't host both trades
   // (re-verify: the 1.2m offset clamped back onto the panel below 3.2m).
   const garageWall = garageCandidates.find(
-    (w) => Math.abs(panelMountU(w) - Math.max(0.4, panelMountU(w) - 1.2)) >= 0.999 ||
-           panelMountU(w) + 1.2 <= w.length - 0.4,
+    (w) =>
+      Math.abs(panelMountU(w) - Math.max(0.4, panelMountU(w) - 1.2)) >= 0.999 ||
+      panelMountU(w) + 1.2 <= w.length - 0.4,
   )
   const tank = garageWall !== undefined
   const whWall = garageWall ?? meter.wall
@@ -309,11 +304,7 @@ export function placeSewerExit(
 
 /** The wet wall for a room: a boundary wall (else the nearest wall) whose
  * midpoint is closest to the shared wet-core centroid. */
-export function wetWallFor(
-  room: RoomSlice,
-  walls: WallSlice[],
-  core: Pt,
-): WallSlice | null {
+export function wetWallFor(room: RoomSlice, walls: WallSlice[], core: Pt): WallSlice | null {
   const candidates =
     room.boundaryWallIds.length > 0
       ? walls.filter((w) => room.boundaryWallIds.includes(w.id))
@@ -584,13 +575,7 @@ function inboardOf(at: Pt, wall: WallSlice, inside: Pt): Pt {
 }
 
 /** Vertical pipe segment at a plan point. */
-function riser(
-  members: Member[],
-  spec: PipeSpec,
-  at: Pt,
-  y0: number,
-  y1: number,
-): void {
+function riser(members: Member[], spec: PipeSpec, at: Pt, y0: number, y1: number): void {
   const length = Math.abs(y1 - y0)
   // Only true no-ops are dropped — a kitchen hot stub 1.8cm above the hot
   // plane still deserves its riser (round-6 advisory).
@@ -688,7 +673,11 @@ function connectorArc(
       dims: [length, 0.012, 0.012],
       length,
       position: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2],
-      rotation: [0, Math.atan2(-(hi[2] - lo[2]), hi[0] - lo[0]), Math.atan2(drop, Math.max(1e-6, plan))],
+      rotation: [
+        0,
+        Math.atan2(-(hi[2] - lo[2]), hi[0] - lo[0]),
+        Math.atan2(drop, Math.max(1e-6, plan)),
+      ],
       material: 'copper',
       sourceId: `conn-${side}-${id}`,
       label: 'braided supply connector',
@@ -937,7 +926,12 @@ export function routePipe(
         (pointInAnyRO(allWalls, wallPlan({ wall: l.wall, u: l.u0 }) as Pt, runY) ||
           pointInAnyRO(allWalls, wallPlan({ wall: l.wall, u: l.u1 }) as Pt, runY))
       const legSpec = endIn
-        ? { ...spec, flag: spec.flag ?? 'OPENING: run ends inside a rough opening at a wall junction — reroute or move the opening' }
+        ? {
+            ...spec,
+            flag:
+              spec.flag ??
+              'OPENING: run ends inside a rough opening at a wall junction — reroute or move the opening',
+          }
         : spec
       pipeWallLeg(members, legSpec, l.wall, l.u0, l.u1, runY, bandHalf)
       const next = legs[i + 1]
@@ -952,9 +946,22 @@ export function routePipe(
             allWalls.length > 0 &&
             (pointInAnyRO(allWalls, a as Pt, runY) || pointInAnyRO(allWalls, b as Pt, runY))
           const jumpSpec = jumpIn
-            ? { ...legSpec, flag: legSpec.flag ?? 'OPENING: junction jumper crosses a rough opening — reroute or move the opening' }
+            ? {
+                ...legSpec,
+                flag:
+                  legSpec.flag ??
+                  'OPENING: junction jumper crosses a rough opening — reroute or move the opening',
+              }
             : legSpec
-          leg(members, { ...jumpSpec, label: `${spec.label} (junction jumper)` }, a, b, runY, false, 0.01)
+          leg(
+            members,
+            { ...jumpSpec, label: `${spec.label} (junction jumper)` },
+            a,
+            b,
+            runY,
+            false,
+            0.01,
+          )
         }
       }
     }
@@ -1276,7 +1283,8 @@ function placedPlumbing(
         walls.some((w) => {
           const q1: Pt = w.start
           const q2: Pt = [w.start[0] + w.dir[0] * w.length, w.start[1] + w.dir[1] * w.length]
-          const d = (o: Pt, e: Pt, pt: Pt) => (e[0] - o[0]) * (pt[1] - o[1]) - (e[1] - o[1]) * (pt[0] - o[0])
+          const d = (o: Pt, e: Pt, pt: Pt) =>
+            (e[0] - o[0]) * (pt[1] - o[1]) - (e[1] - o[1]) * (pt[0] - o[0])
           const d1 = d(pA, pB, q1)
           const d2 = d(pA, pB, q2)
           const d3 = d(q1, q2, pA)
@@ -1482,7 +1490,11 @@ function placedPlumbing(
   // ROs (P2903.7: ¾" minimum service) — or the water-entry service node ----
   const meterForced = overrideWallPoint(walls, overrides?.waterEntry)
   const meterSpot = meterForced
-    ? { wall: meterForced.wall, u: meterForced.u, heightAff: overrides?.waterEntry?.heightAff ?? 0.3 }
+    ? {
+        wall: meterForced.wall,
+        u: meterForced.u,
+        heightAff: overrides?.waterEntry?.heightAff ?? 0.3,
+      }
     : (placeMeterSpot(straight) as { wall: WallSlice; u: number; heightAff: number })
   const meterWall = meterSpot.wall
   const meterU = meterSpot.u
@@ -1638,10 +1650,7 @@ function placedPlumbing(
           sourceId: `wh-strap-${zone}`,
           label: `Seismic strap — ${zone} third of tank, lagged to wall framing (P2801.8)`,
         }
-        const along = (p: Pt, s: number): Pt => [
-          p[0] + whWall.dir[0] * s,
-          p[1] + whWall.dir[1] * s,
-        ]
+        const along = (p: Pt, s: number): Pt => [p[0] + whWall.dir[0] * s, p[1] + whWall.dir[1] * s]
         leg(members, sSpec, along(wallFace, -halfW), along(frontC, -halfW), strapY, false, 0.01)
         leg(members, sSpec, along(frontC, -halfW), along(frontC, halfW), strapY, false, 0.01)
         leg(members, sSpec, along(frontC, halfW), along(wallFace, halfW), strapY, false, 0.01)
@@ -1654,10 +1663,7 @@ function placedPlumbing(
     const TP_TERM_IN = whRules?.tpDischargeMaxAboveFloorIn ?? 6
     const bodyHalf = tank ? whDims[0] / 2 : Math.max(whDims[0], whDims[2]) / 2
     const tpY = tank ? whCenterY + whDims[1] / 2 - 0.15 : whBot + 0.08
-    const alongWall = (p: Pt, s: number): Pt => [
-      p[0] + whWall.dir[0] * s,
-      p[1] + whWall.dir[1] * s,
-    ]
+    const alongWall = (p: Pt, s: number): Pt => [p[0] + whWall.dir[0] * s, p[1] + whWall.dir[1] * s]
     const valveAt = alongWall(whPlan, bodyHalf + 0.04)
     const dischargeAt = alongWall(whPlan, bodyHalf + 0.13)
     members.push({
@@ -1925,8 +1931,8 @@ function roomPlumbing(
   const members: Member[] = []
   const fixtures: Fixture[] = []
   const fab = spec.detail !== '200' // traps/vents/supply branches gate
-  const wetRooms = rooms.filter((r) =>
-    r.category === 'kitchen' || r.category === 'bathroom' || r.category === 'laundry',
+  const wetRooms = rooms.filter(
+    (r) => r.category === 'kitchen' || r.category === 'bathroom' || r.category === 'laundry',
   )
   if (wetRooms.length === 0 || walls.length === 0) return { members, fixtures }
 

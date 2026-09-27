@@ -1,27 +1,12 @@
 'use client'
 
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import * as THREE from 'three'
-import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
+import { getEcoPresentationState, subscribeEcoPresentation } from './eco-presentation-store'
 import { ECO_BASE_EXPOSURE, EcoSky } from './eco-site-sky'
-import {
-  ECO_DEFAULT_LAT,
-  ECO_DEFAULT_LNG,
-  ECO_DEFAULT_TZ,
-  instantAt,
-} from './eco-site-sun'
-import {
-  getEcoPresentationState,
-  subscribeEcoPresentation,
-} from './eco-presentation-store'
+import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
+import { ECO_DEFAULT_LAT, ECO_DEFAULT_LNG, ECO_DEFAULT_TZ, instantAt } from './eco-site-sun'
 
 function useSite() {
   return useSyncExternalStore(subscribeEcoSite, getEcoSiteState, getEcoSiteState)

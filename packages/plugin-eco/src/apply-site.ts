@@ -128,7 +128,9 @@ export function applyEcoSite(site: EcoSite): void {
     setEcoSite(site)
     const massing = site.guides.find((g) => g.kind === 'massing-outline')
     if (massing?.pts?.length) {
-      emitSiteFrame(siteFrameBounds(site, { min: [0, 0], max: [1, 1], center: [0.5, 0.5], size: [1, 1] }))
+      emitSiteFrame(
+        siteFrameBounds(site, { min: [0, 0], max: [1, 1], center: [0.5, 0.5], size: [1, 1] }),
+      )
     }
     return
   }

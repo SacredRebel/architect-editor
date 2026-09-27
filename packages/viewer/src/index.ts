@@ -12,7 +12,12 @@ export { ErrorBoundary } from './components/error-boundary'
 // `@pascal-app/nodes/<kind>/renderer.tsx` and are loaded by the registry
 // — no per-kind re-exports needed.
 export { NodeRenderer } from './components/renderers/node-renderer'
-export { default as Viewer, type ViewerHandle, type ViewerImmersiveSession, type ViewerXRConfig } from './components/viewer'
+export {
+  default as Viewer,
+  type ViewerHandle,
+  type ViewerImmersiveSession,
+  type ViewerXRConfig,
+} from './components/viewer'
 export {
   type BVHEcctrlApi,
   default as BVHEcctrl,
@@ -99,23 +104,13 @@ export type { EdgeMode } from './lib/edge-style'
 export { PERF_OVERLAY_ENABLED } from './lib/gpu-perf'
 export {
   detectGpuQuality,
+  type GpuQuality,
+  type GpuQualityPreference,
   maxDprForQuality,
   peekDetectedGpuQuality,
   resolveGpuQuality,
   shadowMapSizeForQuality,
-  type GpuQuality,
-  type GpuQualityPreference,
 } from './lib/gpu-quality'
-export {
-  FLY_SPEED_DEFAULT_MS,
-  FLY_SPEED_MAX_MS,
-  FLY_SPEED_MIN_MS,
-  RUN_SPEED_MS,
-  SPRINT_DOUBLE_TAP_MS,
-  SPRINT_SPEED_MS,
-  WALK_SPEED_MS,
-  WALK_SPEEDS,
-} from './lib/walk-speeds'
 export {
   computeHeroFraming,
   DEFAULT_FRAMING_EXCLUDED_TYPES,
@@ -224,6 +219,16 @@ export {
   textureMapForSlot,
 } from './lib/texture-reference'
 export { packNormalToRGB, unpackRGBToNormal } from './lib/tsl-compat'
+export {
+  FLY_SPEED_DEFAULT_MS,
+  FLY_SPEED_MAX_MS,
+  FLY_SPEED_MIN_MS,
+  RUN_SPEED_MS,
+  SPRINT_DOUBLE_TAP_MS,
+  SPRINT_SPEED_MS,
+  WALK_SPEED_MS,
+  WALK_SPEEDS,
+} from './lib/walk-speeds'
 export { useItemLightPool } from './store/use-item-light-pool'
 export {
   applyCountryUnitDefault,
