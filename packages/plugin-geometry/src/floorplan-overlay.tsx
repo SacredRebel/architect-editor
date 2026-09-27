@@ -76,7 +76,7 @@ function figureToGeometry(
  */
 export default function GeometryFloorplanOverlay() {
   const { figures, selectedId } = useGeometry()
-  const unitsPerPixel = useFloorplanRender()?.unitsPerPixel ?? 0.01
+  const floorplan = useFloorplanRender()
   const drag = useRef<{
     id: string
     origin: [number, number]
@@ -140,9 +140,10 @@ export default function GeometryFloorplanOverlay() {
     drag.current = null
   }, [])
 
+  if (!floorplan) return null
   if (!figures.length) return null
 
-  const handleR = Math.max(0.08, 6 * unitsPerPixel)
+  const handleR = Math.max(0.08, 6 * floorplan.unitsPerPixel)
 
   return (
     <g data-geometry-floorplan-overlay="true" style={{ pointerEvents: 'auto' }}>
