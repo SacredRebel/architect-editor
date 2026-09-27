@@ -23,7 +23,7 @@ Named from the machine proof, fixed in `plugin-geometry` without `!` / `as any` 
 | Site | Fix |
 |---|---|
 | `sol.meta.edgeMean` (`build.ts`) | Local narrow + `?? 0` — `Record<string, number>` index access |
-| `unitsPerPixel` (`floorplan-overlay.tsx`) | `useFloorplanRender()?.unitsPerPixel ?? 0.01` — same pattern as other overlays |
+| `unitsPerPixel` (`floorplan-overlay.tsx`) | Initially null-guarded; follow-up `3039f529` returns `null` when render context is absent (no invented `0.01` scale) |
 
 Also required for `bun run checks` green (surfaced once geometry was fixed):
 
@@ -73,6 +73,6 @@ packages/plugin-eco/test/make-h0-probe-expr.mjs
 | `bun run checks` | green |
 | `bun run build` | green |
 
-Commits on `eco/h19`: `1416c8d3` (format) · `3535b230` (types) · this commit (CI + ignore + docs).
+Commits on `eco/h19`: `1416c8d3` (format) · `3535b230` (types) · `992bf63e` (CI + ignore + docs) · `3039f529` (overlay null). Merged to `main` as **`121d1ebc`** (merge commit, not squash).
 
 Next: **H19.0** — re-measure FPS (before/after table in `H17-done.md`); change nothing else in that commit.
