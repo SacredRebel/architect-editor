@@ -1,0 +1,74 @@
+{
+  "phase": "H19.0",
+  "capturedAt": "2026-09-27T06:53:32.405Z",
+  "sourceUrl": "https://architect-editor-snowy.vercel.app/?perf",
+  "sampleCount": 1178,
+  "sampleWindowMs": 20000,
+  "cameraPath": {
+    "durationMs": 20000,
+    "kind": "synthetic-pointer-orbit",
+    "note": "Fixed 20s rAF sample while dispatching orbital pointermoves on the canvas."
+  },
+  "fps": {
+    "median": 59.88,
+    "p1": 30.12,
+    "min": 5.45,
+    "max": 62.89
+  },
+  "frameMs": {
+    "median": 16.7,
+    "p99": 33.2,
+    "max": 183.5
+  },
+  "draws": {
+    "median": 12,
+    "last": 25
+  },
+  "tris": {
+    "median": 8254,
+    "last": 8462
+  },
+  "gpu": {
+    "qualityPreference": "auto",
+    "detectedQuality": null,
+    "adaptiveDpr": true,
+    "dpr": 1,
+    "devicePixelRatio": 1
+  },
+  "hud": {
+    "sampleCount": 1179,
+    "fpsMedian": 50,
+    "last": {
+      "t": 20010.099999988073,
+      "fps": 50,
+      "frameMs": 1.8499999997707515,
+      "drawCalls": 25,
+      "triangles": 8462,
+      "textures": 20,
+      "geometries": 330,
+      "heapBytes": 71205592
+    }
+  },
+  "navigation": {
+    "domContentLoadedMs": 3865.300000011921,
+    "loadEventMs": 11600.300000011921,
+    "firstContentfulPaintMs": 11684,
+    "transferSize": 4023
+  },
+  "interaction": {
+    "pointerToHighlightMs": 34.4,
+    "clickToSelectMs": 33.5,
+    "wallDragFrameMs": 16.7,
+    "undoMs": 32,
+    "note": "Synthetic probes; wall-drag is a proxy gesture."
+  },
+  "targets": {
+    "fpsMedian": 60,
+    "fpsP1": 45,
+    "pointerToHighlightMs": 50,
+    "wallDragFrameMs": 16,
+    "loadToInteractiveMs": 4000
+  },
+  "optimisationsApplied": true,
+  "note": "H19.0 after capture on the same H17 20s orbital path (production ?perf). H17.1 AdaptiveDpr / detect-gpu / shadow discipline already on main. Before numbers remain h17-0-baseline.json (~15 median / 12 p1)."
+}

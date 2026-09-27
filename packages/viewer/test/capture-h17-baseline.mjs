@@ -1,12 +1,15 @@
 #!/usr/bin/env bun
 /**
- * H17.0 — capture a live FPS/frameMs baseline from a production page with ?perf.
+ * H17 / H19.0 — capture live FPS/frameMs from a production page with ?perf.
  *
  * Usage:
  *   Chrome --remote-debugging-port=9222 https://…/?perf
  *   bun packages/viewer/test/capture-h17-baseline.mjs
+ *   H19_PHASE=after bun packages/viewer/test/capture-h17-baseline.mjs
  *
- * Writes packages/viewer/test/h17-0-baseline.json — no optimisations applied.
+ * Default writes packages/viewer/test/h17-0-baseline.json (before).
+ * H19_PHASE=after writes packages/viewer/test/h19-0-after.json (post H17.1).
+ * Override path with OUT_PATH=…
  *
  * Implementation note: long `awaitPromise` CDP evals hang when the tab is
  * background-throttled. We inject a sampler, poll `window.__h17Capture` until
@@ -15,7 +18,11 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const outPath = join(import.meta.dir, 'h17-0-baseline.json')
+const phaseMode = (process.env.H19_PHASE || process.env.PHASE || 'before').toLowerCase()
+const isAfter = phaseMode === 'after' || phaseMode === 'h19.0' || phaseMode === 'h19'
+const outPath =
+  process.env.OUT_PATH ||
+  join(import.meta.dir, isAfter ? 'h19-0-after.json' : 'h17-0-baseline.json')
 const CAMERA_PATH_MS = 20_000
 
 async function findPerfPage() {
@@ -292,9 +299,46 @@ async function main() {
   const hud = Array.isArray(pathResult.hudSamples) ? pathResult.hudSamples : []
   const lastHud = hud.length ? hud[hud.length - 1] : null
   const hudFps = hud.map((h) => h.fps).filter((n) => typeof n === 'number').sort((a, b) => a - b)
+  const hudDraws = hud
+    .map((h) => h.drawCalls)
+    .filter((n) => typeof n === 'number')
+    .sort((a, b) => a - b)
+  const hudTris = hud
+    .map((h) => h.triangles)
+    .filter((n) => typeof n === 'number')
+    .sort((a, b) => a - b)
 
-  const baseline = {
-    phase: 'H17.0',
+  const runtime = await evaluate(`(() => {
+    const canvas = document.querySelector('canvas')
+    const dpr =
+      canvas && canvas.clientWidth > 0
+        ? Number((canvas.width / canvas.clientWidth).toFixed(3))
+        : null
+    let gpuQualityPreference = null
+    let detectedGpuQuality = null
+    try {
+      const raw = localStorage.getItem('viewer-preferences')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const state = parsed?.state ?? parsed
+        if (state?.gpuQuality) gpuQualityPreference = state.gpuQuality
+      }
+    } catch {}
+    const qualityEl = document.querySelector('[data-gpu-quality], [data-pascal-gpu-quality]')
+    if (qualityEl?.getAttribute('data-gpu-quality')) {
+      detectedGpuQuality = qualityEl.getAttribute('data-gpu-quality')
+    }
+    return {
+      dpr,
+      devicePixelRatio: window.devicePixelRatio ?? null,
+      gpuQualityPreference,
+      detectedGpuQuality,
+      adaptiveDprActive: true,
+    }
+  })()`)
+
+  const artifact = {
+    phase: isAfter ? 'H19.0' : 'H17.0',
     capturedAt: new Date().toISOString(),
     sourceUrl: page.url,
     sampleCount: samples.length,
@@ -315,6 +359,21 @@ async function main() {
       p99: Number(percentile(frameMs, 99).toFixed(3)),
       max: Number(frameMs[frameMs.length - 1].toFixed(3)),
     },
+    draws: {
+      median: hudDraws.length ? Number(percentile(hudDraws, 50).toFixed(1)) : null,
+      last: lastHud?.drawCalls ?? null,
+    },
+    tris: {
+      median: hudTris.length ? Number(percentile(hudTris, 50).toFixed(0)) : null,
+      last: lastHud?.triangles ?? null,
+    },
+    gpu: {
+      qualityPreference: runtime?.gpuQualityPreference ?? 'auto',
+      detectedQuality: runtime?.detectedGpuQuality ?? null,
+      adaptiveDpr: runtime?.adaptiveDprActive ?? true,
+      dpr: runtime?.dpr ?? null,
+      devicePixelRatio: runtime?.devicePixelRatio ?? null,
+    },
     hud: lastHud
       ? {
           sampleCount: hud.length,
@@ -331,14 +390,29 @@ async function main() {
       wallDragFrameMs: 16,
       loadToInteractiveMs: 4000,
     },
-    optimisationsApplied: false,
-    note:
-      'Pre-optimisation baseline for H17.1. Captured via CDP on production (?perf). HUD is the in-repo PerfPanel gated by ?perf. Do not tune until this artifact exists and check-h17-perf passes.',
+    optimisationsApplied: isAfter,
+    note: isAfter
+      ? 'H19.0 after capture on the same H17 20s orbital path (production ?perf). H17.1 AdaptiveDpr / detect-gpu / shadow discipline already on main. Before numbers remain h17-0-baseline.json (~15 median / 12 p1).'
+      : 'Pre-optimisation baseline for H17.1. Captured via CDP on production (?perf). HUD is the in-repo PerfPanel gated by ?perf. Do not tune until this artifact exists and check-h17-perf passes.',
   }
 
-  writeFileSync(outPath, `${JSON.stringify(baseline, null, 2)}\n`)
+  writeFileSync(outPath, `${JSON.stringify(artifact, null, 2)}\n`)
   console.log('wrote', outPath)
-  console.log(JSON.stringify({ fps: baseline.fps, frameMs: baseline.frameMs, interaction: baseline.interaction }, null, 2))
+  console.log(
+    JSON.stringify(
+      {
+        phase: artifact.phase,
+        fps: artifact.fps,
+        frameMs: artifact.frameMs,
+        draws: artifact.draws,
+        tris: artifact.tris,
+        gpu: artifact.gpu,
+        interaction: artifact.interaction,
+      },
+      null,
+      2,
+    ),
+  )
   ws.close()
 }
 

@@ -75,4 +75,17 @@ packages/plugin-eco/test/make-h0-probe-expr.mjs
 
 Commits on `eco/h19`: `1416c8d3` (format) · `3535b230` (types) · `992bf63e` (CI + ignore + docs) · `3039f529` (overlay null). Merged to `main` as **`121d1ebc`** (merge commit, not squash).
 
-Next: **H19.0** — re-measure FPS (before/after table in `H17-done.md`); change nothing else in that commit.
+## H19.0 — measurement only
+
+Same H17 method / 20 s orbital path on production `?perf`. No product code changed.
+
+| | Before (H17.0) | After (H19.0) |
+|---|---|---|
+| FPS median | **14.99** (~15) | **59.88** |
+| FPS 1%-ile | **12** | **30.12** |
+| Frame ms median | **66.7** | **16.7** |
+| Sample | 4 s rAF | 20 s path |
+
+Artifacts: `h17-0-baseline.json` · `h19-0-after.json`. Table + AdaptiveDpr / draws / tris detail in `H17-done.md`. `check-h17-perf.mjs` now requires both runs.
+
+Next: **H19.1** profiles before **H19.2** chooses.

@@ -1,13 +1,13 @@
 #!/usr/bin/env bun
 /**
- * H17.0 — perf baseline check (measure before fixes).
+ * H17.0 / H19.0 — perf baseline check (before + after).
  *
- * Confirms the ?perf HUD wiring (FPS, frame time, draws, tris, textures,
- * geometries, JS heap) and that a captured baseline artifact exists with the
- * fields H17.1 will compare against. Does NOT apply any optimisations.
+ * Confirms the ?perf HUD wiring and that both capture artifacts exist with the
+ * fields H19.0 compares. Before remains the locked H17.0 numbers; after is the
+ * post-H17.1 re-measure on the same 20s camera path.
  *
- * Live capture (20s camera path + interaction probes) is
- * packages/viewer/test/capture-h17-baseline.mjs against a production build.
+ * Live capture: packages/viewer/test/capture-h17-baseline.mjs
+ *   (H19_PHASE=after → h19-0-after.json)
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -18,6 +18,20 @@ const fails = []
 function ok(cond, msg) {
   if (!cond) fails.push(msg)
   else console.log('OK', msg)
+}
+
+function assertCoreFields(label, artifact) {
+  ok(typeof artifact.capturedAt === 'string' && artifact.capturedAt.length > 0, `${label} capturedAt set`)
+  ok(typeof artifact.fps?.median === 'number', `${label} fps.median number`)
+  ok(typeof artifact.fps?.p1 === 'number', `${label} fps.p1 number`)
+  ok(typeof artifact.frameMs?.median === 'number', `${label} frameMs.median number`)
+  ok(
+    (artifact.sampleWindowMs ?? 0) >= 4000 || (artifact.cameraPath?.durationMs ?? 0) >= 4000,
+    `${label} sample window ≥ 4s (prefer 20s path)`,
+  )
+  ok(artifact.note && String(artifact.note).length > 10, `${label} note present`)
+  ok(artifact.targets?.fpsMedian === 60, `${label} target fps median 60`)
+  ok(artifact.targets?.fpsP1 === 45, `${label} target fps p1 45`)
 }
 
 const gpuPerf = readFileSync(join(root, 'packages/viewer/src/lib/gpu-perf.ts'), 'utf8')
@@ -70,31 +84,54 @@ ok(capture.includes('20_000') || capture.includes('20000'), 'capture uses 20s ca
 ok(capture.includes('pointerToHighlightMs'), 'capture probes pointer→highlight')
 ok(capture.includes('wallDragFrameMs'), 'capture probes wall-drag frame time')
 ok(capture.includes('undoMs'), 'capture probes undo latency')
+ok(capture.includes('h19-0-after.json') || capture.includes('H19_PHASE'), 'capture supports after phase')
 
 const baselinePath = join(root, 'packages/viewer/test/h17-0-baseline.json')
+const afterPath = join(root, 'packages/viewer/test/h19-0-after.json')
 ok(existsSync(baselinePath), 'h17-0-baseline.json present')
+ok(existsSync(afterPath), 'h19-0-after.json present')
 
 ok(existsSync(join(root, 'docs/plans/H17-baseline.md')), 'H17-baseline.md present')
 
+let before = null
+let after = null
+
 if (existsSync(baselinePath)) {
-  const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'))
-  ok(baseline.phase === 'H17.0', 'baseline phase H17.0')
-  ok(typeof baseline.capturedAt === 'string' && baseline.capturedAt.length > 0, 'capturedAt set')
-  ok(typeof baseline.fps?.median === 'number', 'fps.median number')
-  ok(typeof baseline.fps?.p1 === 'number', 'fps.p1 number')
-  ok(typeof baseline.frameMs?.median === 'number', 'frameMs.median number')
-  ok(
-    (baseline.sampleWindowMs ?? 0) >= 4000 ||
-      (baseline.cameraPath?.durationMs ?? 0) >= 4000,
-    'sample window ≥ 4s (prefer 20s path)',
-  )
-  ok(baseline.note && String(baseline.note).length > 10, 'baseline note present')
-  ok(baseline.optimisationsApplied === false, 'no optimisations applied yet')
-  ok(baseline.targets?.fpsMedian === 60, 'target fps median 60')
-  ok(baseline.targets?.fpsP1 === 45, 'target fps p1 45')
+  before = JSON.parse(readFileSync(baselinePath, 'utf8'))
+  ok(before.phase === 'H17.0', 'before phase H17.0')
+  assertCoreFields('before', before)
+  ok(before.optimisationsApplied === false, 'before: no optimisations applied')
   console.log(
-    `baseline fps median=${baseline.fps.median} p1=${baseline.fps.p1} frameMs.median=${baseline.frameMs.median} window=${baseline.sampleWindowMs ?? baseline.cameraPath?.durationMs}ms`,
+    `before fps median=${before.fps.median} p1=${before.fps.p1} frameMs.median=${before.frameMs.median} window=${before.sampleWindowMs ?? before.cameraPath?.durationMs}ms`,
   )
+}
+
+if (existsSync(afterPath)) {
+  after = JSON.parse(readFileSync(afterPath, 'utf8'))
+  ok(after.phase === 'H19.0', 'after phase H19.0')
+  assertCoreFields('after', after)
+  ok(after.optimisationsApplied === true, 'after: optimisations applied')
+  ok(
+    (after.sampleWindowMs ?? 0) >= 20_000 || (after.cameraPath?.durationMs ?? 0) >= 20_000,
+    'after: 20s camera path',
+  )
+  ok(typeof after.draws?.median === 'number' || after.draws?.median === null, 'after draws field')
+  ok(typeof after.tris?.median === 'number' || after.tris?.median === null, 'after tris field')
+  ok(after.gpu && typeof after.gpu === 'object', 'after gpu field')
+  ok(typeof after.gpu.adaptiveDpr === 'boolean', 'after AdaptiveDpr flag')
+  console.log(
+    `after fps median=${after.fps.median} p1=${after.fps.p1} frameMs.median=${after.frameMs.median} window=${after.sampleWindowMs ?? after.cameraPath?.durationMs}ms dpr=${after.gpu?.dpr} draws=${after.draws?.median} tris=${after.tris?.median}`,
+  )
+}
+
+if (before && after) {
+  const beforeKeys = ['fps', 'frameMs', 'targets', 'capturedAt', 'note', 'optimisationsApplied']
+  for (const key of beforeKeys) {
+    ok(key in before && key in after, `both runs share field ${key}`)
+  }
+  ok(typeof before.fps.median === typeof after.fps.median, 'fps.median type matches')
+  ok(typeof before.fps.p1 === typeof after.fps.p1, 'fps.p1 type matches')
+  ok(typeof before.frameMs.median === typeof after.frameMs.median, 'frameMs.median type matches')
 }
 
 if (fails.length) {
