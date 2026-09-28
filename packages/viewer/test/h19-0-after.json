@@ -1,65 +1,82 @@
 {
   "phase": "H19.0",
-  "capturedAt": "2026-09-27T06:53:32.405Z",
-  "sourceUrl": "https://architect-editor-snowy.vercel.app/?perf",
-  "sampleCount": 1178,
+  "capturedAt": "2026-09-28T04:27:47.116Z",
+  "sourceUrl": "http://127.0.0.1:3019/?perf",
+  "tree": "1147fa690120a5af4937a61bbf2f2152bd38c068",
+  "sampleCount": 999,
   "sampleWindowMs": 20000,
   "cameraPath": {
     "durationMs": 20000,
     "kind": "synthetic-pointer-orbit",
-    "note": "Fixed 20s rAF sample while dispatching orbital pointermoves on the canvas."
+    "note": "Fixed 20s orbital pointermoves on the canvas; frames counted from the useFrame tick, not raw rAF.",
+    "meter": "frame-tick"
   },
   "fps": {
-    "median": 59.88,
-    "p1": 30.12,
-    "min": 5.45,
-    "max": 62.89
+    "median": 50,
+    "mean": 49.98,
+    "p1": 29.94,
+    "min": 29.41,
+    "max": 71.43,
+    "perFrameMedian": 59.88,
+    "note": "median = median of 1s wall-clock bins of rendered frames; mean = frames / wall seconds; p1/min/max/perFrameMedian from per-frame render intervals (vsync-quantised)."
+  },
+  "frames": {
+    "sampler": 1000,
+    "hud": 1000,
+    "hudWindows": 38,
+    "tickDelta": 1001,
+    "rendererFrame": 1201,
+    "renderCalls": 6006,
+    "callsPerFrame": 6,
+    "wallMs": 20007.3,
+    "note": "sampler = frameTick changes seen by the injected rAF loop; hud = mean PerfMonitor window fps × wall seconds; rendererFrame = WebGPU info.frame (advanced by the renderer rAF Animation loop, i.e. display ticks — recorded, not used as a frame reference); renderCalls = info.calls (every render() pass)."
   },
   "frameMs": {
     "median": 16.7,
-    "p99": 33.2,
-    "max": 183.5
+    "p99": 33.4,
+    "max": 34
   },
   "draws": {
-    "median": 12,
-    "last": 25
+    "median": 15,
+    "last": 15
   },
   "tris": {
-    "median": 8254,
-    "last": 8462
+    "median": 8350,
+    "last": 8350
   },
   "gpu": {
     "qualityPreference": "auto",
-    "detectedQuality": null,
+    "detectedQuality": "medium",
+    "resolvedQuality": "medium",
     "adaptiveDpr": true,
-    "dpr": 1,
+    "dpr": 1.5,
     "devicePixelRatio": 1
   },
   "hud": {
-    "sampleCount": 1179,
+    "sampleCount": 1201,
     "fpsMedian": 50,
     "last": {
-      "t": 20010.099999988073,
+      "t": 20007.29999998212,
       "fps": 50,
-      "frameMs": 1.8499999997707515,
-      "drawCalls": 25,
-      "triangles": 8462,
-      "textures": 20,
-      "geometries": 330,
-      "heapBytes": 71205592
+      "frameMs": 0.776923071879607,
+      "drawCalls": 15,
+      "triangles": 8350,
+      "textures": 19,
+      "geometries": 19,
+      "heapBytes": 74742621
     }
   },
   "navigation": {
-    "domContentLoadedMs": 3865.300000011921,
-    "loadEventMs": 11600.300000011921,
-    "firstContentfulPaintMs": 11684,
-    "transferSize": 4023
+    "domContentLoadedMs": 38.10000002384186,
+    "loadEventMs": 268.40000000596046,
+    "firstContentfulPaintMs": 416,
+    "transferSize": 300
   },
   "interaction": {
-    "pointerToHighlightMs": 34.4,
-    "clickToSelectMs": 33.5,
-    "wallDragFrameMs": 16.7,
-    "undoMs": 32,
+    "pointerToHighlightMs": 32.7,
+    "clickToSelectMs": 34,
+    "wallDragFrameMs": 16.6,
+    "undoMs": 31.7,
     "note": "Synthetic probes; wall-drag is a proxy gesture."
   },
   "targets": {
@@ -70,5 +87,5 @@
     "loadToInteractiveMs": 4000
   },
   "optimisationsApplied": true,
-  "note": "H19.0 after capture on the same H17 20s orbital path (production ?perf). H17.1 AdaptiveDpr / detect-gpu / shadow discipline already on main. Before numbers remain h17-0-baseline.json (~15 median / 12 p1)."
+  "note": "H19.0 after: eco/h19 tree (H17.1 AdaptiveDpr / detect-gpu / shadow discipline applied) on the 20s orbital path, same harness, same machine and Chrome as the before. Before is h17-0-baseline-path.json; the historic 4s idle file stays as h17-0-baseline.json."
 }
