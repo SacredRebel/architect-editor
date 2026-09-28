@@ -643,7 +643,16 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
                     ...backendParameters,
                     alpha: true,
                     multiview: xrMultiview,
-                    trackTimestamp: PERF_OVERLAY_ENABLED,
+                    // AdaptiveDpr decides from the device's render time (H19.2b)
+                    // and resolves these every frame; the backend drops the flag
+                    // when the adapter lacks timestamp-query. On a 1x display the
+                    // dpr cannot move below the display, and immersive sessions
+                    // don't run that loop: both track only under ?perf.
+                    trackTimestamp:
+                      PERF_OVERLAY_ENABLED ||
+                      (!immersiveActive &&
+                        typeof window !== 'undefined' &&
+                        window.devicePixelRatio > 1),
                   })
                   renderer.toneMapping = THREE.ACESFilmicToneMapping
                   renderer.toneMappingExposure = getSceneTheme(
@@ -689,6 +698,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
               <ViewerScene
                 disablePostFx
                 hoverStyles={hoverStyles}
+                maxFps={frameCap}
                 immersiveXR
                 SceneWrapper={immersive?.Scene}
                 onRenderError={immersive?.onError}
@@ -715,6 +725,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
                 inputSourceOverlay={xr.inputSourceOverlay}
                 playerModes={xr.playerModes}
                 hoverStyles={hoverStyles}
+                maxFps={frameCap}
                 immersiveXR
                 onSceneReadyChange={onSceneReadyChange}
                 perf={perf}
@@ -733,6 +744,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
               <ViewerScene
                 disablePostFx={disablePostFx}
                 hoverStyles={hoverStyles}
+                maxFps={frameCap}
                 onSceneReadyChange={onSceneReadyChange}
                 perf={perf}
                 sceneReadyKey={sceneReadyKey}
@@ -757,6 +769,7 @@ function ViewerScene({
   playerModes = false,
   hoverStyles,
   immersiveXR = false,
+  maxFps,
   onSceneReadyChange,
   perf,
   sceneReadyKey,
@@ -773,6 +786,7 @@ function ViewerScene({
   playerModes?: boolean
   hoverStyles: HoverStyles
   immersiveXR?: boolean
+  maxFps: number
   onSceneReadyChange?: (ready: boolean) => void
   perf: boolean
   sceneReadyKey?: string | number | null
@@ -840,7 +854,9 @@ function ViewerScene({
         {/* <directionalLight position={[10, 10, 5]} intensity={0.5} castShadow
           /> */}
         <Lights quality={resolvedQuality} />
-        {!lightGraphics && <AdaptiveDpr quality={resolvedQuality} />}
+        {!lightGraphics && (
+          <AdaptiveDpr quality={resolvedQuality} budgetMs={1000 / maxFps} sampling={!immersiveXR} />
+        )}
         {SceneWrapper ? (
           <SceneWrapper>{spatialScene}</SceneWrapper>
         ) : playerModes && xrStore ? (
