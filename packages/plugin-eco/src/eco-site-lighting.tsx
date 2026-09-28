@@ -1,12 +1,13 @@
 'use client'
 
+import { useViewer } from '@pascal-app/viewer'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import * as THREE from 'three'
 import { getEcoPresentationState, subscribeEcoPresentation } from './eco-presentation-store'
 import { ECO_BASE_EXPOSURE, EcoSky } from './eco-site-sky'
 import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
-import { ECO_DEFAULT_LAT, ECO_DEFAULT_LNG, ECO_DEFAULT_TZ, instantAt } from './eco-site-sun'
+import { ECO_DEFAULT_LAT, ECO_DEFAULT_LNG, ECO_DEFAULT_TZ, litInstant } from './eco-site-sun'
 
 function useSite() {
   return useSyncExternalStore(subscribeEcoSite, getEcoSiteState, getEcoSiteState)
@@ -71,6 +72,17 @@ export function EcoSiteLighting() {
   const lat = site?.originLL?.[1] ?? ECO_DEFAULT_LAT
   const lng = site?.originLL?.[0] ?? ECO_DEFAULT_LNG
   const northDeg = site?.northDeg ?? 0
+  const sunAt = site?.sunAt
+  const lightGraphics = useViewer((s) => s.graphics === 'light')
+
+  // Contract sun shadows with full graphics only. Light graphics keeps the
+  // renderer's shadow map off, as the viewer sets it.
+  useLayoutEffect(() => {
+    if (lightGraphics || !gl.shadowMap) return
+    gl.shadowMap.enabled = true
+    gl.shadowMap.type = THREE.PCFSoftShadowMap
+    invalidate()
+  }, [gl, lightGraphics, invalidate])
 
   useLayoutEffect(() => {
     prevTone.current = {
@@ -85,10 +97,6 @@ export function EcoSiteLighting() {
     gl.outputColorSpace = THREE.SRGBColorSpace
     gl.toneMapping = THREE.ACESFilmicToneMapping
     gl.toneMappingExposure = ECO_BASE_EXPOSURE
-    if (gl.shadowMap) {
-      gl.shadowMap.enabled = true
-      gl.shadowMap.type = THREE.PCFSoftShadowMap
-    }
 
     let cancelled = false
     void createPmrem(gl).then((pmrem) => {
@@ -127,7 +135,7 @@ export function EcoSiteLighting() {
   }, [gl, scene, sky, invalidate])
 
   useEffect(() => {
-    const when = instantAt(timeOfDayHours, ECO_DEFAULT_TZ)
+    const when = litInstant(sunAt, timeOfDayHours, ECO_DEFAULT_TZ)
     const key = `${lat.toFixed(5)},${lng.toFixed(5)},${northDeg},${timeOfDayHours.toFixed(3)},${when.toISOString()},${pmremTick}`
     if (key === lastKey.current) return
     lastKey.current = key
@@ -163,7 +171,7 @@ export function EcoSiteLighting() {
     }
     gl.toneMappingExposure = ECO_BASE_EXPOSURE * sky.exposure
     invalidate()
-  }, [lat, lng, northDeg, timeOfDayHours, sky, scene, gl, invalidate, pmremTick])
+  }, [lat, lng, northDeg, sunAt, timeOfDayHours, sky, scene, gl, invalidate, pmremTick])
 
   useFrame(() => {
     gl.outputColorSpace = THREE.SRGBColorSpace

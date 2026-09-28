@@ -23,6 +23,8 @@ type BridgeHandlers = {
 
 let installed = false
 let hostOrigin: string | null = null
+/** True once the host has sent a scene or a site. */
+let hostContent = false
 let helloTimer: ReturnType<typeof setTimeout> | null = null
 let lastDirty: boolean | null = null
 let unsubTemporal: (() => void) | null = null
@@ -167,9 +169,11 @@ function onMessage(event: MessageEvent): void {
 
   switch (event.data.t) {
     case 'eco:load-site':
+      hostContent = true
       handleLoadSite(event.data.site)
       break
     case 'eco:load-scene':
+      hostContent = true
       handleLoadScene(event.data.scene)
       break
     case 'eco:request-export':
@@ -234,6 +238,22 @@ export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
       }
     }, HELLO_TIMEOUT_MS)
   }
+}
+
+/** Whether the host (the world's studio) has sent a scene or a site. */
+export function hasEcoHostContent(): boolean {
+  return hostContent
+}
+
+/**
+ * Apply a scene and/or a site exactly as `eco:load-scene` / `eco:load-site`
+ * would, without a host: no hello, so the host origin stays unset and the
+ * world's own hello is still accepted if it arrives later. Used by the demo
+ * fallback when nothing arrives.
+ */
+export function applyEcoPayloadsLocally(payload: { scene?: unknown; site?: EcoSite }): void {
+  if (payload.scene !== undefined) handleLoadScene(payload.scene)
+  if (payload.site) handleLoadSite(payload.site)
 }
 
 export function requestEcoClose(): void {

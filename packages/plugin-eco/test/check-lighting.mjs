@@ -38,6 +38,17 @@ assert(noonPos.altitude > 30, `noon altitude ${noonPos.altitude}`)
 const dir = sunDirectionAt(ECO_DEFAULT_LAT, ECO_DEFAULT_LNG, noon, 0)
 assert(Math.abs(Math.hypot(dir.x, dir.y, dir.z) - 1) < 1e-6, 'unit sun')
 assert(dir.y > 0.4, `noon sun up y=${dir.y}`)
+// A5: the scene is the site's world frame (z = −north), so the noon sun at
+// 34°N stands toward +z; before A5 it stood toward −z, mirrored.
+assert(dir.z > 0.05, `noon sun in the south (+z) z=${dir.z}`)
+// Site north turned 90° clockwise of true north: a sun at site azimuth a moves
+// to a − 90°, so (x, y, z) becomes (z, y, −x); turning by +northDeg in this
+// frame would give (−z, y, x). (The pre-A5 code fails the +z line above.)
+const turned = sunDirectionAt(ECO_DEFAULT_LAT, ECO_DEFAULT_LNG, noon, 90)
+assert(
+  Math.abs(turned.x - dir.z) < 1e-9 && Math.abs(turned.z + dir.x) < 1e-9,
+  `northDeg 90 turns (x, z) to (z, −x): ${JSON.stringify(dir)} → ${JSON.stringify(turned)}`,
+)
 
 // Exposure curve: high sun → ~1; below −2° → ~1.9
 const sky = new EcoSky()

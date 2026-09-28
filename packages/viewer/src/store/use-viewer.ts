@@ -93,6 +93,14 @@ type ViewerState = {
   shadows: boolean
   setShadows: (shadows: boolean) => void
 
+  /**
+   * One graphics setting. `light` (the default): no shadows, no post-processing
+   * (SSGI/AO/ink), pixel ratio 1, 60 fps cap. `full`: everything as configured
+   * (shadows toggle, post-processing, quality-tier pixel ratio, 50 fps cap).
+   */
+  graphics: GraphicsMode
+  setGraphics: (graphics: GraphicsMode) => void
+
   /** H17.1 — detect-gpu tier preference (`auto` uses detected tier). */
   gpuQuality: GpuQualityPreference
   setGpuQuality: (quality: GpuQualityPreference) => void
@@ -206,6 +214,7 @@ type PersistedViewerState = Partial<
     | 'colorPreset'
     | 'edges'
     | 'shadows'
+    | 'graphics'
     | 'gpuQuality'
     | 'unit'
     | 'metricNotation'
@@ -225,6 +234,8 @@ const METRIC_NOTATIONS = ['meters', 'millimeters'] as const
 const LEVEL_MODES = ['stacked', 'exploded', 'solo', 'manual'] as const
 const WALL_MODES = ['up', 'cutaway', 'down', 'translucent'] as const
 const GPU_QUALITIES = ['auto', 'high', 'medium', 'low'] as const
+export const GRAPHICS_MODES = ['light', 'full'] as const
+export type GraphicsMode = (typeof GRAPHICS_MODES)[number]
 
 // Countries still on imperial/US customary units: United States, Liberia, Myanmar.
 const IMPERIAL_REGIONS = ['US', 'LR', 'MM']
@@ -333,6 +344,7 @@ function normalizePersistedViewerState(value: unknown): PersistedViewerState {
     colorPreset: pickString<ColorPreset>(state.colorPreset, COLOR_PRESETS, 'clay'),
     edges: pickString<EdgeMode>(state.edges, EDGE_MODES, 'soft'),
     shadows: typeof state.shadows === 'boolean' ? state.shadows : true,
+    graphics: pickString<GraphicsMode>(state.graphics, GRAPHICS_MODES, 'light'),
     gpuQuality: pickString<GpuQualityPreference>(state.gpuQuality, GPU_QUALITIES, 'auto'),
     unit: pickString<ViewerState['unit']>(state.unit, UNITS, detectDefaultUnit()),
     metricNotation: pickString<MetricNotation>(state.metricNotation, METRIC_NOTATIONS, 'meters'),
@@ -418,6 +430,9 @@ const useViewer = create<ViewerState>()(
 
       shadows: true,
       setShadows: (shadows) => set({ shadows }),
+
+      graphics: 'light',
+      setGraphics: (graphics) => set({ graphics }),
 
       gpuQuality: 'auto',
       setGpuQuality: (gpuQuality) => set({ gpuQuality }),
@@ -581,6 +596,7 @@ const useViewer = create<ViewerState>()(
         colorPreset: state.colorPreset,
         edges: state.edges,
         shadows: state.shadows,
+        graphics: state.graphics,
         gpuQuality: state.gpuQuality,
         ...(state.unitExplicit ? { unit: state.unit } : {}),
         metricNotation: state.metricNotation,

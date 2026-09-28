@@ -1,8 +1,10 @@
 'use client'
 
 import { heightAt, terrainFieldOf, useScene } from '@pascal-app/core'
-import { Line } from '@react-three/drei'
-import { useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
+import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js'
+import { Line2NodeMaterial } from 'three/webgpu'
 import { siteToWorldXz } from './coords'
 import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
 
@@ -19,8 +21,52 @@ function useEcoSiteStore() {
 }
 
 /**
+ * One guide polyline as a WebGPU fat line. drei's <Line> uses the WebGL-only
+ * LineMaterial, which the node builder rejects: with a site loaded the
+ * post-processing pipeline failed and rebuilt every frame (H19.2, profile of the
+ * H19 scene). Line2NodeMaterial is the same screen-space line for WebGPU.
+ */
+function GuideLine({
+  points,
+  color,
+  dashed,
+}: {
+  points: [number, number, number][]
+  color: string
+  dashed: boolean
+}) {
+  const line = useMemo(() => {
+    const geometry = new LineGeometry()
+    geometry.setPositions(points.flat())
+    const material = new Line2NodeMaterial({
+      color,
+      linewidth: 1.5,
+      dashed,
+      // drei's dashScale / dashSize / gapSize.
+      scale: dashed ? 8 : 1,
+      dashSize: 0.4,
+      gapSize: 0.25,
+      depthTest: true,
+    })
+    const guide = new Line2(geometry, material)
+    if (dashed) guide.computeLineDistances()
+    return guide
+  }, [points, color, dashed])
+
+  useEffect(
+    () => () => {
+      line.geometry.dispose()
+      ;(line.material as Line2NodeMaterial).dispose()
+    },
+    [line],
+  )
+
+  return <primitive object={line} />
+}
+
+/**
  * Guide polylines projected onto the site terrain (+0.05 m).
- * Dashed style for easements via Line dashed props.
+ * Easements are dashed.
  */
 export function EcoGuides() {
   const { site, guideVisibility } = useEcoSiteStore()
@@ -62,17 +108,7 @@ export function EcoGuides() {
     <group name="eco-guides">
       {segments.map((seg) =>
         seg ? (
-          <Line
-            key={seg.key}
-            points={seg.points}
-            color={seg.color}
-            lineWidth={1.5}
-            dashed={seg.dashed}
-            dashScale={seg.dashed ? 8 : undefined}
-            dashSize={seg.dashed ? 0.4 : undefined}
-            gapSize={seg.dashed ? 0.25 : undefined}
-            depthTest
-          />
+          <GuideLine key={seg.key} points={seg.points} color={seg.color} dashed={seg.dashed} />
         ) : null,
       )}
     </group>

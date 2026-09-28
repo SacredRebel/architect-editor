@@ -36,6 +36,8 @@ class EditorHostPanelRegistryImpl {
   private readonly panels = new Map<string, EditorHostPanel>()
   private readonly listeners = new Set<() => void>()
   private cached: EditorHostPanel[] = []
+  /** Registered but not shown — see {@link setEditorHostPanelsHidden}. */
+  private hidden = new Set<string>()
 
   subscribe = (onChange: () => void): (() => void) => {
     this.listeners.add(onChange)
@@ -78,8 +80,15 @@ class EditorHostPanelRegistryImpl {
     this.emit()
   }
 
+  setHidden(ids: readonly string[]): void {
+    const next = new Set(ids)
+    if (next.size === this.hidden.size && [...next].every((id) => this.hidden.has(id))) return
+    this.hidden = next
+    this.emit()
+  }
+
   private emit(): void {
-    this.cached = Array.from(this.panels.values())
+    this.cached = Array.from(this.panels.values()).filter((panel) => !this.hidden.has(panel.id))
     for (const listener of this.listeners) listener()
   }
 }
@@ -88,6 +97,15 @@ export const editorHostPanelRegistry = new EditorHostPanelRegistryImpl()
 
 export function registerEditorHostPanel(panel: EditorHostPanel): void {
   editorHostPanelRegistry.registerPanel(panel)
+}
+
+/**
+ * Keep these registered panels out of the rail without unregistering them;
+ * pass a different list (or none) to bring them back. The host decides why
+ * (e.g. a graphics mode in which a panel's tool does not work).
+ */
+export function setEditorHostPanelsHidden(ids: readonly string[]): void {
+  editorHostPanelRegistry.setHidden(ids)
 }
 
 /**

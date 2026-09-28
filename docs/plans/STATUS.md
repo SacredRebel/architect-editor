@@ -1,7 +1,7 @@
 # STATUS — Agent A
-updated: 2026-09-27
-phase: **H19.2a landed on `eco/h19`** · H19.2 paused for a scene decision
-state: The H19.0 pair carries render time. H19.1 profiled. H19.2a (dpr clamp) measured and checked. `eco/h19` is not merged to `main`.
+updated: 2026-09-28
+phase: **demo recorded on `eco/demo`** · waiting on the human's merge to `main`, then production READY
+state: H19.2a is merged and READY in production. `eco/demo` carries the demo: light graphics by default, a site and house when the world sends nothing, and the tools that fail hidden in light mode. Its preview is READY. `gh` is not signed in, so the merge is the human's: the compare link is in `demo-done.md`.
 
 ## Production SHAs
 
@@ -11,37 +11,35 @@ state: The H19.0 pair carries render time. H19.1 profiled. H19.2a (dpr clamp) me
 | H17.1 | AdaptiveDpr / detect-gpu / shadows | `cf50c731` | READY |
 | H18 | walk feel | `795317fb` | READY https://architect-editor-snowy.vercel.app |
 | lane | `.cursor/rules/lane.mdc` | `5d061383` | on main |
-| **H19.0a** | hygiene (format · types · CI checks · LF) | **`121d1ebc`** | READY https://architect-editor-snowy.vercel.app |
-| **H19.0** | re-measure (same harness, same scene, renderMs) | on `eco/h19` · pair `43bc8119` | not merged |
-| **H19.1** | profile | on `eco/h19` · `cf088a8a` | not merged |
-| **H19.2a** | dpr never above the display | on `eco/h19` · `250daa06` · done **`fb6df305`** | not merged |
+| **H19.0a** | hygiene (format · types · CI checks · LF) | **`121d1ebc`** | READY |
+| **H19.0 · H19.1 · H19.2a** | re-measure · profile · dpr never above the display | **`c00d885f`** (merge commit) | **READY** `dpl_GZ9asee41gW5m25zNL4yNFQY33JE` |
+| **demo** | light graphics · demo site · hidden tools | `eco/demo` · done **`ab9c1806`**, preview READY | after the human's merge |
+| H19.2 · A4 · A5 | guides · 2b · 2c · 2d profile · `/builder` · site in the editor | `eco/h19-2` `273d912d` · `eco/a4` `39c602cc` · `eco/a5` `26042fd6` (pre-rebase) | resume after the demo |
 
-PR: https://github.com/SacredRebel/architect-editor/pull/1 (merge commit, not squash)
+## Demo (preview `dpl_5sTZbhRoymUj9g2YNA2xDPLoF9CD`, light graphics)
 
-## Numbers (20 s orbit, empty site, local production builds, same Chrome)
+| Line | Result |
+|---|---|
+| Model | demo site and house built 11.1 s after load in a fresh profile; one wall drawn with the wall tool, walls 8 → 9 |
+| Shown and working | catenary arch · lofted leaf surface · barrel vault · temple forms (domed bay, catenary vault); every other tab opens with no errors |
+| Hidden in light mode | Organic and Minimal surface (draw nothing) · WebXR and Enter VR (do nothing without a headset) · Export IFC (wasm 404) |
+| Body | no UI entry point; nothing to hide |
+| Carried into the demo | the H19.2 guides fix (a site broke every frame on `main`) · A5's sun frame fix (the sun lit the site from the north) |
+| Not fixed | full graphics with a site shows only the sky; light draws the scene |
 
-| | H17.0 `a0ca4ca4` | H17.1 `272ba6b6` | H19.2a `250daa06` |
-|---|---|---|---|
-| renderMs median / p99 | 4.13 / 4.92 | 6.82 / 9.50 | **3.74 / 4.98** |
-| fps (median of 1 s bins) | 50 | 50 | 50 |
-| DPR on a 1× display | 1.0 | 1.5 | 1.0 |
-
-fps is upstream's `FrameLimiter` cap (50) on all three; only render time moves.
-
-## Gate
+## Gate (on `4561bf0e`)
 
 | Check | Result |
 |---|---|
-| `bun run checks` · `bun run build` | green (Bun 1.4.2 installed; pin 1.3.14) |
-| `check-h17-perf` / `--self-test` | OK / OK (7 cases) |
-| `check-h19-2` / `--self-test` | OK / OK (4 cases) |
-| `check-h17-1` | OK (string match; cannot fail on behaviour — H19-done line 5) |
+| typecheck · `bun run build` | green (Bun 1.4.2 installed; pin 1.3.14) |
+| tests | 13 of 20 packages green; the 7 others' 38 failing tests also fail on `main` (`c00d885f`) — none new |
 
 ## Open for the architect
 
-- H19.2 lines 5 (shadows) and 8 (draws) need a scene with casters and items on the same path; the empty site cannot show their gain.
-- `docs/plans/inbox/2026-09-26-brief-H19.md` has not arrived.
-- `maxFps` 50 is upstream's and stays; raising it is a product call.
+- **Full graphics with a site loaded shows only the sky.** This is production today until the demo merges; light is the default after it.
+- **IFC export:** the fix is `91c2ddfe` on `eco/a4`; it needs A4's decoder-path setting.
+- **The 38 pre-existing test failures on `main`** are listed by package in `demo-done.md`.
+- A4 and A5 open items stand; see `A4-done.md` and `A5-done.md` on their branches.
 
-commit: done `fb6df305` on `eco/h19` · probe tree `eco/h17-0-probe` `a0ca4ca4`
-queue: waiting for brief
+commit: demo done `ab9c1806` on `eco/demo` · H19.2a merge `c00d885f` on `main`
+queue: the human merges `eco/demo` (merge commit) → production READY → record; A4/A5 resume after the demo

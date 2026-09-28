@@ -1,0 +1,369 @@
+{
+  "url": "https://architect-editor-n1bslye8y-pauls-projects-af8162cc.vercel.app",
+  "when": "2026-09-28T12:01:13.636Z",
+  "steps": [
+    {
+      "step": "model",
+      "walls": 8,
+      "items": 50,
+      "inStoreS": 2.011,
+      "built": true,
+      "builtS": 11.072,
+      "graphics": "light",
+      "shot": "01-model.jpg"
+    },
+    {
+      "step": "edit",
+      "onCanvas": true,
+      "wallsBefore": 8,
+      "wallsAfter": 9,
+      "shot": "02-edited.jpg"
+    },
+    {
+      "step": "graphics",
+      "graphicsItem": "light",
+      "shot": "03-display-graphics.jpg"
+    },
+    {
+      "step": "tab:Scene",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.012,
+      "crashed": false,
+      "errors": 0,
+      "shot": "10-scene.jpg"
+    },
+    {
+      "step": "tab:Build",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.007,
+      "crashed": false,
+      "errors": 0,
+      "shot": "11-build.jpg"
+    },
+    {
+      "step": "tab:Items",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.01,
+      "crashed": false,
+      "errors": 0,
+      "shot": "12-items.jpg"
+    },
+    {
+      "step": "tab:Settings",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "13-settings.jpg"
+    },
+    {
+      "step": "tab:Nature",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 18.497,
+      "crashed": false,
+      "errors": 0,
+      "shot": "14-nature.jpg"
+    },
+    {
+      "step": "tab:Environment",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 4.417,
+      "crashed": false,
+      "errors": 0,
+      "shot": "15-environment.jpg"
+    },
+    {
+      "step": "tab:Temple forms",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 13.278,
+      "crashed": false,
+      "errors": 0,
+      "shot": "16-temple-forms.jpg"
+    },
+    {
+      "step": "tab:Geometry",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "17-geometry.jpg"
+    },
+    {
+      "step": "tab:Pools",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.007,
+      "crashed": false,
+      "errors": 0,
+      "shot": "18-pools.jpg"
+    },
+    {
+      "step": "tab:Streetscape",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "19-streetscape.jpg"
+    },
+    {
+      "step": "tab:Eco site",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.008,
+      "crashed": false,
+      "errors": 0,
+      "shot": "20-eco-site.jpg"
+    },
+    {
+      "step": "tab:My assets",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.412,
+      "crashed": false,
+      "errors": 0,
+      "shot": "21-my-assets.jpg"
+    },
+    {
+      "step": "tab:Materials",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.005,
+      "crashed": false,
+      "errors": 0,
+      "shot": "22-materials.jpg"
+    },
+    {
+      "step": "tab:Drawings",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 9.261,
+      "crashed": false,
+      "errors": 0,
+      "shot": "23-drawings.jpg"
+    },
+    {
+      "step": "tab:Construction",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "24-construction.jpg"
+    },
+    {
+      "step": "tab:Leaf shell",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 3.616,
+      "crashed": false,
+      "errors": 0,
+      "shot": "25-leaf-shell.jpg"
+    },
+    {
+      "step": "tab:Photo → 3D",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.009,
+      "crashed": false,
+      "errors": 0,
+      "shot": "26-photo-3d.jpg"
+    },
+    {
+      "step": "tab:Plugins",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.005,
+      "crashed": false,
+      "errors": 0,
+      "shot": "27-plugins.jpg"
+    },
+    {
+      "step": "tool:catenary:Add catenary arch",
+      "found": "clicked",
+      "meshes": [
+        227,
+        260
+      ],
+      "drawCalls": [
+        225,
+        258
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "40-catenary-add-catenary-arch.jpg"
+    },
+    {
+      "step": "tool:organic geometry:Add lofted leaf surface",
+      "found": "clicked",
+      "meshes": [
+        260,
+        272
+      ],
+      "drawCalls": [
+        258,
+        275
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "41-organic-geometry-add-lofted-leaf-surface.jpg"
+    },
+    {
+      "step": "tool:organic geometry:Add barrel vault + ribs",
+      "found": "clicked",
+      "meshes": [
+        272,
+        434
+      ],
+      "drawCalls": [
+        275,
+        437
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "42-organic-geometry-add-barrel-vault-ribs.jpg"
+    },
+    {
+      "step": "tool:organic geometry:Grow 5-lobe building",
+      "found": "missing",
+      "meshes": [
+        434,
+        434
+      ],
+      "drawCalls": [
+        437,
+        437
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "43-organic-geometry-grow-5-lobe-building.jpg"
+    },
+    {
+      "step": "tool:organic geometry:Add smooth wall + 3 windows",
+      "found": "missing",
+      "meshes": [
+        434,
+        434
+      ],
+      "drawCalls": [
+        437,
+        437
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "44-organic-geometry-add-smooth-wall-3-windows.jpg"
+    },
+    {
+      "step": "tool:organic geometry:Make from closed curve",
+      "found": "missing",
+      "meshes": [
+        434,
+        434
+      ],
+      "drawCalls": [
+        437,
+        437
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "45-organic-geometry-make-from-closed-curve.jpg"
+    },
+    {
+      "step": "tool:temple forms:Place it where the view is centred",
+      "found": "clicked",
+      "meshes": [
+        434,
+        484
+      ],
+      "drawCalls": [
+        437,
+        498
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "46-temple-forms-place-it-where-the-view-is-centred.jpg"
+    },
+    {
+      "step": "tool:temple forms:Place catenary vault",
+      "found": "clicked",
+      "meshes": [
+        484,
+        484
+      ],
+      "drawCalls": [
+        498,
+        497
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "47-temple-forms-place-catenary-vault.jpg"
+    },
+    {
+      "step": "tool:IFC:Export IFC 4.3",
+      "found": "missing",
+      "meshes": [
+        484,
+        484
+      ],
+      "drawCalls": [
+        497,
+        497
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "48-ifc-export-ifc-4-3.jpg"
+    },
+    {
+      "step": "tool:XR:VR unavailable",
+      "found": "missing",
+      "meshes": [
+        484,
+        484
+      ],
+      "drawCalls": [
+        497,
+        497
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "49-xr-vr-unavailable.jpg"
+    },
+    {
+      "step": "tool:XR:Enter VR",
+      "found": "missing",
+      "meshes": [
+        484,
+        484
+      ],
+      "drawCalls": [
+        497,
+        497
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "50-xr-enter-vr.jpg"
+    }
+  ],
+  "problems": [],
+  "downloads": [],
+  "failed": []
+}

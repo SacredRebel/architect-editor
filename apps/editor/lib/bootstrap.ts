@@ -26,6 +26,8 @@ import { poolHostPanel, poolPlugin } from '@pascal-app/plugin-pool'
 import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
 import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'
 import { registerViewerPresentation } from '@pascal-app/viewer'
+import { startDemoSiteFallback } from './demo-site'
+import { hideInLightGraphics } from './light-graphics-panels'
 
 // Idempotency guards: HMR can reload this module, but `registerNode`
 // throws on duplicate kinds. Flags live in the module closure so they
@@ -110,6 +112,7 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
   })
   void import('@eco/plugin-eco').then(
     ({
+      applyEcoPayloadsLocally,
       ecoAssetsHostPanel,
       ecoConstructionHostPanel,
       ecoDrawingsHostPanel,
@@ -120,7 +123,10 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
       ecoOrganicHostPanel,
       ecoPresentation,
       ecoShellHostPanel,
+      hasEcoHostContent,
     }) => {
+      // Demo: the site/house fixture opens when the world sends nothing.
+      void startDemoSiteFallback({ applyEcoPayloadsLocally, hasEcoHostContent })
       registerEditorHostPanel(ecoHostPanel)
       registerEditorHostPanel(ecoAssetsHostPanel)
       registerEditorHostPanel(ecoMaterialsHostPanel)
@@ -130,6 +136,10 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
       registerEditorHostPanel(ecoImage3dHostPanel)
       registerEditorHostPanel(ecoOrganicHostPanel)
       registerEditorHostPanel(ecoMinimalHostPanel)
+      // Demo: with light graphics, hide the panels whose tools draw nothing in
+      // the 3D view (the organic building and the minimal surface are data only).
+      hideInLightGraphics(ecoOrganicHostPanel.id)
+      hideInLightGraphics(ecoMinimalHostPanel.id)
       registerViewerPresentation(ecoPresentation)
     },
   )
@@ -149,6 +159,8 @@ if (process.env.NEXT_PUBLIC_WEBXR === '1') {
   void import('@webxr/plugin').then(({ webXRHostPanel, webXRPlugin }) => {
     extendPluginDiscovery(async () => [webXRPlugin])
     registerEditorHostPanel(webXRHostPanel)
+    // Demo: without a headset WebXR does nothing; hidden with light graphics.
+    hideInLightGraphics(webXRHostPanel.id)
   })
 }
 extendPluginDiscovery(async () => [bonesPlugin])

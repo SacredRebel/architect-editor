@@ -21,7 +21,9 @@ if (typeof window !== 'undefined') {
 
 export { applyEcoSite, terrainFieldFromEcoSite } from './apply-site'
 export {
+  applyEcoPayloadsLocally,
   CAPS,
+  hasEcoHostContent,
   installEcoBridge,
   isEcoBridgeReady,
   requestEcoClose,
