@@ -3,20 +3,15 @@
 import { EcoExitButton } from '@eco/plugin-eco'
 import { Editor, ItemsPanel } from '@pascal-app/editor'
 import { Hammer, Layers, Package, Settings } from 'lucide-react'
-import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useEffect } from 'react'
 import { BuildTab } from '@/components/build-tab'
+import { FloorplanOverlays } from '@/components/floorplan-overlays'
 import {
   CommunityViewerToolbarLeft,
   CommunityViewerToolbarRight,
 } from '@/components/viewer-toolbar'
 import { detectEcoEmbedded, ecoPublicPath } from '@/lib/eco-mode'
-
-const GeometryFloorplanOverlay = dynamic(
-  () => import('@pascal-app/plugin-geometry').then((m) => m.geometryFloorplanOverlay()),
-  { ssr: false },
-)
 
 function EditorItemsPanel() {
   return <ItemsPanel showSourceFilter={false} showTagFilters={false} />
@@ -103,7 +98,7 @@ export default function EmbedPage() {
     <div className="relative h-screen w-screen overflow-hidden">
       <EcoExitButton />
       <Editor
-        floorplanSceneSlot={<GeometryFloorplanOverlay />}
+        floorplanSceneSlot={<FloorplanOverlays />}
         layoutVersion="v2"
         projectId="eco-embed"
         sidebarTabs={SIDEBAR_TABS}

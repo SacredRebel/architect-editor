@@ -7,6 +7,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { BuildTab } from '@/components/build-tab'
+import { FloorplanOverlays } from '@/components/floorplan-overlays'
 import {
   CommunityViewerToolbarLeft,
   CommunityViewerToolbarRight,
@@ -19,11 +20,6 @@ const WebXREditorShell = webxrEnabled
       ssr: false,
     })
   : null
-
-const GeometryFloorplanOverlay = dynamic(
-  () => import('@pascal-app/plugin-geometry').then((m) => m.geometryFloorplanOverlay()),
-  { ssr: false },
-)
 
 function EditorItemsPanel() {
   return <ItemsPanel showSourceFilter={false} showTagFilters={false} />
@@ -123,7 +119,7 @@ function EditorShell({
         </div>
       )}
       <Editor
-        floorplanSceneSlot={<GeometryFloorplanOverlay />}
+        floorplanSceneSlot={<FloorplanOverlays />}
         immersive={immersive}
         layoutVersion="v2"
         projectId={PROJECT_ID}
