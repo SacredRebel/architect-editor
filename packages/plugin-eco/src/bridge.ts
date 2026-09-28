@@ -12,6 +12,15 @@ import { arrayBufferToBase64, downloadBytes, exportEcoGlb } from './export-glb'
 const PROTOCOL = 'eco/1' as const
 const HELLO_TIMEOUT_MS = 3000
 
+/**
+ * The world's origin — the only origin the bridge listens to or posts to (A4).
+ * The editor is served under the world's /builder, so in production this is
+ * also the page's own origin. One env, baked in at build time.
+ */
+export const ECO_HOST_ORIGIN = (
+  process.env.NEXT_PUBLIC_ECO_HOST_ORIGIN || 'https://spatial-map.vercel.app'
+).replace(/\/+$/, '')
+
 /** Capabilities advertised in eco:ready. */
 export const CAPS = ['site', 'scene', 'assets', 'glb'] as const
 
@@ -45,7 +54,7 @@ function isEcoMsg(data: unknown): data is EcoMsg {
 function postToHost(msg: EcoMsg): void {
   if (typeof window === 'undefined' || !hostOrigin) return
   if (window.parent === window) return
-  window.parent.postMessage(msg, hostOrigin)
+  window.parent.postMessage(msg, ECO_HOST_ORIGIN)
 }
 
 function exportScenePayload(): unknown {
@@ -145,14 +154,12 @@ function handleRequestExport(what: 'scene' | 'glb'): void {
 }
 
 function onMessage(event: MessageEvent): void {
+  // Anything not from the world's origin is ignored, hello included.
+  if (event.origin !== ECO_HOST_ORIGIN) return
   if (!isEcoMsg(event.data)) return
 
   if (event.data.t === 'eco:hello') {
-    if (hostOrigin && event.origin !== hostOrigin) {
-      postToHost({ t: 'eco:error', message: 'eco:hello from unexpected origin' })
-      return
-    }
-    hostOrigin = event.origin
+    hostOrigin = ECO_HOST_ORIGIN
     if (helloTimer) {
       clearTimeout(helloTimer)
       helloTimer = null
@@ -163,7 +170,6 @@ function onMessage(event: MessageEvent): void {
   }
 
   if (!hostOrigin) return
-  if (event.origin !== hostOrigin) return
 
   switch (event.data.t) {
     case 'eco:load-site':
@@ -211,8 +217,10 @@ function watchDirty(): void {
 
 /**
  * Install the eco/1 postMessage bridge once per page.
- * Records the origin of the first valid `eco:hello` and answers only that origin.
- * If no hello arrives within 3s while embedded, continues standalone (no error).
+ * Listens to and answers only ECO_HOST_ORIGIN (NEXT_PUBLIC_ECO_HOST_ORIGIN,
+ * default https://spatial-map.vercel.app); a valid `eco:hello` from it opens
+ * the session. If no hello arrives within 3s while embedded, continues
+ * standalone (no error).
  */
 export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
   if (typeof window === 'undefined') return
