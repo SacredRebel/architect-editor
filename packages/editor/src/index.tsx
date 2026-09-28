@@ -568,6 +568,7 @@ export {
   type EditorHostPanelWorkspace,
   editorHostPanelRegistry,
   registerEditorHostPanel,
+  setEditorHostPanelsHidden,
 } from './lib/plugin-panels'
 export { configureManifoldRuntime } from './lib/print-shell-compiler-manifold-worker'
 export type { ManifoldRuntimeOptions } from './lib/print-shell-compiler-protocol'

@@ -786,6 +786,8 @@ export function CommunityViewerToolbarRight({
   vrDisabled?: boolean
   vrLabel?: string
 } = {}) {
+  // Demo: VR is hidden with light graphics — without a headset it does nothing.
+  const lightGraphics = useViewer((state) => state.graphics === 'light')
   return (
     <div className={TOOLBAR_CONTAINER}>
       <LevelModeToggle />
@@ -794,7 +796,7 @@ export function CommunityViewerToolbarRight({
       <DisplayMenu />
       <div className="my-1.5 w-px bg-border/50" />
       <WalkthroughButton />
-      {onVRToggle || vrButton
+      {!lightGraphics && (onVRToggle || vrButton)
         ? (vrButton ??
           (onVRToggle ? (
             <VRButton
