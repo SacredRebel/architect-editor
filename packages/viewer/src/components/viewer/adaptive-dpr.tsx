@@ -6,8 +6,9 @@ import { type GpuQuality, maxDprForQuality } from '../../lib/gpu-quality'
 
 /**
  * H17.1 — demand-friendly AdaptiveDpr for frameloop="never".
- * Drops DPR under sustained slow frames; restores toward the tier cap when idle.
- * Hard cap remains 2 (via maxDprForQuality).
+ * Drops DPR under sustained slow frames; restores toward the cap when idle.
+ * The cap is the tier's (max 2, via maxDprForQuality) and never above the
+ * display's own devicePixelRatio: pixels past the display are not seen.
  */
 export function AdaptiveDpr({ quality }: { quality: GpuQuality }) {
   const setDpr = useThree((s) => s.setDpr)
@@ -16,7 +17,8 @@ export function AdaptiveDpr({ quality }: { quality: GpuQuality }) {
   const fastStreak = useRef(0)
 
   const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
-  const cap = maxDprForQuality(quality, coarse)
+  const displayDpr = typeof window !== 'undefined' ? Math.max(1, window.devicePixelRatio || 1) : 1
+  const cap = Math.min(maxDprForQuality(quality, coarse), displayDpr)
 
   useEffect(() => {
     current.current = Math.min(cap, Math.max(1, window.devicePixelRatio || 1))
