@@ -14,7 +14,7 @@
  * Attribution toggles (shadow casting off, dpr 1) are in-page, measured, and
  * restored before the script exits; nothing in the product changes.
  */
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const PATH_MS = 20_000
@@ -30,10 +30,10 @@ async function cdp(match) {
     ws.onerror = rej
   })
   let id = 1
-  const send = (method, params = {}) =>
+  const send = (method, params = {}, timeoutMs = 60_000) =>
     new Promise((resolve, reject) => {
       const my = id++
-      const timer = setTimeout(() => reject(new Error(`CDP timeout ${method}`)), 60_000)
+      const timer = setTimeout(() => reject(new Error(`CDP timeout ${method}`)), timeoutMs)
       const onmsg = (ev) => {
         const msg = JSON.parse(ev.data)
         if (msg.id !== my) return
@@ -44,8 +44,8 @@ async function cdp(match) {
       ws.addEventListener('message', onmsg)
       ws.send(JSON.stringify({ id: my, method, params }))
     })
-  const evaluate = async (expression, awaitPromise = false) => {
-    const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise })
+  const evaluate = async (expression, awaitPromise = false, timeoutMs = 60_000) => {
+    const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise }, timeoutMs)
     if (r.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails))
     return r.result?.value
   }
@@ -151,16 +151,56 @@ async function frameProfile() {
   const { page, ws, send, evaluate } = await cdp(process.env.PAGE_MATCH || 'perf')
   await send('Page.bringToFront').catch(() => {})
   await send('Page.enable')
-  // Same empty site as the capture: the editor persists its scene per origin.
-  await send('Storage.clearDataForOrigin', { origin: new URL(page.url).origin, storageTypes: 'all' })
+  // Emulation overrides outlive the session that set them; set or clear explicitly.
+  const emulateDpr = process.env.EMULATE_DPR ? Number(process.env.EMULATE_DPR) : null
+  if (emulateDpr) {
+    await send('Emulation.setDeviceMetricsOverride', { width: 0, height: 0, deviceScaleFactor: emulateDpr, mobile: false })
+  } else {
+    await send('Emulation.clearDeviceMetricsOverride').catch(() => {})
+  }
+  // Same storage as the capture: the editor persists its scene per origin.
+  const origin = new URL(page.url).origin
+  await send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' })
   const hook = await send('Page.addScriptToEvaluateOnNewDocument', { source: GPU_HOOK })
+  // A quality preference, seeded before any app code runs (GPU_QUALITY=high).
+  const prefs = process.env.GPU_QUALITY
+    ? await send('Page.addScriptToEvaluateOnNewDocument', {
+        source: `localStorage.setItem('viewer-preferences', ${JSON.stringify(JSON.stringify({ state: { gpuQuality: process.env.GPU_QUALITY }, version: 0 }))})`,
+      })
+    : null
   await send('Page.reload', { ignoreCache: false })
   await Bun.sleep(1500)
   for (let i = 0; i < 60; i++) {
     if (await evaluate(`!!(window.__pascalPerf && window.__pascalPerf.three && window.__pascalPerf.stats())`)) break
     await Bun.sleep(500)
   }
+  // The same fixture file and flow as the capture harness (FIXTURE=…).
+  const fixtureText = process.env.FIXTURE ? readFileSync(process.env.FIXTURE, 'utf8') : null
+  const fixture = fixtureText ? JSON.parse(fixtureText.replaceAll('{{origin}}', origin)) : null
+  if (fixture?.readyWhen) {
+    let ready = false
+    for (let i = 0; i < 120 && !ready; i++) {
+      ready = await evaluate(`(() => { try { return !!(${fixture.readyWhen}) } catch { return false } })()`)
+      if (!ready) await Bun.sleep(500)
+    }
+    if (!ready) throw new Error('fixture readyWhen never held')
+    await Bun.sleep(1000)
+  }
+  for (const message of fixture?.postMessages ?? []) {
+    await evaluate(`window.postMessage(${JSON.stringify(message)}, location.origin)`)
+    await Bun.sleep(500)
+  }
+  // Settle: at least 4s, then until the HUD's scene counts hold for 3s.
+  const settleStart = Date.now()
   await Bun.sleep(4000)
+  for (let stable = 0, last = null, stamp = null; Date.now() - settleStart < 90_000 && stable < 6; ) {
+    await Bun.sleep(500)
+    const s = await evaluate(`(() => { const s = window.__pascalPerf.stats(); return s && { key: s.drawCalls + ':' + s.triangles + ':' + s.geometries + ':' + s.textures, stamp: s.fps + ':' + s.frameMs + ':' + s.heapBytes } })()`)
+    if (!s || s.stamp === stamp) continue
+    stamp = s.stamp
+    stable = s.key === last ? stable + 1 : 0
+    last = s.key
+  }
 
   // Environment: backend, adapter, resolution, tier.
   const env = await evaluate(
@@ -437,11 +477,15 @@ async function frameProfile() {
     true,
   )
 
-  // Worst draws by cost: hide one drawable at a time and read renderMs against
-  // interleaved baselines. Device timestamps, one sample per resolve.
+  // Worst draws by cost: hide one group of camera-drawn objects at a time and
+  // read renderMs against interleaved baselines (device timestamps, one sample
+  // per resolve). Only what the camera draws counts: batched source meshes sit
+  // on BATCHED_LAYER, invisible to it. A BatchedMesh draws one drawIndexed per
+  // instance on WebGPU, so each container also reports instances against the
+  // unique geometries it holds.
   const drawCost = await evaluate(
     `(async () => {
-      const { gl, scene } = window.__pascalPerf.three()
+      const { gl, scene, camera } = window.__pascalPerf.three()
       const pool = gl.backend.timestampQueryPool?.render
       if (!pool) return null
       const sample = (ms) => new Promise((res) => {
@@ -454,32 +498,61 @@ async function frameProfile() {
         }
         requestAnimationFrame(f)
       })
-      const drawables = []
+      const groups = new Map()
+      const batches = []
+      const label = (o) => {
+        if (o.isBatchedMesh) return 'item-batch (all containers)'
+        if (['wall-batch', 'merged-roof', 'merged-stair', 'eco-sky', 'eco-buildable-envelope', 'pascal-editor-grid-input'].includes(o.name)) return o.name
+        for (let q = o; q; q = q.parent) {
+          if (q.name === 'eco-guides') return 'eco-guides'
+          if (q.name === 'scene-renderer') return 'site / terrain'
+          if (/_\\d+$/.test(q.name)) return 'unbatched item: ' + q.name.replace(/_\\d+$/, '')
+        }
+        return 'other: ' + (o.name || o.type)
+      }
       scene.traverse((o) => {
-        if (!(o.isMesh || o.isLine || o.isPoints) || !o.visible) return
+        if (!(o.isMesh || o.isLine || o.isPoints) || !o.visible || !o.layers.test(camera.layers)) return
         for (let q = o.parent; q; q = q.parent) if (!q.visible) return
-        drawables.push(o)
+        const key = label(o)
+        const g = groups.get(key) || { objects: [], tris: 0 }
+        g.objects.push(o)
+        const idx = o.geometry?.index ? o.geometry.index.count : (o.geometry?.attributes?.position?.count ?? 0)
+        g.tris += Math.round(idx / 3)
+        groups.set(key, g)
+        if (o.isBatchedMesh) {
+          const infos = (o._instanceInfo || []).filter((i) => i && i.active !== false && i.visible !== false)
+          const geos = new Set(infos.map((i) => i.geometryIndex))
+          batches.push({ name: o.name, material: o.material?.type, instances: infos.length, uniqueGeometries: geos.size })
+        }
       })
       await sample(800)
       const rows = []
-      for (const o of drawables) {
+      for (const [name, g] of groups) {
         const before = await sample(1500)
-        o.visible = false
+        for (const o of g.objects) o.visible = false
         await sample(300)
         const hidden = await sample(1500)
-        o.visible = true
+        for (const o of g.objects) o.visible = true
         const after = await sample(1500)
         const base = (before + after) / 2
-        rows.push({ name: o.name || o.parent?.name || o.type, kind: o.type, baseMs: +base.toFixed(3), hiddenMs: +hidden.toFixed(3),
+        rows.push({ name, objects: g.objects.length, triangles: g.tris, baseMs: +base.toFixed(3), hiddenMs: +hidden.toFixed(3),
           costMs: +(base - hidden).toFixed(3), baselineDriftMs: +Math.abs(before - after).toFixed(3) })
       }
-      return rows.sort((a, b) => b.costMs - a.costMs)
+      const instances = batches.reduce((s, b) => s + b.instances, 0)
+      const unique = batches.reduce((s, b) => s + b.uniqueGeometries, 0)
+      return {
+        cameraDrawn: [...groups.values()].reduce((s, g) => s + g.objects.length, 0),
+        batches: { containers: batches.length, instances, uniqueGeometries: unique, drawsSavedByInstancingPerPass: instances - unique, detail: batches },
+        groups: rows.sort((a, b) => b.costMs - a.costMs),
+      }
     })()`,
     true,
+    600_000,
   )
 
   const gpuLog = await evaluate(`window.__gpuLog ? { load: window.__gpuLog.load, orbit: window.__gpuLog.orbit } : null`)
   await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: hook.identifier }).catch(() => {})
+  if (prefs) await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: prefs.identifier }).catch(() => {})
   const r3 = (o) =>
     o &&
     Object.fromEntries(
@@ -506,7 +579,7 @@ async function frameProfile() {
 
   ws.close()
   return {
-    phase: 'H19.1',
+    phase: process.env.PHASE_NAME || 'H19.1',
     capturedAt: new Date().toISOString(),
     sourceUrl: page.url,
     tree: process.env.TREE_SHA || null,
@@ -525,7 +598,8 @@ async function frameProfile() {
 }
 
 const out = loadMode ? await loadProfile() : await frameProfile()
-const file = join(import.meta.dir, loadMode ? 'h19-1-load.json' : 'h19-1-profile.json')
+const file =
+  process.env.OUT_PATH || join(import.meta.dir, loadMode ? 'h19-1-load.json' : 'h19-1-profile.json')
 writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`)
 console.log('wrote', file)
 console.log(JSON.stringify(out, null, 2))
