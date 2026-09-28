@@ -1,4 +1,5 @@
 import { useScene } from '@pascal-app/core'
+import { getWebIfcWasmPath } from '@pascal-app/viewer'
 
 /**
  * Shared IFC 4.3 download helper — command palette + settings Export section.
@@ -7,7 +8,7 @@ import { useScene } from '@pascal-app/core'
 export async function exportIfcModel(): Promise<void> {
   const { exportPascalToIfc } = await import('@pascal-app/ifc-exporter')
   const { nodes, rootNodeIds } = useScene.getState()
-  const result = await exportPascalToIfc({ nodes, rootNodeIds })
+  const result = await exportPascalToIfc({ nodes, rootNodeIds }, { wasmPath: getWebIfcWasmPath() })
   if (result.warnings.length > 0) {
     console.warn('[ifc-export] warnings:', result.warnings)
   }
