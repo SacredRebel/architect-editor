@@ -8,8 +8,9 @@
  *   3. cameraPath.kind and durationMs match across the pair
  *   4. Within each run, sampler frame count and HUD frame count agree within 10%
  *
- * --self-test forges a mismatched path kind, a mismatched duration and a sampler
- * ticking at display Hz; each must FAIL while the unforged control passes.
+ * --self-test forges a mismatched path kind, a mismatched duration, a sampler
+ * ticking at display Hz, a missing renderMs and a renderMs that timed the CPU;
+ * each must FAIL while the unforged control passes.
  *
  * Live capture: packages/viewer/test/capture-h17-baseline.mjs
  *   OUT_PATH=…/h17-0-baseline-path.json  (before, no H19_PHASE)
@@ -64,6 +65,27 @@ function checkArtifacts(beforePath, afterPath, label) {
           `NOTE ${tag}: exact match ${sampler} = ${hud} (tickDelta ${artifact.frames.tickDelta}, display ticks ${artifact.frames.rendererFrame}) — see H17-done.md`,
         )
       }
+    }
+  }
+
+  // Render time beside the interval. renderMs = per-resolve device timestamps
+  // taken by the harness; the HUD's gpuMs = PerfMonitor's own 0.5s window
+  // averages of the same device queries. Separately aggregated, same device.
+  function renderAgree(tag, artifact) {
+    const r = artifact.renderMs
+    ok(r && r.source === 'webgpu-timestamp-query', `${tag} renderMs from device timestamps`)
+    ok((r?.samples ?? 0) >= 100, `${tag} renderMs ≥ 100 samples (${r?.samples ?? 0})`)
+    ok(typeof r?.p99 === 'number', `${tag} renderMs p99 present`)
+    ok((artifact.renderCpuMs?.samples ?? 0) >= 100, `${tag} renderCpuMs ≥ 100 samples`)
+    const hud = r?.hudGpuMsMedian
+    if (typeof r?.median === 'number' && typeof hud === 'number' && hud > 0) {
+      const rel = Math.abs(r.median - hud) / Math.max(r.median, hud)
+      ok(
+        rel <= 0.15,
+        `${tag} renderMs median (${r.median}) vs HUD gpuMs (${hud}) within 15% (rel=${(rel * 100).toFixed(1)}%)`,
+      )
+    } else {
+      ok(false, `${tag} renderMs median and HUD gpuMs both present`)
     }
   }
 
@@ -122,8 +144,9 @@ function checkArtifacts(beforePath, afterPath, label) {
       `${label}: before 20s camera path`,
     )
     metersAgree(`${label} before`, before)
+    renderAgree(`${label} before`, before)
     console.log(
-      `before fps median=${before.fps.median} p1=${before.fps.p1} frames sampler=${before.frames?.sampler} hud=${before.frames?.hud} kind=${before.cameraPath?.kind} window=${before.sampleWindowMs ?? before.cameraPath?.durationMs}ms`,
+      `before fps median=${before.fps.median} p1=${before.fps.p1} frames sampler=${before.frames?.sampler} hud=${before.frames?.hud} renderMs=${before.renderMs?.median}/${before.renderMs?.p99} kind=${before.cameraPath?.kind} window=${before.sampleWindowMs ?? before.cameraPath?.durationMs}ms`,
     )
   }
 
@@ -138,8 +161,9 @@ function checkArtifacts(beforePath, afterPath, label) {
     )
     ok(after.gpu && typeof after.gpu === 'object', `${label}: after gpu field`)
     metersAgree(`${label} after`, after)
+    renderAgree(`${label} after`, after)
     console.log(
-      `after fps median=${after.fps.median} p1=${after.fps.p1} frames sampler=${after.frames?.sampler} hud=${after.frames?.hud} kind=${after.cameraPath?.kind} window=${after.sampleWindowMs ?? after.cameraPath?.durationMs}ms`,
+      `after fps median=${after.fps.median} p1=${after.fps.p1} frames sampler=${after.frames?.sampler} hud=${after.frames?.hud} renderMs=${after.renderMs?.median}/${after.renderMs?.p99} kind=${after.cameraPath?.kind} window=${after.sampleWindowMs ?? after.cameraPath?.durationMs}ms`,
     )
   }
 
@@ -162,6 +186,14 @@ if (selfTest) {
   const dir = mkdtempSync(join(tmpdir(), 'h17-perf-self-'))
   // Numbers mirror a real capture: 50fps cap on a 60Hz display over 20s.
   const frames = { sampler: 1000, hud: 1000, tickDelta: 1000, rendererFrame: 1201 }
+  const renderMs = {
+    median: 7.5,
+    p99: 9.5,
+    max: 11,
+    samples: 500,
+    source: 'webgpu-timestamp-query',
+    hudGpuMsMedian: 7.4,
+  }
   const goodBefore = {
     phase: 'H17.0',
     capturedAt: '2026-01-01T00:00:00.000Z',
@@ -170,6 +202,8 @@ if (selfTest) {
     fps: { median: 50, p1: 30 },
     frames,
     frameMs: { median: 16.7 },
+    renderMs,
+    renderCpuMs: { median: 0.9, p99: 2, max: 3, samples: 1000 },
     targets: { fpsMedian: 60, fpsP1: 45 },
     optimisationsApplied: false,
     note: 'self-test before',
@@ -226,6 +260,19 @@ if (selfTest) {
       goodBefore,
       { ...goodAfter, frames: { ...frames, sampler: frames.rendererFrame } },
       'within 10%',
+    )
+    expectFail(
+      'forge-render-missing',
+      goodBefore,
+      { ...goodAfter, renderMs: null },
+      'renderMs from device timestamps',
+    )
+    // renderMs that timed the CPU encode (≈1ms) instead of the device (≈7.4ms).
+    expectFail(
+      'forge-render-cpu-as-gpu',
+      goodBefore,
+      { ...goodAfter, renderMs: { ...renderMs, median: 0.9 } },
+      'vs HUD gpuMs',
     )
     console.log('check-h17-perf --self-test OK')
   } finally {

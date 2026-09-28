@@ -162,6 +162,35 @@ async function main() {
     state.hudWindows = []
     let lastHud = null
 
+    // Render time, measured beside the interval: the cap hides cost, this doesn't.
+    // renderMs = device (timestamp-query) GPU time of one frame's render passes.
+    // three's pool resolves asynchronously and returns the last resolved frame,
+    // so a sample is taken only when the pool publishes a new resolve.
+    // renderCpuMs = wall time of the outermost renderer.render() call.
+    const gl = typeof perf.three === 'function' ? perf.three().gl : null
+    const pool = gl?.backend?.trackTimestamp ? gl.backend.timestampQueryPool?.render : null
+    state.renderMsSource = pool ? 'webgpu-timestamp-query' : null
+    state.gpuSamples = []
+    state.cpuSamples = []
+    let lastResolve = pool ? pool.frames : null
+    const origRender = gl ? gl.render : null
+    let renderDepth = 0
+    if (gl) {
+      gl.render = function (...args) {
+        const t0 = performance.now()
+        renderDepth++
+        try {
+          return origRender.apply(this, args)
+        } finally {
+          renderDepth--
+          if (renderDepth === 0) state.cpuSamples.push(performance.now() - t0)
+        }
+      }
+    }
+    state.restoreRender = () => {
+      if (gl) gl.render = origRender
+    }
+
     let lastTick = performance.now()
     let lastFrameTick = -1
     const start = performance.now()
@@ -182,8 +211,14 @@ async function main() {
         const hudNow = typeof perf.stats === 'function' ? perf.stats() : null
         if (hudNow && hudNow !== lastHud) {
           // A fresh object per 0.5s HUD window; skip the one that straddles start.
-          if (lastHud) state.hudWindows.push({ t: now - start, fps: hudNow.fps })
+          if (lastHud) state.hudWindows.push({ t: now - start, fps: hudNow.fps, gpuMs: hudNow.gpuMs })
           lastHud = hudNow
+        }
+        if (pool && pool.frames && pool.frames !== lastResolve) {
+          lastResolve = pool.frames
+          if (typeof pool.lastValue === 'number' && pool.lastValue > 0) {
+            state.gpuSamples.push(pool.lastValue)
+          }
         }
 
         const t = (now - start) / PATH_MS
@@ -222,6 +257,7 @@ async function main() {
           state.wallMs = now - start
           state.tick1 = perf.frameTick()
           state.renderer1 = perf.rendererInfo()
+          state.restoreRender()
           // interaction probes after path
           const rect = canvas.getBoundingClientRect()
           const cx = rect.left + rect.width / 2
@@ -286,6 +322,7 @@ async function main() {
           })
         }
       } catch (err) {
+        state.restoreRender?.()
         state.error = String(err)
         state.running = false
         state.done = true
@@ -328,6 +365,9 @@ async function main() {
           tick1: s.tick1,
           renderer0: s.renderer0,
           renderer1: s.renderer1,
+          renderMsSource: s.renderMsSource,
+          gpuSamples: s.gpuSamples,
+          cpuSamples: s.cpuSamples,
         }
       })()`)
       break
@@ -365,6 +405,25 @@ async function main() {
   const r1 = pathResult.renderer1
   const tickDelta = pathResult.tick1 - pathResult.tick0
   const renderCalls = r1.calls - r0.calls
+  const msStats = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) return null
+    const s = [...arr].sort((a, b) => a - b)
+    return {
+      median: Number(percentile(s, 50).toFixed(3)),
+      p99: Number(percentile(s, 99).toFixed(3)),
+      max: Number(s[s.length - 1].toFixed(3)),
+      samples: s.length,
+    }
+  }
+  const hudGpu = hudWindows.map((w) => w.gpuMs).filter((n) => typeof n === 'number' && n > 0)
+  const renderMs = msStats(pathResult.gpuSamples)
+  if (renderMs) {
+    renderMs.source = pathResult.renderMsSource
+    renderMs.hudGpuMsMedian = hudGpu.length
+      ? Number(percentile([...hudGpu].sort((a, b) => a - b), 50).toFixed(3))
+      : null
+  }
+  const renderCpuMs = msStats(pathResult.cpuSamples)
   const frames = {
     sampler: pathResult.samplerFrames,
     hud: hudMeanFps == null ? null : Math.round(hudMeanFps * wallSec),
@@ -442,6 +501,8 @@ async function main() {
       note: 'median = median of 1s wall-clock bins of rendered frames; mean = frames / wall seconds; p1/min/max/perFrameMedian from per-frame render intervals (vsync-quantised).',
     },
     frames,
+    renderMs,
+    renderCpuMs,
     frameMs: {
       median: Number(percentile(frameMs, 50).toFixed(3)),
       p99: Number(percentile(frameMs, 99).toFixed(3)),
@@ -493,6 +554,8 @@ async function main() {
         phase: artifact.phase,
         fps: artifact.fps,
         frames: artifact.frames,
+        renderMs: artifact.renderMs,
+        renderCpuMs: artifact.renderCpuMs,
         frameMs: artifact.frameMs,
         draws: artifact.draws,
         tris: artifact.tris,
