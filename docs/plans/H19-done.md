@@ -199,26 +199,163 @@ Render time fell **45%** (p99 48%), and **the fps column did not move**. That un
 
 `check-h19-2` checks this. It compares the canvas's own ratio (`width / clientWidth`) with `window.devicePixelRatio`, requires the before to have exceeded the display, and requires `renderMs` to fall and fps to hold, all on the same path and scene. Its `--self-test` forges an after still above the display, a different scene and no gain. Artifact `h19-2a-dpr-clamp.json` (`0efe5b37`).
 
-### Not taken, and why
+### How H19.2 is measured from here
 
-Every H19.2 change has to name its profile line and move `renderMs`. The next lines can't do that on the capture scene yet:
+**The H19 scene.** `packages/viewer/test/fixtures/h19-scene.json` is built by `make-h19-scene.mjs` (`36d4f897`) and recorded in `fixtures/MANIFEST.md`. It is one small house (8 walls, 4 rooms, 1 slab, 3 doors, 3 windows, a gable roof, 1 stair), 20 catalog items and 30 catalog trees (`tree` ×18, `fir-tree` ×12), on a synthetic EcoSite (a 97 × 97 terrain at 2.5 m, flat within 45 m of the house).
+- The generator uses core's own node parsers, checks the graph with `validateBuildJson`, formats with Biome, and writes byte-identical output every run (SHA-256 `abdcd20c…`).
+- Every asset is Pascal's own item library, served by the editor under test.
+- The ez-tree trees were **not** used: their leaf images have no recorded source (see the manifest).
+- The harness loads the scene through the eco/1 bridge, the path the world uses: `eco:hello` → `eco:load-scene` → `eco:load-site`.
 
-| Line | Candidate | Why it waits |
+**The harness (`d9760995`).** Storage is cleared and seeded from `/api/health`, a same-origin page that runs no editor code. Before, the storage was cleared while the app was still running, so it could write its in-memory scene back. The harness then:
+- waits for the fixture's readiness test before posting;
+- settles until the HUD's scene counts hold for 3 s;
+- reads back the fixture's node counts;
+- records a scene census, shadow-map passes per frame, the harness file's SHA-256, emulation and a quality preference.
+
+The census counts objects that are visible, whatever their layer. It therefore includes batched source meshes, which sit on `BATCHED_LAYER` and are not drawn: it identifies the scene, not what a frame draws. The profile counts only camera-drawn objects.
+
+**Protocol (from the architect, 28 Sep).** Each H19.2 line gets one before/after set: the empty site once, and the H19 scene as three interleaved pairs, back to back, each from a fresh tab.
+- `renderMs` comes from device timestamps that Chrome quantizes to **0.0655 ms** (2¹⁶ ns). Every recorded value is a multiple of it; an earlier report of 0.131 ms was two steps.
+- A median difference under **0.26 ms** is reported as no change and not chased.
+- The before and after trees are production builds served side by side (`:3017`, `:3019`) in the same Chrome (1280×800, Intel Xe-LPG, WebGPU).
+
+### H19.2 — eco site guides as WebGPU lines (added by the H19-scene profile) — landed
+
+The profile's top line on the H19 scene. With a site loaded, `eco-guides.tsx` drew the survey line and the other guides with drei's `<Line>`, whose `LineMaterial` is WebGL-only.
+- The WebGPU node builder rejected it (`Material "LineMaterial" is not compatible`, 277 times in one run).
+- The post-processing pipeline failed and rebuilt 137 times in 30 s, and the viewer fell back to a direct render.
+- The world always sends guides, so the embedded editor has been running this loop.
+
+The guides are now `Line2` with `Line2NodeMaterial`, the same screen-space line, with the same width and dashes, for WebGPU (`669d9fa4`).
+
+| H19 scene, three interleaved pairs | before `36d4f897` (drei Line) | after `669d9fa4` |
 |---|---|---|
-| 1 | Raise or tier `maxFps` | Upstream's cap, mounted by upstream's `<Editor>`; a product trade, not a cost. Kept at 50 and measured around. |
-| 5 | Per-light `shadow.autoUpdate = false` with `needsUpdate` on dirty; `eco-sun` map sized by tier | 0 casters on the empty site, so the gain is below drift. Needs a scene with casters on the same path. |
-| 2 | AdaptiveDpr's display-Hz meter | Clamped now; below the display the meter only matters on HiDPI, where this box cannot measure. |
-| 8 | Draw cuts | The empty site has no items; needs a loaded-design fixture. |
-| 9 | Split the 2.9 MB chunk | Chunk contents not yet identified; one network sample. |
+| fps mean | 42.77 · 38.54 · 41.79 | 49.96 · 49.63 · 49.75 |
+| per-frame p1 | 10.01 · 8.56 · 8.58 | 29.94 · 29.85 · 29.94 |
+| render-interval p99 | 99.9 · 116.8 · 116.6 ms | 33.4 · 33.5 · 33.4 ms |
+| `render()` CPU p99 | 87.5 · 117.7 · 103.2 ms | 6.1 · 8.4 · 5.5 ms |
+| render calls per frame | 4 (fallback) | 6 (full pipeline) |
+| empty site (no guides), `renderMs` median | 4.19 | 4.46 — no change |
+
+`renderMs` is not a like-for-like measure here: the broken tree rendered a fallback without post-processing (0.72 ms). The fix is measured by the frame the user gets: the cap held, p1 up threefold, the stalls gone.
+- `check-h19-2-guides` asserts both signals on all three pairs: the renderer's calls per frame back to the full pipeline, and the sampler's interval p99 within two vsyncs. `--self-test` forges an after still on the fallback and an after still stalling.
+- Five upstream editor tools also use drei `<Line>` (placement dimension guides, opening guides, the terrain brush cursor, dormer placement, the liquid-line tool). They draw only while their tool is active and are upstream's code; recorded, not changed.
+
+### H19.2b — AdaptiveDpr decides from GPU render time (line 2) — landed
+
+`7969d78f`: `lib/dpr-controller.ts` plus `adaptive-dpr.tsx`.
+- **Inputs.** The controller takes three's timestamp-query render time per frame and the achieved render cadence: the time between rendered frames, measured where `useFrame` runs, not display ticks.
+- **Step down** when render time exceeds 80% of the frame budget (1000 / `maxFps`), or when frames arrive more than 10% slower than the cap while render time is at least 40% of the frame period.
+- **Step up** only at the cap, and only when the cost predicted at the next step (∝ dpr²) fits 50%.
+- The H19.2a clamp stays the ceiling.
+- Where the ceiling equals the floor (a 1× display, or the `low` tier) the loop cannot move and does no work. In production, timestamps are on only on displays with `devicePixelRatio > 1`, outside immersive sessions.
+
+Why the cadence is an input: the first version read render time only. At emulated 2× density, render-pass timestamps saw 14 ms while frames arrived every 25 ms. Presentation and compositing are not in any render pass, so that version held at dpr 2 at 34–40 fps.
+
+Why it does no work at 1×: an intermediate version resolved timestamps on 1× displays, where the dpr cannot move. It cost **+0.3 ms** of `renderMs` on the H19 scene in five of five interleaved comparisons. Those captures are kept in `.cache/h192b-intermediate/`, uncommitted; the sha is gone from the branch.
+
+| | before `669d9fa4` (display-timer loop) | after `7969d78f` |
+|---|---|---|
+| **1× display — H19 scene, four interleaved pairs, `renderMs` median** | 5.243 · 5.374 · 5.439 · 5.177 | 5.439 · 5.439 · 5.374 · 5.374 |
+| differences | | +0.196 · +0.065 · −0.065 · +0.197 — **no change** (under 0.26 ms; signs disagree) |
+| 1× display — empty site, `renderMs` median | 4.325 | 4.391 — **no change** |
+| **emulated 2×, `high` tier — H19 scene**: dpr · fps mean · `renderMs` median / p99 | 1.5 · 39.39 · 11.27 / 19.20 | **1.25 · 46.53 · 7.86 / 15.99** |
+| emulated 2×, `high` tier — empty site | 1.75 · 42.84 · 10.09 / 13.44 | **1.5 · 46.74 · 8.72 / 12.58** |
+
+The old loop's resting dpr at 2× varied from run to run (1.5–2.0), because it stepped only when rAF itself slowed. The new loop lands where the GPU fits, and on both scenes it lifts the frame rate by 4–7 fps at 2×.
+
+`check-h19-2b` drives the real controller:
+- forged 30 ms against a 20 ms budget steps 1.5 → 1.25 after one 30-sample window and settles at the floor;
+- forged 1 ms never passes the ceiling;
+- in closed loop against a GPU costing k·dpr² in its passes plus p·dpr² of presentation the timestamps cannot see, the steady state equals the closed-form dpr in all 14 cases, after load and on recovery.
+
+`--self-test` rejects the H17.1 display-timer loop, a controller with no ceiling, and a render-time-only controller.
+
+### H19.2c — shadow maps redraw on change (line 5) — landed
+
+`b9151c50`, `lights.tsx`. WebGPU draws a light's shadow map when that light's own `shadow.needsUpdate` or `shadow.autoUpdate` is set (`ShadowNode.updateBefore`). H17.1 set the renderer-level WebGL flag, which this renderer never reads, so both shadow lights redrew every frame: the key light, and `eco-sun` at 4096².
+- Every shadow-casting light in the scene is now off per-frame updates, the plugin's sun included.
+- Each is redrawn on change: the sun, the building bounds, rebuilt geometry, any scene-node edit, or its own pose or frustum.
+- A 0.25 s tick catches motion that no store reports (animations).
+
+| H19 scene (136 casters, 2 shadow lights), three interleaved pairs | before `7969d78f` | after `b9151c50` |
+|---|---|---|
+| shadow-map passes per frame (harness count) | 2.000 | **0.154** |
+| `render()` calls per frame (renderer's count) | 6.000 | **4.154** — both counts drop by 1.846 |
+| draws / triangles per frame (HUD) | 573 / 114,216 | **254 / 46,746** |
+| `render()` CPU median | 2.1 · 2.1 · 2.1 ms | **1.4 · 1.4 · 1.2 ms** |
+| `renderMs` median | 5.308 · 5.636 · 5.243 | 5.571 · 5.636 · 5.374 |
+| differences | | +0.263 · 0.000 · +0.131, median +0.131 — **no change** |
+| empty site (0 casters), `renderMs` median | 3.998 | 4.522 |
+
+**What 2c buys on this GPU is CPU and submission, not GPU time:** 92% fewer shadow passes, 56% fewer draws, and a third less encode time per frame. The shadow passes were already shorter than one 0.0655 ms timestamp step. That is also why their per-pass timestamps read 0.000: below the quantum, not unmeasured.
+
+Two readings are recorded, not chased:
+- Pair 1's +0.263 ms sits 0.001 ms over the floor; the set's median is +0.131.
+- The single empty-site capture reads +0.52 ms, but the same unchanged tree has measured anywhere from 3.15 to 4.46 ms on the empty site this session.
+
+The harness count and the renderer count agree **exactly**. That is expected, not suspicious: both count `render()` invocations, one filtered by shadow-map target, one unfiltered, and the shadow passes are the only calls that changed.
+- `check-h19-2c` asserts all of this per pair, plus render time not worse (median pair difference under the floor). `--self-test` forges per-frame redraws, a scene without casters, a count the renderer does not confirm, and a slower set.
+- `check-h17-1` now runs that behavioural check in place of its `autoUpdate = false` text match.
+
+`eco-sun`'s hard-coded 4096² map (line 5) is unchanged: with redraws now on change, its cost is memory (64 MB), not time.
+
+### H19.2d — draw calls and materials on the H19 scene (lines 6–8) — profiled; nothing lands
+
+Profile `h19-2d-profile-scene.json` of `b9151c50`, native. The camera draws **44 objects** per scene pass:
+- 12 `item-batch` containers (upstream's `node-batch` `BatchedMesh`) holding all 50 items, trees included;
+- the merged wall, roof and stair meshes;
+- terrain (16 meshes), sky, guides, grid and envelope;
+- a few item meshes the batcher skips (`MeshPhysicalMaterial` parts).
+
+| Group (hidden in turn, device timestamps) | objects | tris | GPU cost | drift |
+|---|---|---|---|---|
+| site / terrain | 16 | 19,634 | 1.31 ms | 0.79 |
+| eco-buildable-envelope (translucent overlay) | 1 | 12 | 0.62 ms | 0.07 |
+| merged stair | 1 | 124 | 0.56 ms | 0.46 |
+| unbatched bathroom items | 2 | 827 | 0.46 ms | 0.13 |
+| eco-sky | 1 | 2,208 | 0.43 ms | 0.07 |
+| merged roof | 1 | 87 | 0.20 ms | 0.39 |
+| **all batched items (12 containers)** | 12 | 13,151 | **0.20 ms** | 0.13 |
+| everything else | — | — | ≤ 0.13 ms | — |
+
+- **Instancing where the same geometry repeats.** On WebGPU three draws a `BatchedMesh` as one `drawIndexed` per instance (`WebGPUBackend.js:2124-2134`), with no multi-draw. The 12 containers hold 172 instances of 101 unique geometries, so instancing repeats would save 71 draws per pass. But **every batched item together costs 0.20 ms of GPU**, under the noise floor. The change would also live in upstream's `node-batch` or in three's WebGPU backend, neither of which is this lane's code. **Not taken**; the profile names no line it could move.
+- **Materials and programs.** 38 unique materials (24 `MeshLambertNodeMaterial`, 5 `MeshBasicMaterial`, 3 `MeshPhysicalMaterial`, 3 `MeshBasicNodeMaterial`, 3 line materials). 70 shader modules and 51 render pipelines, all at load; **0 created during motion**.
+- **The 24 render-target reallocations (119 MB) mid-orbit, confirmed gone.**
+  - At 1×: 60 textures (184 MB) at load and **0** during the orbit. H19.2a already removed the climb; H19.2b cannot move at 1×.
+  - At emulated 2× (`high`): 2b steps 2 → 1.25 while the scene settles, so 120 textures (597 MB) at load and settle, and **0** during the orbit (`h19-2d-profile-scene-hidpi.json`).
+- **Per-frame uploads during motion on the H19 scene.** About 13 `writeTexture` calls and 17 KB of `writeBuffer` per frame (the batch containers' per-pass updates), about 0.2 ms of CPU per frame. Recorded, not chased.
+
+The biggest remaining GPU line on this scene is the translucent buildable envelope (0.62 ms, the steadiest reading), then terrain and sky. None of them is a draw-call or material line; they are for the next brief to weigh.
+
+### The cap (line 1), where it would be set
+
+The 50 fps cap is upstream's default: `FrameLimiter`, with `maxFps = 50` on `<Viewer>` (`packages/viewer/src/components/viewer/index.tsx:457`). It was made a prop upstream in `f8838200`. It would be set by passing `maxFps` to `<Viewer>` where upstream's `<Editor>` mounts it (`packages/editor/src/components/editor/index.tsx:1168, 1530`), or by changing that default. It stays at 50 in this phase; every number above is measured around it.
+
+### Commits and the merge
+
+H19.2a went up for review as `eco/h19` (preview READY at `37a8250e`) and is merged by the human in the browser with a merge commit. The local merge commit `75703cd0` that `eco/h19-2` was built on is discarded when the branch is rebased onto the real one. After that rebase the H19.2 commit shas change but their trees do not. The pre-rebase history stays on the remote as `eco/h19-2-prebase`, so every sha recorded in the captures above still resolves.
+
+| Line | Commit (pre-rebase) | Captures |
+|---|---|---|
+| harness | `d9760995` | — |
+| H19 scene | `36d4f897` | — |
+| guides | `669d9fa4` | `47d1139f` (`h19-2-guides-*`) |
+| 2b | `7969d78f` | `fc41ce9c` (`h19-2b-*`) |
+| 2c | `b9151c50` | `ccf39232` (`h19-2c-*`); check `285e2f70` |
+| 2d | profile only | `cb996f73` (profile), `26693527` (`h19-2d-profile-scene*`) |
 
 ## Gate
 
 | Check | Result |
 |---|---|
-| `bun run checks` | green (Bun 1.4.2; pin 1.3.14) |
-| `bun run build` | green |
+| `bun run checks` · `bun run build` | green (Bun 1.4.2; pin 1.3.14) |
 | `check-h17-perf` / `--self-test` | OK / OK (7 cases) |
 | `check-h19-2` / `--self-test` | OK / OK (4 cases) |
-| `check-h17-1` | OK (see line 5: it cannot fail on behaviour) |
+| `check-h19-2-guides` / `--self-test` | OK / OK (3 cases) |
+| `check-h19-2b` / `--self-test` | OK / OK (4 cases) |
+| `check-h19-2c` / `--self-test` | OK / OK (5 cases) |
+| `check-h17-1` | OK — shadow discipline now by behaviour |
 
-Next: waiting for the brief. The open question for H19.2 is which scene with casters and items the next lines are measured on.
+H19.2 closes here. Next in order: A4 (base path `/builder`), then A5 (the site in the editor). H19.3 and H19.4 follow H20.
