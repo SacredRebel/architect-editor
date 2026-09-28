@@ -1,10 +1,15 @@
 #!/usr/bin/env bun
 /**
  * H17.1 — perf fix smoke check (after H17.0 baseline).
- * Confirms detect-gpu tiering, AdaptiveDpr, shadow update discipline wiring.
+ * Confirms detect-gpu tiering and AdaptiveDpr wiring. Shadow update discipline
+ * is checked by behaviour, not by text: the H19.2c captures on the H19 scene
+ * (casters present) must show per-frame shadow redraws before and a small
+ * fraction after, confirmed by the renderer's own call count — the old
+ * `autoUpdate = false` text match passed on a flag WebGPU never reads.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { checkShadowSet, loadShadowSet } from './check-h19-2c.mjs'
 
 const root = join(import.meta.dir, '../../..')
 const fails = []
@@ -28,9 +33,9 @@ ok(viewer.includes('detectGpuQuality'), 'detectGpuQuality on boot')
 ok(viewer.includes('frameloop="never"'), 'demand-style frameloop never')
 
 const lights = readFileSync(join(root, 'packages/viewer/src/components/viewer/lights.tsx'), 'utf8')
-ok(lights.includes('autoUpdate = false'), 'shadowMap.autoUpdate false')
-ok(lights.includes('needsUpdate'), 'shadow needsUpdate dirty path')
 ok(lights.includes('shadowMapSizeForQuality'), 'tiered shadow map size')
+// Shadow update discipline, by behaviour (H19.2c).
+for (const failure of checkShadowSet(loadShadowSet(), 'shadow discipline')) fails.push(failure)
 
 const store = readFileSync(join(root, 'packages/viewer/src/store/use-viewer.ts'), 'utf8')
 ok(store.includes('gpuQuality'), 'gpuQuality preference in store')
