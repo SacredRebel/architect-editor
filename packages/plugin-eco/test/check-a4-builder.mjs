@@ -19,10 +19,13 @@
  * plus one KTX2 finish, so the Draco decoder and the Basis transcoder load.
  * Content may also fetch the library files the build itself records as absent
  * from the export and left on the CDN (eco-build.json `onCdn`); those are
- * listed, and nothing else outside the base path passes.
+ * listed, and nothing else outside the base path passes. The pages are held to
+ * the same rule: with nothing from the world, the editor opens its demo site
+ * (public/demo/site-house.json), whose library finishes are such files.
  * --self-test forges one root-relative asset (a fetch of /forged-asset.png from
  * the page) and must FAIL on it, with and without the CDN-only files allowed;
- * the content checks, given a page that loaded no content, and the IFC checks,
+ * the content checks, given a page that loaded no content (the control page's
+ * recording with its models, decoders and maps removed), and the IFC checks,
  * given a page where no export ran, must FAIL too.
  *
  * Env: CHROME (path to Chrome), PORT (static server, default 4173),
@@ -203,9 +206,10 @@ async function recordPage(
 
 /**
  * `declared`: absolute URLs of the files this build itself leaves on the CDN
- * (eco-build.json `onCdn`, derived from the export). Only content passes it:
- * a request to one of those is counted and listed, not failed; any other
- * request outside the base path still fails. The pages pass nothing: zero.
+ * (eco-build.json `onCdn`, derived from the export). Content and the pages pass
+ * it (the pages open the demo site when the world sends nothing): a request to
+ * one of those is counted and listed, not failed; any other request outside the
+ * base path still fails.
  */
 function checkPage(path, { requests, server }, pageOrigin = origin, declared = null) {
   const fails = []
@@ -256,7 +260,9 @@ function checkPage(path, { requests, server }, pageOrigin = origin, declared = n
  * /builder/embed/ and knocks eco:hello. Two separately derived signals: the
  * host's own log (did eco:ready arrive?) and the editor's scene (did the site's
  * guides render?). From the configured origin both must be yes; from any other
- * origin both must be no.
+ * origin both must be no. The refused origin runs after the pages on that same
+ * origin, which saved the demo house the editor opens on its own; a saved
+ * design keeps that fallback from drawing its site's guides here.
  */
 async function originCase(cdp, hostOrigin) {
   const url = `${hostOrigin}/eco-host-harness.html?embed=${encodeURIComponent(`${BASE}/embed/?perf`)}`
@@ -393,6 +399,8 @@ function checkContent(label, { recording, expect, models }) {
  * 4.3" loads web-ifc, whose wasm the app serves. Two separately derived signals:
  * the browser began a download of an .ifc file, and the server served the wasm
  * from under the base path. The request audit runs over the same recording.
+ * Light graphics (the default) hides the command, so this page opens with full
+ * graphics: the viewer's saved preference is set before the app reads it.
  */
 const IFC_WASM = `${BASE}/web-ifc.wasm`
 
@@ -407,6 +415,13 @@ async function ifcCase(cdp, path) {
   await cdp.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath })
   const key = (type, key, code, keyCode, modifiers = 0) =>
     cdp.send('Input.dispatchKeyEvent', { type, key, code, windowsVirtualKeyCode: keyCode, modifiers })
+  const fullGraphics = await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `try {
+      const saved = JSON.parse(localStorage.getItem('viewer-preferences') || 'null') ?? { state: {}, version: 0 }
+      saved.state = { ...(saved.state ?? {}), graphics: 'full' }
+      localStorage.setItem('viewer-preferences', JSON.stringify(saved))
+    } catch {}`,
+  })
   const recording = await recordPage(cdp, path, {
     minMs: 10_000,
     maxMs: 60_000,
@@ -423,6 +438,7 @@ async function ifcCase(cdp, path) {
     },
   })
   cdp.off(listener)
+  await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: fullGraphics.identifier })
   await cdp.send('Page.setDownloadBehavior', { behavior: 'default' })
   return { recording, downloads }
 }
@@ -472,7 +488,7 @@ try {
   if (selfTest) {
     console.log('check-a4-builder --self-test')
     const controlRecording = await recordPage(cdp, PAGES[0])
-    const control = checkPage(PAGES[0], controlRecording)
+    const control = checkPage(PAGES[0], controlRecording, origin, declared)
     if (control.length) {
       console.error('SELF-TEST FAIL: the unforged page should pass', control)
       exitCode = 1
@@ -492,10 +508,19 @@ try {
         forged.some((f) => f.includes('/forged-asset.png')) &&
         forgedDeclared.some((f) => f.includes('/forged-asset.png'))
       // The content checks read a page that loaded no content: they must fail on
-      // the scene and on the decoders, or they could not have failed at all.
+      // the scene and on the decoders, or they could not have failed at all. The
+      // pages open the demo site on their own now, so that page is forged: the
+      // control recording with its models, decoders and maps taken out.
       const { models } = contentFixture(origin)
+      const contentless = {
+        ...controlRecording,
+        state: null,
+        server: controlRecording.server.filter(
+          (s) => !DECODER_FILES.includes(s.path) && !/\/model\.glb$|\.ktx2$/.test(s.path),
+        ),
+      }
       const empty = checkContent(`${PAGES[0]} as content`, {
-        recording: controlRecording,
+        recording: contentless,
         expect: JSON.parse(readFileSync(FIXTURE, 'utf8')).expect,
         models,
       })
@@ -523,9 +548,9 @@ try {
     }
   } else {
     const fails = []
-    for (const path of PAGES) fails.push(...checkPage(path, await recordPage(cdp, path)))
+    for (const path of PAGES) fails.push(...checkPage(path, await recordPage(cdp, path), origin, declared))
     const ifc = await ifcCase(cdp, PAGES[1])
-    fails.push(...checkPage(`${PAGES[1]} + Export IFC`, ifc.recording))
+    fails.push(...checkPage(`${PAGES[1]} + Export IFC`, ifc.recording, origin, declared))
     fails.push(...checkIfc(`${PAGES[1]} + Export IFC`, ifc))
     const local = `http://localhost:${port}`
     console.log(`bridge host origin in this build: ${build.hostOrigin}`)
