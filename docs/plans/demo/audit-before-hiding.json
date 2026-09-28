@@ -1,0 +1,407 @@
+{
+  "url": "https://architect-editor-aupb4pqho-pauls-projects-af8162cc.vercel.app",
+  "when": "2026-09-28T11:33:54.485Z",
+  "steps": [
+    {
+      "step": "model",
+      "walls": 8,
+      "items": 50,
+      "inStoreS": 18.505,
+      "built": true,
+      "builtS": 28.566,
+      "graphics": "light",
+      "shot": "01-model.png"
+    },
+    {
+      "step": "edit",
+      "onCanvas": true,
+      "wallsBefore": 8,
+      "wallsAfter": 9,
+      "shot": "02-edited.png"
+    },
+    {
+      "step": "tab:Scene",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.011,
+      "crashed": false,
+      "errors": 0,
+      "shot": "10-scene.png"
+    },
+    {
+      "step": "tab:Build",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "11-build.png"
+    },
+    {
+      "step": "tab:Items",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "12-items.png"
+    },
+    {
+      "step": "tab:Settings",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.007,
+      "crashed": false,
+      "errors": 0,
+      "shot": "13-settings.png"
+    },
+    {
+      "step": "tab:Nature",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 20.118,
+      "crashed": false,
+      "errors": 0,
+      "shot": "14-nature.png"
+    },
+    {
+      "step": "tab:Environment",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 7.645,
+      "crashed": false,
+      "errors": 0,
+      "shot": "15-environment.png"
+    },
+    {
+      "step": "tab:Temple forms",
+      "clicked": true,
+      "loaded": false,
+      "loadS": 32.229,
+      "crashed": false,
+      "errors": 0,
+      "shot": "16-temple-forms.png"
+    },
+    {
+      "step": "tab:Geometry",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.004,
+      "crashed": false,
+      "errors": 0,
+      "shot": "17-geometry.png"
+    },
+    {
+      "step": "tab:Pools",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.004,
+      "crashed": false,
+      "errors": 0,
+      "shot": "18-pools.png"
+    },
+    {
+      "step": "tab:Streetscape",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 4.426,
+      "crashed": false,
+      "errors": 0,
+      "shot": "19-streetscape.png"
+    },
+    {
+      "step": "tab:WebXR",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.004,
+      "crashed": false,
+      "errors": 0,
+      "shot": "20-webxr.png"
+    },
+    {
+      "step": "tab:Eco site",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.009,
+      "crashed": false,
+      "errors": 0,
+      "shot": "21-eco-site.png"
+    },
+    {
+      "step": "tab:My assets",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.009,
+      "crashed": false,
+      "errors": 0,
+      "shot": "22-my-assets.png"
+    },
+    {
+      "step": "tab:Materials",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "23-materials.png"
+    },
+    {
+      "step": "tab:Drawings",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 3.217,
+      "crashed": false,
+      "errors": 0,
+      "shot": "24-drawings.png"
+    },
+    {
+      "step": "tab:Construction",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.009,
+      "crashed": false,
+      "errors": 0,
+      "shot": "25-construction.png"
+    },
+    {
+      "step": "tab:Leaf shell",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.005,
+      "crashed": false,
+      "errors": 0,
+      "shot": "26-leaf-shell.png"
+    },
+    {
+      "step": "tab:Photo → 3D",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.009,
+      "crashed": false,
+      "errors": 0,
+      "shot": "27-photo-3d.png"
+    },
+    {
+      "step": "tab:Organic",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.004,
+      "crashed": false,
+      "errors": 0,
+      "shot": "28-organic.png"
+    },
+    {
+      "step": "tab:Minimal surface",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.006,
+      "crashed": false,
+      "errors": 0,
+      "shot": "29-minimal-surface.png"
+    },
+    {
+      "step": "tab:Plugins",
+      "clicked": true,
+      "loaded": true,
+      "loadS": 2.005,
+      "crashed": false,
+      "errors": 0,
+      "shot": "30-plugins.png"
+    },
+    {
+      "step": "tool:catenary:Add catenary arch",
+      "found": "clicked",
+      "meshes": [
+        227,
+        260
+      ],
+      "drawCalls": [
+        225,
+        258
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "40-catenary-add-catenary-arch.png"
+    },
+    {
+      "step": "tool:organic geometry:Add lofted leaf surface",
+      "found": "missing",
+      "meshes": [
+        270,
+        270
+      ],
+      "drawCalls": [
+        273,
+        279
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "41-organic-geometry-add-lofted-leaf-surface.png"
+    },
+    {
+      "step": "tool:organic geometry:Add barrel vault + ribs",
+      "found": "clicked",
+      "meshes": [
+        270,
+        432
+      ],
+      "drawCalls": [
+        275,
+        435
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "42-organic-geometry-add-barrel-vault-ribs.png"
+    },
+    {
+      "step": "tool:organic geometry:Grow 5-lobe building",
+      "found": "clicked",
+      "meshes": [
+        432,
+        432
+      ],
+      "drawCalls": [
+        435,
+        435
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "43-organic-geometry-grow-5-lobe-building.png"
+    },
+    {
+      "step": "tool:organic geometry:Add smooth wall + 3 windows",
+      "found": "missing",
+      "meshes": [
+        432,
+        432
+      ],
+      "drawCalls": [
+        439,
+        441
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "44-organic-geometry-add-smooth-wall-3-windows.png"
+    },
+    {
+      "step": "tool:temple forms:Place it where the view is centred",
+      "found": "clicked",
+      "meshes": [
+        432,
+        482
+      ],
+      "drawCalls": [
+        436,
+        496
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "45-temple-forms-place-it-where-the-view-is-centred.png"
+    },
+    {
+      "step": "tool:temple forms:Place catenary vault",
+      "found": "missing",
+      "meshes": [
+        482,
+        479
+      ],
+      "drawCalls": [
+        495,
+        496
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "46-temple-forms-place-catenary-vault.png"
+    },
+    {
+      "step": "tool:IFC:Export IFC 4.3",
+      "found": "clicked",
+      "meshes": [
+        479,
+        479
+      ],
+      "drawCalls": [
+        490,
+        490
+      ],
+      "downloads": [],
+      "httpErrors": [
+        "404 https://architect-editor-aupb4pqho-pauls-projects-af8162cc.vercel.app/_next/static/immutable/chunks/web-ifc.wasm",
+        "404 https://architect-editor-aupb4pqho-pauls-projects-af8162cc.vercel.app/_next/static/immutable/chunks/web-ifc.wasm"
+      ],
+      "errors": [
+        "wasm streaming compile failed: TypeError: Failed to execute 'compile' on 'WebAssembly': HTTP status code is not ok",
+        "falling back to ArrayBuffer instantiation",
+        "failed to asynchronously prepare wasm: both async and sync fetching of the wasm failed",
+        "Aborted(both async and sync fetching of the wasm failed)"
+      ],
+      "shot": "47-ifc-export-ifc-4-3.png"
+    },
+    {
+      "step": "tool:XR:VR unavailable",
+      "found": "disabled",
+      "meshes": [
+        479,
+        479
+      ],
+      "drawCalls": [
+        490,
+        490
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "48-xr-vr-unavailable.png"
+    },
+    {
+      "step": "tool:XR:Enter VR",
+      "found": "disabled",
+      "meshes": [
+        479,
+        479
+      ],
+      "drawCalls": [
+        490,
+        490
+      ],
+      "downloads": [],
+      "httpErrors": [],
+      "errors": [],
+      "shot": "49-xr-enter-vr.png"
+    }
+  ],
+  "problems": [
+    {
+      "step": "tool:IFC:Export IFC 4.3",
+      "kind": "console.error",
+      "text": "wasm streaming compile failed: TypeError: Failed to execute 'compile' on 'WebAssembly': HTTP status code is not ok"
+    },
+    {
+      "step": "tool:IFC:Export IFC 4.3",
+      "kind": "console.error",
+      "text": "falling back to ArrayBuffer instantiation"
+    },
+    {
+      "step": "tool:IFC:Export IFC 4.3",
+      "kind": "console.error",
+      "text": "failed to asynchronously prepare wasm: both async and sync fetching of the wasm failed"
+    },
+    {
+      "step": "tool:IFC:Export IFC 4.3",
+      "kind": "console.error",
+      "text": "Aborted(both async and sync fetching of the wasm failed)"
+    }
+  ],
+  "downloads": [],
+  "failed": [
+    "404 https://architect-editor-aupb4pqho-pauls-projects-af8162cc.vercel.app/_next/static/immutable/chunks/web-ifc.wasm",
+    "404 https://architect-editor-aupb4pqho-pauls-projects-af8162cc.vercel.app/_next/static/immutable/chunks/web-ifc.wasm"
+  ]
+}
