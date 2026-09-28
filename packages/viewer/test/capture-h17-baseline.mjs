@@ -491,7 +491,7 @@ async function main() {
   })()`)
 
   const artifact = {
-    phase: isAfter ? 'H19.0' : 'H17.0',
+    phase: process.env.PHASE_NAME || (isAfter ? 'H19.0' : 'H17.0'),
     capturedAt: new Date().toISOString(),
     sourceUrl: page.url,
     tree: process.env.TREE_SHA || null,
