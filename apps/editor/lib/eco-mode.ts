@@ -15,6 +15,14 @@ export const ecoAssetPrefix = isEcoStaticClient
 
 export function ecoPublicPath(path: string): string {
   const normalized = path.startsWith('/') ? path : `/${path}`
+  // The static build rebases root-relative literals onto the base path, so a
+  // path may already carry it.
+  if (
+    ecoAssetPrefix &&
+    (normalized === ecoAssetPrefix || normalized.startsWith(`${ecoAssetPrefix}/`))
+  ) {
+    return normalized
+  }
   return `${ecoAssetPrefix}${normalized}`
 }
 
