@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "check-types": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test/check-h16-geometry.mjs",
     "check:geometry": "bun test/check-h16-geometry.mjs"
   },
   "peerDependencies": {

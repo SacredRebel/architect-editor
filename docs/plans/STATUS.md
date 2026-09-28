@@ -1,7 +1,7 @@
 # STATUS — Agent A
 updated: 2026-09-28
-phase: **demo in production** · `0d38a884` READY · waiting for the next brief (A4/A5 resume after the demo)
-state: The demo is merged (pull request #3 from `eco/demo`, merge commit `0d38a884`) and READY in production: light graphics by default, a site and house when the world sends nothing, and the tools that fail hidden in light mode. H19.2a went in before it (`c00d885f`).
+phase: **ci on `eco/ci`** · the quality job is green on pull request #4 · merge next; the demo is in production (`0d38a884` READY)
+state: The demo is merged (pull request #3 from `eco/demo`, merge commit `0d38a884`) and READY in production: light graphics by default, a site and house when the world sends nothing, and the tools that fail hidden in light mode. H19.2a went in before it (`c00d885f`). GitHub CI's quality job had failed on every push to `main` since `121d1ebc` because `plugin-geometry` had no tests; `eco/ci` fixes it (`ci-done.md`).
 
 ## Production SHAs
 
@@ -14,6 +14,7 @@ state: The demo is merged (pull request #3 from `eco/demo`, merge commit `0d38a8
 | **H19.0a** | hygiene (format · types · CI checks · LF) | **`121d1ebc`** | READY |
 | **H19.0 · H19.1 · H19.2a** | re-measure · profile · dpr never above the display | **`c00d885f`** (merge commit) | **READY** `dpl_GZ9asee41gW5m25zNL4yNFQY33JE` |
 | **demo** | light graphics · demo site · hidden tools | **`0d38a884`** (merge commit, pull request #3) | **READY** `dpl_BUYwmDfTxVJCL2KD2Xf7cQChN5GC` |
+| **ci** | CI quality job: `plugin-geometry`'s test runs its geometry check | `eco/ci` `8571285c` · pull request #4, CI run #9 green · preview READY | after the merge |
 | H19.2 · A4 · A5 | guides · 2b · 2c · 2d profile · `/builder` · site in the editor | `eco/h19-2` `273d912d` · `eco/a4` `39c602cc` · `eco/a5` `26042fd6` (pre-rebase) | resume after the demo |
 
 ## Demo (preview `dpl_5sTZbhRoymUj9g2YNA2xDPLoF9CD`, light graphics)
@@ -39,8 +40,8 @@ state: The demo is merged (pull request #3 from `eco/demo`, merge commit `0d38a8
 
 - **Full graphics with a site loaded shows only the sky.** Production now opens in light graphics, which draws the scene; switching to full with a site loaded still shows only the sky.
 - **IFC export:** the fix is `91c2ddfe` on `eco/a4`; it needs A4's decoder-path setting.
-- **The 38 pre-existing test failures on `main`** are listed by package in `demo-done.md`.
+- **The 38 local test failures** (`demo-done.md`) come from this machine, not the code: a checkout path with spaces and `&`, Windows-only file behaviour, and CRLF fixtures. On Linux CI every package's tests pass (`ci-done.md`).
 - A4 and A5 open items stand; see `A4-done.md` and `A5-done.md` on their branches.
 
-commit: demo merge `0d38a884` on `main`, production READY · done `ab9c1806` · H19.2a merge `c00d885f`
-queue: waiting for the next brief; A4 and A5 resume after the demo
+commit: ci fix `8571285c` on `eco/ci` · demo merge `0d38a884` on `main`, production READY · H19.2a merge `c00d885f`
+queue: merge `eco/ci` (merge commit) → production READY → record; then the next brief. A4 and A5 resume after the demo
