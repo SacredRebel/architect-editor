@@ -1,3 +1,4 @@
+import './iconify-offline'
 import { mintHostPanel, mintPlugin } from '@mint/pascal-plugin'
 import {
   type AnyNodeDefinition,
