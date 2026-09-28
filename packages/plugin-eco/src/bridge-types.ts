@@ -38,6 +38,12 @@ export interface EcoSite {
   /** optional reference model (the current massing) as base64 GLB, shown as a toggleable ghost */
   refGlb?: string
   northDeg?: number // 0 = +z is true north (default)
+  /** optional (A5): the site's standing trees, surveyed — shown as reference, never exported.
+   *  pt in local metres [x east, z north] like guides; they stand on the terrain */
+  trees?: { pt: [number, number]; heightM: number; canopyM: number; species?: string }[]
+  /** optional (A5): the instant the world lights the site at, ISO 8601 — the editor's sun is
+   *  the lighting contract's NOAA sun for originLL at this instant */
+  sunAt?: string
 }
 
 export interface EcoWalk {
