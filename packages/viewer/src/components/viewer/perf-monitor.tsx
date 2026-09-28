@@ -48,6 +48,7 @@ function averageOf(bucket: PerfCounterBucket | undefined): number | null {
  */
 export const PerfMonitor = () => {
   const frameCount = useRef(0)
+  const renderTick = useRef(0)
   const elapsed = useRef(0)
   const tickCount = useRef(0)
   // Carry the previous tick's reading forward when no fresh samples arrive,
@@ -77,6 +78,21 @@ export const PerfMonitor = () => {
       batchStats: readPerfBatchStats,
       /** Latest HUD window — FPS, draws, tris, textures, geometries, heap. */
       stats: readPerfStats,
+      /** Monotonic useFrame counter — independent of the 0.5s HUD average. */
+      frameTick: () => renderTick.current,
+      /**
+       * Renderer-owned counters (never reset by info.reset()): `calls` counts
+       * every WebGPURenderer.render(); `frame` is advanced by the renderer's
+       * internal rAF Animation loop.
+       */
+      rendererInfo: () => {
+        const info = gl.info as any
+        return {
+          frame: info.frame ?? null,
+          calls: info.calls ?? null,
+          renderCalls: info.render?.calls ?? null,
+        }
+      },
       listNodes(type: string): string[] {
         return Object.values(useScene.getState().nodes)
           .filter((n) => n.type === type)
@@ -251,6 +267,7 @@ export const PerfMonitor = () => {
 
   useFrame(({ gl, scene, clock }) => {
     frameCount.current++
+    renderTick.current++
 
     const now = clock.elapsedTime
     const dt = now - elapsed.current
