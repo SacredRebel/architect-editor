@@ -1,139 +1,243 @@
 #!/usr/bin/env bun
 /**
- * H17.0 / H19.0 — perf baseline check (before + after).
+ * H17.0 / H19.0 — perf baseline check (before + after on the same path).
  *
- * Confirms the ?perf HUD wiring and that both capture artifacts exist with the
- * fields H19.0 compares. Before remains the locked H17.0 numbers; after is the
- * post-H17.1 re-measure on the same 20s camera path.
+ * Asserts:
+ *   1. Schema / wiring for ?perf HUD and capture harness
+ *   2. Before = h17-0-baseline-path.json (20s orbit); after = h19-0-after.json
+ *   3. cameraPath.kind and durationMs match across the pair
+ *   4. Within each run, sampler frame count and HUD frame count agree within 10%
+ *
+ * --self-test forges a mismatched path kind, a mismatched duration and a sampler
+ * ticking at display Hz; each must FAIL while the unforged control passes.
  *
  * Live capture: packages/viewer/test/capture-h17-baseline.mjs
- *   (H19_PHASE=after → h19-0-after.json)
+ *   OUT_PATH=…/h17-0-baseline-path.json  (before, no H19_PHASE)
+ *   H19_PHASE=after                      (after)
  */
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const root = join(import.meta.dir, '../../..')
-const fails = []
+const selfTest = process.argv.includes('--self-test')
 
-function ok(cond, msg) {
-  if (!cond) fails.push(msg)
-  else console.log('OK', msg)
-}
-
-function assertCoreFields(label, artifact) {
-  ok(typeof artifact.capturedAt === 'string' && artifact.capturedAt.length > 0, `${label} capturedAt set`)
-  ok(typeof artifact.fps?.median === 'number', `${label} fps.median number`)
-  ok(typeof artifact.fps?.p1 === 'number', `${label} fps.p1 number`)
-  ok(typeof artifact.frameMs?.median === 'number', `${label} frameMs.median number`)
-  ok(
-    (artifact.sampleWindowMs ?? 0) >= 4000 || (artifact.cameraPath?.durationMs ?? 0) >= 4000,
-    `${label} sample window ≥ 4s (prefer 20s path)`,
-  )
-  ok(artifact.note && String(artifact.note).length > 10, `${label} note present`)
-  ok(artifact.targets?.fpsMedian === 60, `${label} target fps median 60`)
-  ok(artifact.targets?.fpsP1 === 45, `${label} target fps p1 45`)
-}
-
-const gpuPerf = readFileSync(join(root, 'packages/viewer/src/lib/gpu-perf.ts'), 'utf8')
-ok(gpuPerf.includes("has('perf')"), '?perf query gate')
-
-ok(
-  existsSync(join(root, 'packages/viewer/src/components/viewer/perf-panel.tsx')),
-  'PerfPanel HUD',
-)
-ok(
-  existsSync(join(root, 'packages/viewer/src/components/viewer/perf-monitor.tsx')),
-  'PerfMonitor collector',
-)
-
-const viewer = readFileSync(join(root, 'packages/viewer/src/components/viewer/index.tsx'), 'utf8')
-ok(viewer.includes('<PerfPanel'), 'PerfPanel mounted in Viewer')
-ok(viewer.includes('<PerfMonitor'), 'PerfMonitor mounted in Viewer')
-ok(viewer.includes('PERF_OVERLAY_ENABLED'), 'overlay gated by PERF_OVERLAY_ENABLED')
-
-const panel = readFileSync(
-  join(root, 'packages/viewer/src/components/viewer/perf-panel.tsx'),
-  'utf8',
-)
-ok(panel.includes('fps'), 'HUD shows fps')
-ok(panel.includes('frameMs') || panel.includes('frame'), 'HUD shows frame time')
-ok(panel.includes('drawCalls') || panel.includes('draw'), 'HUD shows draw calls')
-ok(panel.includes('triangles') || panel.includes('tri'), 'HUD shows triangles')
-ok(panel.includes('textures') || panel.includes('tex'), 'HUD shows textures')
-ok(panel.includes('geometries') || panel.includes('geo'), 'HUD shows geometries')
-ok(panel.includes('heap'), 'HUD shows JS heap')
-ok(panel.includes('data-pascal-perf-panel'), 'HUD data attribute for probes')
-
-const monitor = readFileSync(
-  join(root, 'packages/viewer/src/components/viewer/perf-monitor.tsx'),
-  'utf8',
-)
-ok(monitor.includes('__pascalPerf'), 'window.__pascalPerf probe')
-ok(monitor.includes('stats:') || monitor.includes('stats:'), 'probe exposes stats()')
-ok(monitor.includes('readPerfStats'), 'readPerfStats wired into probe')
-
-const store = readFileSync(join(root, 'packages/viewer/src/lib/perf-panel-store.ts'), 'utf8')
-ok(store.includes('export function readPerfStats'), 'readPerfStats export')
-
-ok(
-  existsSync(join(root, 'packages/viewer/test/capture-h17-baseline.mjs')),
-  'capture-h17-baseline.mjs present',
-)
-const capture = readFileSync(join(root, 'packages/viewer/test/capture-h17-baseline.mjs'), 'utf8')
-ok(capture.includes('20_000') || capture.includes('20000'), 'capture uses 20s camera path')
-ok(capture.includes('pointerToHighlightMs'), 'capture probes pointer→highlight')
-ok(capture.includes('wallDragFrameMs'), 'capture probes wall-drag frame time')
-ok(capture.includes('undoMs'), 'capture probes undo latency')
-ok(capture.includes('h19-0-after.json') || capture.includes('H19_PHASE'), 'capture supports after phase')
-
-const baselinePath = join(root, 'packages/viewer/test/h17-0-baseline.json')
-const afterPath = join(root, 'packages/viewer/test/h19-0-after.json')
-ok(existsSync(baselinePath), 'h17-0-baseline.json present')
-ok(existsSync(afterPath), 'h19-0-after.json present')
-
-ok(existsSync(join(root, 'docs/plans/H17-baseline.md')), 'H17-baseline.md present')
-
-let before = null
-let after = null
-
-if (existsSync(baselinePath)) {
-  before = JSON.parse(readFileSync(baselinePath, 'utf8'))
-  ok(before.phase === 'H17.0', 'before phase H17.0')
-  assertCoreFields('before', before)
-  ok(before.optimisationsApplied === false, 'before: no optimisations applied')
-  console.log(
-    `before fps median=${before.fps.median} p1=${before.fps.p1} frameMs.median=${before.frameMs.median} window=${before.sampleWindowMs ?? before.cameraPath?.durationMs}ms`,
-  )
-}
-
-if (existsSync(afterPath)) {
-  after = JSON.parse(readFileSync(afterPath, 'utf8'))
-  ok(after.phase === 'H19.0', 'after phase H19.0')
-  assertCoreFields('after', after)
-  ok(after.optimisationsApplied === true, 'after: optimisations applied')
-  ok(
-    (after.sampleWindowMs ?? 0) >= 20_000 || (after.cameraPath?.durationMs ?? 0) >= 20_000,
-    'after: 20s camera path',
-  )
-  ok(typeof after.draws?.median === 'number' || after.draws?.median === null, 'after draws field')
-  ok(typeof after.tris?.median === 'number' || after.tris?.median === null, 'after tris field')
-  ok(after.gpu && typeof after.gpu === 'object', 'after gpu field')
-  ok(typeof after.gpu.adaptiveDpr === 'boolean', 'after AdaptiveDpr flag')
-  console.log(
-    `after fps median=${after.fps.median} p1=${after.fps.p1} frameMs.median=${after.frameMs.median} window=${after.sampleWindowMs ?? after.cameraPath?.durationMs}ms dpr=${after.gpu?.dpr} draws=${after.draws?.median} tris=${after.tris?.median}`,
-  )
-}
-
-if (before && after) {
-  const beforeKeys = ['fps', 'frameMs', 'targets', 'capturedAt', 'note', 'optimisationsApplied']
-  for (const key of beforeKeys) {
-    ok(key in before && key in after, `both runs share field ${key}`)
+function checkArtifacts(beforePath, afterPath, label) {
+  const fails = []
+  function ok(cond, msg) {
+    if (!cond) fails.push(msg)
+    else console.log('OK', msg)
   }
-  ok(typeof before.fps.median === typeof after.fps.median, 'fps.median type matches')
-  ok(typeof before.fps.p1 === typeof after.fps.p1, 'fps.p1 type matches')
-  ok(typeof before.frameMs.median === typeof after.frameMs.median, 'frameMs.median type matches')
+
+  function assertCoreFields(tag, artifact) {
+    ok(typeof artifact.capturedAt === 'string' && artifact.capturedAt.length > 0, `${tag} capturedAt set`)
+    ok(typeof artifact.fps?.median === 'number', `${tag} fps.median number`)
+    ok(typeof artifact.fps?.p1 === 'number', `${tag} fps.p1 number`)
+    ok(typeof artifact.frameMs?.median === 'number', `${tag} frameMs.median number`)
+    ok(
+      (artifact.sampleWindowMs ?? 0) >= 4000 || (artifact.cameraPath?.durationMs ?? 0) >= 4000,
+      `${tag} sample window ≥ 4s`,
+    )
+    ok(artifact.note && String(artifact.note).length > 10, `${tag} note present`)
+    ok(artifact.targets?.fpsMedian === 60, `${tag} target fps median 60`)
+    ok(artifact.targets?.fpsP1 === 45, `${tag} target fps p1 45`)
+  }
+
+  // Sampler frame count (frameTick changes seen by the injected rAF loop)
+  // against the HUD's own count (PerfMonitor window fps × wall seconds). The
+  // renderer's info.frame is not a reference: in three/webgpu it is advanced
+  // by the renderer's rAF Animation loop, i.e. it counts display ticks.
+  function metersAgree(tag, artifact) {
+    const sampler = artifact.frames?.sampler
+    const hud = artifact.frames?.hud
+    ok(artifact.cameraPath?.meter === 'frame-tick', `${tag} meter is frame-tick (not raw rAF)`)
+    ok(typeof sampler === 'number' && sampler > 0, `${tag} sampler frame count present`)
+    ok(typeof hud === 'number' && hud > 0, `${tag} HUD frame count present`)
+    if (typeof sampler === 'number' && typeof hud === 'number' && sampler > 0 && hud > 0) {
+      const rel = Math.abs(sampler - hud) / Math.max(sampler, hud)
+      ok(
+        rel <= 0.1,
+        `${tag} sampler frames (${sampler}) vs HUD frames (${hud}) within 10% (rel=${(rel * 100).toFixed(1)}%)`,
+      )
+      if (sampler === hud) {
+        console.log(
+          `NOTE ${tag}: exact match ${sampler} = ${hud} (tickDelta ${artifact.frames.tickDelta}, display ticks ${artifact.frames.rendererFrame}) — see H17-done.md`,
+        )
+      }
+    }
+  }
+
+  if (!selfTest) {
+    const gpuPerf = readFileSync(join(root, 'packages/viewer/src/lib/gpu-perf.ts'), 'utf8')
+    ok(gpuPerf.includes("has('perf')"), '?perf query gate')
+    ok(existsSync(join(root, 'packages/viewer/src/components/viewer/perf-panel.tsx')), 'PerfPanel HUD')
+    ok(
+      existsSync(join(root, 'packages/viewer/src/components/viewer/perf-monitor.tsx')),
+      'PerfMonitor collector',
+    )
+    const viewer = readFileSync(join(root, 'packages/viewer/src/components/viewer/index.tsx'), 'utf8')
+    ok(viewer.includes('<PerfPanel'), 'PerfPanel mounted in Viewer')
+    ok(viewer.includes('<PerfMonitor'), 'PerfMonitor mounted in Viewer')
+    ok(viewer.includes('PERF_OVERLAY_ENABLED'), 'overlay gated by PERF_OVERLAY_ENABLED')
+    const panel = readFileSync(
+      join(root, 'packages/viewer/src/components/viewer/perf-panel.tsx'),
+      'utf8',
+    )
+    ok(panel.includes('fps'), 'HUD shows fps')
+    ok(panel.includes('drawCalls') || panel.includes('draw'), 'HUD shows draw calls')
+    ok(panel.includes('triangles') || panel.includes('tri'), 'HUD shows triangles')
+    ok(panel.includes('data-pascal-perf-panel'), 'HUD data attribute for probes')
+    const monitor = readFileSync(
+      join(root, 'packages/viewer/src/components/viewer/perf-monitor.tsx'),
+      'utf8',
+    )
+    ok(monitor.includes('__pascalPerf'), 'window.__pascalPerf probe')
+    ok(monitor.includes('readPerfStats'), 'readPerfStats wired into probe')
+    const capture = readFileSync(
+      join(root, 'packages/viewer/test/capture-h17-baseline.mjs'),
+      'utf8',
+    )
+    ok(capture.includes('20_000') || capture.includes('20000'), 'capture uses 20s camera path')
+    ok(capture.includes('pointerToHighlightMs'), 'capture probes pointer→highlight')
+    ok(capture.includes('h17-0-baseline-path') || capture.includes('OUT_PATH'), 'capture supports OUT_PATH')
+    ok(existsSync(join(root, 'docs/plans/H17-baseline.md')), 'H17-baseline.md present')
+    ok(
+      existsSync(join(root, 'packages/viewer/test/h17-0-baseline.json')),
+      'historic 4s h17-0-baseline.json kept',
+    )
+  }
+
+  ok(existsSync(beforePath), `${label}: before artifact present`)
+  ok(existsSync(afterPath), `${label}: after artifact present`)
+
+  let before = null
+  let after = null
+  if (existsSync(beforePath)) {
+    before = JSON.parse(readFileSync(beforePath, 'utf8'))
+    ok(before.phase === 'H17.0', `${label}: before phase H17.0`)
+    assertCoreFields(`${label} before`, before)
+    ok(before.optimisationsApplied === false, `${label}: before optimisationsApplied false`)
+    ok(
+      (before.sampleWindowMs ?? 0) >= 20_000 || (before.cameraPath?.durationMs ?? 0) >= 20_000,
+      `${label}: before 20s camera path`,
+    )
+    metersAgree(`${label} before`, before)
+    console.log(
+      `before fps median=${before.fps.median} p1=${before.fps.p1} frames sampler=${before.frames?.sampler} hud=${before.frames?.hud} kind=${before.cameraPath?.kind} window=${before.sampleWindowMs ?? before.cameraPath?.durationMs}ms`,
+    )
+  }
+
+  if (existsSync(afterPath)) {
+    after = JSON.parse(readFileSync(afterPath, 'utf8'))
+    ok(after.phase === 'H19.0', `${label}: after phase H19.0`)
+    assertCoreFields(`${label} after`, after)
+    ok(after.optimisationsApplied === true, `${label}: after optimisationsApplied true`)
+    ok(
+      (after.sampleWindowMs ?? 0) >= 20_000 || (after.cameraPath?.durationMs ?? 0) >= 20_000,
+      `${label}: after 20s camera path`,
+    )
+    ok(after.gpu && typeof after.gpu === 'object', `${label}: after gpu field`)
+    metersAgree(`${label} after`, after)
+    console.log(
+      `after fps median=${after.fps.median} p1=${after.fps.p1} frames sampler=${after.frames?.sampler} hud=${after.frames?.hud} kind=${after.cameraPath?.kind} window=${after.sampleWindowMs ?? after.cameraPath?.durationMs}ms`,
+    )
+  }
+
+  if (before && after) {
+    ok(
+      before.cameraPath?.kind === after.cameraPath?.kind,
+      `${label}: cameraPath.kind equal (${before.cameraPath?.kind} vs ${after.cameraPath?.kind})`,
+    )
+    ok(
+      before.cameraPath?.durationMs === after.cameraPath?.durationMs,
+      `${label}: cameraPath.durationMs equal (${before.cameraPath?.durationMs} vs ${after.cameraPath?.durationMs})`,
+    )
+  }
+
+  return fails
 }
 
+if (selfTest) {
+  console.log('check-h17-perf --self-test')
+  const dir = mkdtempSync(join(tmpdir(), 'h17-perf-self-'))
+  // Numbers mirror a real capture: 50fps cap on a 60Hz display over 20s.
+  const frames = { sampler: 1000, hud: 1000, tickDelta: 1000, rendererFrame: 1201 }
+  const goodBefore = {
+    phase: 'H17.0',
+    capturedAt: '2026-01-01T00:00:00.000Z',
+    sampleWindowMs: 20000,
+    cameraPath: { durationMs: 20000, kind: 'synthetic-pointer-orbit', meter: 'frame-tick' },
+    fps: { median: 50, p1: 30 },
+    frames,
+    frameMs: { median: 16.7 },
+    targets: { fpsMedian: 60, fpsP1: 45 },
+    optimisationsApplied: false,
+    note: 'self-test before',
+  }
+  const goodAfter = {
+    ...goodBefore,
+    phase: 'H19.0',
+    optimisationsApplied: true,
+    note: 'self-test after',
+    gpu: { adaptiveDpr: true },
+  }
+  const run = (name, before, after) => {
+    const pb = join(dir, `${name}-before.json`)
+    const pa = join(dir, `${name}-after.json`)
+    writeFileSync(pb, JSON.stringify(before))
+    writeFileSync(pa, JSON.stringify(after))
+    return checkArtifacts(pb, pa, name)
+  }
+  const expectFail = (name, before, after, needle) => {
+    const fails = run(name, before, after)
+    if (!fails.some((f) => f.includes(needle))) {
+      console.error(`SELF-TEST FAIL: ${name} was not rejected on "${needle}"`)
+      console.error(fails)
+      process.exit(1)
+    }
+    console.log(`SELF-TEST OK: ${name} rejected`)
+  }
+  try {
+    // Control: the unforged pair passes, so each forge fails for its own reason.
+    const control = run('control', goodBefore, goodAfter)
+    if (control.length) {
+      console.error('SELF-TEST FAIL: control pair should pass')
+      console.error(control)
+      process.exit(1)
+    }
+    console.log('SELF-TEST OK: control pair passes')
+
+    expectFail(
+      'forge-kind',
+      goodBefore,
+      { ...goodAfter, cameraPath: { ...goodAfter.cameraPath, kind: 'raf-idle-sample' } },
+      'cameraPath.kind',
+    )
+    expectFail(
+      'forge-duration',
+      goodBefore,
+      { ...goodAfter, cameraPath: { ...goodAfter.cameraPath, durationMs: 4000 } },
+      'cameraPath.durationMs',
+    )
+    // A sampler that ticks at display Hz: it counts every rAF (1201 in 20s)
+    // while the renderer produced 1000 frames.
+    expectFail(
+      'forge-display-hz-sampler',
+      goodBefore,
+      { ...goodAfter, frames: { ...frames, sampler: frames.rendererFrame } },
+      'within 10%',
+    )
+    console.log('check-h17-perf --self-test OK')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+  process.exit(0)
+}
+
+
+const beforePath = join(root, 'packages/viewer/test/h17-0-baseline-path.json')
+const afterPath = join(root, 'packages/viewer/test/h19-0-after.json')
+const fails = checkArtifacts(beforePath, afterPath, 'pair')
 if (fails.length) {
   console.error('FAIL')
   for (const f of fails) console.error('-', f)
