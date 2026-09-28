@@ -1,5 +1,6 @@
 'use client'
 
+import { useViewer } from '@pascal-app/viewer'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import * as THREE from 'three'
@@ -71,6 +72,16 @@ export function EcoSiteLighting() {
   const lat = site?.originLL?.[1] ?? ECO_DEFAULT_LAT
   const lng = site?.originLL?.[0] ?? ECO_DEFAULT_LNG
   const northDeg = site?.northDeg ?? 0
+  const lightGraphics = useViewer((s) => s.graphics === 'light')
+
+  // Contract sun shadows with full graphics only. Light graphics keeps the
+  // renderer's shadow map off, as the viewer sets it.
+  useLayoutEffect(() => {
+    if (lightGraphics || !gl.shadowMap) return
+    gl.shadowMap.enabled = true
+    gl.shadowMap.type = THREE.PCFSoftShadowMap
+    invalidate()
+  }, [gl, lightGraphics, invalidate])
 
   useLayoutEffect(() => {
     prevTone.current = {
@@ -85,10 +96,6 @@ export function EcoSiteLighting() {
     gl.outputColorSpace = THREE.SRGBColorSpace
     gl.toneMapping = THREE.ACESFilmicToneMapping
     gl.toneMappingExposure = ECO_BASE_EXPOSURE
-    if (gl.shadowMap) {
-      gl.shadowMap.enabled = true
-      gl.shadowMap.type = THREE.PCFSoftShadowMap
-    }
 
     let cancelled = false
     void createPmrem(gl).then((pmrem) => {

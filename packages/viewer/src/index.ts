@@ -233,6 +233,8 @@ export { useItemLightPool } from './store/use-item-light-pool'
 export {
   applyCountryUnitDefault,
   default as useViewer,
+  GRAPHICS_MODES,
+  type GraphicsMode,
   type MetricNotation,
   type WallMode,
 } from './store/use-viewer'

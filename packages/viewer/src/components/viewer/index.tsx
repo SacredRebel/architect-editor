@@ -402,8 +402,8 @@ interface ViewerProps {
    */
   sceneReadyMaxWaitMs?: number
   /**
-   * Frame cap for the render loop, in frames per second. Defaults to 50, the
-   * value the viewer has always used.
+   * Frame cap for the render loop, in frames per second. Defaults to 60 with
+   * light graphics and to 50, the value the viewer has always used, with full.
    *
    * The viewer runs `frameloop="never"` and advances frames itself through
    * `<FrameLimiter>`, so this cap is the only thing setting the cadence and a
@@ -454,7 +454,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
     sceneReadyKey,
     onSceneReadyChange,
     sceneReadyMaxWaitMs,
-    maxFps = 50,
+    maxFps,
     disablePostFx = false,
     renderPaused = false,
     xr,
@@ -506,6 +506,10 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
   // GPUValidationError. Disabling at the renderer level rebuilds materials
   // without disposing anything, so the round-trip is safe.
   const shadowsEnabled = useViewer((state) => state.shadows)
+  // One graphics setting: light (default) turns shadows off, pins the pixel
+  // ratio at 1 and raises the default frame cap to 60; full is as configured.
+  const lightGraphics = useViewer((state) => state.graphics === 'light')
+  const frameCap = maxFps ?? (lightGraphics ? 60 : 50)
   useLayoutEffect(() => {
     if (transparent === undefined) return
 
@@ -619,7 +623,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
         className={`transition-colors duration-700 ${
           transparentBackground ? 'bg-transparent' : isDark ? 'bg-[#1f2433]' : 'bg-[#fafafa]'
         }`}
-        dpr={[1, maxDpr]}
+        dpr={lightGraphics ? 1 : [1, maxDpr]}
         frameloop="never"
         gl={
           ((props: { canvas?: HTMLCanvasElement; powerPreference?: RendererPowerPreference }) => {
@@ -676,7 +680,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
         }}
         shadows={{
           type: THREE.PCFShadowMap,
-          enabled: shadowsEnabled,
+          enabled: shadowsEnabled && !lightGraphics,
         }}
       >
         <ImmersiveXRPresentationProvider enabled={immersiveActive}>
@@ -700,7 +704,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
             </ImmersiveSession>
           ) : xr ? (
             <ViewerXRSessionRoot
-              fps={maxFps}
+              fps={frameCap}
               originPosition={xr.playerModes ? GOD_ORIGIN_POSITION.toArray() : xr.originPosition}
               paused={renderPaused}
               session={xr.session}
@@ -725,7 +729,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
             </ViewerXRSessionRoot>
           ) : (
             <>
-              <FrameLimiter fps={maxFps} paused={renderPaused} />
+              <FrameLimiter fps={frameCap} paused={renderPaused} />
               <ViewerScene
                 disablePostFx={disablePostFx}
                 hoverStyles={hoverStyles}
@@ -782,6 +786,8 @@ function ViewerScene({
   const gpuQualityPref = useViewer((s) => s.gpuQuality)
   const detectedGpuQuality = useViewer((s) => s.detectedGpuQuality)
   const resolvedQuality = resolveGpuQuality(gpuQualityPref, detectedGpuQuality)
+  // Light graphics: pixel ratio stays 1 (no adaptive DPR), no post-processing.
+  const lightGraphics = useViewer((s) => s.graphics === 'light')
 
   const renderedScene = useBvh ? (
     <SceneBvh>
@@ -834,7 +840,7 @@ function ViewerScene({
         {/* <directionalLight position={[10, 10, 5]} intensity={0.5} castShadow
           /> */}
         <Lights quality={resolvedQuality} />
-        <AdaptiveDpr quality={resolvedQuality} />
+        {!lightGraphics && <AdaptiveDpr quality={resolvedQuality} />}
         {SceneWrapper ? (
           <SceneWrapper>{spatialScene}</SceneWrapper>
         ) : playerModes && xrStore ? (
@@ -845,7 +851,10 @@ function ViewerScene({
           spatialScene
         )}
         {shouldMountPostProcessingRenderDriver(immersiveXR) && (
-          <PostProcessing disablePostFx={disablePostFx} hoverStyles={hoverStyles} />
+          <PostProcessing
+            disablePostFx={disablePostFx || lightGraphics}
+            hoverStyles={hoverStyles}
+          />
         )}
         {selectionManager === 'default' && <SelectionManager />}
         {(perf || PERF_OVERLAY_ENABLED) && <PerfMonitor />}

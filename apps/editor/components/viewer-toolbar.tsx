@@ -332,6 +332,9 @@ function DisplayMenu() {
   const setEdges = useViewer((state) => state.setEdges)
   const shadows = useViewer((state) => state.shadows)
   const setShadows = useViewer((state) => state.setShadows)
+  const graphics = useViewer((state) => state.graphics)
+  const setGraphics = useViewer((state) => state.setGraphics)
+  const lightGraphics = graphics === 'light'
   const gpuQuality = useViewer((state) => state.gpuQuality)
   const setGpuQuality = useViewer((state) => state.setGpuQuality)
   const detectedGpuQuality = useViewer((state) => state.detectedGpuQuality)
@@ -379,6 +382,21 @@ function DisplayMenu() {
         side="bottom"
         sideOffset={8}
       >
+        <DropdownMenuItem
+          data-graphics={graphics}
+          onSelect={(e) => keepOpen(e, () => setGraphics(lightGraphics ? 'full' : 'light'))}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <div className="flex flex-col">
+            <span>Graphics</span>
+            <span className="text-muted-foreground text-xs">
+              {lightGraphics ? 'No shadows or effects, 60 fps' : 'Shadows and effects on'}
+            </span>
+          </div>
+          <span className="ml-auto text-muted-foreground text-xs">
+            {lightGraphics ? 'Light' : 'Full'}
+          </span>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={(e) => keepOpen(e, () => setShowGrid(!showGrid))}>
           <Grid2X2 className="h-4 w-4" />
           <span>Grid</span>
@@ -497,12 +515,18 @@ function DisplayMenu() {
             {magneticSnap ? 'On' : 'Off'}
           </span>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={(e) => keepOpen(e, () => setShadows(!shadows))}>
+        <DropdownMenuItem
+          disabled={lightGraphics}
+          onSelect={(e) => keepOpen(e, () => setShadows(!shadows))}
+        >
           <Contrast className="h-4 w-4" />
           <span>Shadows</span>
-          <span className="ml-auto text-muted-foreground text-xs">{shadows ? 'On' : 'Off'}</span>
+          <span className="ml-auto text-muted-foreground text-xs">
+            {lightGraphics ? 'Full graphics' : shadows ? 'On' : 'Off'}
+          </span>
         </DropdownMenuItem>
         <DropdownMenuItem
+          disabled={lightGraphics}
           onSelect={(e) =>
             keepOpen(e, () => {
               const order = ['auto', 'high', 'medium', 'low'] as const
@@ -516,9 +540,11 @@ function DisplayMenu() {
           </span>
           <span>Quality</span>
           <span className="ml-auto text-muted-foreground text-xs">
-            {gpuQuality === 'auto'
-              ? `Auto${detectedGpuQuality ? ` (${detectedGpuQuality})` : ''}`
-              : gpuQuality}
+            {lightGraphics
+              ? 'Full graphics'
+              : gpuQuality === 'auto'
+                ? `Auto${detectedGpuQuality ? ` (${detectedGpuQuality})` : ''}`
+                : gpuQuality}
           </span>
         </DropdownMenuItem>
         <DropdownMenuItem
