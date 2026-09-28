@@ -1,0 +1,358 @@
+{
+  "phase": "H19.1",
+  "capturedAt": "2026-09-28T04:34:08.128Z",
+  "sourceUrl": "http://127.0.0.1:3019/?perf",
+  "tree": "7165f62092c84a01a83b834a16324f3c11c1ead4",
+  "cameraPath": {
+    "kind": "synthetic-pointer-orbit",
+    "durationMs": 20000
+  },
+  "env": {
+    "backend": "webgpu",
+    "adapter": {
+      "vendor": "intel",
+      "architecture": "xe-lpg",
+      "description": "",
+      "isFallback": null
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 24,
+    "dpr": 1.5,
+    "devicePixelRatio": 1,
+    "drawingBuffer": [
+      1380,
+      1057
+    ],
+    "cssSize": [
+      920,
+      705
+    ],
+    "detectedQuality": "medium",
+    "resolvedQuality": "medium",
+    "shadowMap": {
+      "enabled": true,
+      "type": 1
+    },
+    "toneMapping": 4
+  },
+  "frame": {
+    "windows": 40,
+    "fps": {
+      "median": 50,
+      "max": 50
+    },
+    "budgetMsAtCap": 20,
+    "cpuFrameMs": {
+      "median": 1.2,
+      "max": 2.74
+    },
+    "cpuFrameMaxMs": {
+      "median": 2.1,
+      "max": 5.7
+    },
+    "renderEncodeMs": {
+      "median": 0.84,
+      "max": 1.96
+    },
+    "gpuMs": {
+      "median": 7.55,
+      "max": 8.76
+    },
+    "gpuMaxMs": {
+      "median": 8.78,
+      "max": 10.81
+    },
+    "gpuTracked": true,
+    "queueMs": {
+      "median": 15.55,
+      "max": 51.19
+    },
+    "drawCalls": {
+      "median": 15,
+      "max": 15
+    },
+    "triangles": {
+      "median": 8350,
+      "max": 8350
+    },
+    "systemTracks": [
+      {
+        "name": "pointer",
+        "totalMs": 166.8,
+        "count": 1192,
+        "maxMs": 1.2
+      }
+    ]
+  },
+  "passes": {
+    "framesSampled": 10,
+    "callsPerFrame": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6
+    ],
+    "exampleFrame": [
+      {
+        "tick": 9001,
+        "depth": 2,
+        "target": "ShadowMap 1024x1024 +depth",
+        "camera": "OrthographicCamera",
+        "scene": "Scene",
+        "drawCalls": 0,
+        "triangles": 0,
+        "cpuMs": 0
+      },
+      {
+        "tick": 9001,
+        "depth": 2,
+        "target": "ShadowMap 4096x4096 +depth",
+        "camera": "OrthographicCamera",
+        "scene": "Scene",
+        "drawCalls": 0,
+        "triangles": 0,
+        "cpuMs": 0
+      },
+      {
+        "tick": 9001,
+        "depth": 1,
+        "target": "output 1380x1057 +depth",
+        "camera": "PerspectiveCamera",
+        "scene": "Scene",
+        "drawCalls": 9,
+        "triangles": 4285,
+        "cpuMs": 0.3
+      },
+      {
+        "tick": 9001,
+        "depth": 1,
+        "target": "output 1380x1057 +depth",
+        "camera": "PerspectiveCamera",
+        "scene": "Scene",
+        "drawCalls": 1,
+        "triangles": 1984,
+        "cpuMs": 0.1
+      },
+      {
+        "tick": 9001,
+        "depth": 1,
+        "target": "output 1380x1057 +depth",
+        "camera": "PerspectiveCamera",
+        "scene": "Scene",
+        "drawCalls": 4,
+        "triangles": 2080,
+        "cpuMs": 0.1
+      },
+      {
+        "tick": 9001,
+        "depth": 0,
+        "target": "canvas",
+        "camera": "OrthographicCamera",
+        "scene": "Mesh",
+        "drawCalls": 15,
+        "triangles": 8350,
+        "cpuMs": 0.7
+      }
+    ]
+  },
+  "shadows": {
+    "lights": [
+      {
+        "type": "DirectionalLight",
+        "name": null,
+        "visible": true,
+        "castShadow": true,
+        "mapSize": "1024x1024",
+        "allocated": true,
+        "autoUpdate": true
+      },
+      {
+        "type": "DirectionalLight",
+        "name": "eco-sun",
+        "visible": true,
+        "castShadow": true,
+        "mapSize": "4096x4096",
+        "allocated": true,
+        "autoUpdate": true
+      }
+    ],
+    "otherLights": 16,
+    "visibleCasters": 0,
+    "visibleReceivers": 2
+  },
+  "materials": {
+    "unique": 9,
+    "byType": {
+      "MeshLambertNodeMaterial": 2,
+      "LineBasicMaterial": 1,
+      "MeshBasicMaterial": 5,
+      "MeshBasicNodeMaterial": 1
+    },
+    "transparent": 6
+  },
+  "drawables": 9,
+  "worstDraws": [
+    {
+      "name": "eco-sky",
+      "kind": "Mesh",
+      "triangles": 2208,
+      "instances": 1,
+      "materials": "MeshBasicMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": false
+    },
+    {
+      "name": "Mesh",
+      "kind": "Mesh",
+      "triangles": 63,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": false,
+      "receiveShadow": true,
+      "frustumCulled": true
+    },
+    {
+      "name": "Mesh",
+      "kind": "Mesh",
+      "triangles": 32,
+      "instances": 1,
+      "materials": "MeshBasicMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": true
+    },
+    {
+      "name": "Mesh",
+      "kind": "Mesh",
+      "triangles": 32,
+      "instances": 1,
+      "materials": "MeshBasicMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": true
+    },
+    {
+      "name": "Mesh",
+      "kind": "Mesh",
+      "triangles": 32,
+      "instances": 1,
+      "materials": "MeshBasicMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": true
+    },
+    {
+      "name": "eco-buildable-envelope",
+      "kind": "Mesh",
+      "triangles": 12,
+      "instances": 1,
+      "materials": "MeshBasicMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": true
+    },
+    {
+      "name": "Mesh",
+      "kind": "Mesh",
+      "triangles": 2,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": false,
+      "receiveShadow": true,
+      "frustumCulled": true
+    },
+    {
+      "name": "pascal-editor-grid-input",
+      "kind": "Mesh",
+      "triangles": 2,
+      "instances": 1,
+      "materials": "MeshBasicNodeMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": true
+    },
+    {
+      "name": "Line",
+      "kind": "Line",
+      "triangles": 0,
+      "instances": 1,
+      "materials": "LineBasicMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": false
+    }
+  ],
+  "drawComposition": {
+    "items": 0,
+    "itemMeshes": 0,
+    "otherVisibleMeshes": 8,
+    "meshesByKind": {
+      "site": 2,
+      "(unregistered)": 6
+    },
+    "perItemMeshes": {
+      "avg": 0,
+      "p50": 0,
+      "max": 0
+    },
+    "assets": [],
+    "projected": {
+      "current": 0,
+      "perItemMerge": 0,
+      "instancedByAsset": 0,
+      "both": 0
+    }
+  },
+  "upload": {
+    "texturesFirst": 19,
+    "texturesLast": 19,
+    "geometriesFirst": 19,
+    "geometriesLast": 19,
+    "gpuBytesFirst": 203305250,
+    "gpuBytesLast": 203305250,
+    "heapBytesFirst": 61049711,
+    "heapBytesLast": 59389291
+  },
+  "attribution": [
+    {
+      "label": "baseline",
+      "windows": 8,
+      "gpuMs": 7.48,
+      "cpuMs": 1.14,
+      "drawCalls": 15,
+      "fps": 50
+    },
+    {
+      "label": "shadow casting off (all lights)",
+      "windows": 8,
+      "gpuMs": 6.23,
+      "cpuMs": 0.66,
+      "drawCalls": 15,
+      "fps": 50
+    },
+    {
+      "label": "dpr 1.0",
+      "windows": 8,
+      "gpuMs": 3.42,
+      "cpuMs": 0.67,
+      "drawCalls": 15,
+      "fps": 50
+    },
+    {
+      "label": "baseline again",
+      "windows": 8,
+      "gpuMs": 6.22,
+      "cpuMs": 0.68,
+      "drawCalls": 15,
+      "fps": 50
+    }
+  ],
+  "note": "Profile only. No product change. Attribution toggles were applied in-page and restored."
+}
