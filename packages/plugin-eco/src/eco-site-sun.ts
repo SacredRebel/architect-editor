@@ -3,7 +3,9 @@
  * (lighting contract commit af1f0bd). Accurate to well under a degree.
  *
  * World frame: x east, y up, z = −north.
- * Eco editor frame: x east, y up, +z = site north (after `northDeg`).
+ * Editor scene: the site's world frame — x east, y up, z = −(site north)
+ * (`siteToWorldXz` negates the site's z-north for terrain, guides and the
+ * ghost). Site north is `northDeg` clockwise from true north.
  */
 
 const D2R = Math.PI / 180
@@ -140,29 +142,63 @@ export function instantAt(hours: number, timeZone: string, day: Date = new Date(
   return guess
 }
 
+/** Wall-clock hours of `date` in `timeZone`, fractional (15:30 → 15.5). */
+export function localHoursAt(date: Date, timeZone: string): number {
+  const o: Record<string, string> = {}
+  const f = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+  for (const p of f.formatToParts(date)) if (p.type !== 'literal') o[p.type] = p.value
+  return +(o.hour ?? '0') + +(o.minute ?? '0') / 60 + +(o.second ?? '0') / 3600
+}
+
+/** The world's `sunAt` as a Date, or null when absent or unreadable. */
+export function parseSunAt(sunAt: string | undefined): Date | null {
+  if (typeof sunAt !== 'string') return null
+  const date = new Date(sunAt)
+  return Number.isFinite(date.getTime()) ? date : null
+}
+
 /**
- * Unit vector toward the sun in eco editor frame (y up, +z = site north).
- * `northDeg` is degrees clockwise from true north to editor +z.
+ * The instant the site is lit at (A5). The world's `sunAt` exactly, while the
+ * time slider still reads its local time; the slider's hours on `sunAt`'s date
+ * once it moves; the slider's hours today when nothing was sent.
  */
+export function litInstant(
+  sunAt: string | undefined,
+  hours: number,
+  timeZone: string = ECO_DEFAULT_TZ,
+): Date {
+  const sent = parseSunAt(sunAt)
+  if (!sent) return instantAt(hours, timeZone)
+  if (Math.abs(localHoursAt(sent, timeZone) - hours) < 1e-6) return sent
+  return instantAt(hours, timeZone, sent)
+}
+
+/**
+ * The sun as a unit vector in the editor's scene frame (x site east, y up,
+ * z = −site north). Site north stands `northDeg` clockwise from true north,
+ * so a sun at true azimuth A stands at A − northDeg from site north.
+ *
+ * A5: the sun was placed with +z as north — mirrored against the terrain,
+ * guides and ghost, which are all in this frame — and turned by +northDeg.
+ */
+export function sunSceneVector(p: SunPos, northDeg = 0): { x: number; y: number; z: number } {
+  return sunVector({ altitude: p.altitude, azimuth: p.azimuth - northDeg })
+}
+
+/** Unit vector toward the sun in the editor's scene frame (see `sunSceneVector`). */
 export function sunDirectionAt(
   latDeg: number,
   lonDeg: number,
   when: Date,
   northDeg = 0,
 ): { x: number; y: number; z: number } {
-  const p = sunPosition(when, latDeg, lonDeg)
-  const v = sunVector(p)
-  // world z = −north → eco z = +north
-  const xEast = v.x
-  const yUp = v.y
-  const zNorth = -v.z
-  const th = -northDeg * D2R
-  const cos = Math.cos(th)
-  const sin = Math.sin(th)
-  const x = xEast * cos - zNorth * sin
-  const z = xEast * sin + zNorth * cos
-  const len = Math.hypot(x, yUp, z) || 1
-  return { x: x / len, y: yUp / len, z: z / len }
+  return sunSceneVector(sunPosition(when, latDeg, lonDeg), northDeg)
 }
 
 /** @deprecated Prefer sunPosition (degrees). Kept for call sites expecting radians. */

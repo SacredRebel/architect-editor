@@ -9,7 +9,9 @@ import {
 } from '@pascal-app/core'
 import type { EcoSite } from './bridge-types'
 import { siteToWorldXz } from './coords'
+import { setEcoTimeOfDayHours } from './eco-presentation-store'
 import { setEcoSite } from './eco-site-store'
+import { ECO_DEFAULT_TZ, localHoursAt, parseSunAt } from './eco-site-sun'
 
 const MAX_DIM = 257
 
@@ -120,6 +122,11 @@ export function applyEcoSite(site: EcoSite): void {
   const { cols, rows, spacing, origin } = field
   const ox = origin[0]
   const oz = origin[1]
+
+  // A5: the world's sun. The time slider starts at the sent instant's local
+  // time, and the lighting uses that exact instant until the slider moves.
+  const sunAt = parseSunAt(site.sunAt)
+  if (sunAt) setEcoTimeOfDayHours(localHoursAt(sunAt, ECO_DEFAULT_TZ))
 
   const scene = useScene.getState()
   const siteId = scene.rootNodeIds.find((id) => scene.nodes[id]?.type === 'site')
