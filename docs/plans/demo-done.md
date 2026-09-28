@@ -1,6 +1,6 @@
 # Demo — ship to production tonight
 
-Branch `eco/demo`, from `main` after the H19.2a merge (`c00d885f`).
+Branch `eco/demo`, from `main` after the H19.2a merge (`c00d885f`). Merged as **`0d38a884`**; production **READY**.
 
 The brief (architect, 28 Sep):
 
@@ -78,9 +78,9 @@ Built means every wall's object is registered and nothing is left dirty. Earlier
 - **Full graphics with a site loaded shows only the sky.**
   - The house is built (every wall registered, nothing dirty), but the full post-processing pipeline draws the eco sky over it.
   - Light mode draws the scene.
-  - `main` has only full graphics, so this is production today whenever a site loads.
-  - Light is now the default; full stays behind it, as briefed.
-- **Cold first visit.** The house appears only after the item models download, 11–31 s depending on the CDN.
+  - Before this merge `main` had only full graphics, so production showed only the sky whenever a site loaded.
+  - Light is now the default in production; full stays behind it, as briefed.
+- **Cold first visit.** The house appears only after the item models download: 11–31 s on the previews and 51 s on production's first visit, depending on the CDN.
 
 ## 5. Proof
 
@@ -117,10 +117,15 @@ Screenshots are in `docs/plans/demo/`. They were taken on the final preview, **`
 | `648755a5` | tools that error or do nothing are hidden with light graphics |
 | `4561bf0e` | fetch the demo site with the editor's first load, wait 3 s for the world |
 
-## Merge
+## Merge and production
 
-`gh` is not signed in, so the pull request is the human's to open and merge, with a **merge commit, never squash**:
+- **Merge:** `gh` was not signed in, so the human merged pull request #3 (`eco/demo` into `main`) with a merge commit, **`0d38a884`** (parents `c00d885f` and `129625b9`). Its tree is identical to `129625b9`, the last preview's commit.
+- **Production:** **READY**, `dpl_BUYwmDfTxVJCL2KD2Xf7cQChN5GC` at `0d38a884`, served at https://architect-editor-snowy.vercel.app.
+- **Production, opened once** with the same tour (fresh Chrome profile, 1600 × 1000). The record is `demo/production-tour.json`, with one screenshot, `demo/production-01-model.jpg`:
+  - graphics light; the demo site and house opened by the fallback, in the store after 2.4 s and built after **50.8 s** on this first visit to the new deployment (11.1 s on the final preview);
+  - one wall drawn with the wall tool, walls 8 → 9;
+  - all 18 visible rail tabs opened, with no crashed panel and no error;
+  - the catenary arch, leaf surface, barrel vault and temple forms ran as on the preview (meshes 227 → 260 → 272 → 434 → 484); the hidden tools' buttons are absent;
+  - 0 page errors, 0 failed requests and 0 downloads over the whole run.
 
-https://github.com/SacredRebel/architect-editor/compare/main...eco/demo?expand=1
-
-Production READY is recorded after that merge. A4 and A5 resume after the demo.
+A4 and A5 resume after the demo.
