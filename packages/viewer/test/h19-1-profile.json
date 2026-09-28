@@ -19,14 +19,8 @@
     "hardwareConcurrency": 24,
     "dpr": 1.5,
     "devicePixelRatio": 1,
-    "drawingBuffer": [
-      1380,
-      1057
-    ],
-    "cssSize": [
-      920,
-      705
-    ],
+    "drawingBuffer": [1380, 1057],
+    "cssSize": [920, 705],
     "detectedQuality": "medium",
     "resolvedQuality": "medium",
     "shadowMap": {
@@ -86,18 +80,7 @@
   },
   "passes": {
     "framesSampled": 10,
-    "callsPerFrame": [
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6
-    ],
+    "callsPerFrame": [6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
     "exampleFrame": [
       {
         "tick": 9001,
