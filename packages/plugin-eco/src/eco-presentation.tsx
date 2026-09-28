@@ -15,6 +15,7 @@ import { EcoShells } from './eco-shells'
 import { EcoSiteLighting } from './eco-site-lighting'
 import { getEcoSiteState, subscribeEcoSite } from './eco-site-store'
 import { EcoSiteTrees } from './eco-site-trees'
+import { EcoSiteWallDefaults } from './eco-site-walls'
 import { EcoTrees } from './eco-trees'
 import { EcoWalk } from './eco-walk'
 
@@ -101,6 +102,7 @@ export default function EcoPresentation() {
       <EcoPlacedAssets />
       <EcoTrees />
       <EcoSiteTrees />
+      <EcoSiteWallDefaults />
       {!presentation && <EcoCompass />}
       {!presentation && <EcoWalk />}
     </group>
