@@ -1,4 +1,5 @@
 import './iconify-offline'
+import './decoders-self-hosted'
 import { mintHostPanel, mintPlugin } from '@mint/pascal-plugin'
 import {
   type AnyNodeDefinition,
