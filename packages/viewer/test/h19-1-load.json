@@ -1,0 +1,241 @@
+{
+  "phase": "H19.1-load",
+  "capturedAt": "2026-09-28T04:34:49.817Z",
+  "sourceUrl": "https://architect-editor-snowy.vercel.app/?perf-load",
+  "cache": "disabled",
+  "navigation": {
+    "ttfbMs": 2263,
+    "domContentLoadedMs": 2954,
+    "loadEventMs": 18723,
+    "firstContentfulPaintMs": 10164
+  },
+  "resourceCount": 164,
+  "totalTransferKB": 6423,
+  "byType": {
+    "link": 362,
+    "script": 5918,
+    "fetch": 4,
+    "img": 139,
+    "other": 0
+  },
+  "largest": [
+    {
+      "name": "/_next/static/immutable/chunks/159orxkje4b4r.js",
+      "type": "script",
+      "startMs": 10293,
+      "durationMs": 8152,
+      "endMs": 18445,
+      "transferKB": 2913,
+      "decodedKB": 3904
+    },
+    {
+      "name": "/_next/static/immutable/chunks/3ejjt73t5fmf1.js",
+      "type": "script",
+      "startMs": 2271,
+      "durationMs": 7452,
+      "endMs": 9723,
+      "transferKB": 537,
+      "decodedKB": 1892
+    },
+    {
+      "name": "/_next/static/immutable/chunks/26ou-p_hsrwlr.js",
+      "type": "script",
+      "startMs": 2271,
+      "durationMs": 6906,
+      "endMs": 9177,
+      "transferKB": 192,
+      "decodedKB": 785
+    },
+    {
+      "name": "/_next/static/immutable/chunks/1n8rgnboiorq4.js",
+      "type": "script",
+      "startMs": 2270,
+      "durationMs": 4232,
+      "endMs": 6502,
+      "transferKB": 190,
+      "decodedKB": 687
+    },
+    {
+      "name": "/_next/static/immutable/chunks/2_q71t1fxzqc0.js",
+      "type": "script",
+      "startMs": 2270,
+      "durationMs": 4180,
+      "endMs": 6450,
+      "transferKB": 170,
+      "decodedKB": 529
+    },
+    {
+      "name": "/_next/static/immutable/chunks/342hm_66eqvej.js",
+      "type": "script",
+      "startMs": 2270,
+      "durationMs": 4193,
+      "endMs": 6463,
+      "transferKB": 159,
+      "decodedKB": 662
+    },
+    {
+      "name": "/_next/static/immutable/chunks/42komil17ekjd.js",
+      "type": "script",
+      "startMs": 2270,
+      "durationMs": 3812,
+      "endMs": 6082,
+      "transferKB": 122,
+      "decodedKB": 398
+    },
+    {
+      "name": "/_next/static/immutable/chunks/3b_w2a5a-x-6b.js",
+      "type": "script",
+      "startMs": 2270,
+      "durationMs": 3777,
+      "endMs": 6048,
+      "transferKB": 110,
+      "decodedKB": 334
+    },
+    {
+      "name": "/_next/static/immutable/chunks/2pffss0gg6sbh.js",
+      "type": "script",
+      "startMs": 2271,
+      "durationMs": 4972,
+      "endMs": 7243,
+      "transferKB": 101,
+      "decodedKB": 374
+    },
+    {
+      "name": "/_next/static/immutable/chunks/1ygiguqjxhc19.js",
+      "type": "script",
+      "startMs": 2270,
+      "durationMs": 3812,
+      "endMs": 6083,
+      "transferKB": 86,
+      "decodedKB": 355
+    },
+    {
+      "name": "/_next/static/immutable/chunks/21vpwrifjv-ne.js",
+      "type": "script",
+      "startMs": 9774,
+      "durationMs": 359,
+      "endMs": 10133,
+      "transferKB": 86,
+      "decodedKB": 304
+    },
+    {
+      "name": "/_next/static/immutable/chunks/2pv9re1chck31.js",
+      "type": "script",
+      "startMs": 2270,
+      "durationMs": 4331,
+      "endMs": 6601,
+      "transferKB": 78,
+      "decodedKB": 268
+    }
+  ],
+  "latestToFinish": [
+    {
+      "name": "/icons/wall.webp",
+      "type": "img",
+      "startMs": 18817,
+      "durationMs": 229,
+      "endMs": 19047,
+      "transferKB": 6,
+      "decodedKB": 6
+    },
+    {
+      "name": "/favicon.ico?favicon.2o5c-66mmweff.ico",
+      "type": "other",
+      "startMs": 18725,
+      "durationMs": 148,
+      "endMs": 18873,
+      "transferKB": 0,
+      "decodedKB": 4
+    },
+    {
+      "name": "/_next/static/immutable/chunks/1e_prqgcu4bpb.js",
+      "type": "script",
+      "startMs": 18586,
+      "durationMs": 135,
+      "endMs": 18721,
+      "transferKB": 3,
+      "decodedKB": 6
+    },
+    {
+      "name": "/_next/static/immutable/chunks/3bhdd97090koi.js",
+      "type": "script",
+      "startMs": 18591,
+      "durationMs": 85,
+      "endMs": 18676,
+      "transferKB": 1,
+      "decodedKB": 0
+    },
+    {
+      "name": "/_next/static/immutable/chunks/0r3id755nj7t7.js",
+      "type": "script",
+      "startMs": 10663,
+      "durationMs": 7974,
+      "endMs": 18637,
+      "transferKB": 4,
+      "decodedKB": 8
+    },
+    {
+      "name": "/_next/static/immutable/chunks/3k4szlibdygyh.js",
+      "type": "script",
+      "startMs": 10663,
+      "durationMs": 7927,
+      "endMs": 18590,
+      "transferKB": 6,
+      "decodedKB": 14
+    },
+    {
+      "name": "/_next/static/immutable/chunks/28y30oycu1msf.js",
+      "type": "script",
+      "startMs": 10663,
+      "durationMs": 7926,
+      "endMs": 18589,
+      "transferKB": 1,
+      "decodedKB": 1
+    },
+    {
+      "name": "/_next/static/immutable/chunks/3a85l0xqgn89-.js",
+      "type": "script",
+      "startMs": 10663,
+      "durationMs": 7926,
+      "endMs": 18589,
+      "transferKB": 3,
+      "decodedKB": 9
+    },
+    {
+      "name": "/_next/static/immutable/chunks/2mr_ippzemqws.js",
+      "type": "script",
+      "startMs": 10663,
+      "durationMs": 7925,
+      "endMs": 18588,
+      "transferKB": 6,
+      "decodedKB": 15
+    },
+    {
+      "name": "/_next/static/immutable/chunks/26hg5fubrebs4.js",
+      "type": "script",
+      "startMs": 10430,
+      "durationMs": 8141,
+      "endMs": 18571,
+      "transferKB": 1,
+      "decodedKB": 1
+    },
+    {
+      "name": "/_next/static/immutable/chunks/1nv54euopoe4a.js",
+      "type": "script",
+      "startMs": 10293,
+      "durationMs": 8278,
+      "endMs": 18570,
+      "transferKB": 0,
+      "decodedKB": 0
+    },
+    {
+      "name": "/scenes?_rsc=3DCFVQA7TV6_ahgu",
+      "type": "fetch",
+      "startMs": 10367,
+      "durationMs": 8203,
+      "endMs": 18570,
+      "transferKB": 3,
+      "decodedKB": 23
+    }
+  ]
+}

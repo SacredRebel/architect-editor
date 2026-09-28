@@ -566,6 +566,20 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
   const detectedGpuQuality = useViewer((s) => s.detectedGpuQuality)
   const resolvedQuality = resolveGpuQuality(gpuQualityPref, detectedGpuQuality)
 
+  // Expose detect-gpu / resolved tier for CDP capture (?perf / H19).
+  useEffect(() => {
+    const el = document.documentElement
+    if (detectedGpuQuality) el.dataset.gpuQuality = detectedGpuQuality
+    else delete el.dataset.gpuQuality
+    el.dataset.gpuQualityResolved = resolvedQuality
+    el.dataset.gpuQualityPref = gpuQualityPref
+    return () => {
+      delete el.dataset.gpuQuality
+      delete el.dataset.gpuQualityResolved
+      delete el.dataset.gpuQualityPref
+    }
+  }, [detectedGpuQuality, resolvedQuality, gpuQualityPref])
+
   // Coarse-pointer devices get a tighter DPR ceiling; quality tier caps the rest (max 2).
   const maxDpr = maxDprForQuality(
     resolvedQuality,

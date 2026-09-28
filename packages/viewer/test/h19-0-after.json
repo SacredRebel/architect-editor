@@ -1,0 +1,105 @@
+{
+  "phase": "H19.0",
+  "capturedAt": "2026-09-28T05:02:48.279Z",
+  "sourceUrl": "http://127.0.0.1:3019/?perf",
+  "tree": "272ba6b6752756199316e82374fc1b8beaf9787d",
+  "sampleCount": 999,
+  "sampleWindowMs": 20000,
+  "cameraPath": {
+    "durationMs": 20000,
+    "kind": "synthetic-pointer-orbit",
+    "note": "Fixed 20s orbital pointermoves on the canvas; frames counted from the useFrame tick, not raw rAF.",
+    "meter": "frame-tick"
+  },
+  "fps": {
+    "median": 50,
+    "mean": 49.97,
+    "p1": 29.94,
+    "min": 29.76,
+    "max": 60.98,
+    "perFrameMedian": 59.88,
+    "note": "median = median of 1s wall-clock bins of rendered frames; mean = frames / wall seconds; p1/min/max/perFrameMedian from per-frame render intervals (vsync-quantised)."
+  },
+  "frames": {
+    "sampler": 1000,
+    "hud": 1001,
+    "hudWindows": 39,
+    "tickDelta": 1001,
+    "rendererFrame": 1201,
+    "renderCalls": 6006,
+    "callsPerFrame": 6,
+    "wallMs": 20011.4,
+    "note": "sampler = frameTick changes seen by the injected rAF loop; hud = mean PerfMonitor window fps × wall seconds; rendererFrame = WebGPU info.frame (advanced by the renderer rAF Animation loop, i.e. display ticks — recorded, not used as a frame reference); renderCalls = info.calls (every render() pass)."
+  },
+  "renderMs": {
+    "median": 6.816,
+    "p99": 9.503,
+    "max": 10.682,
+    "samples": 929,
+    "source": "webgpu-timestamp-query",
+    "hudGpuMsMedian": 7.002
+  },
+  "renderCpuMs": {
+    "median": 0.6,
+    "p99": 1.9,
+    "max": 3.3,
+    "samples": 1001
+  },
+  "frameMs": {
+    "median": 16.7,
+    "p99": 33.4,
+    "max": 33.6
+  },
+  "draws": {
+    "median": 15,
+    "last": 15
+  },
+  "tris": {
+    "median": 8350,
+    "last": 8350
+  },
+  "gpu": {
+    "qualityPreference": "auto",
+    "detectedQuality": "medium",
+    "resolvedQuality": "medium",
+    "adaptiveDpr": true,
+    "dpr": 1.5,
+    "devicePixelRatio": 1
+  },
+  "hud": {
+    "sampleCount": 1201,
+    "fpsMedian": 50,
+    "last": {
+      "t": 20011.400000017882,
+      "fps": 50,
+      "frameMs": 0.7807692300814849,
+      "drawCalls": 15,
+      "triangles": 8350,
+      "textures": 19,
+      "geometries": 19,
+      "heapBytes": 78819396
+    }
+  },
+  "navigation": {
+    "domContentLoadedMs": 35.099999994039536,
+    "loadEventMs": 106.90000000596046,
+    "firstContentfulPaintMs": 384,
+    "transferSize": 300
+  },
+  "interaction": {
+    "pointerToHighlightMs": 33.2,
+    "clickToSelectMs": 36.7,
+    "wallDragFrameMs": 16.7,
+    "undoMs": 34,
+    "note": "Synthetic probes; wall-drag is a proxy gesture."
+  },
+  "targets": {
+    "fpsMedian": 60,
+    "fpsP1": 45,
+    "pointerToHighlightMs": 50,
+    "wallDragFrameMs": 16,
+    "loadToInteractiveMs": 4000
+  },
+  "optimisationsApplied": true,
+  "note": "H19.0 after: eco/h19 tree (H17.1 AdaptiveDpr / detect-gpu / shadow discipline applied) on the 20s orbital path, same harness, same machine and Chrome as the before. Before is h17-0-baseline-path.json; the historic 4s idle file stays as h17-0-baseline.json."
+}
