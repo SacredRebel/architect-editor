@@ -8,6 +8,9 @@
  *   LOAD_URL=https://…/?perf bun packages/viewer/test/profile-h19-1.mjs --load   (load timing only)
  *
  * Writes packages/viewer/test/h19-1-profile.json (or h19-1-load.json with --load).
+ * Clears the origin's storage and reloads with a WebGPU call hook (uploads,
+ * pipelines) installed; reads per-pass device timestamps and hides one drawable
+ * at a time to rank draws by GPU cost.
  * Attribution toggles (shadow casting off, dpr 1) are in-page, measured, and
  * restored before the script exits; nothing in the product changes.
  */
@@ -99,13 +102,65 @@ async function loadProfile() {
   return { phase: 'H19.1-load', capturedAt: new Date().toISOString(), sourceUrl: page.url, cache: 'disabled', ...out }
 }
 
+// Counts WebGPU uploads and program creation from the first script on the page.
+// Installed before a reload; `phase` is flipped to 'orbit' once the path starts.
+const GPU_HOOK = `(() => {
+  if (!window.GPUQueue || window.__gpuLog) return
+  const log = { phase: 'load', load: {}, orbit: {}, rest: {} }
+  window.__gpuLog = log
+  const add = (name, bytes, ms) => {
+    const e = (log[log.phase][name] ||= { calls: 0, bytes: 0, ms: 0 })
+    e.calls++
+    e.bytes += bytes || 0
+    e.ms += ms
+  }
+  const wrap = (proto, name, bytesOf) => {
+    const orig = proto[name]
+    if (typeof orig !== 'function') return
+    proto[name] = function (...args) {
+      const t0 = performance.now()
+      const out = orig.apply(this, args)
+      if (out && typeof out.then === 'function') {
+        return out.then((v) => (add(name, bytesOf(args), performance.now() - t0), v))
+      }
+      add(name, bytesOf(args), performance.now() - t0)
+      return out
+    }
+  }
+  const len = (d) => (d && (d.byteLength ?? d.length)) || 0
+  const extent = (s) => Array.isArray(s) ? (s[0] || 1) * (s[1] || 1) * (s[2] || 1) : (s?.width || 1) * (s?.height || 1) * (s?.depthOrArrayLayers || 1)
+  wrap(GPUQueue.prototype, 'writeBuffer', (a) => a[4] ?? len(a[2]) - (a[3] || 0))
+  wrap(GPUQueue.prototype, 'writeTexture', (a) => len(a[1]))
+  wrap(GPUQueue.prototype, 'copyExternalImageToTexture', (a) => extent(a[2]) * 4)
+  wrap(GPUDevice.prototype, 'createTexture', (a) => extent(a[0]?.size) * 4)
+  wrap(GPUDevice.prototype, 'createShaderModule', () => 0)
+  wrap(GPUDevice.prototype, 'createRenderPipeline', () => 0)
+  wrap(GPUDevice.prototype, 'createRenderPipelineAsync', () => 0)
+  wrap(GPUDevice.prototype, 'createComputePipeline', () => 0)
+  wrap(GPUDevice.prototype, 'createComputePipelineAsync', () => 0)
+  const createBuffer = GPUDevice.prototype.createBuffer
+  GPUDevice.prototype.createBuffer = function (desc) {
+    const t0 = performance.now()
+    const out = createBuffer.call(this, desc)
+    add(desc?.mappedAtCreation ? 'createBuffer(mapped)' : 'createBuffer', desc?.size, performance.now() - t0)
+    return out
+  }
+})()`
+
 async function frameProfile() {
   const { page, ws, send, evaluate } = await cdp(process.env.PAGE_MATCH || 'perf')
   await send('Page.bringToFront').catch(() => {})
+  await send('Page.enable')
+  // Same empty site as the capture: the editor persists its scene per origin.
+  await send('Storage.clearDataForOrigin', { origin: new URL(page.url).origin, storageTypes: 'all' })
+  const hook = await send('Page.addScriptToEvaluateOnNewDocument', { source: GPU_HOOK })
+  await send('Page.reload', { ignoreCache: false })
+  await Bun.sleep(1500)
   for (let i = 0; i < 60; i++) {
     if (await evaluate(`!!(window.__pascalPerf && window.__pascalPerf.three && window.__pascalPerf.stats())`)) break
     await Bun.sleep(500)
   }
+  await Bun.sleep(4000)
 
   // Environment: backend, adapter, resolution, tier.
   const env = await evaluate(
@@ -140,6 +195,7 @@ async function frameProfile() {
   await evaluate(`(() => {
     const p = window.__pascalPerf, c = document.querySelector('canvas')
     const s = { done: false, windows: [], t0: performance.now(), mem0: p.rendererInfo() }
+    if (window.__gpuLog) window.__gpuLog.phase = 'orbit'
     window.__h191 = s
     let last = p.stats()
     function tick(now) {
@@ -157,7 +213,10 @@ async function frameProfile() {
           tracks: st.tracks })
       }
       if (now - s.t0 < ${PATH_MS}) requestAnimationFrame(tick)
-      else s.done = true
+      else {
+        s.done = true
+        if (window.__gpuLog) window.__gpuLog.phase = 'rest'
+      }
     }
     requestAnimationFrame(tick)
   })()`)
@@ -309,6 +368,142 @@ async function frameProfile() {
     await hudFor('baseline again', '() => {}', '() => {}'),
   ]
 
+  // Time per pass: label each render context's timestamp uid by its target,
+  // then read three's per-context device timestamps on every new resolve.
+  const passGpu = await evaluate(
+    `(async () => {
+      const { gl } = window.__pascalPerf.three()
+      const be = gl.backend, pool = be.timestampQueryPool?.render
+      if (!be.trackTimestamp || !pool) return null
+      const labels = new Map()
+      const orig = be.beginRender
+      be.beginRender = function (rc) {
+        const out = orig.call(this, rc)
+        const uid = be.get(rc).timestampUID
+        if (uid) {
+          const rt = rc.renderTarget
+          labels.set(String(uid).replace(/:f\\d+$/, ''),
+            rt ? (rt.texture?.name || 'rt') + ' ' + rc.width + 'x' + rc.height : 'canvas ' + rc.width + 'x' + rc.height)
+        }
+        return out
+      }
+      const per = {}, totals = []
+      let last = pool.frames
+      const t0 = performance.now()
+      await new Promise((res) => {
+        const f = () => {
+          if (pool.frames && pool.frames !== last) {
+            last = pool.frames
+            const frame = pool.frames[pool.frames.length - 1]
+            let total = 0
+            // uid = r:<render.frameCalls>:<contextId>:f<frame>. frameCalls drifts
+            // (PerfMonitor owns info.reset), so a pass is its context id plus its
+            // order within the frame.
+            const inFrame = []
+            for (const [uid, ms] of pool.timestamps) {
+              const m = String(uid).match(/^r:(\\d+):(\\d+):f(\\d+)$/)
+              if (!m || Number(m[3]) !== frame) continue
+              inFrame.push({ order: Number(m[1]), ctx: m[2], base: 'r:' + m[1] + ':' + m[2], ms })
+            }
+            inFrame.sort((a, b) => a.order - b.order)
+            inFrame.forEach((p, i) => {
+              const label = '#' + (i + 1) + ' ' + (labels.get(p.base) || 'unlabelled') + ' (context ' + p.ctx + ')'
+              ;(per[label] ||= []).push(p.ms)
+              total += p.ms
+            })
+            if (total > 0) totals.push(total)
+          }
+          performance.now() - t0 < 8000 ? requestAnimationFrame(f) : res()
+        }
+        requestAnimationFrame(f)
+      })
+      be.beginRender = orig
+      const med = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] }
+      const totalMed = med(totals)
+      // A pass is per-frame if it appears in at least half the resolves.
+      const rows = Object.entries(per).map(([label, a]) => ({
+        label, samples: a.length, gpuMsMedian: +med(a).toFixed(3), share: +(med(a) / totalMed).toFixed(3),
+      }))
+      const perFrame = rows.filter((r) => r.samples >= totals.length / 2)
+      const oneOff = rows.filter((r) => r.samples < totals.length / 2)
+      return {
+        resolves: totals.length,
+        frameGpuMsMedian: +totalMed.toFixed(3),
+        perFramePassSumMs: +perFrame.reduce((s, r) => s + r.gpuMsMedian, 0).toFixed(3),
+        passes: perFrame.sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true })),
+        oneOff: { contexts: oneOff.length, samples: oneOff.reduce((s, r) => s + r.samples, 0) },
+      }
+    })()`,
+    true,
+  )
+
+  // Worst draws by cost: hide one drawable at a time and read renderMs against
+  // interleaved baselines. Device timestamps, one sample per resolve.
+  const drawCost = await evaluate(
+    `(async () => {
+      const { gl, scene } = window.__pascalPerf.three()
+      const pool = gl.backend.timestampQueryPool?.render
+      if (!pool) return null
+      const sample = (ms) => new Promise((res) => {
+        const vals = []
+        let last = pool.frames
+        const t0 = performance.now()
+        const f = () => {
+          if (pool.frames && pool.frames !== last) { last = pool.frames; if (pool.lastValue > 0) vals.push(pool.lastValue) }
+          performance.now() - t0 < ms ? requestAnimationFrame(f) : res(vals.sort((a, b) => a - b)[Math.floor(vals.length / 2)])
+        }
+        requestAnimationFrame(f)
+      })
+      const drawables = []
+      scene.traverse((o) => {
+        if (!(o.isMesh || o.isLine || o.isPoints) || !o.visible) return
+        for (let q = o.parent; q; q = q.parent) if (!q.visible) return
+        drawables.push(o)
+      })
+      await sample(800)
+      const rows = []
+      for (const o of drawables) {
+        const before = await sample(1500)
+        o.visible = false
+        await sample(300)
+        const hidden = await sample(1500)
+        o.visible = true
+        const after = await sample(1500)
+        const base = (before + after) / 2
+        rows.push({ name: o.name || o.parent?.name || o.type, kind: o.type, baseMs: +base.toFixed(3), hiddenMs: +hidden.toFixed(3),
+          costMs: +(base - hidden).toFixed(3), baselineDriftMs: +Math.abs(before - after).toFixed(3) })
+      }
+      return rows.sort((a, b) => b.costMs - a.costMs)
+    })()`,
+    true,
+  )
+
+  const gpuLog = await evaluate(`window.__gpuLog ? { load: window.__gpuLog.load, orbit: window.__gpuLog.orbit } : null`)
+  await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: hook.identifier }).catch(() => {})
+  const r3 = (o) =>
+    o &&
+    Object.fromEntries(
+      Object.entries(o).map(([k, v]) => [k, { calls: v.calls, bytes: v.bytes, ms: Number(v.ms.toFixed(2)) }]),
+    )
+  const gpuWork = gpuLog
+    ? {
+        note: 'WebGPU calls wrapped from the first script on the page (reload). load = until the 20s orbit starts; orbit = during it. ms is CPU wall time of the call.',
+        load: r3(gpuLog.load),
+        orbit: r3(gpuLog.orbit),
+        programs: {
+          shaderModules: gpuLog.load.createShaderModule?.calls ?? 0,
+          renderPipelines:
+            (gpuLog.load.createRenderPipeline?.calls ?? 0) + (gpuLog.load.createRenderPipelineAsync?.calls ?? 0),
+          computePipelines:
+            (gpuLog.load.createComputePipeline?.calls ?? 0) + (gpuLog.load.createComputePipelineAsync?.calls ?? 0),
+          createdDuringOrbit:
+            (gpuLog.orbit.createShaderModule?.calls ?? 0) +
+            (gpuLog.orbit.createRenderPipeline?.calls ?? 0) +
+            (gpuLog.orbit.createRenderPipelineAsync?.calls ?? 0),
+        },
+      }
+    : null
+
   ws.close()
   return {
     phase: 'H19.1',
@@ -321,8 +516,11 @@ async function frameProfile() {
     passes,
     ...scene,
     upload,
+    gpuWork,
+    passGpu,
+    drawCost,
     attribution,
-    note: 'Profile only. No product change. Attribution toggles were applied in-page and restored.',
+    note: 'Profile only. No product change. Toggles (shadow casting, dpr, one drawable hidden at a time) were applied in-page and restored; the WebGPU call hook was installed for one reload and removed.',
   }
 }
 

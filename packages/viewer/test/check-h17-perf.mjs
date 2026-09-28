@@ -9,7 +9,8 @@
  *   4. Within each run, sampler frame count and HUD frame count agree within 10%
  *
  * --self-test forges a mismatched path kind, a mismatched duration, a sampler
- * ticking at display Hz, a missing renderMs and a renderMs that timed the CPU;
+ * ticking at display Hz, a missing renderMs, a renderMs that timed the CPU and a
+ * different scene on one side;
  * each must FAIL while the unforged control passes.
  *
  * Live capture: packages/viewer/test/capture-h17-baseline.mjs
@@ -168,6 +169,11 @@ function checkArtifacts(beforePath, afterPath, label) {
   }
 
   if (before && after) {
+    // Same scene on both sides, or renderMs compares different workloads.
+    ok(
+      before.draws?.median === after.draws?.median && before.tris?.median === after.tris?.median,
+      `${label}: same scene (draws ${before.draws?.median} vs ${after.draws?.median}, tris ${before.tris?.median} vs ${after.tris?.median})`,
+    )
     ok(
       before.cameraPath?.kind === after.cameraPath?.kind,
       `${label}: cameraPath.kind equal (${before.cameraPath?.kind} vs ${after.cameraPath?.kind})`,
@@ -202,6 +208,8 @@ if (selfTest) {
     fps: { median: 50, p1: 30 },
     frames,
     frameMs: { median: 16.7 },
+    draws: { median: 15 },
+    tris: { median: 8350 },
     renderMs,
     renderCpuMs: { median: 0.9, p99: 2, max: 3, samples: 1000 },
     targets: { fpsMedian: 60, fpsP1: 45 },
@@ -273,6 +281,13 @@ if (selfTest) {
       goodBefore,
       { ...goodAfter, renderMs: { ...renderMs, median: 0.9 } },
       'vs HUD gpuMs',
+    )
+    // The after page kept an edited scene in its origin's storage.
+    expectFail(
+      'forge-different-scene',
+      goodBefore,
+      { ...goodAfter, draws: { median: 33 }, tris: { median: 8446 } },
+      'same scene',
     )
     console.log('check-h17-perf --self-test OK')
   } finally {

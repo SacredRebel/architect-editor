@@ -106,7 +106,17 @@ async function main() {
   const { ws, send, evaluate } = makeWs(page.webSocketDebuggerUrl)
   await send('Page.bringToFront', {}).catch(() => {})
 
-  for (let i = 0; i < 40; i++) {
+  // Every run starts from the same empty site: the editor persists its scene
+  // per origin, and the interaction probes below edit it (wall-drag, undo).
+  if (process.env.KEEP_STORAGE !== '1') {
+    const origin = new URL(page.url).origin
+    await send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' })
+    await send('Page.reload', { ignoreCache: false })
+    await Bun.sleep(1500)
+    console.log('cleared storage and reloaded', origin)
+  }
+
+  for (let i = 0; i < 60; i++) {
     const ready = await evaluate(
       `!!(document.querySelector('canvas') && (window.__pascalPerf || document.querySelector('[data-pascal-perf-panel]')))`,
     )
@@ -114,6 +124,8 @@ async function main() {
     await Bun.sleep(500)
   }
   console.log('canvas/perf ready')
+  // Same settle on both sides before the path: site, sky and HUD windows.
+  await Bun.sleep(4000)
 
   const navTiming = await evaluate(`(() => {
     const nav = performance.getEntriesByType('navigation')[0]
