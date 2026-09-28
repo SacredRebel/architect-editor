@@ -266,6 +266,7 @@ export {
   ecoAssetsHostPanel,
   ecoConstructionHostPanel,
   ecoDrawingsHostPanel,
+  ecoFloorplanOverlay,
   ecoHostPanel,
   ecoImage3dHostPanel,
   ecoMaterialsHostPanel,
