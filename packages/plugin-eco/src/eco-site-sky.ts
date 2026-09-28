@@ -13,7 +13,7 @@ import {
   ECO_DEFAULT_LNG,
   type SunPos,
   sunPosition,
-  sunVector,
+  sunSceneVector,
 } from './eco-site-sun'
 
 const L = (r: number, g: number, b: number) =>
@@ -67,7 +67,7 @@ export function sunTransmission(
   const c = 0.2 * air.turbidity * 10e-18
   const zenithAngle = Math.acos(Math.max(0, s.y))
   const inverse =
-    1 / (Math.cos(zenithAngle) + 0.15 * Math.pow(93.885 - (zenithAngle * 180) / Math.PI, -1.253))
+    1 / (Math.cos(zenithAngle) + 0.15 * (93.885 - (zenithAngle * 180) / Math.PI) ** -1.253)
   return TOTAL_RAYLEIGH.map((b, i) =>
     Math.exp(
       -(
@@ -94,13 +94,11 @@ function colourAt(keys: SkyKeys, dir: THREE.Vector3): THREE.Color {
   const dxz = new THREE.Vector2(d.x + 1e-5, d.z).normalize()
   const sxz = new THREE.Vector2(s.x + 1e-5, s.z).normalize()
   const toward = 0.5 + 0.5 * dxz.dot(sxz)
-  const horizon = keys.away.clone().lerp(keys.toward, Math.pow(toward, 4))
-  const t = Math.pow(1 - Math.max(h, 0), 2.2)
+  const horizon = keys.away.clone().lerp(keys.toward, toward ** 4)
+  const t = (1 - Math.max(h, 0)) ** 2.2
   const sky = keys.zenith.clone().lerp(horizon, t)
   const c = Math.max(d.dot(s), 0)
-  const glow = keys.glow
-    .clone()
-    .multiplyScalar(keys.glowK * (0.5 * Math.pow(c, 32) + 0.5 * Math.pow(c, 400)))
+  const glow = keys.glow.clone().multiplyScalar(keys.glowK * (0.5 * c ** 32 + 0.5 * c ** 400))
   if (h < 0) {
     return horizon
       .clone()
@@ -136,16 +134,6 @@ function bakeEquirect(keys: SkyKeys, width = 256, height = 128): THREE.DataTextu
   tex.colorSpace = THREE.LinearSRGBColorSpace
   tex.needsUpdate = true
   return tex
-}
-
-function toEcoDir(world: { x: number; y: number; z: number }, northDeg: number): THREE.Vector3 {
-  const xEast = world.x
-  const yUp = world.y
-  const zNorth = -world.z
-  const th = (-northDeg * Math.PI) / 180
-  const cos = Math.cos(th)
-  const sin = Math.sin(th)
-  return new THREE.Vector3(xEast * cos - zNorth * sin, yUp, xEast * sin + zNorth * cos).normalize()
 }
 
 /**
@@ -205,8 +193,8 @@ export class EcoSky {
     northDeg = 0,
   ): { pos: SunPos; horizon: THREE.Color; zenith: THREE.Color } {
     const p = sunPosition(date, lat, lng)
-    const worldV = sunVector(p)
-    const sunDir = toEcoDir(worldV, northDeg)
+    const scene = sunSceneVector(p, northDeg)
+    const sunDir = new THREE.Vector3(scene.x, scene.y, scene.z).normalize()
     this.dir.copy(sunDir).setY(Math.max(sunDir.y, 0.02)).normalize()
     this.sun.position.copy(this.sun.target.position).addScaledVector(this.dir, 900)
     this.keys.sunDir.copy(sunDir)

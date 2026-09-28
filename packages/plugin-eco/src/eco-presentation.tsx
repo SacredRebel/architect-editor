@@ -2,6 +2,7 @@
 
 import { emitter } from '@pascal-app/core'
 import { Suspense, useEffect, useSyncExternalStore } from 'react'
+import { siteToWorldXz } from './coords'
 import { EcoBuildableEnvelope } from './eco-buildable-envelope'
 import { EcoCompass } from './eco-compass'
 import { EcoGhost } from './eco-ghost'
@@ -47,7 +48,8 @@ function EcoPresentationFraming() {
         maxX = -Infinity
         minZ = Infinity
         maxZ = -Infinity
-        for (const [x, z] of pts) {
+        // Guide points are site z-north; the scene is z-south (A5).
+        for (const [x, z] of pts.map((pt) => siteToWorldXz(pt))) {
           minX = Math.min(minX, x)
           maxX = Math.max(maxX, x)
           minZ = Math.min(minZ, z)
