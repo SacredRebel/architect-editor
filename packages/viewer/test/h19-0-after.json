@@ -1,8 +1,8 @@
 {
   "phase": "H19.0",
-  "capturedAt": "2026-09-28T04:51:13.426Z",
+  "capturedAt": "2026-09-28T05:02:48.279Z",
   "sourceUrl": "http://127.0.0.1:3019/?perf",
-  "tree": "75883010c37a363b927e9a5c1fad4fbd765ec403",
+  "tree": "272ba6b6752756199316e82374fc1b8beaf9787d",
   "sampleCount": 999,
   "sampleWindowMs": 20000,
   "cameraPath": {
@@ -13,50 +13,50 @@
   },
   "fps": {
     "median": 50,
-    "mean": 50,
+    "mean": 49.97,
     "p1": 29.94,
-    "min": 29.85,
-    "max": 61.35,
+    "min": 29.76,
+    "max": 60.98,
     "perFrameMedian": 59.88,
     "note": "median = median of 1s wall-clock bins of rendered frames; mean = frames / wall seconds; p1/min/max/perFrameMedian from per-frame render intervals (vsync-quantised)."
   },
   "frames": {
     "sampler": 1000,
-    "hud": 1000,
-    "hudWindows": 38,
+    "hud": 1001,
+    "hudWindows": 39,
     "tickDelta": 1001,
     "rendererFrame": 1201,
     "renderCalls": 6006,
     "callsPerFrame": 6,
-    "wallMs": 20000.5,
+    "wallMs": 20011.4,
     "note": "sampler = frameTick changes seen by the injected rAF loop; hud = mean PerfMonitor window fps × wall seconds; rendererFrame = WebGPU info.frame (advanced by the renderer rAF Animation loop, i.e. display ticks — recorded, not used as a frame reference); renderCalls = info.calls (every render() pass)."
   },
   "renderMs": {
-    "median": 8.847,
-    "p99": 11.534,
-    "max": 13.566,
-    "samples": 651,
+    "median": 6.816,
+    "p99": 9.503,
+    "max": 10.682,
+    "samples": 929,
     "source": "webgpu-timestamp-query",
-    "hudGpuMsMedian": 8.943
+    "hudGpuMsMedian": 7.002
   },
   "renderCpuMs": {
-    "median": 1,
-    "p99": 3.1,
-    "max": 3.8,
+    "median": 0.6,
+    "p99": 1.9,
+    "max": 3.3,
     "samples": 1001
   },
   "frameMs": {
     "median": 16.7,
     "p99": 33.4,
-    "max": 33.5
+    "max": 33.6
   },
   "draws": {
-    "median": 33,
-    "last": 33
+    "median": 15,
+    "last": 15
   },
   "tris": {
-    "median": 8446,
-    "last": 8446
+    "median": 8350,
+    "last": 8350
   },
   "gpu": {
     "qualityPreference": "auto",
@@ -70,27 +70,27 @@
     "sampleCount": 1201,
     "fpsMedian": 50,
     "last": {
-      "t": 20000.5,
+      "t": 20011.400000017882,
       "fps": 50,
-      "frameMs": 1.4269230789863145,
-      "drawCalls": 33,
-      "triangles": 8446,
-      "textures": 20,
-      "geometries": 21,
-      "heapBytes": 80063259
+      "frameMs": 0.7807692300814849,
+      "drawCalls": 15,
+      "triangles": 8350,
+      "textures": 19,
+      "geometries": 19,
+      "heapBytes": 78819396
     }
   },
   "navigation": {
-    "domContentLoadedMs": 50,
-    "loadEventMs": 295.10000002384186,
-    "firstContentfulPaintMs": 408,
+    "domContentLoadedMs": 35.099999994039536,
+    "loadEventMs": 106.90000000596046,
+    "firstContentfulPaintMs": 384,
     "transferSize": 300
   },
   "interaction": {
-    "pointerToHighlightMs": 34,
-    "clickToSelectMs": 76.9,
+    "pointerToHighlightMs": 33.2,
+    "clickToSelectMs": 36.7,
     "wallDragFrameMs": 16.7,
-    "undoMs": 32.3,
+    "undoMs": 34,
     "note": "Synthetic probes; wall-drag is a proxy gesture."
   },
   "targets": {
