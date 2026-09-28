@@ -1,7 +1,7 @@
 # STATUS — Agent A
 updated: 2026-09-28
-phase: **ci on `eco/ci`** · the quality job is green on pull request #4 · merge next; the demo is in production (`0d38a884` READY)
-state: The demo is merged (pull request #3 from `eco/demo`, merge commit `0d38a884`) and READY in production: light graphics by default, a site and house when the world sends nothing, and the tools that fail hidden in light mode. H19.2a went in before it (`c00d885f`). GitHub CI's quality job had failed on every push to `main` since `121d1ebc` because `plugin-geometry` had no tests; `eco/ci` fixes it (`ci-done.md`).
+phase: **A4 · A5 · H19.2 landing** · `eco/a5` rebased on `main`, pull request #5 green, preview READY · merge next
+state: Cleanup done: `eco/ci` merged (`bd81105b`, production READY) and CI's quality job is green on `main`; pull request #2 is closed; 21 remote branches are deleted. `eco/a5` (holding `eco/h19-2` and `eco/a4`) is rebased on `main` as pull request #5, which brings `/builder` (what the world's "Edit building" opens) and the site in the editor to production. The demo is in production (`0d38a884`), and this merge keeps its behaviour (`A4-A5-landing-done.md`).
 
 ## Production SHAs
 
@@ -14,8 +14,8 @@ state: The demo is merged (pull request #3 from `eco/demo`, merge commit `0d38a8
 | **H19.0a** | hygiene (format · types · CI checks · LF) | **`121d1ebc`** | READY |
 | **H19.0 · H19.1 · H19.2a** | re-measure · profile · dpr never above the display | **`c00d885f`** (merge commit) | **READY** `dpl_GZ9asee41gW5m25zNL4yNFQY33JE` |
 | **demo** | light graphics · demo site · hidden tools | **`0d38a884`** (merge commit, pull request #3) | **READY** `dpl_BUYwmDfTxVJCL2KD2Xf7cQChN5GC` |
-| **ci** | CI quality job: `plugin-geometry`'s test runs its geometry check | `eco/ci` `8571285c` · pull request #4, CI run #9 green · preview READY | after the merge |
-| H19.2 · A4 · A5 | guides · 2b · 2c · 2d profile · `/builder` · site in the editor | `eco/h19-2` `273d912d` · `eco/a4` `39c602cc` · `eco/a5` `26042fd6` (pre-rebase) | resume after the demo |
+| **ci** | CI quality job: `plugin-geometry`'s test runs its geometry check | **`bd81105b`** (merge commit, pull request #4) | **READY** `dpl_Hqoy9Nx2WU5twRPjZdERqgbGYud7` |
+| **H19.2 · A4 · A5** | 2b · 2c · 2d profile · `/builder` · the site in the editor | `eco/a5` **`43ac80d5`** (rebased) · pull request #5, CI green · preview READY `dpl_BEUtXvhS3aWRctxaNEo4PCeLhLps` | after the merge |
 
 ## Demo (preview `dpl_5sTZbhRoymUj9g2YNA2xDPLoF9CD`, light graphics)
 
@@ -39,9 +39,11 @@ state: The demo is merged (pull request #3 from `eco/demo`, merge commit `0d38a8
 ## Open for the architect
 
 - **Full graphics with a site loaded shows only the sky.** Production now opens in light graphics, which draws the scene; switching to full with a site loaded still shows only the sky.
-- **IFC export:** the fix is `91c2ddfe` on `eco/a4`; it needs A4's decoder-path setting.
+- **IFC export works with A4** (the `/builder` check downloads an `.ifc`), but light graphics still hides it, as the demo recorded. Showing it in light mode is a decision for after the demo.
+- **The bridge answers one origin** (`NEXT_PUBLIC_ECO_HOST_ORIGIN`, default `https://spatial-map.vercel.app`, A4); after this merge, production does too.
+- **The host's reference massing (`eco-ghost`) did not appear** in the `/builder/embed/` harness, though its site and guides did. Not new; see `A4-A5-landing-done.md`.
 - **The 38 local test failures** (`demo-done.md`) come from this machine, not the code: a checkout path with spaces and `&`, Windows-only file behaviour, and CRLF fixtures. On Linux CI every package's tests pass (`ci-done.md`).
-- A4 and A5 open items stand; see `A4-done.md` and `A5-done.md` on their branches.
+- A4 and A5 open items stand; see `A4-done.md` and `A5-done.md`. Their commit SHAs predate the rebase; `A4-A5-landing-done.md` maps them.
 
-commit: ci fix `8571285c` on `eco/ci` · demo merge `0d38a884` on `main`, production READY · H19.2a merge `c00d885f`
-queue: merge `eco/ci` (merge commit) → production READY → record; then the next brief. A4 and A5 resume after the demo
+commit: `eco/a5` `43ac80d5` (pull request #5) · ci merge `bd81105b` on `main`, production READY · demo merge `0d38a884`
+queue: merge `eco/a5` (merge commit) → production READY → delete `eco/h19-2`, `eco/a4`, `eco/a5` → record; then the next brief
