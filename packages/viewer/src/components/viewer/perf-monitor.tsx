@@ -93,6 +93,8 @@ export const PerfMonitor = () => {
           renderCalls: info.render?.calls ?? null,
         }
       },
+      /** R3F state (gl, scene, camera) for scripted profiling under ?perf. */
+      three: () => getThree(),
       listNodes(type: string): string[] {
         return Object.values(useScene.getState().nodes)
           .filter((n) => n.type === type)
