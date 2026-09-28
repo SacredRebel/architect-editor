@@ -1,0 +1,150 @@
+{
+  "phase": "H19.2b",
+  "capturedAt": "2026-09-28T07:18:52.890Z",
+  "sourceUrl": "http://127.0.0.1:3019/?perf",
+  "tree": "669d9fa46e9bb296e4b0a6639a27f143630063a1",
+  "sampleCount": 998,
+  "sampleWindowMs": 20000,
+  "cameraPath": {
+    "durationMs": 20000,
+    "kind": "synthetic-pointer-orbit",
+    "note": "Fixed 20s orbital pointermoves on the canvas; frames counted from the useFrame tick, not raw rAF.",
+    "meter": "frame-tick"
+  },
+  "fps": {
+    "median": 50,
+    "mean": 49.94,
+    "p1": 29.94,
+    "min": 29.85,
+    "max": 60.98,
+    "perFrameMedian": 59.88,
+    "note": "median = median of 1s wall-clock bins of rendered frames; mean = frames / wall seconds; p1/min/max/perFrameMedian from per-frame render intervals (vsync-quantised)."
+  },
+  "frames": {
+    "sampler": 999,
+    "hud": 999,
+    "hudWindows": 39,
+    "tickDelta": 999,
+    "rendererFrame": 1200,
+    "renderCalls": 5994,
+    "callsPerFrame": 6,
+    "wallMs": 20005.6,
+    "note": "sampler = frameTick changes seen by the injected rAF loop; hud = mean PerfMonitor window fps × wall seconds; rendererFrame = WebGPU info.frame (advanced by the renderer rAF Animation loop, i.e. display ticks — recorded, not used as a frame reference); renderCalls = info.calls (every render() pass)."
+  },
+  "renderMs": {
+    "median": 5.243,
+    "p99": 7.864,
+    "max": 11.665,
+    "samples": 806,
+    "source": "webgpu-timestamp-query",
+    "hudGpuMsMedian": 5.59
+  },
+  "renderCpuMs": {
+    "median": 3.1,
+    "p99": 6.3,
+    "max": 9.5,
+    "samples": 999
+  },
+  "shadowPasses": {
+    "total": 1998,
+    "perFrame": 2,
+    "outerRenders": 999
+  },
+  "scene": {
+    "drawables": 227,
+    "triangles": 54295,
+    "instances": 227,
+    "casters": 136,
+    "shadowLights": 2,
+    "materials": 38
+  },
+  "fixture": {
+    "name": "h19-scene",
+    "sha256": "abdcd20c6f9d90eb7189cf6ca091b19b655c9d6820bab43e92212a87a4de005b",
+    "expect": {
+      "wall": 8,
+      "door": 3,
+      "window": 3,
+      "zone": 4,
+      "slab": 1,
+      "roof": 1,
+      "stair": 1,
+      "item": 50
+    },
+    "counts": {
+      "wall": 8,
+      "door": 3,
+      "window": 3,
+      "zone": 4,
+      "slab": 1,
+      "roof": 1,
+      "stair": 1,
+      "item": 50
+    }
+  },
+  "harness": {
+    "sha256": "7df5c03e20a59ad7e33eeb3668ffe35bd76a72547cabce037b91aaf979ea6f54"
+  },
+  "emulation": {
+    "deviceScaleFactor": null,
+    "gpuQualityPreference": null
+  },
+  "settleMs": 7515,
+  "frameMs": {
+    "median": 16.7,
+    "p99": 33.4,
+    "max": 33.5
+  },
+  "draws": {
+    "median": 573,
+    "last": 573
+  },
+  "tris": {
+    "median": 114216,
+    "last": 114214.15384615384
+  },
+  "gpu": {
+    "qualityPreference": "auto",
+    "detectedQuality": "medium",
+    "resolvedQuality": "medium",
+    "adaptiveDpr": true,
+    "dpr": 1,
+    "devicePixelRatio": 1
+  },
+  "hud": {
+    "sampleCount": 1200,
+    "fpsMedian": 50,
+    "last": {
+      "t": 20005.599999982118,
+      "fps": 50,
+      "frameMs": 3.6038461533876567,
+      "drawCalls": 573,
+      "triangles": 114214.15384615384,
+      "textures": 52,
+      "geometries": 164,
+      "heapBytes": 148101884
+    }
+  },
+  "navigation": {
+    "domContentLoadedMs": 8.700000017881393,
+    "loadEventMs": 77.90000000596046,
+    "firstContentfulPaintMs": 400,
+    "transferSize": 300
+  },
+  "interaction": {
+    "pointerToHighlightMs": 33.9,
+    "clickToSelectMs": 36.4,
+    "wallDragFrameMs": 16.7,
+    "undoMs": 28.8,
+    "note": "Synthetic probes; wall-drag is a proxy gesture."
+  },
+  "targets": {
+    "fpsMedian": 60,
+    "fpsP1": 45,
+    "pointerToHighlightMs": 50,
+    "wallDragFrameMs": 16,
+    "loadToInteractiveMs": 4000
+  },
+  "optimisationsApplied": false,
+  "note": "H17.0 before: pre-H17.1 tree plus the ?perf probe only, on the 20s orbital path, same harness, same machine and Chrome as the after. Historic 4s idle sample remains in h17-0-baseline.json untouched."
+}
