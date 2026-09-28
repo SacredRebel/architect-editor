@@ -2,8 +2,11 @@ import type { EcoSite } from '@eco/plugin-eco'
 import { useScene } from '@pascal-app/core'
 import { ecoAssetPrefix, ecoPublicPath } from './eco-mode'
 
-/** How long the world's studio has, once the editor is up, to send a scene or a site. */
-const WAIT_FOR_WORLD_MS = 5000
+/**
+ * How long the world's studio has, once the editor is up, to send a scene or a
+ * site. Short: anything it sends later still replaces the fixture.
+ */
+const WAIT_FOR_WORLD_MS = 3000
 const STRUCTURE = new Set(['site', 'building', 'level'])
 
 /** The two bridge calls the fallback needs, passed in so this file never imports the plugin. */
@@ -33,14 +36,17 @@ function editorUp(): boolean {
  */
 export async function startDemoSiteFallback(bridge: EcoBridge): Promise<void> {
   if (typeof window === 'undefined') return
+  // Fetched now, alongside the editor's own first load, so it is ready to open.
+  const fixtureText = fetch(ecoPublicPath('/demo/site-house.json'))
+    .then((response) => (response.ok ? response.text() : null))
+    .catch(() => null)
   const deadline = Date.now() + 60_000
-  while (!editorUp() && Date.now() < deadline) await sleep(500)
+  while (!editorUp() && Date.now() < deadline) await sleep(250)
   await sleep(WAIT_FOR_WORLD_MS)
   if (bridge.hasEcoHostContent() || sceneHasDesign()) return
 
-  const response = await fetch(ecoPublicPath('/demo/site-house.json'))
-  if (!response.ok) return
-  const text = await response.text()
+  const text = await fixtureText
+  if (!text) return
   const fixture = JSON.parse(
     text.replaceAll('{{origin}}', `${window.location.origin}${ecoAssetPrefix}`),
   ) as { postMessages: { t: string; scene?: unknown; site?: EcoSite }[] }
