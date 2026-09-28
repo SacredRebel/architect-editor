@@ -251,6 +251,28 @@ export const PerfMonitor = () => {
           behindCamera: v.z > 1,
         }
       },
+      /** `projectNode` for a world point: CSS pixels relative to the canvas. */
+      projectPoint(
+        x: number,
+        y: number,
+        z: number,
+      ): { x: number; y: number; behindCamera: boolean } {
+        const { camera, size } = getThree()
+        const v = new Vector3(x, y, z).project(camera)
+        return {
+          x: ((v.x + 1) / 2) * size.width,
+          y: ((1 - v.y) / 2) * size.height,
+          behindCamera: v.z > 1,
+        }
+      },
+      /** A node's stored data, as the scene holds it. */
+      node(nodeId: string): unknown {
+        return (useScene.getState().nodes as Record<string, unknown>)[nodeId] ?? null
+      },
+      /** The object registered for a node (in-page use; not serialisable). */
+      object(nodeId: string): unknown {
+        return sceneRegistry.nodes.get(nodeId) ?? null
+      },
     }
     ;(window as any).__pascalPerf = probe
     return () => {
