@@ -142,6 +142,14 @@ if (deps.status !== 0) {
   process.exit(deps.status ?? 1)
 }
 
+// `next build` is spawned directly, so the package's prebuild copies do not
+// run; the decoders must be in public/ before the export copies it.
+const decoders = spawnSync('node', ['scripts/copy-decoders.mjs'], { cwd: appDir, stdio: 'inherit' })
+if (decoders.status !== 0) {
+  console.error('[eco-static] copying decoders failed')
+  process.exit(decoders.status ?? 1)
+}
+
 hideApi()
 
 let status = 1

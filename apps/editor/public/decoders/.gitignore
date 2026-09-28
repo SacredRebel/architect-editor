@@ -1,0 +1,6 @@
+# Copied from the installed three package by ../../scripts/copy-decoders.mjs
+# on postinstall / predev / prebuild and by the static export — do not commit.
+# LICENSE (Apache-2.0 text) is tracked; NOTICE.md is written by the script.
+draco/
+basis/
+NOTICE.md

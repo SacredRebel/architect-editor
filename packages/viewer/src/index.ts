@@ -99,6 +99,7 @@ export {
   prepareBrushForCSG,
   SUBTRACTION,
 } from './lib/csg-utils'
+export { configureDecoderPaths, getDracoDecoderPath } from './lib/decoder-paths'
 export { disposeObject3DResources } from './lib/dispose-object3d'
 export type { EdgeMode } from './lib/edge-style'
 export { PERF_OVERLAY_ENABLED } from './lib/gpu-perf'
