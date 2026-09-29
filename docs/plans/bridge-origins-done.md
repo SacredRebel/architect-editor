@@ -61,3 +61,15 @@ The static server also listens on IPv6 loopback, which gives it an origin off th
 ## Note for the architect: E's preview URLs
 
 In the team's Vercel deployment list, the world's per-deployment preview URLs read `spatial-<hash>-pauls-projects-af8162cc.vercel.app`. Vercel shortened the project name there, so `spatial-map-*` does not match them. Its branch aliases, `spatial-map-git-<branch>-pauls-projects-af8162cc.vercel.app`, do match. If E's checks run from per-deployment URLs, widening the prefix to `spatial-` (team suffix unchanged) is a one-line change in `eco-origins.ts` and its check's oracle. It is the architect's call.
+
+## Merged, then widened (29 Sep)
+
+- **Merged:** the architect merged pull request #7 as `d8ecb779`. Production is READY: `dpl_9QZPXMYxq3XCkYGaZShMtuScrSPR`.
+- **The architect's decision:** the preview pattern is now `https://spatial-*-pauls-projects-af8162cc.vercel.app`, with the team suffix still exact. It covers:
+  - deployment URLs, `spatial-<hash>-…`;
+  - branch URLs, `spatial-map-git-<branch>-…`.
+- **The change** is on `eco/bridge-origins-widen`, a separate pull request:
+  - `eco-origins.ts` and the check's oracle drop the `map-` from their prefix;
+  - the table gains the look-alike `https://spatial-x.pauls-projects-af8162cc.vercel.app.evil.com` and `https://spatial--pauls-projects-af8162cc.vercel.app`, both silent;
+  - it also gains the world's `main` branch URL and a deployment-style URL, both answered.
+- **Result:** `check-bridge-origins` passes on 32 origins (10 answered, 22 silent), and its `--self-test` still rejects all three forgeries.
