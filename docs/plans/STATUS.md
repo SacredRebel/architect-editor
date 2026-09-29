@@ -1,7 +1,7 @@
 # STATUS — Agent A
 updated: 2026-09-28
-phase: **A4 · A5 · H19.2 landing** · `eco/a5` rebased on `main`, pull request #5 green, preview READY · merge next
-state: Cleanup done: `eco/ci` merged (`bd81105b`, production READY) and CI's quality job is green on `main`; pull request #2 is closed; 21 remote branches are deleted. `eco/a5` (holding `eco/h19-2` and `eco/a4`) is rebased on `main` as pull request #5, which brings `/builder` (what the world's "Edit building" opens) and the site in the editor to production. The demo is in production (`0d38a884`), and this merge keeps its behaviour (`A4-A5-landing-done.md`).
+phase: **A4 · A5 · H19.2 in production** · `79dc5f13` READY · waiting for the next brief
+state: Cleanup done. `eco/ci` is merged (`bd81105b`, production READY) and CI's quality job is green on `main`. Pull request #2 is closed. The remote holds only `main`: 24 branches are deleted. `eco/a5` (holding `eco/h19-2` and `eco/a4`) was rebased on `main` and merged as pull request #5 (`79dc5f13`). That puts `/builder`, what the world's "Edit building" opens, and the site in the editor into production. The demo's behaviour is unchanged (`A4-A5-landing-done.md`).
 
 ## Production SHAs
 
@@ -15,7 +15,7 @@ state: Cleanup done: `eco/ci` merged (`bd81105b`, production READY) and CI's qua
 | **H19.0 · H19.1 · H19.2a** | re-measure · profile · dpr never above the display | **`c00d885f`** (merge commit) | **READY** `dpl_GZ9asee41gW5m25zNL4yNFQY33JE` |
 | **demo** | light graphics · demo site · hidden tools | **`0d38a884`** (merge commit, pull request #3) | **READY** `dpl_BUYwmDfTxVJCL2KD2Xf7cQChN5GC` |
 | **ci** | CI quality job: `plugin-geometry`'s test runs its geometry check | **`bd81105b`** (merge commit, pull request #4) | **READY** `dpl_Hqoy9Nx2WU5twRPjZdERqgbGYud7` |
-| **H19.2 · A4 · A5** | 2b · 2c · 2d profile · `/builder` · the site in the editor | `eco/a5` **`43ac80d5`** (rebased) · pull request #5, CI green · preview READY `dpl_BEUtXvhS3aWRctxaNEo4PCeLhLps` | after the merge |
+| **H19.2 · A4 · A5** | 2b · 2c · 2d profile · `/builder` · the site in the editor | **`79dc5f13`** (merge commit, pull request #5) | **READY** `dpl_Gd2hzP9a9Lmrv2y6jr4AmozMZoE9` |
 
 ## Demo (preview `dpl_5sTZbhRoymUj9g2YNA2xDPLoF9CD`, light graphics)
 
@@ -45,5 +45,5 @@ state: Cleanup done: `eco/ci` merged (`bd81105b`, production READY) and CI's qua
 - **The 38 local test failures** (`demo-done.md`) come from this machine, not the code: a checkout path with spaces and `&`, Windows-only file behaviour, and CRLF fixtures. On Linux CI every package's tests pass (`ci-done.md`).
 - A4 and A5 open items stand; see `A4-done.md` and `A5-done.md`. Their commit SHAs predate the rebase; `A4-A5-landing-done.md` maps them.
 
-commit: `eco/a5` `43ac80d5` (pull request #5) · ci merge `bd81105b` on `main`, production READY · demo merge `0d38a884`
-queue: merge `eco/a5` (merge commit) → production READY → delete `eco/h19-2`, `eco/a4`, `eco/a5` → record; then the next brief
+commit: A4 · A5 · H19.2 merge `79dc5f13` on `main`, production READY · ci merge `bd81105b` · demo merge `0d38a884`
+queue: waiting for the next brief

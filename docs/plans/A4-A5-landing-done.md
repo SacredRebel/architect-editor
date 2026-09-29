@@ -101,8 +101,15 @@ Two demo changes on `main` made A4's check fail, though A4 itself hadn't changed
 
 ## 5. Merge and production
 
-- **Order:** merge commit to `main` once this commit's preview is READY, then production READY.
-- **Branches:** `eco/h19-2`, `eco/a4` and `eco/a5` are deleted from the remote once the merge is in. On this machine, local branches keep the old commits: `eco/h19-2`, `eco/a4` and `eco/a5-prebase`.
+- **Merge:** pull request #5 (`eco/a5` at `82dc5f8e`) merged with a merge commit, **`79dc5f13`**. Before the merge, CI was green on `82dc5f8e` and its preview was READY (`dpl_huWSj8JkrNDjPxqEExw9877E2TyV`). `bun run build` passed (10 of 10) before the push.
+- **Production:** **READY**, `dpl_Gd2hzP9a9Lmrv2y6jr4AmozMZoE9` at `79dc5f13`, served at https://architect-editor-snowy.vercel.app.
+- **Production tour:** the demo tour ran once more against production, in a fresh Chrome profile (record: `demo/landing-production-tour.json`):
+  - the demo house opened in light graphics, built 4.6 s after load;
+  - walls went 8 → 9;
+  - all 18 tabs opened, with no errors;
+  - every tool gave the same result as in `demo-done.md`;
+  - no page errors and no failed requests.
+- **Branches deleted:** `eco/h19-2` (`4b2ae1ba`), `eco/a4` (`1d2ac08c`) and `eco/a5` (`82dc5f8e`). The remote now holds only `main`. On this machine, local branches still hold the commits from before the rebase: `eco/h19-2`, `eco/a4` and `eco/a5-prebase`.
 
 ## Open
 
