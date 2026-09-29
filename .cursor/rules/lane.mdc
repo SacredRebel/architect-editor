@@ -27,3 +27,9 @@ The design editor that opens INSIDE the world. A fork of Pascal Editor (`pascalo
 
 ## Your standing next brief
 **H19** — re-measure fps after the perf phase (a before/after pair must exist), close the residual list with numbers. Then H20 (change review + scoped context), H21 (assisted plan tracing). Briefs arrive in `docs/plans/`.
+
+## Current direction (29 Sep 2026)
+- The map moves to Godot 4.7.2 as a desktop app (lane E). Houses are designed in Blender 5.2.2 and FreeCAD 1.1.4 directly.
+- Godot, Blender and FreeCAD MCP connectors are installed at user scope for every window.
+- The browser world stays as the web viewer, the land pack (C) stays the data source, and the Atlas (F) stays the web front door.
+- All lanes are paused except E. This lane is paused: start nothing without a new brief. Begin from `docs/plans/HANDOVER.md`.
