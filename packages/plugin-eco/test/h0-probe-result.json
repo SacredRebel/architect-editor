@@ -1,0 +1,30 @@
+{
+  "probeModel": {
+    "meshes": 2,
+    "triangles": 108,
+    "floors": 2,
+    "solids": 8
+  },
+  "checks": {
+    "floorsEq2": true,
+    "solidsEq8": true,
+    "wSharedSplitInto2": true,
+    "wSharedNames": ["wall:wShared:0", "wall:wShared:1"],
+    "floorTopsAll015": true,
+    "floorTops": [0.15, 0.15],
+    "northWallNames": ["wall:wN_A", "wall:wN_B"],
+    "northZsAllNegative": true,
+    "northZsSample": [-3.11, -3.11, -3.11, -3.11, -3.11, -3.11]
+  },
+  "pass": true,
+  "solidNames": [
+    "wall:wN_A",
+    "wall:wS_A",
+    "wall:wW",
+    "wall:wShared:0",
+    "wall:wShared:1",
+    "wall:wN_B",
+    "wall:wS_B",
+    "wall:wE"
+  ]
+}
