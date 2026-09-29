@@ -25,7 +25,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "check-types": "tsc --noEmit",
-    "test": "bun test src",
+    "test": "bun test src && bun test/check-bridge-origins.mjs && bun test/check-bridge-origins.mjs --self-test",
+    "check:origins": "bun test/check-bridge-origins.mjs",
     "check:glb": "bun test/check-glb-h1.mjs",
     "check:export": "bun test/check-export.mjs",
     "check:roundtrip": "bun test/check-roundtrip.mjs",
