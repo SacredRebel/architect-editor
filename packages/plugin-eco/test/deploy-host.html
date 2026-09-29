@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>eco deploy host — snowy embed round-trip</title>
+    <style>
+      body {
+        margin: 0;
+        font: 13px/1.4 ui-sans-serif, system-ui, sans-serif;
+        display: grid;
+        grid-template-rows: auto 180px 1fr;
+        height: 100vh;
+        background: #0e1116;
+        color: #e6edf3;
+      }
+      header {
+        padding: 8px 12px;
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      #log {
+        overflow: auto;
+        padding: 8px 12px;
+        font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        background: #010409;
+        white-space: pre-wrap;
+        border-bottom: 1px solid #30363d;
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #000;
+      }
+      .ok {
+        color: #3fb950;
+      }
+      .bad {
+        color: #f85149;
+      }
+      button {
+        background: #238636;
+        color: #fff;
+        border: 1px solid #2ea043;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      #status {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Deploy host</strong>
+      <span id="status">waiting…</span>
+      <button id="btnExport" type="button" disabled>Request eco:glb</button>
+    </header>
+    <div id="log"></div>
+    <iframe id="editor" title="eco-embed" allow="autoplay; fullscreen"></iframe>
+    <script type="module">
+      const EMBED =
+        new URLSearchParams(location.search).get('embed') ||
+        new URL('/embed', location.href).href
+      const embedOrigin = new URL(EMBED).origin
+      const logEl = document.getElementById('log')
+      const statusEl = document.getElementById('status')
+      const iframe = document.getElementById('editor')
+      const btnExport = document.getElementById('btnExport')
+      const arrived = []
+      const t0 = performance.now()
+      let helloTimer = null
+      let helloCount = 0
+      let ready = false
+
+      function ts() {
+        return ((performance.now() - t0) / 1000).toFixed(3) + 's'
+      }
+
+      function log(dir, payload) {
+        const preview =
+          typeof payload === 'string'
+            ? payload
+            : payload?.t === 'eco:glb'
+              ? `eco:glb bytes≈${Math.round(((payload.glb || '').length * 3) / 4)} floors=${payload.walk?.floors?.length ?? '?'} solids=${payload.walk?.solids?.length ?? '?'}`
+              : payload?.t === 'eco:load-site'
+                ? `eco:load-site terrain=${payload.site?.terrain?.w}×${payload.site?.terrain?.h}`
+                : JSON.stringify(payload).slice(0, 240)
+        logEl.textContent += `[${ts()}] ${dir} ${preview}\n`
+        logEl.scrollTop = logEl.scrollHeight
+        if (payload?.t) arrived.push(payload.t)
+        window.__ecoArrived = [...arrived]
+        window.__ecoLog = logEl.textContent
+        console.log('[deploy-host]', dir, payload)
+      }
+
+      function miniSite() {
+        const w = 17
+        const h = 17
+        const stepM = 2
+        const heights = Array.from({ length: w * h }, (_, i) => {
+          const r = Math.floor(i / w)
+          const c = i % w
+          return 400 + Math.sin(c * 0.4) * 2 + Math.cos(r * 0.35) * 1.5
+        })
+        const half = ((w - 1) * stepM) / 2
+        return {
+          v: 'eco/1',
+          originLL: [-119.1776, 34.4481],
+          originElevM: 400,
+          terrain: {
+            w,
+            h,
+            stepM,
+            originOffsetM: [-half, half],
+            heights,
+          },
+          guides: [
+            {
+              kind: 'boundary',
+              name: 'survey',
+              pts: [
+                [-20, -18],
+                [22, -18],
+                [22, 20],
+                [-20, 20],
+                [-20, -18],
+              ],
+            },
+            {
+              kind: 'footprint',
+              name: 'pad',
+              pts: [
+                [-8, -6],
+                [10, -6],
+                [10, 8],
+                [-8, 8],
+                [-8, -6],
+              ],
+            },
+          ],
+        }
+      }
+
+      function stopHello() {
+        if (helloTimer) {
+          clearInterval(helloTimer)
+          helloTimer = null
+        }
+      }
+
+      function sendHello() {
+        if (ready || helloCount >= 60) {
+          stopHello()
+          if (!ready) {
+            statusEl.innerHTML = '<span class="bad">no eco:ready</span>'
+            log('!', 'knock budget exhausted')
+          }
+          return
+        }
+        helloCount += 1
+        const msg = { t: 'eco:hello', v: 'eco/1' }
+        iframe.contentWindow?.postMessage(msg, embedOrigin)
+        log('→', `${msg.t} (#${helloCount})`)
+      }
+
+      function startKnocking() {
+        stopHello()
+        helloCount = 0
+        ready = false
+        btnExport.disabled = true
+        statusEl.textContent = 'knocking eco:hello…'
+        sendHello()
+        helloTimer = setInterval(sendHello, 500)
+      }
+
+      function sendSite() {
+        const msg = { t: 'eco:load-site', site: miniSite() }
+        iframe.contentWindow.postMessage(msg, embedOrigin)
+        log('→', msg)
+        statusEl.innerHTML = '<span class="ok">site sent — requesting GLB…</span>'
+        setTimeout(() => {
+          const exp = { t: 'eco:request-export', what: 'glb' }
+          iframe.contentWindow.postMessage(exp, embedOrigin)
+          log('→', exp)
+        }, 1500)
+      }
+
+      window.addEventListener('message', (event) => {
+        if (!event.data || typeof event.data.t !== 'string') return
+        if (!String(event.data.t).startsWith('eco:')) return
+        log('←', event.data)
+        if (event.data.t === 'eco:ready') {
+          ready = true
+          stopHello()
+          btnExport.disabled = false
+          statusEl.innerHTML = `<span class="ok">ready</span> caps=[${(event.data.caps || []).join(', ')}]`
+          sendSite()
+        }
+        if (event.data.t === 'eco:glb') {
+          const bytes = Math.round(((event.data.glb || '').length * 3) / 4)
+          const floors = event.data.walk?.floors?.length ?? 0
+          const solids = event.data.walk?.solids?.length ?? 0
+          statusEl.innerHTML = `<span class="ok">GLB OK</span> ≈${bytes} B · floors=${floors} · solids=${solids}`
+          window.__ecoGlb = {
+            bytes,
+            floors,
+            solids,
+            originLL: event.data.originLL,
+          }
+        }
+        if (event.data.t === 'eco:error') {
+          statusEl.innerHTML = `<span class="bad">eco:error</span> ${event.data.message}`
+        }
+      })
+
+      btnExport.addEventListener('click', () => {
+        const msg = { t: 'eco:request-export', what: 'glb' }
+        iframe.contentWindow.postMessage(msg, embedOrigin)
+        log('→', msg)
+      })
+
+      iframe.addEventListener('load', () => {
+        log('!', 'iframe load → ' + EMBED)
+        startKnocking()
+      })
+      iframe.src = EMBED
+      window.__ecoEmbed = EMBED
+    </script>
+  </body>
+</html>
