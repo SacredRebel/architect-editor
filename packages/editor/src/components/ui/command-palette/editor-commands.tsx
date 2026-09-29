@@ -452,8 +452,6 @@ export function EditorCommands() {
         group: 'Export & Share',
         icon: <Building2 className="h-4 w-4" />,
         keywords: ['export', 'ifc', 'bim', 'step', 'download'],
-        // Demo: hidden with light graphics — its web-ifc wasm 404s on a chunk path.
-        when: () => useViewer.getState().graphics !== 'light',
         execute: () =>
           run(async () => {
             const { exportIfcModel } = await import('../../../lib/ifc-export')

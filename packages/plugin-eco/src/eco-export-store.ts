@@ -1,5 +1,6 @@
 /**
- * Last GLB export outcome for the Eco legend UI — size label + hard-audit errors.
+ * Last export outcomes for the Eco legend UI — GLB size label + hard-audit
+ * errors, and the last IFC export's summary (counts and GlobalId print).
  */
 export type EcoExportUiState = {
   status: 'idle' | 'exporting' | 'ok' | 'error'
@@ -8,6 +9,8 @@ export type EcoExportUiState = {
   error: string | null
   beforeBytes: number | null
   afterBytes: number | null
+  /** e.g. `IFC 4.3 · 58 elements, 7 spaces, 2 storeys · GlobalIds 9f2c41e0`. */
+  ifcSummary: string | null
 }
 
 const listeners = new Set<() => void>()
@@ -18,6 +21,7 @@ let state: EcoExportUiState = {
   error: null,
   beforeBytes: null,
   afterBytes: null,
+  ifcSummary: null,
 }
 
 export function getEcoExportState(): EcoExportUiState {
@@ -45,6 +49,7 @@ export function resetEcoExportState(): void {
     error: null,
     beforeBytes: null,
     afterBytes: null,
+    ifcSummary: null,
   }
   emit()
 }

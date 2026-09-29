@@ -9,7 +9,7 @@ import {
   nodeRegistry,
   registerNode,
 } from '@pascal-app/core'
-import { registerEditorHostPanel } from '@pascal-app/editor'
+import { registerEditorHostPanel, setIfcModelExporter } from '@pascal-app/editor'
 import { builtinPlugin } from '@pascal-app/nodes'
 import { bodyPlugin } from '@pascal-app/plugin-body'
 import { bonesHostPanel, bonesPlugin } from '@pascal-app/plugin-bones'
@@ -125,10 +125,13 @@ if (process.env.NEXT_PUBLIC_ECO === '1') {
       ecoOrganicHostPanel,
       ecoPresentation,
       ecoShellHostPanel,
+      exportEcoIfcFromEditor,
       hasEcoHostContent,
     }) => {
       // Demo: the site/house fixture opens when the world sends nothing.
       void startDemoSiteFallback({ applyEcoPayloadsLocally, hasEcoHostContent })
+      // UNIFY P1: "Export IFC 4.3" writes FreeCAD-ready IFC (stable ids, storeys, north, every kind).
+      setIfcModelExporter(exportEcoIfcFromEditor)
       registerEditorHostPanel(ecoHostPanel)
       registerEditorHostPanel(ecoAssetsHostPanel)
       registerEditorHostPanel(ecoMaterialsHostPanel)

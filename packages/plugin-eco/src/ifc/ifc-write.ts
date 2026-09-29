@@ -39,8 +39,13 @@ export class IfcWriter {
     return entity
   }
 
+  /** Every GlobalId this writer has handed out. */
+  readonly globalIds = new Set<string>()
+
   guid(name: string) {
-    return new ns.IfcGloballyUniqueId(ifcGlobalId(name))
+    const id = ifcGlobalId(name)
+    this.globalIds.add(id)
+    return new ns.IfcGloballyUniqueId(id)
   }
 
   label(text: string | undefined | null) {
@@ -58,11 +63,15 @@ export class IfcWriter {
   }
 
   point2([x, y]: [number, number]) {
-    return this.write(new ns.IfcCartesianPoint([new ns.IfcLengthMeasure(x), new ns.IfcLengthMeasure(y)]))
+    return this.write(
+      new ns.IfcCartesianPoint([new ns.IfcLengthMeasure(x), new ns.IfcLengthMeasure(y)]),
+    )
   }
 
   direction3([x, y, z]: Vec3) {
-    return this.write(new ns.IfcDirection([new ns.IfcReal(x), new ns.IfcReal(y), new ns.IfcReal(z)]))
+    return this.write(
+      new ns.IfcDirection([new ns.IfcReal(x), new ns.IfcReal(y), new ns.IfcReal(z)]),
+    )
   }
 
   direction2([x, y]: [number, number]) {
@@ -71,7 +80,8 @@ export class IfcWriter {
 
   /** An axis placement at `origin`, turned `angle` radians about +Z (IFC plan angle). */
   axis3(origin: Vec3, angle = 0) {
-    if (Math.abs(angle) < 1e-12) return this.write(new ns.IfcAxis2Placement3D(this.point3(origin), null, null))
+    if (Math.abs(angle) < 1e-12)
+      return this.write(new ns.IfcAxis2Placement3D(this.point3(origin), null, null))
     return this.write(
       new ns.IfcAxis2Placement3D(
         this.point3(origin),
@@ -92,7 +102,9 @@ export class IfcWriter {
       return this.write(new ns.IfcPolyline([...points, points[0] as never]))
     }
     if (holes.length === 0) {
-      return this.write(new ns.IfcArbitraryClosedProfileDef(ns.IfcProfileTypeEnum.AREA, null, curve(outer)))
+      return this.write(
+        new ns.IfcArbitraryClosedProfileDef(ns.IfcProfileTypeEnum.AREA, null, curve(outer)),
+      )
     }
     return this.write(
       new ns.IfcArbitraryProfileDefWithVoids(
@@ -117,13 +129,13 @@ export class IfcWriter {
     )
   }
 
-  /** Extrude a profile along +Z by `depth`, starting at z = `base`. */
-  extrude(profile: unknown, depth: number, base = 0) {
+  /** Extrude a profile by `depth` from z = `base`, up (+Z) or down (−Z). */
+  extrude(profile: unknown, depth: number, base = 0, direction: 1 | -1 = 1) {
     return this.write(
       new ns.IfcExtrudedAreaSolid(
         profile as never,
         base === 0 ? null : this.axis3([0, 0, base]),
-        this.direction3([0, 0, 1]),
+        this.direction3([0, 0, direction]),
         new ns.IfcPositiveLengthMeasure(depth),
       ),
     )
@@ -165,7 +177,10 @@ export class IfcWriter {
       ),
     )
     const shading = this.write(
-      new ns.IfcSurfaceStyleShading(colour, opacity < 1 ? new ns.IfcNormalisedRatioMeasure(1 - opacity) : null),
+      new ns.IfcSurfaceStyleShading(
+        colour,
+        opacity < 1 ? new ns.IfcNormalisedRatioMeasure(1 - opacity) : null,
+      ),
     )
     const style = this.write(new ns.IfcSurfaceStyle(null, ns.IfcSurfaceSide.BOTH, [shading]))
     this.styles.set(key, style)
@@ -178,7 +193,12 @@ export class IfcWriter {
 
   shape(context: unknown, identifier: 'Body' | 'Axis', type: string, items: unknown[]) {
     return this.write(
-      new ns.IfcShapeRepresentation(context as never, new ns.IfcLabel(identifier), new ns.IfcLabel(type), items as never[]),
+      new ns.IfcShapeRepresentation(
+        context as never,
+        new ns.IfcLabel(identifier),
+        new ns.IfcLabel(type),
+        items as never[],
+      ),
     )
   }
 
@@ -189,12 +209,34 @@ export class IfcWriter {
   /** Pset_Playground on `element`: the Pascal id and kind, plus optional parameters (JSON). */
   playgroundPset(guidName: string, element: unknown, props: Record<string, string>) {
     const properties = Object.entries(props).map(([name, value]) =>
-      this.write(new ns.IfcPropertySingleValue(new ns.IfcIdentifier(name), null, new ns.IfcText(value), null)),
+      this.write(
+        new ns.IfcPropertySingleValue(
+          new ns.IfcIdentifier(name),
+          null,
+          new ns.IfcText(value),
+          null,
+        ),
+      ),
     )
     const pset = this.write(
-      new ns.IfcPropertySet(this.guid(`${guidName}#pset`), null, new ns.IfcLabel('Pset_Playground'), null, properties),
+      new ns.IfcPropertySet(
+        this.guid(`${guidName}#pset`),
+        null,
+        new ns.IfcLabel('Pset_Playground'),
+        null,
+        properties,
+      ),
     )
-    this.write(new ns.IfcRelDefinesByProperties(this.guid(`${guidName}#pset-rel`), null, null, null, [element as never], pset))
+    this.write(
+      new ns.IfcRelDefinesByProperties(
+        this.guid(`${guidName}#pset-rel`),
+        null,
+        null,
+        null,
+        [element as never],
+        pset,
+      ),
+    )
   }
 }
 

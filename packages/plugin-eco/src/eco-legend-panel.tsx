@@ -266,6 +266,14 @@ export default function EcoLegendPanel() {
       {exportUi.status === 'error' && exportUi.error ? (
         <div style={{ color: '#b42318', lineHeight: 1.35 }}>{exportUi.error}</div>
       ) : null}
+      {exportUi.ifcSummary ? (
+        <div
+          data-eco-ifc-summary
+          style={{ fontFamily: 'ui-monospace, monospace', opacity: 0.9, lineHeight: 1.35 }}
+        >
+          {exportUi.ifcSummary}
+        </div>
+      ) : null}
 
       <div style={{ fontWeight: 600 }}>Ventura envelope</div>
       <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

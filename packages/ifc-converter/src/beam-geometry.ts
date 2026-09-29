@@ -7,8 +7,16 @@ export function extractBeamGeometry(
   ifcApi: IfcAPI,
   modelID: number,
   expressID: number,
-  options: { origin: number[]; unitFactor: number; swapYZ: boolean; levelElevation: number },
+  options: {
+    origin: number[]
+    unitFactor: number
+    swapYZ: boolean
+    levelElevation: number
+    /** IFC +Y is north (Pascal −z): flip the plan's second axis, as the converter does. */
+    northUp?: boolean
+  },
 ): { position: Point; topology: BlockTopology } | null {
+  const planSign = options.northUp ? -1 : 1
   const mesh = ifcApi.GetFlatMesh(modelID, expressID)
   const topology: BlockTopology = { vertices: [], edges: [], faces: [] }
   const vertexByPosition = new Map<string, string>()
@@ -36,7 +44,7 @@ export function extractBeamGeometry(
           // web-ifc meshes are already in meters and use (X, Z, -Y).
           // Undo that basis before applying the converter's origin and axis preset.
           const sx = wx - options.origin[0] * options.unitFactor
-          const sy = -wz - options.origin[1] * options.unitFactor
+          const sy = planSign * (-wz - options.origin[1] * options.unitFactor)
           const sz = wy - options.origin[2] * options.unitFactor - options.levelElevation
           const position: Point = options.swapYZ ? [sx, sz, sy] : [sx, sy, sz]
           if (!position.every(Number.isFinite)) throw new Error('Non-finite beam vertex')
@@ -55,7 +63,8 @@ export function extractBeamGeometry(
           m[4] * (m[1] * m[10] - m[9] * m[2]) +
           m[8] * (m[1] * m[6] - m[5] * m[2])
         // Baking a reflection into the vertices also reverses the outward face winding.
-        const reverseWinding = determinant < 0 !== options.swapYZ
+        // The axis mapping itself reflects when exactly one of swapYZ / northUp is set.
+        const reverseWinding = determinant < 0 !== (options.swapYZ !== Boolean(options.northUp))
         for (let i = 0; i + 2 < indices.length; i += 3) {
           const ids = [vertexIds[indices[i]], vertexIds[indices[i + 1]], vertexIds[indices[i + 2]]]
           if (ids.some((id) => id === undefined)) throw new Error('Invalid beam triangle index')

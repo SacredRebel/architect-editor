@@ -43,7 +43,8 @@ export function sha1(data: Uint8Array): Uint8Array {
   for (let offset = 0; offset < padded.length; offset += 64) {
     for (let i = 0; i < 16; i++) w[i] = view.getUint32(offset + i * 4)
     for (let i = 16; i < 80; i++) {
-      const x = (w[i - 3] as number) ^ (w[i - 8] as number) ^ (w[i - 14] as number) ^ (w[i - 16] as number)
+      const x =
+        (w[i - 3] as number) ^ (w[i - 8] as number) ^ (w[i - 14] as number) ^ (w[i - 16] as number)
       w[i] = (x << 1) | (x >>> 31)
     }
     let a = h0
@@ -82,7 +83,7 @@ export function sha1(data: Uint8Array): Uint8Array {
   }
   const out = new Uint8Array(20)
   const outView = new DataView(out.buffer)
-  ;[h0, h1, h2, h3, h4].forEach((h, i) => outView.setUint32(i * 4, h))
+  for (const [i, h] of [h0, h1, h2, h3, h4].entries()) outView.setUint32(i * 4, h)
   return out
 }
 
@@ -109,7 +110,10 @@ export function compressGuid(bytes: Uint8Array): string {
   }
   let out = chars(bytes[0] as number, 2)
   for (let i = 1; i < 16; i += 3) {
-    out += chars(((bytes[i] as number) << 16) + ((bytes[i + 1] as number) << 8) + (bytes[i + 2] as number), 4)
+    out += chars(
+      ((bytes[i] as number) << 16) + ((bytes[i + 1] as number) << 8) + (bytes[i + 2] as number),
+      4,
+    )
   }
   return out
 }

@@ -642,7 +642,9 @@ function extractImportedMeshPrimitives(
   originOffset: number[],
   levelElevation: number,
   swapYZ: boolean,
+  northUp = false,
 ): ImportedMeshPrimitiveValue[] {
+  const planSign = northUp ? -1 : 1
   let flatMesh: {
     geometries: { size: () => number; get: (index: number) => unknown }
     delete?: () => void
@@ -689,16 +691,17 @@ function extractImportedMeshPrimitives(
           // IFC Z-up coordinates to an X/Y-up/-Z frame. Applying the regular
           // STEP `swapYZ` transform here a second time makes plan depth look
           // like height (and height look like plan depth), exploding fallback
-          // walls and railings across the scene.
+          // walls and railings across the scene. `planSign` flips the plan's
+          // second axis exactly as `worldToScene` does for north-up reading.
           const mappedPosition: [number, number, number] = swapYZ
             ? [
                 world[0]! - originOffset[0]! * unitFactor,
                 world[1]! - originOffset[2]! * unitFactor - levelElevation,
-                -(world[2]! + originOffset[1]! * unitFactor),
+                planSign * -(world[2]! + originOffset[1]! * unitFactor),
               ]
             : [
                 world[0]! - originOffset[0]! * unitFactor,
-                -(world[2]! + originOffset[1]! * unitFactor),
+                planSign * -(world[2]! + originOffset[1]! * unitFactor),
                 world[1]! - originOffset[2]! * unitFactor - levelElevation,
               ]
           positions.push(...mappedPosition.map(roundMeshPosition))
@@ -712,8 +715,8 @@ function extractImportedMeshPrimitives(
             matrix[2]! * nx + matrix[6]! * ny + matrix[10]! * nz,
           ]
           const mappedNormal = swapYZ
-            ? [worldNormal[0]!, worldNormal[1]!, -worldNormal[2]!]
-            : [worldNormal[0]!, -worldNormal[2]!, worldNormal[1]!]
+            ? [worldNormal[0]!, worldNormal[1]!, planSign * -worldNormal[2]!]
+            : [worldNormal[0]!, planSign * -worldNormal[2]!, worldNormal[1]!]
           const normalLength = Math.hypot(...mappedNormal) || 1
           normals.push(
             roundMeshNormal(mappedNormal[0]! / normalLength),
@@ -723,7 +726,8 @@ function extractImportedMeshPrimitives(
         }
 
         const indices = Array.from(sourceIndices)
-        if (swapYZ) {
+        // The mapping reflects (and so reverses the winding) when exactly one of swapYZ / northUp is set.
+        if (swapYZ !== northUp) {
           for (let index = 0; index + 2 < indices.length; index += 3) {
             const second = indices[index + 1]!
             indices[index + 1] = indices[index + 2]!
@@ -824,6 +828,13 @@ function getExtrusionPosition(ifcApi: WebIFC.IfcAPI, modelID: number, element: a
 
 export interface ConversionOptions {
   swapYZ?: boolean
+  /**
+   * Read IFC +Y as north, i.e. Pascal −z, so plans are not mirrored north–south
+   * (an IFC plan point (X, Y) becomes Pascal [x, z] = [X, −Y]). Off by default,
+   * which pairs with `@pascal-app/ifc-exporter` (it writes plan z as IFC Y); on
+   * for IFC written north-up, as other BIM tools and the eco exporter write it.
+   */
+  northUp?: boolean
   extrusionDepthIsHeight?: boolean
   swapProfileDimensions?: boolean
   wasmPath?: string
@@ -853,6 +864,7 @@ export async function convertIfcToPascal(
 ): Promise<PascalSceneGraph> {
   const opts = {
     swapYZ: options?.swapYZ ?? true,
+    northUp: options?.northUp ?? false,
     extrusionDepthIsHeight: options?.extrusionDepthIsHeight ?? true,
     swapProfileDimensions: options?.swapProfileDimensions ?? false,
     wasmPath: options?.wasmPath ?? '/',
@@ -919,10 +931,14 @@ export async function convertIfcToPascal(
     /* keep zero offset */
   }
 
+  // Scene frame: IFC (X, Y, Z) from the site origin, in metres. North-up reading
+  // flips the plan's second axis here, once, so every plan point, polygon and
+  // placement below becomes Pascal [x, z] = [X, −Y].
+  const planSign = opts.northUp ? -1 : 1
   function worldToScene(worldPt: number[]): number[] {
     return [
       (worldPt[0] - originOffset[0]) * unitFactor,
-      (worldPt[1] - originOffset[1]) * unitFactor,
+      planSign * (worldPt[1] - originOffset[1]) * unitFactor,
       (worldPt[2] - originOffset[2]) * unitFactor,
     ]
   }
@@ -1074,6 +1090,7 @@ export async function convertIfcToPascal(
       originOffset,
       elementLevelElevation(expressId),
       opts.swapYZ,
+      opts.northUp,
     )
     importedPrimitivesByExpressId.set(expressId, primitives)
     return primitives
@@ -1397,7 +1414,14 @@ export async function convertIfcToPascal(
           // wall's start/end above.
           const axisX = (end[0] - start[0]) / wallLenM
           const axisY = (end[1] - start[1]) / wallLenM
-          const extents = measureWallLocalExtents(ifcApi, modelID, wallExpressID, axisX, axisY)
+          // The mesh is measured in IFC's own plan axes: undo the north-up flip of the axis.
+          const extents = measureWallLocalExtents(
+            ifcApi,
+            modelID,
+            wallExpressID,
+            axisX,
+            planSign * axisY,
+          )
           const geom = extents
             ? wallHeightThicknessFromExtents(extents, wallLenM, unitFactor)
             : null
@@ -2201,6 +2225,7 @@ export async function convertIfcToPascal(
           origin: originOffset,
           unitFactor,
           swapYZ: opts.swapYZ,
+          northUp: opts.northUp,
           levelElevation,
         })
         if (!geometry) throw new Error('No renderable beam geometry')

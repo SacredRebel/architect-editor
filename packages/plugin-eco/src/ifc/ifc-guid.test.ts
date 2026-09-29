@@ -5,7 +5,9 @@ const hex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart
 
 describe('stable IFC GlobalIds', () => {
   it('SHA-1 matches the FIPS 180 test vector', () => {
-    expect(hex(sha1(new TextEncoder().encode('abc')))).toBe('a9993e364706816aba3e25717850c26c9cd0d89d')
+    expect(hex(sha1(new TextEncoder().encode('abc')))).toBe(
+      'a9993e364706816aba3e25717850c26c9cd0d89d',
+    )
     expect(hex(sha1(new Uint8Array(0)))).toBe('da39a3ee5e6b4b0d3255bfef95601890afd80709')
   })
 

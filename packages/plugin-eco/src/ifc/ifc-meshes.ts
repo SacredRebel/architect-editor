@@ -33,21 +33,33 @@ function skipObject(o: Object3D): boolean {
 function drawn(material: Material | undefined): material is ColoredMaterial {
   if (!material) return false
   const m = material as ColoredMaterial
-  return m.visible !== false && m.colorWrite !== false && !(m.transparent && (m.opacity ?? 1) <= 0.01)
+  return (
+    m.visible !== false && m.colorWrite !== false && !(m.transparent && (m.opacity ?? 1) <= 0.01)
+  )
 }
 
 /**
  * @param stopAt objects owned by another element: their subtree is skipped.
  * @param worldToFrame Pascal world → the element's frame (e.g. its storey), before the IFC axis swap.
  */
-export function collectMeshes(root: Object3D, stopAt: (o: Object3D) => boolean, worldToFrame: Matrix4): MeshPart[] {
+export function collectMeshes(
+  root: Object3D,
+  stopAt: (o: Object3D) => boolean,
+  worldToFrame: Matrix4,
+): MeshPart[] {
   root.updateWorldMatrix(true, true)
   const byColor = new Map<string, MeshPart>()
   const v = new Vector3()
   const toFrame = new Matrix4()
   const instance = new Matrix4()
 
-  const addGeometry = (geometry: BufferGeometry, matrix: Matrix4, material: Material | undefined, start = 0, count = Number.POSITIVE_INFINITY) => {
+  const addGeometry = (
+    geometry: BufferGeometry,
+    matrix: Matrix4,
+    material: Material | undefined,
+    start = 0,
+    count = Number.POSITIVE_INFINITY,
+  ) => {
     const position = geometry.getAttribute('position')
     if (!position || !drawn(material)) return
     const c = material.color instanceof Color ? material.color : new Color(0.8, 0.8, 0.8)
@@ -96,10 +108,12 @@ export function collectMeshes(root: Object3D, stopAt: (o: Object3D) => boolean, 
     if (mesh.isMesh && mesh.geometry) {
       const geometry = mesh.geometry
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      const groups = Array.isArray(mesh.material) && geometry.groups.length > 0 ? geometry.groups : null
+      const groups =
+        Array.isArray(mesh.material) && geometry.groups.length > 0 ? geometry.groups : null
       const emit = (matrix: Matrix4) => {
         if (groups) {
-          for (const g of groups) addGeometry(geometry, matrix, materials[g.materialIndex ?? 0], g.start, g.count)
+          for (const g of groups)
+            addGeometry(geometry, matrix, materials[g.materialIndex ?? 0], g.start, g.count)
         } else {
           addGeometry(geometry, matrix, materials[0])
         }

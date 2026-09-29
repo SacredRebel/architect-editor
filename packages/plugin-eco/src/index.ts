@@ -307,3 +307,13 @@ export {
 } from './glb-audit'
 export type { OptimiseProfile } from './glb-optimise'
 export { optimiseGlb } from './glb-optimise'
+export { collectEcoExtras, exportEcoIfcFromEditor } from './ifc/eco-ifc-editor'
+export {
+  type EcoIfcExtra,
+  type EcoIfcInput,
+  type EcoIfcResult,
+  type EcoIfcSite,
+  type EcoIfcWarning,
+  exportEcoIfc,
+} from './ifc/eco-ifc-export'
+export { ifcGlobalId } from './ifc/ifc-guid'

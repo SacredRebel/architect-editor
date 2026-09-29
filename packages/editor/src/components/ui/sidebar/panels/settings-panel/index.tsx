@@ -252,7 +252,6 @@ export function SettingsPanel({
   const resetSelection = useViewer((state) => state.resetSelection)
   const modelExport = useEditor((state) => state.modelExport)
   const shadows = useViewer((state) => state.shadows)
-  const lightGraphics = useViewer((state) => state.graphics === 'light')
   const setPhase = useEditor((state) => state.setPhase)
   const floorplanMode = useFloorplanMode((state) => state.mode)
   const registryVersion = useRegistryVersion()
@@ -875,20 +874,17 @@ export function SettingsPanel({
 
           <PrintExportButton onlyVisible={exportOnlyVisible} />
 
-          {/* Demo: hidden with light graphics — its web-ifc wasm 404s on a chunk path. */}
-          {lightGraphics ? null : (
-            <Button
-              aria-busy={activeIfcExport}
-              className="w-full justify-start gap-2"
-              disabled={activeIfcExport}
-              onClick={() => void handleIfcExport()}
-              variant="outline"
-            >
-              <Download aria-hidden="true" className="size-4" />
-              {activeIfcExport ? 'Exporting IFC…' : 'Export IFC 4.3'}
-            </Button>
-          )}
-          {ifcExportError && !lightGraphics ? (
+          <Button
+            aria-busy={activeIfcExport}
+            className="w-full justify-start gap-2"
+            disabled={activeIfcExport}
+            onClick={() => void handleIfcExport()}
+            variant="outline"
+          >
+            <Download aria-hidden="true" className="size-4" />
+            {activeIfcExport ? 'Exporting IFC…' : 'Export IFC 4.3'}
+          </Button>
+          {ifcExportError ? (
             <p className="text-destructive text-xs" role="alert">
               {ifcExportError}
             </p>
