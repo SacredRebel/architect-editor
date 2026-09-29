@@ -1,7 +1,7 @@
 # STATUS — Agent A
-updated: 2026-09-28
-phase: **A4 · A5 · H19.2 in production** · `79dc5f13` READY · waiting for the next brief
-state: Cleanup done. `eco/ci` is merged (`bd81105b`, production READY) and CI's quality job is green on `main`. Pull request #2 is closed. The remote holds only `main`: 24 branches are deleted. `eco/a5` (holding `eco/h19-2` and `eco/a4`) was rebased on `main` and merged as pull request #5 (`79dc5f13`). That puts `/builder`, what the world's "Edit building" opens, and the site in the editor into production. The demo's behaviour is unchanged (`A4-A5-landing-done.md`).
+updated: 2026-09-29
+phase: **UNIFY phase 0** (scan and plan, docs only) · `UNIFY-A.md` on `eco/unify-scan` · merge next. A4 · A5 · H19.2 are in production (`79dc5f13`).
+state: UNIFY-A covers four things. First, a read-only scan of FreeCAD on Johny's PC: 1.1.4 with IfcOpenShell 0.8.4 at `C:\AI-Work\Ai apps & Codebase\FreeCAD`, no add-ons, no MCP bridge, and 19 downloaded repositories, each with its role and licence. Second, the "Edit building" ↔ FreeCAD IFC round-trip design. Third, Pascal ↔ FreeCAD BIM overlap. Fourth, steps P1–P4. Key finding: today's IFC export is not FreeCAD-ready (random ids, storeys at 0, misplaced openings, mirrored plan), so P1 fixes it first. Cleanup done. `eco/ci` is merged (`bd81105b`, production READY) and CI's quality job is green on `main`. Pull request #2 is closed. The remote holds only `main`: 24 branches are deleted. `eco/a5` (holding `eco/h19-2` and `eco/a4`) was rebased on `main` and merged as pull request #5 (`79dc5f13`). That puts `/builder`, what the world's "Edit building" opens, and the site in the editor into production. The demo's behaviour is unchanged (`A4-A5-landing-done.md`).
 
 ## Production SHAs
 
@@ -16,6 +16,7 @@ state: Cleanup done. `eco/ci` is merged (`bd81105b`, production READY) and CI's 
 | **demo** | light graphics · demo site · hidden tools | **`0d38a884`** (merge commit, pull request #3) | **READY** `dpl_BUYwmDfTxVJCL2KD2Xf7cQChN5GC` |
 | **ci** | CI quality job: `plugin-geometry`'s test runs its geometry check | **`bd81105b`** (merge commit, pull request #4) | **READY** `dpl_Hqoy9Nx2WU5twRPjZdERqgbGYud7` |
 | **H19.2 · A4 · A5** | 2b · 2c · 2d profile · `/builder` · the site in the editor | **`79dc5f13`** (merge commit, pull request #5) | **READY** `dpl_Gd2hzP9a9Lmrv2y6jr4AmozMZoE9` |
+| **UNIFY-0** | scan and plan: FreeCAD, the IFC round-trip, P1–P4 (docs only) | `eco/unify-scan` | after the merge |
 
 ## Demo (preview `dpl_5sTZbhRoymUj9g2YNA2xDPLoF9CD`, light graphics)
 
@@ -40,10 +41,12 @@ state: Cleanup done. `eco/ci` is merged (`bd81105b`, production READY) and CI's 
 
 - **Full graphics with a site loaded shows only the sky.** Production now opens in light graphics, which draws the scene; switching to full with a site loaded still shows only the sky.
 - **IFC export works with A4** (the `/builder` check downloads an `.ifc`), but light graphics still hides it, as the demo recorded. Showing it in light mode is a decision for after the demo.
+- **IFC export is not FreeCAD-ready** (UNIFY-A (a)): random GlobalIds, no project → site link, storeys at 0, openings shifted with windows on the floor, a north–south mirror, no georeference, and only walls, doors, windows and zones exported. UNIFY P1 fixes it.
+- **No FreeCAD MCP bridge is installed** on Johny's PC. Choosing one, and recording its licence, is part of P3.
 - **The bridge answers one origin** (`NEXT_PUBLIC_ECO_HOST_ORIGIN`, default `https://spatial-map.vercel.app`, A4); after this merge, production does too.
 - **The host's reference massing (`eco-ghost`) did not appear** in the `/builder/embed/` harness, though its site and guides did. Not new; see `A4-A5-landing-done.md`.
 - **The 38 local test failures** (`demo-done.md`) come from this machine, not the code: a checkout path with spaces and `&`, Windows-only file behaviour, and CRLF fixtures. On Linux CI every package's tests pass (`ci-done.md`).
 - A4 and A5 open items stand; see `A4-done.md` and `A5-done.md`. Their commit SHAs predate the rebase; `A4-A5-landing-done.md` maps them.
 
-commit: A4 · A5 · H19.2 merge `79dc5f13` on `main`, production READY · ci merge `bd81105b` · demo merge `0d38a884`
-queue: waiting for the next brief
+commit: UNIFY-A on `eco/unify-scan` · A4 · A5 · H19.2 merge `79dc5f13` on `main`, production READY · ci merge `bd81105b` · demo merge `0d38a884`
+queue: merge `eco/unify-scan` (docs only) → production READY → record; then UNIFY P1 when the architect says
