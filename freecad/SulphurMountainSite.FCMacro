@@ -1,0 +1,616 @@
+# -*- coding: utf-8 -*-
+"""SulphurMountainSite — the Sulphur Mountain site template, from the live pack.
+
+Builds ``SulphurMountain-site.FCStd`` from https://sulphur-mountain-world.vercel.app
+at run time; nothing from the pack is bundled here (the pack's rule: terrain and
+imagery are streamed from their publishers, never bulk-copied).
+
+Frame of the document:
+  * metres (the document's unit system is set to metres);
+  * origin (0, 0, 0) = the Oak Leaf chimney (the pack's ``models.json`` origin of
+    ``oak-leaf-massing``), Z = 0 at the 425.90 m datum (the Oak Leaf main floor);
+  * +X east, +Y true north (the pack frame is equirectangular WGS84, x east, y north).
+
+What it draws, and from which layer:
+  * terrain: USGS 3DEP 1 m (terrarium tiles, ``terrain/``), one vertex per second
+    pixel at the pixel's own centre and value, plus 1 m contours (5 m index);
+  * property line: ``survey.geojson`` boundary (11 corners), draped on the terrain,
+    with its 11 horizontal distances dimensioned; the 16 ft access easement; the
+    4 found monuments;
+  * setbacks: this repository's Ventura RE/AE typical yards (front 6.10 m, side
+    1.52 m, rear 4.57 m; height limit 10.67 m; confirm with the AHJ). The front is
+    the edge with the most frontage within 8 m of a county road centreline, the
+    edges next to it are sides, the rest rear (``SITE_FRONT_EDGE`` overrides);
+  * existing structures as simple solids: the county footprints on their county
+    base elevations with their 2018 lidar roof heights, and the lidar roof plane of
+    the warehouse the county does not map. Each records the terrain under it
+    (``TerrainUnderM``) and the drift from its base (``TerrainDriftM``): the county
+    bases and the 2018 terrain disagree by up to about a metre;
+  * the chimney origin, a north arrow, and a BIM Site carrying the georeference.
+
+Run: FreeCAD 1.1 ▸ Macro ▸ Macros… ▸ this file (or through the FreeCAD MCP
+connector). Output: ``SITE_FCSTD`` if set, else
+``Documents\\SulphurMountain\\SulphurMountain-site.FCStd`` in the user's home.
+Licence of this macro: MIT, as the rest of this repository's own code.
+"""
+
+import datetime
+import json
+import math
+import os
+import struct
+import time
+import urllib.request
+import zlib
+
+import FreeCAD as App
+import Mesh
+import Part
+
+try:
+    import FreeCADGui as Gui
+except ImportError:  # freecadcmd
+    Gui = None
+
+PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
+OUT = os.environ.get("SITE_FCSTD") or os.path.join(
+    os.path.expanduser("~"), "Documents", "SulphurMountain", "SulphurMountain-site.FCStd"
+)
+DATUM_M = 425.90  # the Oak Leaf main floor: Z = 0
+MARGIN_M = 40.0  # terrain beyond the parcel's box
+GRID_STEP_PX = 2  # one terrain vertex per second 1 m pixel
+CONTOUR_M = 1.0
+INDEX_CONTOUR_M = 5.0
+# Contours are cut this far above each whole metre. Terrarium steps are 1/256 m, so no
+# contour leaves its pixel, but a flat patch lying exactly on a whole metre (a pad, a pond)
+# is no longer cut along every facet edge.
+CONTOUR_CUT_ABOVE_M = 0.002
+DIM_OFFSET_M = 4.0  # boundary dimension lines, square to their edge, outside the parcel
+SETBACKS_M = {"front": 6.10, "side": 1.52, "rear": 4.57}  # plugin-eco eco-jurisdiction-ventura.ts
+HEIGHT_LIMIT_M = 10.67
+FT = 0.3048
+MM = 1000.0
+
+
+# --------------------------------------------------------------------------- pack
+def fetch(path, binary=False, attempts=3):
+    url = path if path.startswith("http") else PACK + path
+    req = urllib.request.Request(url, headers={"User-Agent": "SulphurMountainSite-macro"})
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                data = r.read()
+            break
+        except OSError as exc:  # timeouts and dropped connections are retried; a 4xx answer is final
+            if attempt == attempts - 1 or getattr(exc, "code", 500) < 500:
+                raise
+            App.Console.PrintWarning("site: %s failed (%s), retrying\n" % (url, exc))
+            time.sleep(2 + 3 * attempt)
+    return data if binary else json.loads(data.decode("utf-8"))
+
+
+class Frame:
+    """The pack's frame (equirectangular at origin_lat), re-centred on the chimney."""
+
+    def __init__(self, frame, chimney_lnglat):
+        self.lng0 = frame["origin_lng"]
+        self.lat0 = frame["origin_lat"]
+        self.kx = frame["metres_per_deg_lng"]
+        self.ky = frame["metres_per_deg_lat"]
+        self.cx, self.cy = self.pack_xy(*chimney_lnglat)
+
+    def pack_xy(self, lng, lat):
+        return (lng - self.lng0) * self.kx, (lat - self.lat0) * self.ky
+
+    def local(self, lng, lat):
+        x, y = self.pack_xy(lng, lat)
+        return x - self.cx, y - self.cy
+
+    def lnglat(self, X, Y):
+        return self.lng0 + (X + self.cx) / self.kx, self.lat0 + (Y + self.cy) / self.ky
+
+
+def V(x, y, z=0.0):
+    """Metres → a FreeCAD vector (internal millimetres)."""
+    return App.Vector(x * MM, y * MM, z * MM)
+
+
+# --------------------------------------------------------------------------- terrain
+def decode_png(data):
+    """8-bit RGB/RGBA non-interlaced PNG → (width, height, bytes per pixel, rows)."""
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("not a PNG")
+    pos, idat, width = 8, [], None
+    while pos < len(data):
+        (length,) = struct.unpack(">I", data[pos : pos + 4])
+        kind = data[pos + 4 : pos + 8]
+        body = data[pos + 8 : pos + 8 + length]
+        pos += 12 + length
+        if kind == b"IHDR":
+            width, height, depth, ctype, _c, _f, interlace = struct.unpack(">IIBBBBB", body)
+            if depth != 8 or ctype not in (2, 6) or interlace != 0:
+                raise ValueError("unsupported PNG layout")
+        elif kind == b"IDAT":
+            idat.append(body)
+        elif kind == b"IEND":
+            break
+    bpp = 3 if ctype == 2 else 4
+    raw = zlib.decompress(b"".join(idat))
+    stride = width * bpp
+    rows, prev, i = [], bytearray(stride), 0
+    for _ in range(height):
+        f = raw[i]
+        i += 1
+        cur = bytearray(raw[i : i + stride])
+        i += stride
+        if f == 1:
+            for x in range(bpp, stride):
+                cur[x] = (cur[x] + cur[x - bpp]) & 255
+        elif f == 2:
+            for x in range(stride):
+                cur[x] = (cur[x] + prev[x]) & 255
+        elif f == 3:
+            for x in range(stride):
+                left = cur[x - bpp] if x >= bpp else 0
+                cur[x] = (cur[x] + ((left + prev[x]) >> 1)) & 255
+        elif f == 4:
+            for x in range(stride):
+                a = cur[x - bpp] if x >= bpp else 0
+                b = prev[x]
+                c = prev[x - bpp] if x >= bpp else 0
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                pr = a if pa <= pb and pa <= pc else (b if pb <= pc else c)
+                cur[x] = (cur[x] + pr) & 255
+        rows.append(cur)
+        prev = cur
+    return width, height, bpp, rows
+
+
+def tile_of(lng, lat, z):
+    """Fractional XYZ tile coordinates (Web Mercator)."""
+    n = 2**z
+    lat_r = math.radians(lat)
+    return (lng + 180.0) / 360.0 * n, (1.0 - math.asinh(math.tan(lat_r)) / math.pi) / 2.0 * n
+
+
+def lnglat_of(gx, gy, z):
+    """Global pixel-space coordinates (tile units) → lng, lat."""
+    n = 2**z
+    lng = gx / n * 360.0 - 180.0
+    lat = math.degrees(math.atan(math.sinh(math.pi * (1.0 - 2.0 * gy / n))))
+    return lng, lat
+
+
+class Dem:
+    """The terrarium mosaic at one zoom: exact pixel values at pixel centres."""
+
+    def __init__(self, template, z, bbox):
+        self.z = z
+        x0, y1 = tile_of(bbox[0], bbox[1], z)
+        x1, y0 = tile_of(bbox[2], bbox[3], z)
+        self.tx0, self.ty0 = int(math.floor(x0)), int(math.floor(y0))
+        self.tx1, self.ty1 = int(math.floor(x1)), int(math.floor(y1))
+        self.tiles = {}
+        for tx in range(self.tx0, self.tx1 + 1):
+            for ty in range(self.ty0, self.ty1 + 1):
+                path = template.replace("{z}", str(z)).replace("{x}", str(tx)).replace("{y}", str(ty))
+                w, h, bpp, rows = decode_png(fetch(path, binary=True))
+                self.tiles[(tx, ty)] = (w, bpp, rows)
+        self.size = next(iter(self.tiles.values()))[0]
+
+    def value(self, px, py):
+        """Elevation (m) of the global pixel (px, py) at this zoom."""
+        tx, ox = divmod(px, self.size)
+        ty, oy = divmod(py, self.size)
+        _w, bpp, rows = self.tiles[(tx, ty)]
+        r = rows[oy]
+        o = ox * bpp
+        return r[o] * 256 + r[o + 1] + r[o + 2] / 256.0 - 32768.0
+
+    def at(self, lng, lat):
+        """Bilinear elevation at a point (between the four nearest pixel centres)."""
+        gx, gy = tile_of(lng, lat, self.z)
+        fx, fy = gx * self.size - 0.5, gy * self.size - 0.5
+        ix, iy = int(math.floor(fx)), int(math.floor(fy))
+        tx, ty = fx - ix, fy - iy
+        v00, v10 = self.value(ix, iy), self.value(ix + 1, iy)
+        v01, v11 = self.value(ix, iy + 1), self.value(ix + 1, iy + 1)
+        return (v00 * (1 - tx) + v10 * tx) * (1 - ty) + (v01 * (1 - tx) + v11 * tx) * ty
+
+
+# --------------------------------------------------------------------------- geometry helpers
+def ring_open(coords):
+    pts = [tuple(c) for c in coords]
+    return pts[:-1] if pts and pts[0] == pts[-1] else pts
+
+
+def signed_area(pts):
+    return 0.5 * sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))
+
+
+def segment_distance(p, a, b):
+    ax, ay = b[0] - a[0], b[1] - a[1]
+    t = max(0.0, min(1.0, ((p[0] - a[0]) * ax + (p[1] - a[1]) * ay) / (ax * ax + ay * ay or 1.0)))
+    return math.hypot(p[0] - a[0] - t * ax, p[1] - a[1] - t * ay)
+
+
+def edge_buffer(a, b, d):
+    """Every point within d of the segment ab (a rectangle and two discs), in plan at Z = 0."""
+    length = math.hypot(b[0] - a[0], b[1] - a[1])
+    nx, ny = -(b[1] - a[1]) / length * d, (b[0] - a[0]) / length * d
+    rect = Part.Face(
+        Part.makePolygon(
+            [V(a[0] + nx, a[1] + ny), V(b[0] + nx, b[1] + ny), V(b[0] - nx, b[1] - ny), V(a[0] - nx, a[1] - ny), V(a[0] + nx, a[1] + ny)]
+        )
+    )
+    discs = [Part.Face(Part.Wire(Part.makeCircle(d * MM, V(*p)))) for p in (a, b)]
+    return rect.fuse(discs)
+
+
+def draped(points_xy, frame, dem, step_m=2.0, lift_m=0.05, closed=False):
+    """A polyline following the terrain: corners exact in plan, densified every step."""
+    pts = list(points_xy) + ([points_xy[0]] if closed else [])
+    out = []
+    for a, b in zip(pts, pts[1:]):
+        n = max(1, int(math.ceil(math.hypot(b[0] - a[0], b[1] - a[1]) / step_m)))
+        for k in range(n):
+            x = a[0] + (b[0] - a[0]) * k / n
+            y = a[1] + (b[1] - a[1]) * k / n
+            out.append(V(x, y, dem.at(*frame.lnglat(x, y)) - DATUM_M + lift_m))
+    x, y = pts[-1]
+    out.append(V(x, y, dem.at(*frame.lnglat(x, y)) - DATUM_M + lift_m))
+    return out
+
+
+def add(doc, type_name, name, label, group=None):
+    obj = doc.addObject(type_name, name)
+    obj.Label = label
+    if group is not None:
+        group.addObject(obj)
+    return obj
+
+
+def set_meta(obj, name, value, doc_text=""):
+    kind = "App::PropertyFloat" if isinstance(value, float) else "App::PropertyString"
+    if name not in obj.PropertiesList:
+        obj.addProperty(kind, name, "Pack", doc_text)
+    setattr(obj, name, value if isinstance(value, float) else str(value))
+
+
+def style(doc):
+    """Display only (no geometry): readable in plan and in 3D. Skipped without the GUI."""
+    if Gui is None or Gui.getDocument(doc.Name) is None:
+        return
+
+    def vo(name):
+        obj = doc.getObject(name)
+        return obj.ViewObject if obj is not None and obj.ViewObject is not None else None
+
+    def paint(name, colour=None, **props):
+        v = vo(name)
+        if v is None:
+            return
+        if colour is not None and "ShapeAppearance" in v.PropertiesList:
+            material = App.Material()
+            material.DiffuseColor = colour
+            v.ShapeAppearance = [material]
+        for key, value in props.items():
+            if key in v.PropertiesList:
+                setattr(v, key, value)
+
+    paint("Terrain", colour=(0.74, 0.68, 0.55), Lighting="Two side")
+    paint("Contours1m", LineColor=(0.47, 0.40, 0.30), LineWidth=1.0)
+    paint("Contours5m", LineColor=(0.30, 0.24, 0.16), LineWidth=2.0)
+    paint("PropertyLine", LineColor=(0.85, 0.10, 0.10), LineWidth=4.0)
+    paint("PropertyLinePlan", Visibility=False)
+    paint("BuildableEnvelope", DisplayMode="Wireframe", LineColor=(0.10, 0.55, 0.20), LineWidth=2.0, DrawStyle="Dashed")
+    paint("ChimneyOrigin", colour=(0.85, 0.10, 0.10))
+    paint("NorthArrow", LineColor=(0.0, 0.0, 0.0), LineWidth=3.0)
+    for obj in doc.Objects:
+        if obj.Name.startswith("Easement"):
+            paint(obj.Name, LineColor=(0.95, 0.55, 0.05), LineWidth=2.0, DrawStyle="Dashdot")
+        elif obj.Name.startswith("Existing"):
+            paint(obj.Name, colour=(0.82, 0.82, 0.86))
+        elif obj.Name.startswith("Monument"):
+            paint(obj.Name, colour=(0.10, 0.10, 0.60))
+        elif obj.Name.startswith("Dimension"):
+            # A label longer than its edge runs into the corner ticks: short edges get smaller text.
+            paint(
+                obj.Name,
+                FontSize=min(4.0, obj.Distance.Value / MM / 4.5) * MM,
+                ArrowTypeStart="Tick",
+                ArrowTypeEnd="Tick",
+                ArrowSizeStart="1.2 m",
+                ArrowSizeEnd="1.2 m",
+                LineColor=(0.15, 0.15, 0.15),
+                TextColor=(0.10, 0.10, 0.10),
+            )
+
+
+# --------------------------------------------------------------------------- build
+def build():
+    started = datetime.datetime.now(datetime.timezone.utc)
+    pack = fetch("pack.json")
+    models = fetch("models.json")
+    survey = fetch("survey.geojson")
+    county = fetch("county.geojson")
+    roofs = fetch("roofs.geojson")
+    terrain_index = fetch(pack["layers"]["terrain"]["index"])
+
+    oak = next(m for m in models["models"] if m["id"] == "oak-leaf-massing")
+    chimney = tuple(oak["origin"])
+    frame = Frame(pack["frame"], chimney)
+
+    boundary_f = next(f for f in survey["features"] if f["properties"].get("layer") == "boundary")
+    boundary_ll = ring_open(boundary_f["geometry"]["coordinates"][0])
+    boundary = [frame.local(*p) for p in boundary_ll]
+
+    lngs = [p[0] for p in boundary_ll]
+    lats = [p[1] for p in boundary_ll]
+    dlng = MARGIN_M / frame.kx
+    dlat = MARGIN_M / frame.ky
+    bbox = (min(lngs) - dlng, min(lats) - dlat, max(lngs) + dlng, max(lats) + dlat)
+    z = int(pack["layers"]["terrain"].get("maxzoom", terrain_index.get("maxzoom", 17)))
+    dem = Dem(pack["layers"]["terrain"]["template"], z, bbox)
+
+    doc = App.newDocument("SulphurMountainSite")
+    doc.Label = "SulphurMountain-site"
+    if "UnitSystem" in doc.PropertiesList:
+        choices = doc.getEnumerationsOfProperty("UnitSystem")
+        metre = next((c for c in choices if "Meter decimal" in c or "MKS" in c), None)
+        if metre:
+            doc.UnitSystem = metre
+
+    g_terrain = add(doc, "App::DocumentObjectGroup", "TerrainGroup", "Terrain (USGS 3DEP 1 m, 2018)")
+    g_survey = add(doc, "App::DocumentObjectGroup", "SurveyGroup", "Survey 2024-11-14")
+    g_rules = add(doc, "App::DocumentObjectGroup", "SetbackGroup", "Setbacks (typical Ventura RE/AE — confirm AHJ)")
+    g_existing = add(doc, "App::DocumentObjectGroup", "ExistingGroup", "Existing structures")
+    g_ref = add(doc, "App::DocumentObjectGroup", "ReferenceGroup", "Origin, datum, north")
+
+    # --- terrain: pixel-centre vertices, triangulated on the pixel lattice
+    gx0, gy1 = tile_of(bbox[0], bbox[1], z)
+    gx1, gy0 = tile_of(bbox[2], bbox[3], z)
+    px0, px1 = int(gx0 * dem.size), int(gx1 * dem.size)
+    py0, py1 = int(gy0 * dem.size), int(gy1 * dem.size)
+    cols = list(range(px0, px1 + 1, GRID_STEP_PX))
+    rows = list(range(py0, py1 + 1, GRID_STEP_PX))
+    grid = []
+    zmin, zmax = float("inf"), float("-inf")
+    for py in rows:
+        line = []
+        for px in cols:
+            lng, lat = lnglat_of((px + 0.5) / dem.size, (py + 0.5) / dem.size, z)
+            x, y = frame.local(lng, lat)
+            e = dem.value(px, py)
+            zmin, zmax = min(zmin, e), max(zmax, e)
+            line.append((x * MM, y * MM, (e - DATUM_M) * MM))
+        grid.append(line)
+    facets = []
+    for j in range(len(rows) - 1):
+        for i in range(len(cols) - 1):
+            a, b = grid[j][i], grid[j][i + 1]
+            c, d = grid[j + 1][i], grid[j + 1][i + 1]
+            facets.append([a, c, b])  # rows run south: this winding faces up
+            facets.append([b, c, d])
+    terrain_mesh = Mesh.Mesh(facets)
+    terrain = add(doc, "Mesh::Feature", "Terrain", "Terrain mesh", g_terrain)
+    terrain.Mesh = terrain_mesh
+    set_meta(terrain, "Source", pack["layers"]["terrain"].get("source", ""))
+    set_meta(terrain, "Zoom", str(z))
+    set_meta(terrain, "PixelStep", str(GRID_STEP_PX))
+
+    # --- contours (1 m, 5 m index), at whole metres above sea level
+    levels = [e for e in range(int(math.ceil(zmin)), int(math.floor(zmax)) + 1)]
+    sections = terrain_mesh.crossSections([(V(0, 0, e + CONTOUR_CUT_ABOVE_M - DATUM_M), App.Vector(0, 0, 1)) for e in levels])
+    minor, index = [], []
+    for e, polylines in zip(levels, sections):
+        for poly in polylines:
+            if len(poly) < 2:
+                continue
+            (index if e % INDEX_CONTOUR_M == 0 else minor).append(Part.makePolygon(poly))
+    if minor:
+        c = add(doc, "Part::Feature", "Contours1m", "Contours 1 m", g_terrain)
+        c.Shape = Part.makeCompound(minor)
+    if index:
+        c = add(doc, "Part::Feature", "Contours5m", "Contours 5 m (index)", g_terrain)
+        c.Shape = Part.makeCompound(index)
+
+    # --- property line, draped; horizontal distances dimensioned; easement; monuments
+    line = add(doc, "Part::Feature", "PropertyLine", "Property line (survey, 11 corners)", g_survey)
+    line.Shape = Part.makePolygon(draped(boundary, frame, dem, closed=True))
+    flat = add(doc, "Part::Feature", "PropertyLinePlan", "Property line in plan (Z = 0)", g_survey)
+    flat.Shape = Part.makePolygon([V(x, y) for x, y in boundary] + [V(*boundary[0])])
+    for k in ("area_acres", "perimeter_ft", "closure_ft", "placement", "record_map"):
+        if k in boundary_f["properties"]:
+            set_meta(line, "Survey_" + k, str(boundary_f["properties"][k]))
+    try:
+        import Draft
+
+        dim_z = max(0.0, zmax - DATUM_M) + 3.0
+        outside = 1.0 if signed_area(boundary) > 0 else -1.0  # counter-clockwise ring: the outside is on the right
+        for i, (a, b) in enumerate(zip(boundary, boundary[1:] + boundary[:1])):
+            # Text reads along start → end: keep it left-to-right, or bottom-to-top when near north-south.
+            angle = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
+            p, q = (a, b) if -85.0 <= angle < 95.0 else (b, a)
+            length = math.hypot(b[0] - a[0], b[1] - a[1])
+            nx, ny = outside * (b[1] - a[1]) / length, -outside * (b[0] - a[0]) / length
+            mx, my = (a[0] + b[0]) / 2.0 + DIM_OFFSET_M * nx, (a[1] + b[1]) / 2.0 + DIM_OFFSET_M * ny
+            d = Draft.make_dimension(V(p[0], p[1], dim_z), V(q[0], q[1], dim_z), V(mx, my, dim_z))
+            # Draft guesses the text's plane and flip from the working plane and the view;
+            # in plan, with start → end ordered as above, the text reads upright unflipped.
+            d.Normal = App.Vector(0, 0, 1)
+            if getattr(d, "ViewObject", None) is not None and "FlipText" in d.ViewObject.PropertiesList:
+                d.ViewObject.FlipText = False
+            d.Dimline = App.Vector(d.Dimline)  # redraw the text with that plane and no flip
+            d.Label = "Boundary edge %d" % (i + 1)
+            g_survey.addObject(d)
+    except Exception as exc:  # dimensions are a courtesy; geometry is the record
+        App.Console.PrintWarning("site: dimensions skipped (%s)\n" % exc)
+
+    for f in survey["features"]:
+        p = f["properties"]
+        gtype = f["geometry"]["type"]
+        if p.get("layer") == "easement" and gtype == "Polygon":
+            pts = [frame.local(*q) for q in ring_open(f["geometry"]["coordinates"][0])]
+            e = add(doc, "Part::Feature", "Easement", "%s, part %s" % (p.get("name", "easement"), p.get("part", "")), g_survey)
+            e.Shape = Part.makePolygon(draped(pts, frame, dem, closed=True, lift_m=0.08))
+        elif gtype == "Point":
+            x, y = frame.local(*f["geometry"]["coordinates"][:2])
+            zz = dem.at(*f["geometry"]["coordinates"][:2]) - DATUM_M
+            m = add(doc, "Part::Feature", "Monument", p.get("label", "monument"), g_survey)
+            m.Shape = Part.makeCylinder(0.15 * MM, 1.0 * MM, V(x, y, zz))
+
+    # --- setbacks: parcel minus a buffer of each edge at its role's distance.
+    # Front = the edge with the most frontage: its length within 8 m of a road centreline
+    # (county road centrelines); SITE_FRONT_EDGE (1-based) overrides.
+    road_segs = []
+    for f in county["features"]:
+        if f["geometry"]["type"] == "LineString":
+            pts = [frame.local(*q) for q in f["geometry"]["coordinates"]]
+            road_segs.extend(zip(pts, pts[1:]))
+    edges = list(zip(boundary, boundary[1:] + boundary[:1]))
+
+    def frontage(edge):
+        (a, b), steps = edge, 200
+        near = 0
+        for k in range(steps + 1):
+            p = (a[0] + (b[0] - a[0]) * k / steps, a[1] + (b[1] - a[1]) * k / steps)
+            if road_segs and min(segment_distance(p, q, r) for q, r in road_segs) <= 8.0:
+                near += 1
+        return math.hypot(b[0] - a[0], b[1] - a[1]) * near / (steps + 1)
+
+    override = os.environ.get("SITE_FRONT_EDGE")
+    front = int(override) - 1 if override else max(range(len(edges)), key=lambda i: frontage(edges[i]))
+    n = len(edges)
+    roles = ["front" if i == front else ("side" if i in ((front + 1) % n, (front - 1) % n) else "rear") for i in range(n)]
+    parcel_face = Part.Face(Part.makePolygon([V(x, y) for x, y in boundary] + [V(*boundary[0])]))
+    envelope = parcel_face.cut([edge_buffer(a, b, SETBACKS_M[role]) for (a, b), role in zip(edges, roles)])
+    env = add(doc, "Part::Feature", "BuildableEnvelope", "Buildable area after setbacks (plan, Z = 0)", g_rules)
+    env.Shape = envelope
+    set_meta(env, "FrontEdge", str(front + 1))
+    set_meta(env, "Roles", ",".join(roles))
+    set_meta(env, "SetbacksM", json.dumps(SETBACKS_M))
+    set_meta(env, "HeightLimitM", HEIGHT_LIMIT_M)
+    set_meta(env, "Basis", "typical Ventura County RE/AE yards (plugin-eco eco-jurisdiction-ventura.ts) — confirm with the AHJ")
+
+    # --- existing structures: simple solids
+    def solid(pts_ll, base_m, height_m, name, label, meta):
+        pts = [frame.local(*q) for q in ring_open(pts_ll)]
+        if signed_area(pts) < 0:
+            pts = pts[::-1]
+        face = Part.Face(Part.makePolygon([V(x, y, base_m - DATUM_M) for x, y in pts] + [V(pts[0][0], pts[0][1], base_m - DATUM_M)]))
+        o = add(doc, "Part::Feature", name, label, g_existing)
+        o.Shape = face.extrude(App.Vector(0, 0, height_m * MM))
+        for k, v in meta.items():
+            set_meta(o, k, v)
+        # The base is the pack's; the terrain under it is the 2018 DEM. Kept apart, drift shown.
+        corners_ll = ring_open(pts_ll)
+        centre_ll = (sum(q[0] for q in corners_ll) / len(corners_ll), sum(q[1] for q in corners_ll) / len(corners_ll))
+        under = [dem.at(*q) for q in corners_ll + [centre_ll]]
+        ground = sum(under) / len(under)
+        set_meta(o, "TerrainUnderM", round(ground, 3), "mean DEM elevation at the footprint's corners and centre")
+        set_meta(o, "TerrainDriftM", round(ground - base_m, 3), "DEM under the footprint less the base (positive: the ground is above the base)")
+        if abs(ground - base_m) > 0.3:
+            App.Console.PrintWarning("site: %s: base %.2f m, terrain under it %.2f m (%+.2f m)\n" % (label, base_m, ground, ground - base_m))
+        return o
+
+    for f in county["features"]:
+        p = f["properties"]
+        if p.get("layer") != "footprint":
+            continue
+        lidar = p.get("lidar_2018") or {}
+        kind = lidar.get("kind", "structure")
+        height = lidar.get("roof_m")
+        solid(
+            f["geometry"]["coordinates"][0],
+            float(p["county_base_m"]),
+            float(height) if height else 0.15,
+            "Existing",
+            "Existing %s (county footprint, 2018 lidar %s)" % (kind, "%.2f m" % height if height else "pad 0.15 m"),
+            {"Kind": kind, "BaseM": float(p["county_base_m"]), "HeightM": float(height) if height else 0.15, "Authority": "county footprint + 2018 lidar"},
+        )
+    for f in roofs["features"]:
+        p = f["properties"]
+        if p.get("county_footprint") is not None:
+            continue  # already drawn from its county footprint
+        kind = str(p.get("kind", "structure")).split(" (")[0]
+        solid(
+            f["geometry"]["coordinates"][0],
+            float(p["ground_m"]),
+            float(p["roof_m"]),
+            "Existing",
+            "Existing %s (2018 lidar roof plane — the true footprint is larger)" % kind,
+            {"Kind": kind, "BaseM": float(p["ground_m"]), "HeightM": float(p["roof_m"]), "Authority": "derived: 2018 lidar roof plane"},
+        )
+
+    # --- chimney origin, north arrow, BIM site with the georeference
+    marker = add(doc, "Part::Feature", "ChimneyOrigin", "Chimney origin (0,0,0) — datum 425.90 m", g_ref)
+    marker.Shape = Part.makeCylinder(0.3 * MM, 3.0 * MM, V(0, 0, 0))
+    xs = [p[0] for p in boundary]
+    ys = [p[1] for p in boundary]
+    ax, ay, alen = max(xs) + 15.0, max(ys) - 5.0, 12.0
+    pz = max(0.0, zmax - DATUM_M) + 3.0  # above the ground, so it reads in plan and in 3D
+    arrow = Part.makePolygon([V(ax - 2, ay, pz), V(ax, ay + alen, pz), V(ax + 2, ay, pz), V(ax, ay + alen * 0.25, pz), V(ax - 2, ay, pz)])
+    letter = [
+        Part.makeLine(V(ax - 1.5, ay + alen + 1.5, pz), V(ax - 1.5, ay + alen + 5.5, pz)),
+        Part.makeLine(V(ax - 1.5, ay + alen + 5.5, pz), V(ax + 1.5, ay + alen + 1.5, pz)),
+        Part.makeLine(V(ax + 1.5, ay + alen + 1.5, pz), V(ax + 1.5, ay + alen + 5.5, pz)),
+    ]
+    na = add(doc, "Part::Feature", "NorthArrow", "North (true north = +Y)", g_ref)
+    na.Shape = Part.makeCompound([arrow] + letter)
+
+    try:
+        import Arch
+
+        site = Arch.makeSite([g_terrain, g_survey, g_rules, g_existing, g_ref], name="Site")
+    except Exception as exc:
+        App.Console.PrintWarning("site: BIM Site unavailable (%s); using a plain group\n" % exc)
+        site = add(doc, "App::DocumentObjectGroup", "Site", "Site")
+    site.Label = "Sulphur Mountain site"
+    for prop, value in (("Longitude", chimney[0]), ("Latitude", chimney[1]), ("Declination", 0.0)):
+        if prop in site.PropertiesList:
+            setattr(site, prop, value)
+    if "Elevation" in site.PropertiesList:
+        site.Elevation = DATUM_M * MM
+    set_meta(site, "PackUrl", PACK)
+    set_meta(site, "PackVersion", pack.get("version", ""))
+    set_meta(site, "PackGenerated", pack.get("generated", ""))
+    set_meta(site, "Fetched", started.isoformat(timespec="seconds"))
+    set_meta(site, "ChimneyLng", float(chimney[0]))
+    set_meta(site, "ChimneyLat", float(chimney[1]))
+    set_meta(site, "ChimneyPackX", float(frame.cx))
+    set_meta(site, "ChimneyPackY", float(frame.cy))
+    set_meta(site, "DatumM", DATUM_M)
+    set_meta(site, "Frame", json.dumps(pack["frame"]))
+    set_meta(site, "Axes", "X east, Y true north, Z up; metres; Z = elevation - 425.90 m")
+    positions = fetch("positions.csv", binary=True).decode("utf-8").splitlines()
+    head = positions[0].split(",")
+    row = next((r.split(",") for r in positions[1:] if r.startswith("oak-leaf-massing,")), None)
+    if row:
+        rec = dict(zip(head, row))
+        set_meta(site, "ChimneyUtm11N_E", float(rec["utm11_e"]))
+        set_meta(site, "ChimneyUtm11N_N", float(rec["utm11_n"]))
+        set_meta(site, "ChimneyDemElevM", float(rec["elev_m"]))
+    set_meta(site, "Sources", "; ".join("%s (%s)" % (s.get("id"), s.get("date", "")) for s in pack.get("sources", [])))
+    set_meta(site, "Licences", "terrain: USGS 3DEP, public domain; pack layers: the pack's own work; this macro: MIT")
+
+    doc.recompute()
+    style(doc)
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    doc.saveAs(OUT)
+    if Gui is not None and getattr(Gui, "ActiveDocument", None) is not None:
+        try:
+            Gui.Selection.clearSelection()  # Draft selects each dimension it makes
+            Gui.ActiveDocument.ActiveView.viewTop()
+            Gui.SendMsgToActiveView("ViewFit")
+        except Exception:
+            pass
+    App.Console.PrintMessage(
+        "site: %s — %d terrain facets, %d contour levels, %d structures, saved %s\n"
+        % (doc.Label, terrain_mesh.CountFacets, len(levels), len(g_existing.Group), OUT)
+    )
+    return doc
+
+
+build()
