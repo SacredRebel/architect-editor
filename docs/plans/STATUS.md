@@ -1,6 +1,15 @@
 # STATUS — Agent A
 updated: 2026-09-29
-phase: **paused**. Every lane is paused except E (architect, 29 Sep). The full picture for a fresh start is **`HANDOVER.md`**, built 29 Sep on `eco/handover-0929`.
+phase: **FreeCAD lane: organic structures.** This follows the architect's 29 Sep note of Johny's final direction: "structure and houses only". Work stays local: commits are save points and there are no PRs.
+- **F1, the site template, is done** as a local save point on `eco/freecad-site` (`7aea750e`, `freecad-site-done.md`).
+  - `freecad/SulphurMountainSite.FCMacro` builds the site from the live pack.
+  - `freecad/check_site.py` passes 25 checks and rejects 9 of 9 forgeries.
+  - F2 (plans) and F3 (IFC P1) are dropped under the new direction.
+- **Now:** an Organic toolbar for FreeCAD, on `eco/organic`. It has three parts:
+  - a scan of every shaping tool;
+  - the plugin-eco generators ported to real FreeCAD solids;
+  - one button that sends a building to `exchange\godot\` as GLB and IFC, in the chimney-origin frame.
+- The web editor stays paused as it was. The full picture for a fresh start is **`HANDOVER.md`**, built 29 Sep on `eco/handover-0929`.
 direction (29 Sep 2026):
 - The map moves to Godot 4.7.2 as a desktop app (lane E). Houses are designed in Blender 5.2.2 and FreeCAD 1.1.4 directly.
 - Godot, Blender and FreeCAD MCP connectors are installed at user scope for every window.
