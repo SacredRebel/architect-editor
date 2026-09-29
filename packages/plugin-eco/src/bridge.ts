@@ -1,6 +1,6 @@
 import { useScene } from '@pascal-app/core'
 import { applySceneGraphToEditor, type SceneGraph } from '@pascal-app/editor'
-import { applyEcoSite } from './apply-site'
+import { applyEcoSite, ecoSiteLandings } from './apply-site'
 import type { EcoMsg, EcoSite } from './bridge-types'
 import { siteToWorldXz } from './coords'
 import { ecoDebug, ecoDebugWarn } from './eco-debug'
@@ -234,8 +234,13 @@ export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
 
   const embedded = window.self !== window.top
   ;(window as Window & { ecoEmbedded?: boolean }).ecoEmbedded = embedded
-  // Read-only, for checks: the origin whose hello opened the session (or null).
+  // Read-only, for checks: the origin whose hello opened the session (or null),
+  // and how each site's ground landed (apply-site.ts).
   Object.defineProperty(window, 'ecoHost', { get: () => gate.host(), configurable: true })
+  Object.defineProperty(window, 'ecoSiteLandings', {
+    get: () => ecoSiteLandings(),
+    configurable: true,
+  })
 
   if (embedded) {
     helloTimer = setTimeout(() => {
