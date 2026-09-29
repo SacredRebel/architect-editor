@@ -2,6 +2,23 @@ import { loadAssetUrl } from '@pascal-app/core'
 
 export const ASSETS_CDN_URL = process.env.NEXT_PUBLIC_ASSETS_CDN_URL || 'https://editor.pascal.app'
 
+// A4 — a static build served under a base path (the world's /builder) resolves
+// app-relative assets on its own origin under that base, not on a CDN, unless a
+// CDN is set explicitly. Paths that already carry the base (the static build
+// rebases root-relative literals) are left as they are.
+const STATIC_BASE =
+  process.env.NEXT_PUBLIC_ECO_STATIC === '1' && !process.env.NEXT_PUBLIC_ASSETS_CDN_URL
+    ? (process.env.NEXT_PUBLIC_ECO_BASE_PATH || '/builder').replace(/\/+$/, '')
+    : null
+
+function appRelativeUrl(url: string): string {
+  const normalizedPath = url.startsWith('/') ? url : `/${url}`
+  if (STATIC_BASE === null) return `${ASSETS_CDN_URL}${normalizedPath}`
+  if (normalizedPath === STATIC_BASE || normalizedPath.startsWith(`${STATIC_BASE}/`))
+    return normalizedPath
+  return `${STATIC_BASE}${normalizedPath}`
+}
+
 /**
  * Resolves an asset URL to the appropriate format:
  * - If URL starts with http:// or https://, return as-is (external URL)
@@ -22,9 +39,8 @@ export async function resolveAssetUrl(url: string | undefined | null): Promise<s
     return loadAssetUrl(url)
   }
 
-  // Absolute or relative path - prepend CDN URL
-  const normalizedPath = url.startsWith('/') ? url : `/${url}`
-  return `${ASSETS_CDN_URL}${normalizedPath}`
+  // Absolute or relative path - the CDN, or this build's own base path
+  return appRelativeUrl(url)
 }
 
 /**
@@ -45,7 +61,6 @@ export function resolveCdnUrl(url: string | undefined | null): string | null {
     return null
   }
 
-  // Absolute or relative path - prepend CDN URL
-  const normalizedPath = url.startsWith('/') ? url : `/${url}`
-  return `${ASSETS_CDN_URL}${normalizedPath}`
+  // Absolute or relative path - the CDN, or this build's own base path
+  return appRelativeUrl(url)
 }

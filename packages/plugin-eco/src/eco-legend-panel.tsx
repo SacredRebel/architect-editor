@@ -37,8 +37,10 @@ import {
   getEcoSiteState,
   setGuideVisible,
   setShowCompass,
+  setShowContours,
   setShowEnvelope,
   setShowGhost,
+  setShowSiteTrees,
   subscribeEcoSite,
 } from './eco-site-store'
 import { getEcoWalkState, setWalkEnabled, subscribeEcoWalk } from './eco-walk-store'
@@ -75,7 +77,15 @@ function useEcoExport() {
  * Legend + visibility toggles for Eco site overlays, Walk, and world export.
  */
 export default function EcoLegendPanel() {
-  const { site, guideVisibility, showGhost, showCompass, showEnvelope } = useEcoSiteStore()
+  const {
+    site,
+    guideVisibility,
+    showGhost,
+    showCompass,
+    showEnvelope,
+    showSiteTrees,
+    showContours,
+  } = useEcoSiteStore()
   const { enabled: walkEnabled, firstPerson } = useWalkStore()
   const { shells } = useShells()
   const organic = useOrganic()
@@ -303,6 +313,28 @@ export default function EcoLegendPanel() {
             />
             Compass (northDeg={site.northDeg ?? 0})
           </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              checked={showSiteTrees}
+              disabled={!site.trees?.length}
+              onChange={(e) => setShowSiteTrees(e.target.checked)}
+              type="checkbox"
+            />
+            Standing trees {site.trees?.length ? `(${site.trees.length})` : '(none sent)'}
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              checked={showContours}
+              onChange={(e) => setShowContours(e.target.checked)}
+              type="checkbox"
+            />
+            Contours in plan (1 m, 5 m bold)
+          </label>
+          {site.sunAt ? (
+            <div style={{ opacity: 0.75, lineHeight: 1.35 }}>
+              Sun from the world: <code>{site.sunAt}</code> (the time slider starts there)
+            </div>
+          ) : null}
           <div style={{ fontWeight: 600, marginTop: 4 }}>Guides</div>
           {site.guides.map((guide, i) => {
             const key = `${guide.kind}:${i}`

@@ -15,7 +15,8 @@
  * background-throttled. We inject a sampler, poll `window.__h17Capture` until
  * done (wall-clock 20s), then collect results.
  */
-import { writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const phaseMode = (process.env.H19_PHASE || process.env.PHASE || 'before').toLowerCase()
@@ -105,18 +106,52 @@ async function main() {
   console.log('CDP page', page.url)
   const { ws, send, evaluate } = makeWs(page.webSocketDebuggerUrl)
   await send('Page.bringToFront', {}).catch(() => {})
+  await send('Page.enable', {})
 
-  // Every run starts from the same empty site: the editor persists its scene
-  // per origin, and the interaction probes below edit it (wall-drag, undo).
+  let target = new URL(process.env.PAGE_URL || page.url)
+  // A run that died between the storage step and the load leaves the tab here.
+  if (target.pathname.startsWith('/api/')) target = new URL('/?perf', target.origin)
+  const origin = target.origin
+  // A fixture is data: storage to seed, a readiness test, bridge messages to
+  // post, and the node counts it must produce. `{{origin}}` is filled with the
+  // page's origin (item models served by the editor itself); the hash is taken
+  // over the file as committed, so every local port loads the same fixture.
+  const fixturePath = process.env.FIXTURE || null
+  const fixtureText = fixturePath ? readFileSync(fixturePath, 'utf8') : null
+  const fixture = fixtureText
+    ? JSON.parse(fixtureText.replaceAll('{{origin}}', target.origin))
+    : null
+  const emulateDpr = process.env.EMULATE_DPR ? Number(process.env.EMULATE_DPR) : null
+  const gpuQuality = process.env.GPU_QUALITY || null
+
+  // Every run starts from the same storage: the editor persists its scene per
+  // origin, and the interaction probes below edit it (wall-drag, undo). Storage
+  // is cleared and seeded from a same-origin page that runs no editor code, so
+  // the app cannot write its in-memory scene back between the clear and the load.
   if (process.env.KEEP_STORAGE !== '1') {
-    const origin = new URL(page.url).origin
+    await send('Page.navigate', { url: `${origin}/api/health` })
+    await Bun.sleep(800)
     await send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' })
-    await send('Page.reload', { ignoreCache: false })
-    await Bun.sleep(1500)
-    console.log('cleared storage and reloaded', origin)
+    const seed = { ...(fixture?.localStorage ?? {}) }
+    if (gpuQuality) seed['viewer-preferences'] = { state: { gpuQuality }, version: 0 }
+    const entries = Object.entries(seed).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])
+    await evaluate(`(() => { localStorage.clear(); for (const [k, v] of ${JSON.stringify(entries)}) localStorage.setItem(k, v); return localStorage.length })()`)
+    console.log('cleared storage', origin, 'seeded', entries.map(([k]) => k).join(', ') || 'nothing')
   }
+  if (emulateDpr) {
+    await send('Emulation.setDeviceMetricsOverride', {
+      width: 0,
+      height: 0,
+      deviceScaleFactor: emulateDpr,
+      mobile: false,
+    })
+  } else {
+    await send('Emulation.clearDeviceMetricsOverride', {}).catch(() => {})
+  }
+  await send('Page.navigate', { url: target.href })
+  await Bun.sleep(1500)
 
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 120; i++) {
     const ready = await evaluate(
       `!!(document.querySelector('canvas') && (window.__pascalPerf || document.querySelector('[data-pascal-perf-panel]')))`,
     )
@@ -124,8 +159,57 @@ async function main() {
     await Bun.sleep(500)
   }
   console.log('canvas/perf ready')
-  // Same settle on both sides before the path: site, sky and HUD windows.
+
+  // Fixture messages the page should receive once it is up (e.g. the eco/1
+  // bridge). Messages sent before the editor's first load are lost, so wait for
+  // the fixture's own readiness test first.
+  if (fixture?.readyWhen) {
+    let fixtureReady = false
+    for (let i = 0; i < 120 && !fixtureReady; i++) {
+      fixtureReady = await evaluate(`(() => { try { return !!(${fixture.readyWhen}) } catch { return false } })()`)
+      if (!fixtureReady) await Bun.sleep(500)
+    }
+    if (!fixtureReady) throw new Error('fixture readyWhen never held')
+    await Bun.sleep(1000)
+  }
+  for (const message of fixture?.postMessages ?? []) {
+    await evaluate(`window.postMessage(${JSON.stringify(message)}, location.origin)`)
+    await Bun.sleep(500)
+  }
+
+  // Settle: at least 4s, then until the HUD's scene counts hold for 3s (six
+  // windows) — asset loads finish at different times on different runs.
+  const settleStart = Date.now()
   await Bun.sleep(4000)
+  let stableWindows = 0
+  let lastCounts = null
+  let lastStats = null
+  while (Date.now() - settleStart < 90_000 && stableWindows < 6) {
+    await Bun.sleep(500)
+    const counts = await evaluate(`(() => {
+      const s = window.__pascalPerf?.stats?.()
+      return s ? { key: s.drawCalls + ':' + s.triangles + ':' + s.geometries + ':' + s.textures, stamp: s.fps + ':' + s.frameMs + ':' + s.heapBytes } : null
+    })()`)
+    if (!counts || counts.stamp === lastStats) continue
+    lastStats = counts.stamp
+    stableWindows = counts.key === lastCounts ? stableWindows + 1 : 0
+    lastCounts = counts.key
+  }
+  const settleMs = Date.now() - settleStart
+  console.log('settled in', settleMs, 'ms', lastCounts)
+
+  // The fixture's node counts, read back from the live scene.
+  let fixtureCounts = null
+  if (fixture?.expect) {
+    fixtureCounts = await evaluate(`(() => {
+      const p = window.__pascalPerf
+      const out = {}
+      for (const type of ${JSON.stringify(Object.keys(fixture.expect))}) out[type] = p.listNodes(type).length
+      return out
+    })()`)
+    const missing = Object.entries(fixture.expect).filter(([k, v]) => fixtureCounts?.[k] !== v)
+    console.log('fixture counts', JSON.stringify(fixtureCounts), missing.length ? 'MISMATCH' : 'ok')
+  }
 
   const navTiming = await evaluate(`(() => {
     const nav = performance.getEntriesByType('navigation')[0]
@@ -184,20 +268,49 @@ async function main() {
     state.renderMsSource = pool ? 'webgpu-timestamp-query' : null
     state.gpuSamples = []
     state.cpuSamples = []
+    state.shadowPasses = 0
+    state.outerRenders = 0
     let lastResolve = pool ? pool.frames : null
     const origRender = gl ? gl.render : null
     let renderDepth = 0
     if (gl) {
       gl.render = function (...args) {
         const t0 = performance.now()
+        const rt = gl.getRenderTarget?.()
+        if (rt && String(rt.texture?.name || '').startsWith('ShadowMap')) state.shadowPasses++
         renderDepth++
         try {
           return origRender.apply(this, args)
         } finally {
           renderDepth--
-          if (renderDepth === 0) state.cpuSamples.push(performance.now() - t0)
+          if (renderDepth === 0) {
+            state.outerRenders++
+            state.cpuSamples.push(performance.now() - t0)
+          }
         }
       }
+    }
+    // Scene census, independent of render cadence: what is in the scene, not
+    // what a given frame drew.
+    if (typeof perf.three === 'function') {
+      const scene = perf.three().scene
+      const census = { drawables: 0, triangles: 0, instances: 0, casters: 0, shadowLights: 0, materials: 0 }
+      const mats = new Set()
+      scene.traverse((o) => {
+        if (o.isLight && o.castShadow && o.visible) census.shadowLights++
+        if (!(o.isMesh || o.isLine || o.isPoints) || !o.visible) return
+        for (let q = o.parent; q; q = q.parent) if (!q.visible) return
+        census.drawables++
+        const g = o.geometry
+        const idx = g?.index ? g.index.count : (g?.attributes?.position?.count ?? 0)
+        const n = o.isInstancedMesh ? o.count : 1
+        if (o.isMesh) census.triangles += Math.round(idx / 3) * n
+        census.instances += n
+        if (o.castShadow) census.casters++
+        for (const m of [].concat(o.material)) if (m) mats.add(m.uuid)
+      })
+      census.materials = mats.size
+      state.scene = census
     }
     state.restoreRender = () => {
       if (gl) gl.render = origRender
@@ -380,6 +493,9 @@ async function main() {
           renderMsSource: s.renderMsSource,
           gpuSamples: s.gpuSamples,
           cpuSamples: s.cpuSamples,
+          shadowPasses: s.shadowPasses,
+          outerRenders: s.outerRenders,
+          scene: s.scene,
         }
       })()`)
       break
@@ -515,6 +631,26 @@ async function main() {
     frames,
     renderMs,
     renderCpuMs,
+    shadowPasses: {
+      total: pathResult.shadowPasses ?? null,
+      perFrame:
+        pathResult.outerRenders > 0
+          ? Number((pathResult.shadowPasses / pathResult.outerRenders).toFixed(3))
+          : null,
+      outerRenders: pathResult.outerRenders ?? null,
+    },
+    scene: pathResult.scene ?? null,
+    fixture: fixture
+      ? {
+          name: fixture.name ?? null,
+          sha256: createHash('sha256').update(fixtureText).digest('hex'),
+          expect: fixture.expect ?? null,
+          counts: fixtureCounts,
+        }
+      : { name: 'empty-site', sha256: null },
+    harness: { sha256: createHash('sha256').update(readFileSync(import.meta.path)).digest('hex') },
+    emulation: { deviceScaleFactor: emulateDpr, gpuQualityPreference: gpuQuality },
+    settleMs,
     frameMs: {
       median: Number(percentile(frameMs, 50).toFixed(3)),
       p99: Number(percentile(frameMs, 99).toFixed(3)),

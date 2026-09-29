@@ -9,6 +9,9 @@ type EcoSiteStore = {
   showCompass: boolean
   /** Ventura buildable envelope translucent volume (H16.5). */
   showEnvelope: boolean
+  /** A5 reference layers: the site's standing trees; terrain contours in plan. */
+  showSiteTrees: boolean
+  showContours: boolean
 }
 
 const listeners = new Set<() => void>()
@@ -19,6 +22,8 @@ let state: EcoSiteStore = {
   showGhost: true,
   showCompass: true,
   showEnvelope: true,
+  showSiteTrees: true,
+  showContours: true,
 }
 
 function emit() {
@@ -70,5 +75,15 @@ export function setShowCompass(showCompass: boolean): void {
 
 export function setShowEnvelope(showEnvelope: boolean): void {
   state = { ...state, showEnvelope }
+  emit()
+}
+
+export function setShowSiteTrees(showSiteTrees: boolean): void {
+  state = { ...state, showSiteTrees }
+  emit()
+}
+
+export function setShowContours(showContours: boolean): void {
+  state = { ...state, showContours }
   emit()
 }

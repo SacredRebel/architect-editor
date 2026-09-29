@@ -25,6 +25,7 @@ import {
   createDefaultMaterial,
   createSurfaceRoleMaterial,
   ErrorBoundary,
+  getDracoDecoderPath,
   glassMaterial,
   NodeRenderer,
   type RenderShading,
@@ -226,7 +227,7 @@ const configureItemModelLoader = (loader: ItemGLTFLoader, renderer: unknown) => 
   configureKtx2Support(loader, renderer)
   if (!itemDracoLoader) {
     itemDracoLoader = new DRACOLoader(loader.manager)
-    itemDracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.5/')
+    itemDracoLoader.setDecoderPath(getDracoDecoderPath())
   }
   loader.setDRACOLoader(itemDracoLoader)
   loader.setMeshoptDecoder(MeshoptDecoder)

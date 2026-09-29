@@ -6,6 +6,9 @@ export const ecoPresentation: ViewerPresentationContribution = {
   component: () => import('./eco-presentation'),
 }
 
+/** A5 — the site in the plan: contours, survey, standing trees (Editor `floorplanSceneSlot`). */
+export const ecoFloorplanOverlay = () => import('./eco-floorplan-overlay')
+
 export const ecoHostPanel: EditorHostPanel = {
   id: 'eco:plugin-eco:legend',
   label: 'Eco site',

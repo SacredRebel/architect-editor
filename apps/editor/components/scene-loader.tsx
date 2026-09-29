@@ -10,7 +10,6 @@ import {
   type SidebarTab,
 } from '@pascal-app/editor'
 import { Hammer, Layers, Settings } from 'lucide-react'
-import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -21,12 +20,8 @@ import { saveLocalScene } from '@/lib/local-scene-store'
 import { type PersistedSceneGraph, sceneGraphSignature } from '@/lib/scene-signature'
 import { cn } from '@/lib/utils'
 import { BuildTab } from './build-tab'
+import { FloorplanOverlays } from './floorplan-overlays'
 import { CommunityViewerToolbarLeft, CommunityViewerToolbarRight } from './viewer-toolbar'
-
-const GeometryFloorplanOverlay = dynamic(
-  () => import('@pascal-app/plugin-geometry').then((m) => m.geometryFloorplanOverlay()),
-  { ssr: false },
-)
 
 export interface SceneMeta {
   id: string
@@ -317,7 +312,7 @@ export function SceneLoader({ initialScene, meta }: SceneLoaderProps) {
         </Link>
       </div>
       <Editor
-        floorplanSceneSlot={<GeometryFloorplanOverlay />}
+        floorplanSceneSlot={<FloorplanOverlays />}
         disablePostFx={lightPreview}
         layoutVersion="v2"
         onLoad={handleLoad}

@@ -271,6 +271,12 @@ export type IfcExportOptions = {
   projectName?: string
   author?: string
   organization?: string
+  /**
+   * Directory URL the page serves `web-ifc.wasm` from. Unset, web-ifc resolves
+   * it against the script that loaded it, which in a bundle is a chunk
+   * directory that does not hold the wasm.
+   */
+  wasmPath?: string
 }
 
 export async function exportPascalToIfc(
@@ -290,6 +296,7 @@ export async function exportPascalToIfc(
   }
 
   const ifcApi = new WebIFC.IfcAPI()
+  if (options.wasmPath) ifcApi.SetWasmPath(options.wasmPath, true)
   await ifcApi.Init()
 
   const modelID = ifcApi.CreateModel({

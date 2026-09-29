@@ -1,5 +1,5 @@
 import { emitter, type SiteNode, useLiveNodeOverrides, useScene } from '@pascal-app/core'
-import { SCENE_LAYER } from '@pascal-app/viewer'
+import { getDracoDecoderPath, SCENE_LAYER } from '@pascal-app/viewer'
 import { useGLTF } from '@react-three/drei/core/Gltf'
 import { useFrame } from '@react-three/fiber'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -65,7 +65,7 @@ function SiteFlagModel({
   opacity?: number
   scale?: number
 }) {
-  const { scene } = useGLTF(SITE_FLAG_MODEL_URL, true)
+  const { scene } = useGLTF(SITE_FLAG_MODEL_URL, getDracoDecoderPath())
   const modelRef = useRef<Object3D>(null)
   const flagScene = useMemo(() => {
     const cloned = scene.clone(true)

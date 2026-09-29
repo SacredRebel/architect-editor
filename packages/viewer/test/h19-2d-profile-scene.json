@@ -1,0 +1,782 @@
+{
+  "phase": "H19.2d",
+  "capturedAt": "2026-09-28T07:54:32.986Z",
+  "sourceUrl": "http://127.0.0.1:3019/?perf",
+  "tree": "b9151c50dbc15677a08fa795733b11bb883a39df",
+  "cameraPath": {
+    "kind": "synthetic-pointer-orbit",
+    "durationMs": 20000
+  },
+  "env": {
+    "backend": "webgpu",
+    "adapter": {
+      "vendor": "intel",
+      "architecture": "xe-lpg",
+      "description": "",
+      "isFallback": null
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 24,
+    "dpr": 1,
+    "devicePixelRatio": 1,
+    "drawingBuffer": [920, 705],
+    "cssSize": [920, 705],
+    "detectedQuality": "medium",
+    "resolvedQuality": "medium",
+    "shadowMap": {
+      "enabled": true,
+      "type": 1
+    },
+    "toneMapping": 4
+  },
+  "frame": {
+    "windows": 39,
+    "fps": {
+      "median": 50,
+      "max": 50
+    },
+    "budgetMsAtCap": 20,
+    "cpuFrameMs": {
+      "median": 6.98,
+      "max": 8.96
+    },
+    "cpuFrameMaxMs": {
+      "median": 11.2,
+      "max": 21.1
+    },
+    "renderEncodeMs": {
+      "median": 5.5,
+      "max": 7.33
+    },
+    "gpuMs": {
+      "median": 6.35,
+      "max": 9.48
+    },
+    "gpuMaxMs": {
+      "median": 7.54,
+      "max": 22.87
+    },
+    "gpuTracked": true,
+    "queueMs": {
+      "median": 37.37,
+      "max": 89.39
+    },
+    "drawCalls": {
+      "median": 254,
+      "max": 257
+    },
+    "triangles": {
+      "median": 46746.46,
+      "max": 47479.83
+    },
+    "systemTracks": [
+      {
+        "name": "pointer",
+        "totalMs": 1470.4,
+        "count": 1152,
+        "maxMs": 10.2
+      }
+    ]
+  },
+  "passes": {
+    "framesSampled": 10,
+    "callsPerFrame": [4, 4, 4, 4, 6, 4, 4, 4, 4, 4],
+    "exampleFrame": [
+      {
+        "tick": 1843,
+        "depth": 1,
+        "target": "output 920x705 +depth",
+        "camera": "PerspectiveCamera",
+        "scene": "Scene",
+        "drawCalls": 221,
+        "triangles": 37059,
+        "cpuMs": 8.9
+      },
+      {
+        "tick": 1843,
+        "depth": 1,
+        "target": "output 920x705 +depth",
+        "camera": "PerspectiveCamera",
+        "scene": "Scene",
+        "drawCalls": 1,
+        "triangles": 1984,
+        "cpuMs": 0.7
+      },
+      {
+        "tick": 1843,
+        "depth": 1,
+        "target": "output 920x705 +depth",
+        "camera": "PerspectiveCamera",
+        "scene": "Scene",
+        "drawCalls": 4,
+        "triangles": 2076,
+        "cpuMs": 0.6
+      },
+      {
+        "tick": 1843,
+        "depth": 0,
+        "target": "canvas",
+        "camera": "OrthographicCamera",
+        "scene": "Mesh",
+        "drawCalls": 227,
+        "triangles": 41120,
+        "cpuMs": 11.8
+      }
+    ]
+  },
+  "shadows": {
+    "lights": [
+      {
+        "type": "DirectionalLight",
+        "name": null,
+        "visible": true,
+        "castShadow": true,
+        "mapSize": "1024x1024",
+        "allocated": true,
+        "autoUpdate": false
+      },
+      {
+        "type": "DirectionalLight",
+        "name": "eco-sun",
+        "visible": true,
+        "castShadow": true,
+        "mapSize": "4096x4096",
+        "allocated": true,
+        "autoUpdate": false
+      }
+    ],
+    "otherLights": 16,
+    "visibleCasters": 136,
+    "visibleReceivers": 138
+  },
+  "materials": {
+    "unique": 38,
+    "byType": {
+      "MeshLambertNodeMaterial": 24,
+      "MeshBasicMaterial": 5,
+      "MeshPhysicalMaterial": 3,
+      "LineBasicMaterial": 1,
+      "Line2NodeMaterial": 2,
+      "MeshBasicNodeMaterial": 3
+    },
+    "transparent": 7
+  },
+  "drawables": 227,
+  "worstDraws": [
+    {
+      "name": "Mesh",
+      "kind": "Mesh",
+      "triangles": 18432,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": true,
+      "receiveShadow": true,
+      "frustumCulled": true
+    },
+    {
+      "name": "item-batch",
+      "kind": "Mesh",
+      "triangles": 6536,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": true,
+      "receiveShadow": true,
+      "frustumCulled": false
+    },
+    {
+      "name": "Mesh287_2",
+      "kind": "Mesh",
+      "triangles": 2868,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": true,
+      "receiveShadow": true,
+      "frustumCulled": true
+    },
+    {
+      "name": "eco-sky",
+      "kind": "Mesh",
+      "triangles": 2208,
+      "instances": 1,
+      "materials": "MeshBasicMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": false
+    },
+    {
+      "name": "item-batch",
+      "kind": "Mesh",
+      "triangles": 1452,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": true,
+      "receiveShadow": true,
+      "frustumCulled": false
+    },
+    {
+      "name": "item-batch",
+      "kind": "Mesh",
+      "triangles": 1224,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": false,
+      "receiveShadow": false,
+      "frustumCulled": false
+    },
+    {
+      "name": "Mesh",
+      "kind": "Mesh",
+      "triangles": 768,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": false,
+      "receiveShadow": true,
+      "frustumCulled": true
+    },
+    {
+      "name": "bathroom_item_010",
+      "kind": "Mesh",
+      "triangles": 694,
+      "instances": 1,
+      "materials": "MeshPhysicalMaterial",
+      "castShadow": true,
+      "receiveShadow": true,
+      "frustumCulled": true
+    },
+    {
+      "name": "item-batch",
+      "kind": "Mesh",
+      "triangles": 688,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": true,
+      "receiveShadow": true,
+      "frustumCulled": false
+    },
+    {
+      "name": "item-batch",
+      "kind": "Mesh",
+      "triangles": 686,
+      "instances": 1,
+      "materials": "MeshLambertNodeMaterial",
+      "castShadow": true,
+      "receiveShadow": true,
+      "frustumCulled": false
+    }
+  ],
+  "drawComposition": {
+    "items": 50,
+    "itemMeshes": 109,
+    "otherVisibleMeshes": 119,
+    "meshesByKind": {
+      "site": 220,
+      "building": 217,
+      "wall": 89,
+      "door": 60,
+      "window": 21,
+      "slab": 2,
+      "roof": 2,
+      "roof-segment": 1,
+      "stair": 2,
+      "stair-segment": 1,
+      "item": 109,
+      "level": 217,
+      "(unregistered)": 0
+    },
+    "perItemMeshes": {
+      "avg": 2.2,
+      "p50": 2,
+      "max": 4
+    },
+    "assets": [
+      {
+        "id": "tree",
+        "name": "Tree",
+        "copies": 18,
+        "meshesPerCopy": 2,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "fir-tree",
+        "name": "Fir",
+        "copies": 12,
+        "meshesPerCopy": 2,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "dining-chair",
+        "name": "Dining Chair",
+        "copies": 4,
+        "meshesPerCopy": 3,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "livingroom-chair",
+        "name": "Livingroom Chair",
+        "copies": 2,
+        "meshesPerCopy": 3,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "bedside-table",
+        "name": "Bedside Table",
+        "copies": 2,
+        "meshesPerCopy": 3,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "indoor-plant",
+        "name": "Indoor Plant",
+        "copies": 1,
+        "meshesPerCopy": 4,
+        "materialsPerCopy": 4
+      },
+      {
+        "id": "sofa",
+        "name": "Sofa",
+        "copies": 1,
+        "meshesPerCopy": 3,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "coffee-table",
+        "name": "Coffee Table",
+        "copies": 1,
+        "meshesPerCopy": 3,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "dresser",
+        "name": "Dresser",
+        "copies": 1,
+        "meshesPerCopy": 3,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "television",
+        "name": "Television",
+        "copies": 1,
+        "meshesPerCopy": 2,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "bookshelf",
+        "name": "Bookshelf",
+        "copies": 1,
+        "meshesPerCopy": 2,
+        "materialsPerCopy": 1
+      },
+      {
+        "id": "dining-table",
+        "name": "Dining Table",
+        "copies": 1,
+        "meshesPerCopy": 2,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "toilet",
+        "name": "Toilet",
+        "copies": 1,
+        "meshesPerCopy": 2,
+        "materialsPerCopy": 2
+      },
+      {
+        "id": "tv-stand",
+        "name": "TV Stand",
+        "copies": 1,
+        "meshesPerCopy": 1,
+        "materialsPerCopy": 1
+      },
+      {
+        "id": "fridge",
+        "name": "Fridge",
+        "copies": 1,
+        "meshesPerCopy": 1,
+        "materialsPerCopy": 1
+      }
+    ],
+    "projected": {
+      "current": 109,
+      "perItemMerge": 97,
+      "instancedByAsset": 38,
+      "both": 31
+    }
+  },
+  "upload": {
+    "texturesFirst": 52,
+    "texturesLast": 52,
+    "geometriesFirst": 162,
+    "geometriesLast": 162,
+    "gpuBytesFirst": 172936519,
+    "gpuBytesLast": 172936639,
+    "heapBytesFirst": 166103753,
+    "heapBytesLast": 160283516
+  },
+  "gpuWork": {
+    "note": "WebGPU calls wrapped from the first script on the page (reload). load = until the 20s orbit starts; orbit = during it. ms is CPU wall time of the call.",
+    "load": {
+      "createTexture": {
+        "calls": 60,
+        "bytes": 184349632,
+        "ms": 1.5
+      },
+      "createBuffer": {
+        "calls": 623,
+        "bytes": 121272,
+        "ms": 4.3
+      },
+      "createBuffer(mapped)": {
+        "calls": 594,
+        "bytes": 2225860,
+        "ms": 5.3
+      },
+      "writeBuffer": {
+        "calls": 14213,
+        "bytes": 13643924,
+        "ms": 51.2
+      },
+      "createShaderModule": {
+        "calls": 70,
+        "bytes": 0,
+        "ms": 2.5
+      },
+      "createRenderPipeline": {
+        "calls": 51,
+        "bytes": 0,
+        "ms": 3.1
+      },
+      "writeTexture": {
+        "calls": 9667,
+        "bytes": 5097496,
+        "ms": 96.5
+      }
+    },
+    "orbit": {
+      "writeTexture": {
+        "calls": 13420,
+        "bytes": 1716528,
+        "ms": 134.4
+      },
+      "writeBuffer": {
+        "calls": 6283,
+        "bytes": 17416494,
+        "ms": 45.9
+      },
+      "createBuffer(mapped)": {
+        "calls": 44,
+        "bytes": 17544,
+        "ms": 1
+      },
+      "createBuffer": {
+        "calls": 40,
+        "bytes": 3200,
+        "ms": 0.6
+      }
+    },
+    "programs": {
+      "shaderModules": 70,
+      "renderPipelines": 51,
+      "computePipelines": 0,
+      "createdDuringOrbit": 0
+    }
+  },
+  "passGpu": {
+    "resolves": 95,
+    "frameGpuMsMedian": 6.619,
+    "perFramePassSumMs": 6.62,
+    "passes": [
+      {
+        "label": "#1 canvas 920x705 (context 10)",
+        "samples": 95,
+        "gpuMsMedian": 1.114,
+        "share": 0.168
+      },
+      {
+        "label": "#2 output 920x705 (context 11)",
+        "samples": 95,
+        "gpuMsMedian": 4.85,
+        "share": 0.733
+      },
+      {
+        "label": "#3 output 920x705 (context 13)",
+        "samples": 87,
+        "gpuMsMedian": 0.328,
+        "share": 0.05
+      },
+      {
+        "label": "#4 output 920x705 (context 13)",
+        "samples": 87,
+        "gpuMsMedian": 0.328,
+        "share": 0.05
+      }
+    ],
+    "oneOff": {
+      "contexts": 4,
+      "samples": 32
+    }
+  },
+  "drawCost": {
+    "cameraDrawn": 44,
+    "batches": {
+      "containers": 12,
+      "instances": 172,
+      "uniqueGeometries": 101,
+      "drawsSavedByInstancingPerPass": 71,
+      "detail": [
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 51,
+          "uniqueGeometries": 51
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 21,
+          "uniqueGeometries": 21
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 6,
+          "uniqueGeometries": 4
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 4,
+          "uniqueGeometries": 3
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 3,
+          "uniqueGeometries": 3
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 5,
+          "uniqueGeometries": 4
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 3,
+          "uniqueGeometries": 3
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 31,
+          "uniqueGeometries": 3
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 31,
+          "uniqueGeometries": 3
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 8,
+          "uniqueGeometries": 2
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 4,
+          "uniqueGeometries": 1
+        },
+        {
+          "name": "item-batch",
+          "material": "MeshLambertNodeMaterial",
+          "instances": 5,
+          "uniqueGeometries": 3
+        }
+      ]
+    },
+    "groups": [
+      {
+        "name": "site / terrain",
+        "objects": 16,
+        "triangles": 19634,
+        "baseMs": 6.029,
+        "hiddenMs": 4.719,
+        "costMs": 1.311,
+        "baselineDriftMs": 0.786
+      },
+      {
+        "name": "eco-buildable-envelope",
+        "objects": 1,
+        "triangles": 12,
+        "baseMs": 4.751,
+        "hiddenMs": 4.129,
+        "costMs": 0.623,
+        "baselineDriftMs": 0.066
+      },
+      {
+        "name": "merged-stair",
+        "objects": 1,
+        "triangles": 124,
+        "baseMs": 6.586,
+        "hiddenMs": 6.029,
+        "costMs": 0.557,
+        "baselineDriftMs": 0.459
+      },
+      {
+        "name": "unbatched item: bathroom_item",
+        "objects": 2,
+        "triangles": 827,
+        "baseMs": 6.947,
+        "hiddenMs": 6.488,
+        "costMs": 0.459,
+        "baselineDriftMs": 0.131
+      },
+      {
+        "name": "eco-sky",
+        "objects": 1,
+        "triangles": 2208,
+        "baseMs": 4.751,
+        "hiddenMs": 4.325,
+        "costMs": 0.426,
+        "baselineDriftMs": 0.066
+      },
+      {
+        "name": "merged-roof",
+        "objects": 1,
+        "triangles": 87,
+        "baseMs": 6.226,
+        "hiddenMs": 6.029,
+        "costMs": 0.197,
+        "baselineDriftMs": 0.393
+      },
+      {
+        "name": "item-batch (all containers)",
+        "objects": 12,
+        "triangles": 13151,
+        "baseMs": 4.784,
+        "hiddenMs": 4.588,
+        "costMs": 0.197,
+        "baselineDriftMs": 0.131
+      },
+      {
+        "name": "eco-guides",
+        "objects": 2,
+        "triangles": 12,
+        "baseMs": 4.588,
+        "hiddenMs": 4.456,
+        "costMs": 0.131,
+        "baselineDriftMs": 0
+      },
+      {
+        "name": "unbatched item: kitchen_table",
+        "objects": 1,
+        "triangles": 56,
+        "baseMs": 6.16,
+        "hiddenMs": 6.16,
+        "costMs": 0,
+        "baselineDriftMs": 0.393
+      },
+      {
+        "name": "unbatched item: Mesh579",
+        "objects": 1,
+        "triangles": 14,
+        "baseMs": 4.784,
+        "hiddenMs": 4.784,
+        "costMs": 0,
+        "baselineDriftMs": 0.131
+      },
+      {
+        "name": "wall-batch",
+        "objects": 1,
+        "triangles": 459,
+        "baseMs": 4.719,
+        "hiddenMs": 4.719,
+        "costMs": 0,
+        "baselineDriftMs": 0.131
+      },
+      {
+        "name": "pascal-editor-grid-input",
+        "objects": 1,
+        "triangles": 2,
+        "baseMs": 4.62,
+        "hiddenMs": 4.653,
+        "costMs": -0.033,
+        "baselineDriftMs": 0.066
+      },
+      {
+        "name": "unbatched item: Mesh256",
+        "objects": 1,
+        "triangles": 28,
+        "baseMs": 6.128,
+        "hiddenMs": 6.226,
+        "costMs": -0.098,
+        "baselineDriftMs": 0.459
+      },
+      {
+        "name": "unbatched item: kitchen_item",
+        "objects": 1,
+        "triangles": 68,
+        "baseMs": 6.324,
+        "hiddenMs": 6.488,
+        "costMs": -0.164,
+        "baselineDriftMs": 0.197
+      },
+      {
+        "name": "unbatched item: bed",
+        "objects": 1,
+        "triangles": 514,
+        "baseMs": 6.455,
+        "hiddenMs": 6.75,
+        "costMs": -0.295,
+        "baselineDriftMs": 0.197
+      },
+      {
+        "name": "unbatched item: Mesh1005",
+        "objects": 1,
+        "triangles": 2,
+        "baseMs": 6.029,
+        "hiddenMs": 6.554,
+        "costMs": -0.524,
+        "baselineDriftMs": 0.655
+      }
+    ]
+  },
+  "attribution": [
+    {
+      "label": "baseline",
+      "windows": 8,
+      "gpuMs": 5.69,
+      "cpuMs": 5.46,
+      "drawCalls": 255,
+      "fps": 50
+    },
+    {
+      "label": "shadow casting off (all lights)",
+      "windows": 8,
+      "gpuMs": 5.54,
+      "cpuMs": 4.77,
+      "drawCalls": 227,
+      "fps": 50
+    },
+    {
+      "label": "dpr 1.0",
+      "windows": 8,
+      "gpuMs": 6.74,
+      "cpuMs": 7.82,
+      "drawCalls": 255,
+      "fps": 50
+    },
+    {
+      "label": "baseline again",
+      "windows": 8,
+      "gpuMs": 5.81,
+      "cpuMs": 6,
+      "drawCalls": 255,
+      "fps": 50
+    }
+  ],
+  "note": "Profile only. No product change. Toggles (shadow casting, dpr, one drawable hidden at a time) were applied in-page and restored; the WebGPU call hook was installed for one reload and removed."
+}

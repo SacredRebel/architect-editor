@@ -1,4 +1,4 @@
-import { sceneRegistry } from '@pascal-app/core'
+import { sceneRegistry, useScene } from '@pascal-app/core'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import type {
@@ -75,6 +75,41 @@ const SHADOW_MARGIN = 3
 const SHADOW_BACKOFF = 10
 // Fallback radius when the scene has no building geometry yet (empty scene).
 const SHADOW_FALLBACK_RADIUS = 30
+// Seconds between shadow-map redraws when nothing reports a change (H19.2c).
+const SHADOW_REFRESH_INTERVAL = 0.25
+const POSE_EPSILON = 1e-6
+const poseScratch = new Float64Array(48)
+
+/**
+ * Records a shadow light's world pose, its target's and its shadow projection;
+ * returns true when any of them moved since the last call (or on first sight).
+ */
+function trackShadowPose(
+  poses: WeakMap<THREE.Light, Float64Array>,
+  light: THREE.Light,
+  shadow: THREE.LightShadow,
+): boolean {
+  poseScratch.set(light.matrixWorld.elements, 0)
+  const target = (light as THREE.DirectionalLight).target
+  if (target) poseScratch.set(target.matrixWorld.elements, 16)
+  else poseScratch.fill(0, 16, 32)
+  poseScratch.set(shadow.camera.projectionMatrix.elements, 32)
+  const prev = poses.get(light)
+  if (prev) {
+    let same = true
+    for (let i = 0; i < poseScratch.length; i++) {
+      if (Math.abs(prev[i]! - poseScratch[i]!) > POSE_EPSILON) {
+        same = false
+        break
+      }
+    }
+    if (same) return false
+    prev.set(poseScratch)
+    return true
+  }
+  poses.set(light, Float64Array.from(poseScratch))
+  return true
+}
 
 export function Lights({ quality = 'medium' }: { quality?: GpuQuality }) {
   const sceneTheme = useViewer((state) => state.sceneTheme)
@@ -95,19 +130,14 @@ export function Lights({ quality = 'medium' }: { quality?: GpuQuality }) {
   const shadowCameraSize = 50
   const lastSunDir = useRef(new THREE.Vector3(NaN, NaN, NaN))
   const shadowsDirty = useRef(true)
+  const shadowLights = useRef<THREE.Light[]>([])
+  const shadowPoses = useRef(new WeakMap<THREE.Light, Float64Array>())
+  const lastShadowRefresh = useRef(-1)
+  const lastNodes = useRef<unknown>(null)
 
-  // H17.1 — update the shadow map only when the sun or scene geometry moves.
-  useEffect(() => {
-    const map = gl.shadowMap
-    if (!map) return
-    map.autoUpdate = false
-    map.needsUpdate = true
-    shadowsDirty.current = true
-  }, [gl])
-
+  // Redraw shadow maps when the sun, the building or the settings change.
   useEffect(() => {
     shadowsDirty.current = true
-    if (gl.shadowMap) gl.shadowMap.needsUpdate = true
   }, [geometryRevision, shadows, quality, gl])
 
   // Building bounds the shadow frustum is fit to, recomputed on an interval.
@@ -161,8 +191,10 @@ export function Lights({ quality = 'medium' }: { quality?: GpuQuality }) {
     // frustum extents are derived here.
     if (shadows) {
       const now = state.clock.elapsedTime
+      let scanLights = shadowLights.current.length === 0
       if (now - lastBoundsTime.current >= BOUNDS_REFRESH_INTERVAL) {
         lastBoundsTime.current = now
+        scanLights = true
         const box = boundsBox.current.makeEmpty()
         for (const [id, obj] of sceneRegistry.nodes) {
           if (SHADOW_EXCLUDED_TYPES.some((type) => sceneRegistry.byType[type]!.has(id))) continue
@@ -235,10 +267,37 @@ export function Lights({ quality = 'medium' }: { quality?: GpuQuality }) {
           }
         }
       }
-      if (shadowsDirty.current && state.gl.shadowMap) {
-        state.gl.shadowMap.needsUpdate = true
-        shadowsDirty.current = false
+      // H19.2c — the WebGPU renderer draws a light's shadow map when that
+      // light's own shadow.needsUpdate or shadow.autoUpdate is set
+      // (ShadowNode.updateBefore); the renderer-level shadowMap flags are
+      // WebGL's and it never reads them. Every shadow-casting light in the scene
+      // (this key light, a plugin's site sun) is taken off per-frame updates and
+      // redrawn on change — sun, building bounds, rebuilt geometry, any scene
+      // edit, the light's own pose or frustum — and on a slow tick for motion
+      // nothing reports (animations).
+      if (scanLights) {
+        const found: THREE.Light[] = []
+        state.scene.traverse((object) => {
+          const light = object as THREE.Light & { shadow?: THREE.LightShadow }
+          if (light.isLight && light.castShadow && light.shadow) found.push(light)
+        })
+        shadowLights.current = found
       }
+      const nodes = useScene.getState().nodes
+      if (nodes !== lastNodes.current) {
+        lastNodes.current = nodes
+        shadowsDirty.current = true
+      }
+      const tick = now - lastShadowRefresh.current >= SHADOW_REFRESH_INTERVAL
+      for (const light of shadowLights.current) {
+        const shadow = (light as THREE.Light & { shadow?: THREE.LightShadow }).shadow
+        if (!shadow) continue
+        shadow.autoUpdate = false
+        const moved = trackShadowPose(shadowPoses.current, light, shadow)
+        if (shadowsDirty.current || tick || moved) shadow.needsUpdate = true
+      }
+      if (tick) lastShadowRefresh.current = now
+      shadowsDirty.current = false
     }
 
     for (const index of lightSlots) {
