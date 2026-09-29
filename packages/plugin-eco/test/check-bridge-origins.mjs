@@ -26,10 +26,11 @@ const selfTest = process.argv.includes('--self-test')
 const bridgeSource = readFileSync(join(import.meta.dir, '../src/bridge.ts'), 'utf8')
 
 // ---------------------------------------------------------------- the oracle
-// From the brief: https://spatial-map.vercel.app; https://spatial-map-*-
-// pauls-projects-af8162cc.vercel.app (that exact team suffix); http://localhost:*
-// and http://127.0.0.1:*. Browsers send canonical origins, so anything URL()
-// would rewrite (case, default port, path) is not one of them.
+// From the brief, as the architect widened it on 29 Sep: https://spatial-map.vercel.app;
+// https://spatial-*-pauls-projects-af8162cc.vercel.app (that exact team suffix —
+// deployment URLs spatial-<hash>-… and branch URLs spatial-map-git-<branch>-…);
+// http://localhost:* and http://127.0.0.1:*. Browsers send canonical origins, so
+// anything URL() would rewrite (case, default port, path) is not one of them.
 const TEAM_SUFFIX = '-pauls-projects-af8162cc.vercel.app'
 function oracle(origin) {
   let url
@@ -43,8 +44,8 @@ function oracle(origin) {
   if (url.protocol !== 'https:' || url.port !== '') return false
   const host = url.hostname
   if (host === 'spatial-map.vercel.app') return true
-  if (!host.startsWith('spatial-map-') || !host.endsWith(TEAM_SUFFIX)) return false
-  const name = host.slice('spatial-map-'.length, host.length - TEAM_SUFFIX.length)
+  if (!host.startsWith('spatial-') || !host.endsWith(TEAM_SUFFIX)) return false
+  const name = host.slice('spatial-'.length, host.length - TEAM_SUFFIX.length)
   return name.length > 0 && [...name].every((c) => 'abcdefghijklmnopqrstuvwxyz0123456789-'.includes(c))
 }
 
@@ -53,6 +54,8 @@ const TABLE = [
   'https://spatial-map.vercel.app',
   'https://spatial-map-k3x9d2p1a-pauls-projects-af8162cc.vercel.app',
   'https://spatial-map-git-eco-s2-pauls-projects-af8162cc.vercel.app',
+  'https://spatial-map-git-main-pauls-projects-af8162cc.vercel.app',
+  'https://spatial-k3x9d2p1a-pauls-projects-af8162cc.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost',
@@ -71,7 +74,8 @@ const TABLE = [
   'https://spatial-map-k3x9-pauls-projects-af8162cd.vercel.app',
   'https://spatial-map-k3x9-pauls-projects-af8162cc.vercel.app.evil.example',
   'https://spatial-map-k3x9-pauls-projects-af8162cc.vercel.app:8443',
-  'https://spatial-map--pauls-projects-af8162cc.vercel.app',
+  'https://spatial-x.pauls-projects-af8162cc.vercel.app.evil.com',
+  'https://spatial--pauls-projects-af8162cc.vercel.app',
   'https://spatial-map-a.b-pauls-projects-af8162cc.vercel.app',
   'https://architect-editor-snowy.vercel.app',
   'https://localhost:3000',
