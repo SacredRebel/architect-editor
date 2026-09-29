@@ -79,6 +79,7 @@
     "@react-three/rapier": "^2.2.0",
     "draco3dgltf": "^1.5.7",
     "ecctrl": "^2.0.2",
-    "meshoptimizer": "^0.22.0"
+    "meshoptimizer": "^0.22.0",
+    "web-ifc": "^0.0.77"
   }
 }
