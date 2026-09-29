@@ -20,6 +20,22 @@ function base64ToObjectUrl(base64: string): string {
   return URL.createObjectURL(blob)
 }
 
+/**
+ * One object URL per reference GLB, kept outside React. The loader suspends,
+ * and a retry renders this component afresh, so a URL minted in render (even
+ * memoised) is new on every retry: the loader's cache never hits and the ghost
+ * never settles — thousands of blobs a minute. The previous URL is revoked when
+ * the host sends a different reference.
+ */
+let ghostUrl: { glb: string; url: string } | null = null
+
+function objectUrlForGlb(base64: string): string {
+  if (ghostUrl?.glb === base64) return ghostUrl.url
+  if (ghostUrl) URL.revokeObjectURL(ghostUrl.url)
+  ghostUrl = { glb: base64, url: base64ToObjectUrl(base64) }
+  return ghostUrl.url
+}
+
 function GhostModel({ url }: { url: string }) {
   const gltf = useLoader(GLTFLoader, url)
   const ghost = useMemo(() => {
@@ -55,10 +71,7 @@ function GhostModel({ url }: { url: string }) {
  */
 export function EcoGhost() {
   const { site, showGhost } = useEcoSiteStore()
-  const url = useMemo(() => {
-    if (!site?.refGlb || !showGhost) return null
-    return base64ToObjectUrl(site.refGlb)
-  }, [site?.refGlb, showGhost])
+  const url = site?.refGlb && showGhost ? objectUrlForGlb(site.refGlb) : null
 
   useEffect(() => {
     ensureEcoPlanSnapInstalled()
