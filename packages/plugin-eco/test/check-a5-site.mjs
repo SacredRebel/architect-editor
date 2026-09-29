@@ -2,11 +2,11 @@
 /**
  * A5 — the site in the editor.
  *
- *   (cd apps/editor && NEXT_PUBLIC_ECO_HOST_ORIGIN=http://localhost:4173 bun run build:static)
+ *   (cd apps/editor && bun run build:static)
  *   bun packages/plugin-eco/test/check-a5-site.mjs [--self-test]
  *
  * Serves the static build, opens /builder/?perf in its own Chrome, and sends
- * over the eco/1 bridge (from the build's host origin) the realistic site, a
+ * over the eco/1 bridge (from localhost, which the bridge hears) the realistic site, a
  * 97×97 heightfield with metres of relief under the pad, plus standing trees
  * and the world's sun instant. Then it compares what the editor draws against
  * the same site sampled here, independently of the editor's terrain:
@@ -36,7 +36,7 @@
  *
  * Env: CHROME, PORT (default 4173), HEADLESS=1.
  */
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
   connect,
@@ -547,11 +547,6 @@ function checkPlan(label, site, plan) {
 // ------------------------------------------------ run
 if (!existsSync(join(outDir, BASE.slice(1), 'index.html'))) {
   console.error(`FAIL - no static export at ${outDir}${BASE}/ (see the header for the build command)`)
-  process.exit(1)
-}
-const build = JSON.parse(readFileSync(join(outDir, BASE.slice(1), 'eco-build.json'), 'utf8'))
-if (build.hostOrigin !== origin) {
-  console.error(`FAIL - this build answers ${build.hostOrigin}; the site check posts from ${origin}. Build with NEXT_PUBLIC_ECO_HOST_ORIGIN=${origin}.`)
   process.exit(1)
 }
 

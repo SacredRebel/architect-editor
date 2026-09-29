@@ -5,6 +5,7 @@ import type { EcoMsg, EcoSite } from './bridge-types'
 import { siteToWorldXz } from './coords'
 import { ecoDebug, ecoDebugWarn } from './eco-debug'
 import { setEcoExportState } from './eco-export-store'
+import { createEcoOriginGate } from './eco-origins'
 import { exportEcoScenePayload, restoreEcoSceneExtras } from './eco-scene'
 import { getEcoSiteState } from './eco-site-store'
 import { arrayBufferToBase64, downloadBytes, exportEcoGlb } from './export-glb'
@@ -13,13 +14,11 @@ const PROTOCOL = 'eco/1' as const
 const HELLO_TIMEOUT_MS = 3000
 
 /**
- * The world's origin — the only origin the bridge listens to or posts to (A4).
- * The editor is served under the world's /builder, so in production this is
- * also the page's own origin. One env, baked in at build time.
+ * Which origins are heard: the world, its previews and local development
+ * (eco-origins.ts). The first of them to say hello is the host, and every reply
+ * goes to that origin only.
  */
-export const ECO_HOST_ORIGIN = (
-  process.env.NEXT_PUBLIC_ECO_HOST_ORIGIN || 'https://spatial-map.vercel.app'
-).replace(/\/+$/, '')
+const gate = createEcoOriginGate()
 
 /** Capabilities advertised in eco:ready. */
 export const CAPS = ['site', 'scene', 'assets', 'glb'] as const
@@ -31,7 +30,6 @@ type BridgeHandlers = {
 }
 
 let installed = false
-let hostOrigin: string | null = null
 /** True once the host has sent a scene or a site. */
 let hostContent = false
 let helloTimer: ReturnType<typeof setTimeout> | null = null
@@ -54,9 +52,10 @@ function isEcoMsg(data: unknown): data is EcoMsg {
 }
 
 function postToHost(msg: EcoMsg): void {
-  if (typeof window === 'undefined' || !hostOrigin) return
+  const host = gate.host()
+  if (typeof window === 'undefined' || !host) return
   if (window.parent === window) return
-  window.parent.postMessage(msg, ECO_HOST_ORIGIN)
+  window.parent.postMessage(msg, host)
 }
 
 function exportScenePayload(): unknown {
@@ -121,7 +120,7 @@ async function runGlbExport(): Promise<void> {
       beforeBytes: optimise.beforeBytes,
       afterBytes: optimise.afterBytes,
     })
-    if (hostOrigin && typeof window !== 'undefined' && window.parent !== window) {
+    if (gate.host() && typeof window !== 'undefined' && window.parent !== window) {
       postToHost({
         t: 'eco:glb',
         glb: arrayBufferToBase64(buffer),
@@ -141,7 +140,7 @@ async function runGlbExport(): Promise<void> {
       beforeBytes: null,
       afterBytes: null,
     })
-    if (hostOrigin) postToHost({ t: 'eco:error', message })
+    if (gate.host()) postToHost({ t: 'eco:error', message })
     else console.error('[eco:bridge]', message)
   }
 }
@@ -156,12 +155,13 @@ function handleRequestExport(what: 'scene' | 'glb'): void {
 }
 
 function onMessage(event: MessageEvent): void {
-  // Anything not from the world's origin is ignored, hello included.
-  if (event.origin !== ECO_HOST_ORIGIN) return
   if (!isEcoMsg(event.data)) return
+  // Silence for any origin off the list, and for any other origin once a host
+  // has said hello — hello included.
+  const admitted = gate.admit(event.origin, event.data.t === 'eco:hello')
+  if (!admitted) return
 
-  if (event.data.t === 'eco:hello') {
-    hostOrigin = ECO_HOST_ORIGIN
+  if (admitted === 'hello') {
     if (helloTimer) {
       clearTimeout(helloTimer)
       helloTimer = null
@@ -170,8 +170,6 @@ function onMessage(event: MessageEvent): void {
     emitDirty(readDirty())
     return
   }
-
-  if (!hostOrigin) return
 
   switch (event.data.t) {
     case 'eco:load-site':
@@ -221,10 +219,9 @@ function watchDirty(): void {
 
 /**
  * Install the eco/1 postMessage bridge once per page.
- * Listens to and answers only ECO_HOST_ORIGIN (NEXT_PUBLIC_ECO_HOST_ORIGIN,
- * default https://spatial-map.vercel.app); a valid `eco:hello` from it opens
- * the session. If no hello arrives within 3s while embedded, continues
- * standalone (no error).
+ * A valid `eco:hello` from an allowed origin (eco-origins.ts) opens the
+ * session; the bridge then hears and answers that origin only. If no hello
+ * arrives within 3s while embedded, continues standalone (no error).
  */
 export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
   if (typeof window === 'undefined') return
@@ -237,11 +234,13 @@ export function installEcoBridge(nextHandlers: BridgeHandlers = {}): void {
 
   const embedded = window.self !== window.top
   ;(window as Window & { ecoEmbedded?: boolean }).ecoEmbedded = embedded
+  // Read-only, for checks: the origin whose hello opened the session (or null).
+  Object.defineProperty(window, 'ecoHost', { get: () => gate.host(), configurable: true })
 
   if (embedded) {
     helloTimer = setTimeout(() => {
       helloTimer = null
-      if (!hostOrigin) {
+      if (!gate.host()) {
         ecoDebug('no eco:hello within 3s — standalone embed mode')
       }
     }, HELLO_TIMEOUT_MS)
@@ -274,9 +273,9 @@ export function requestEcoGlbExport(): void {
 }
 
 export function getEcoHostOrigin(): string | null {
-  return hostOrigin
+  return gate.host()
 }
 
 export function isEcoBridgeReady(): boolean {
-  return hostOrigin !== null
+  return gate.host() !== null
 }

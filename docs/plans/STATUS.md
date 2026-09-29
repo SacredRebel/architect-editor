@@ -1,6 +1,6 @@
 # STATUS — Agent A
 updated: 2026-09-29
-phase: **UNIFY phase 0 merged** (scan and plan, docs only) · `81c1dd3f` READY · waiting for the next brief (UNIFY P1 when the architect says). A4 · A5 · H19.2 are in production (`79dc5f13`).
+phase: **eco/1 origin allowlist** on `eco/bridge-origins` · the architect merges · then UNIFY P1 (a FreeCAD-ready IFC). UNIFY-0 is merged (`81c1dd3f`); A4 · A5 · H19.2 are in production (`79dc5f13`).
 state: UNIFY-A covers four things. First, a read-only scan of FreeCAD on Johny's PC: 1.1.4 with IfcOpenShell 0.8.4 at `C:\AI-Work\Ai apps & Codebase\FreeCAD`, no add-ons, no MCP bridge, and 19 downloaded repositories, each with its role and licence. Second, the "Edit building" ↔ FreeCAD IFC round-trip design. Third, Pascal ↔ FreeCAD BIM overlap. Fourth, steps P1–P4. Key finding: today's IFC export is not FreeCAD-ready (random ids, storeys at 0, misplaced openings, mirrored plan), so P1 fixes it first. Cleanup done. `eco/ci` is merged (`bd81105b`, production READY) and CI's quality job is green on `main`. Pull request #2 is closed. The remote holds only `main`: 24 branches are deleted. `eco/a5` (holding `eco/h19-2` and `eco/a4`) was rebased on `main` and merged as pull request #5 (`79dc5f13`). That puts `/builder`, what the world's "Edit building" opens, and the site in the editor into production. The demo's behaviour is unchanged (`A4-A5-landing-done.md`).
 
 ## Production SHAs
@@ -17,6 +17,7 @@ state: UNIFY-A covers four things. First, a read-only scan of FreeCAD on Johny's
 | **ci** | CI quality job: `plugin-geometry`'s test runs its geometry check | **`bd81105b`** (merge commit, pull request #4) | **READY** `dpl_Hqoy9Nx2WU5twRPjZdERqgbGYud7` |
 | **H19.2 · A4 · A5** | 2b · 2c · 2d profile · `/builder` · the site in the editor | **`79dc5f13`** (merge commit, pull request #5) | **READY** `dpl_Gd2hzP9a9Lmrv2y6jr4AmozMZoE9` |
 | **UNIFY-0** | scan and plan: FreeCAD, the IFC round-trip, P1–P4 (docs only) | **`81c1dd3f`** (merge commit, pull request #6) | **READY** `dpl_GpsDF2PHSUNz3XHamrDX7RTfnEPJ` |
+| **bridge origins** | eco/1 answers the world, its previews, localhost and 127.0.0.1, and replies to the hello's origin only | `eco/bridge-origins` (`bridge-origins-done.md`) | after the architect's merge |
 
 ## Demo (preview `dpl_5sTZbhRoymUj9g2YNA2xDPLoF9CD`, light graphics)
 
@@ -43,10 +44,10 @@ state: UNIFY-A covers four things. First, a read-only scan of FreeCAD on Johny's
 - **IFC export works with A4** (the `/builder` check downloads an `.ifc`), but light graphics still hides it, as the demo recorded. Showing it in light mode is a decision for after the demo.
 - **IFC export is not FreeCAD-ready** (UNIFY-A (a)): random GlobalIds, no project → site link, storeys at 0, openings shifted with windows on the floor, a north–south mirror, no georeference, and only walls, doors, windows and zones exported. UNIFY P1 fixes it.
 - **No FreeCAD MCP bridge is installed** on Johny's PC. Choosing one, and recording its licence, is part of P3.
-- **The bridge answers one origin** (`NEXT_PUBLIC_ECO_HOST_ORIGIN`, default `https://spatial-map.vercel.app`, A4); after this merge, production does too.
+- **The bridge's origins:** `eco/bridge-origins` replaces A4's single origin with the allowlist (the world, its previews, localhost, 127.0.0.1). The world's per-deployment preview URLs read `spatial-<hash>-…`, which `spatial-map-*` does not match; see `bridge-origins-done.md`.
 - **The host's reference massing (`eco-ghost`) did not appear** in the `/builder/embed/` harness, though its site and guides did. Not new; see `A4-A5-landing-done.md`.
 - **The 38 local test failures** (`demo-done.md`) come from this machine, not the code: a checkout path with spaces and `&`, Windows-only file behaviour, and CRLF fixtures. On Linux CI every package's tests pass (`ci-done.md`).
 - A4 and A5 open items stand; see `A4-done.md` and `A5-done.md`. Their commit SHAs predate the rebase; `A4-A5-landing-done.md` maps them.
 
-commit: UNIFY-0 merge `81c1dd3f` on `main`, production READY · A4 · A5 · H19.2 merge `79dc5f13` · ci merge `bd81105b` · demo merge `0d38a884`
-queue: waiting for the next brief; UNIFY P1 (a FreeCAD-ready IFC) when the architect says
+commit: `eco/bridge-origins` (the architect merges) · UNIFY-0 merge `81c1dd3f` on `main`, production READY · A4 · A5 · H19.2 merge `79dc5f13`
+queue: the architect merges `eco/bridge-origins` → UNIFY P1, a FreeCAD-ready IFC (`eco/unify-p1`), then its FreeCAD screenshot → P2's eco/1 revision is agreed with E after that

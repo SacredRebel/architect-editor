@@ -208,7 +208,6 @@ try {
       path.join(exportRoot, 'eco-build.json'),
       `${JSON.stringify({
         basePath,
-        hostOrigin: process.env.NEXT_PUBLIC_ECO_HOST_ORIGIN || 'https://spatial-map.vercel.app',
         cdn,
         onCdn,
       })}\n`,

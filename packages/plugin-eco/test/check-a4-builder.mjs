@@ -14,9 +14,9 @@
  *   - the server's own log: every path under /builder/ and answered 200;
  *   - the two agree on which paths were fetched.
  * Then IFC export from /builder/embed/ (its wasm must come from the base
- * path), the bridge's origin gate (below), and, on a build whose host origin is
- * this server's localhost, the same audit over real content: the H19 fixture
- * plus one KTX2 finish, so the Draco decoder and the Basis transcoder load.
+ * path), the bridge's origin gate (below), and the same audit over real
+ * content, posted from this server's localhost: the H19 fixture plus one KTX2
+ * finish, so the Draco decoder and the Basis transcoder load.
  * Content may also fetch the library files the build itself records as absent
  * from the export and left on the CDN (eco-build.json `onCdn`); those are
  * listed, and nothing else outside the base path passes. The pages are held to
@@ -64,29 +64,30 @@ if (!existsSync(join(outDir, BASE.slice(1), 'index.html'))) {
 
 // ------------------------------------------------------------ static server
 const serverLog = []
-const server = Bun.serve({
-  port,
-  hostname: '127.0.0.1',
-  fetch(request) {
-    const url = new URL(request.url)
-    let path = decodeURIComponent(url.pathname)
-    const file = (() => {
-      const candidates = path.endsWith('/') ? [`${path}index.html`] : [path, `${path}/index.html`, `${path}.html`]
-      for (const candidate of candidates) {
-        const full = normalize(join(outDir, candidate))
-        if (!full.startsWith(outDir)) return null
-        if (existsSync(full) && statSync(full).isFile()) return full
-      }
-      return null
-    })()
-    const status = file ? 200 : 404
-    serverLog.push({ path, status })
-    if (!file) return new Response('not found', { status: 404 })
-    const type = extname(file) === '.mjs' ? { 'content-type': 'text/javascript' } : undefined
-    return new Response(Bun.file(file), { headers: type })
-  },
-})
+function serveFile(request) {
+  const url = new URL(request.url)
+  let path = decodeURIComponent(url.pathname)
+  const file = (() => {
+    const candidates = path.endsWith('/') ? [`${path}index.html`] : [path, `${path}/index.html`, `${path}.html`]
+    for (const candidate of candidates) {
+      const full = normalize(join(outDir, candidate))
+      if (!full.startsWith(outDir)) return null
+      if (existsSync(full) && statSync(full).isFile()) return full
+    }
+    return null
+  })()
+  const status = file ? 200 : 404
+  serverLog.push({ path, status })
+  if (!file) return new Response('not found', { status: 404 })
+  const type = extname(file) === '.mjs' ? { 'content-type': 'text/javascript' } : undefined
+  return new Response(Bun.file(file), { headers: type })
+}
+const server = Bun.serve({ port, hostname: '127.0.0.1', fetch: serveFile })
+// The same files on IPv6 loopback: an origin off the bridge's list, for the
+// refused hello (localhost and 127.0.0.1 are both on it).
+const server6 = Bun.serve({ port, hostname: '::1', fetch: serveFile })
 const origin = `http://127.0.0.1:${port}`
+const foreignOrigin = `http://[::1]:${port}`
 
 // ------------------------------------------------------------------- chrome
 const profile = mkdtempSync(join(tmpdir(), 'a4-chrome-'))
@@ -255,14 +256,16 @@ function checkPage(path, { requests, server }, pageOrigin = origin, declared = n
 }
 
 /**
- * The bridge talks to one origin (NEXT_PUBLIC_ECO_HOST_ORIGIN, recorded by the
- * build in eco-build.json). The world stand-in (eco-host-harness.html) embeds
- * /builder/embed/ and knocks eco:hello. Two separately derived signals: the
- * host's own log (did eco:ready arrive?) and the editor's scene (did the site's
- * guides render?). From the configured origin both must be yes; from any other
- * origin both must be no. The refused origin runs after the pages on that same
- * origin, which saved the demo house the editor opens on its own; a saved
- * design keeps that fallback from drawing its site's guides here.
+ * The bridge hears the world, its previews and local development
+ * (src/eco-origins.ts), and replies only to the origin that said hello. The
+ * world stand-in (eco-host-harness.html) embeds /builder/embed/ and knocks
+ * eco:hello. Two separately derived signals: the host's own log (did eco:ready
+ * arrive?) and the editor's own record of its host (`window.ecoHost`). From an
+ * allowed origin, eco:ready arrives, the editor records that origin, and the
+ * site the host then sends draws its guides. From a foreign origin (IPv6
+ * loopback, off the list), no eco:ready and no host. The guides are not asked
+ * of the refused case: with nothing from the world, the editor may open its
+ * demo site, guides and all.
  */
 async function originCase(cdp, hostOrigin) {
   const url = `${hostOrigin}/eco-host-harness.html?embed=${encodeURIComponent(`${BASE}/embed/?perf`)}`
@@ -274,11 +277,13 @@ async function originCase(cdp, hostOrigin) {
         expression: `(() => {
           const log = document.getElementById('log')?.textContent ?? ''
           let guides = 0
+          let host
           try {
             const w = document.getElementById('editor').contentWindow
+            host = w.ecoHost
             w.__pascalPerf?.three().scene.traverse((o) => { if (o.name === 'eco-guides') guides++ })
           } catch {}
-          return { ready: log.includes('eco:ready'), exhausted: log.includes('knock budget exhausted'), guides }
+          return { ready: log.includes('eco:ready'), exhausted: log.includes('knock budget exhausted'), guides, host: host === undefined ? 'unread' : host }
         })()`,
       })
     ).result.value
@@ -458,7 +463,7 @@ function checkIfc(label, { recording, downloads }) {
   return fails
 }
 
-function checkOrigin(label, state, expectAccepted) {
+function checkOrigin(label, state, hostOrigin, expectAccepted) {
   const fails = []
   const ok = (cond, msg) => {
     if (!cond) fails.push(`${label}: ${msg}`)
@@ -466,10 +471,11 @@ function checkOrigin(label, state, expectAccepted) {
   }
   if (expectAccepted) {
     ok(state.ready, 'host received eco:ready')
+    ok(state.host === hostOrigin, `editor's host is the origin that said hello (${state.host})`)
     ok(state.guides > 0, `editor rendered the site's guides (${state.guides})`)
   } else {
     ok(!state.ready, 'host received no eco:ready')
-    ok(state.guides === 0, `editor rendered no site (${state.guides} guide groups)`)
+    ok(state.host === null, `editor bound no host (${state.host})`)
   }
   return fails
 }
@@ -553,20 +559,13 @@ try {
     fails.push(...checkPage(`${PAGES[1]} + Export IFC`, ifc.recording, origin, declared))
     fails.push(...checkIfc(`${PAGES[1]} + Export IFC`, ifc))
     const local = `http://localhost:${port}`
-    console.log(`bridge host origin in this build: ${build.hostOrigin}`)
     console.log(`files this build leaves on ${build.cdn}: ${declared.size}`)
-    fails.push(...checkOrigin(`hello from ${origin}`, await originCase(cdp, origin), build.hostOrigin === origin))
-    if (build.hostOrigin === local) {
-      fails.push(...checkOrigin(`hello from ${local}`, await originCase(cdp, local), true))
-      const content = await contentCase(cdp, local)
-      const label = `${BASE}/?perf + H19 fixture + ${KTX2_FINISH}`
-      fails.push(...checkPage(label, content.recording, local, declared))
-      fails.push(...checkContent(label, content))
-    } else {
-      console.log(
-        `NOTE the accepted case and the content case need a build with NEXT_PUBLIC_ECO_HOST_ORIGIN=${local}; this build answers only ${build.hostOrigin}`,
-      )
-    }
+    fails.push(...checkOrigin(`hello from ${foreignOrigin}`, await originCase(cdp, foreignOrigin), foreignOrigin, false))
+    fails.push(...checkOrigin(`hello from ${local}`, await originCase(cdp, local), local, true))
+    const content = await contentCase(cdp, local)
+    const label = `${BASE}/?perf + H19 fixture + ${KTX2_FINISH}`
+    fails.push(...checkPage(label, content.recording, local, declared))
+    fails.push(...checkContent(label, content))
     if (fails.length) {
       console.error('FAIL')
       for (const f of fails) console.error('-', f)
@@ -582,6 +581,7 @@ try {
 } finally {
   chrome.kill()
   server.stop(true)
+  server6.stop(true)
   await Bun.sleep(500)
   try {
     rmSync(profile, { recursive: true, force: true })
