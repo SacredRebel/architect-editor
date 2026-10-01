@@ -5,10 +5,14 @@ phase: **FreeCAD lane: organic structures.** This follows the architect's 29 Sep
   - `freecad/SulphurMountainSite.FCMacro` builds the site from the live pack.
   - `freecad/check_site.py` passes 25 checks and rejects 9 of 9 forgeries.
   - F2 (plans) and F3 (IFC P1) are dropped under the new direction.
-- **Now:** an Organic toolbar for FreeCAD, on `eco/organic`. It has three parts:
-  - a scan of every shaping tool;
-  - the plugin-eco generators ported to real FreeCAD solids;
-  - one button that sends a building to `exchange\godot\` as GLB and IFC, in the chimney-origin frame.
+- **Now:** an Organic toolbar for FreeCAD, on `eco/organic` (save point `f4c14757`). Not done yet.
+  - **The scan is written:** `ORGANIC-SCAN.md`, one table.
+  - **The workbench is built and installed:** `freecad/Organic`, 14 toolbar commands, in `%APPDATA%\FreeCAD\v1-1\Mod\Organic`. Its kernels match closed forms: an arc wall, a circle wall, a semicircular vault and a hemispherical dome to 0.000 %.
+  - **The test pavilion is made and sent:** a curved room wall with five openings, an S-curved garden wall, a leaf shell roof and a ribbed catenary vault. One click wrote `organic-test-pavilion.glb`, `.ifc` and `.json` into `exchange\godot\`.
+  - **`freecad/check_organic.py` is not green:** 18 of 20 checks passed on its first run.
+    - The leaf's tips hang 0.02–0.39 m above the map's terrain. This is a design fault and is being fixed.
+    - The check's IFC reader returned nothing. The reader is rewritten and still has to be re-run.
+  - **Still to do:** re-run the check with `--self-test`, take the screenshot in the Godot map, write the done-file.
 - The web editor stays paused as it was. The full picture for a fresh start is **`HANDOVER.md`**, built 29 Sep on `eco/handover-0929`.
 direction (29 Sep 2026):
 - The map moves to Godot 4.7.2 as a desktop app (lane E). Houses are designed in Blender 5.2.2 and FreeCAD 1.1.4 directly.

@@ -1,8 +1,18 @@
 # freecad/
 
-FreeCAD 1.1 macros and checks for the Sulphur Mountain site. They run inside FreeCAD,
-either as a macro or through the FreeCAD MCP connector. Nothing here runs in the web
-app's build.
+FreeCAD 1.1 macros, a workbench and checks for the Sulphur Mountain site. They run inside
+FreeCAD, either as a macro or through the FreeCAD MCP connector. Nothing here runs in the
+web app's build.
+
+| Here | What it is |
+|---|---|
+| `Organic/` | the Organic workbench: organic architecture as real solids, and Send to the map. See `Organic/README.md` |
+| `InstallOrganic.FCMacro` | installs or updates the workbench in `%APPDATA%\FreeCAD\v1-1\Mod\Organic` |
+| `check_organic.py` | checks the workbench's solids and the building it sent to the map, with `--self-test` |
+| `SulphurMountainSite.FCMacro` | builds the site template from the live land pack |
+| `check_site.py` | checks the site template against the pack, with `--self-test` |
+
+Designs (`*.FCStd`) are not kept here; they live in `%USERPROFILE%\Documents\SulphurMountain`.
 
 ## SulphurMountainSite.FCMacro: the site template
 
