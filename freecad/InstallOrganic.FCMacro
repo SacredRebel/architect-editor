@@ -1,0 +1,47 @@
+# -*- coding: utf-8 -*-
+"""Install or update the Organic workbench from this repository.
+
+Copies freecad/Organic into FreeCAD 1.1's user Mod folder (%APPDATA%\\FreeCAD\\v1-1\\Mod\\Organic;
+FreeCAD 1.1 reads add-ons from the versioned folder) and loads it into the running FreeCAD, so the
+Organic toolbar is there at once and on every start after. Run it from Macro ▸ Macros…, or
+through the FreeCAD MCP connector. The repository stays the source; the Mod copy is replaced.
+"""
+
+import importlib
+import os
+import shutil
+import sys
+
+import FreeCAD as App
+
+try:
+    HERE = os.path.dirname(os.path.abspath(__file__))
+except NameError:  # run without a file name
+    HERE = os.environ.get("ORGANIC_REPO_FREECAD", r"C:\Playground\Architect-editor\freecad")
+SRC = os.path.join(HERE, "Organic")
+DST = os.path.join(App.getUserAppDataDir(), "Mod", "Organic")
+
+
+def install():
+    if not os.path.isfile(os.path.join(SRC, "InitGui.py")):
+        raise RuntimeError("no Organic workbench at %s" % SRC)
+    if os.path.isdir(DST):
+        shutil.rmtree(DST)
+    shutil.copytree(SRC, DST, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    if DST not in sys.path:
+        sys.path.append(DST)
+    for name in ("organic_geom", "organic_objects", "organic_export", "organic_commands"):
+        if name in sys.modules:
+            importlib.reload(sys.modules[name])
+    if App.GuiUp:
+        import FreeCADGui as Gui
+
+        if "OrganicWorkbench" not in Gui.listWorkbenches():
+            with open(os.path.join(DST, "InitGui.py"), encoding="utf-8") as fh:
+                exec(compile(fh.read(), os.path.join(DST, "InitGui.py"), "exec"), {"__name__": "OrganicInitGui"})
+        Gui.activateWorkbench("OrganicWorkbench")
+    App.Console.PrintMessage("Organic workbench installed in %s\n" % DST)
+    return DST
+
+
+install()
