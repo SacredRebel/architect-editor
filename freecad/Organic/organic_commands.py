@@ -6,6 +6,7 @@ import os
 
 import FreeCAD as App
 import FreeCADGui as Gui
+import Part
 
 import organic_export as ox
 import organic_geom as og
@@ -52,17 +53,39 @@ def place(obj, doc):
     return obj
 
 
+def is_kind(obj, kind):
+    """Whether obj is an Organic object of that class (by name: a reloaded module's classes
+    are new objects, so isinstance fails on what was made before the reload)."""
+    return type(getattr(obj, "Proxy", None)).__name__ == kind
+
+
 def selected_curves():
+    """The curves in the selection: plan curves, sketches, wires; a selected wall gives its base."""
     out = []
     for s in Gui.Selection.getSelection():
         shape = getattr(s, "Shape", None)
         if shape is None or shape.isNull():
             continue
-        if isinstance(getattr(s, "Proxy", None), oo.Wall):
-            out.append(s.Base) if s.Base is not None else None
+        if is_kind(s, "Wall"):
+            out.append(s.Base)
         elif not shape.Solids and shape.Edges:
             out.append(s)
     return [c for c in out if c is not None]
+
+
+def arc_length_at(edge, point):
+    """Metres along an edge to the point on it nearest `point`."""
+    c = edge.Curve
+    u0, u1 = edge.FirstParameter, edge.LastParameter
+    u = c.parameter(App.Vector(point.x, point.y, edge.valueAt(u0).z))
+    if c.isPeriodic():  # a circle answers in 0..2π, an arc's own range may lie beyond it
+        period = c.LastParameter - c.FirstParameter
+        while u < u0:
+            u += period
+        while u > u1:
+            u -= period
+    u = min(max(u, u0), u1)
+    return Part.Edge(c, u0, u).Length / MM if u > u0 + 1e-12 else 0.0
 
 
 def finish(doc, objs, label):
@@ -180,21 +203,12 @@ class Opening(Command):
         done = []
         for sel in Gui.Selection.getSelectionEx():
             w = sel.Object
-            if not isinstance(getattr(w, "Proxy", None), oo.Wall):
+            if not is_kind(w, "Wall"):
                 continue
-            edge, closed = oo.base_edge(w)
+            edge, _closed = oo.base_edge(w)
             if edge is None:
-                edge, closed = og.arc_curve(5.0, 120.0), False
-            pos = edge.Length / MM / 2
-            if sel.PickedPoints:
-                p = sel.PickedPoints[0]
-                p = App.Vector(p.x, p.y, edge.valueAt(edge.FirstParameter).z)
-                u = edge.Curve.parameter(p)
-                u = min(max(u, edge.FirstParameter), edge.LastParameter)
-                try:
-                    pos = edge.Curve.length(edge.FirstParameter, u) / MM
-                except Exception:
-                    pos = edge.Length / MM * (u - edge.FirstParameter) / (edge.LastParameter - edge.FirstParameter)
+                edge = og.arc_curve(5.0, 120.0)
+            pos = arc_length_at(edge, sel.PickedPoints[0]) if sel.PickedPoints else edge.Length / MM / 2
             oo.add_opening(w, pos)
             done.append(w)
         if not done:
@@ -258,7 +272,7 @@ class ShellRoof(Command):
         for c in selected_curves():
             r = oo.make(oo.ShellRoof, "ShellRoof", "Shell roof", doc)
             r.Base = c
-            wall = next((w for w in c.InList if isinstance(getattr(w, "Proxy", None), oo.Wall)), None)
+            wall = next((w for w in c.InList if is_kind(w, "Wall")), None)
             if wall is not None:
                 r.Eaves = wall.Height
             out.append(place(r, doc))
