@@ -260,6 +260,11 @@ class Wall(Organic):
         prop(obj, "App::PropertyFloatList", "OpeningHeights", g, "height of each opening (m)")
         prop(obj, "App::PropertyFloatList", "OpeningSills", g, "sill of each opening above the base (m)")
         prop(obj, "App::PropertyStringList", "OpeningShapes", g, "Rect, Arch, Pointed or Round")
+        g = "Joints"
+        tip = ("where this wall's %s meets other walls: the end of its left face and of its right face, from the end point, in millimetres "
+               "(left and right of the base curve's own direction). Worked out by join_walls; empty: the end is cut square")
+        prop(obj, "App::PropertyVectorList", "StartJoint", g, tip % "start")
+        prop(obj, "App::PropertyVectorList", "EndJoint", g, tip % "end")
         prop(obj, "App::PropertyFloat", "CentrelineLength", "Measures", "length of the centreline (m)")
         obj.setEditorMode("CentrelineLength", 1)
 
@@ -280,8 +285,11 @@ class Wall(Organic):
         if edge is None:
             edge, closed = og.arc_curve(5.0, 120.0), False
         obj.CentrelineLength = edge.Length / MM
+        joints = {end: tuple(getattr(obj, name)) for end, name in (("start", "StartJoint"), ("end", "EndJoint")) if len(getattr(obj, name, None) or []) == 2}
+        said = {}
         set_local(obj, og.wall_shape(edge, closed, m(obj.Thickness), m(obj.Height), obj.Align, self.top_line(obj, edge, closed) or obj.Top, m(obj.TopRise),
-                                     obj.TopWaves, self.openings(obj), m(obj.BaseOffset), m(obj.Foundation)))
+                                     obj.TopWaves, self.openings(obj), m(obj.BaseOffset), m(obj.Foundation), joints, said))
+        self.ends_joined = len(joints) if said.get("joined") else 0  # how many of its ends this solid really has shaped (a shaped top keeps them square)
 
     def top_line(self, obj, edge, closed):
         """The top line as a function, when the wall has TopHeights (else None). On a smooth
@@ -295,6 +303,102 @@ class Wall(Organic):
         spans = len(heights) if closed else len(heights) - 1
         at_points = through_points and abs((edge.LastParameter - edge.FirstParameter) - spans) < 1e-6
         return og.sampled_top(edge, closed, heights, at_points)
+
+
+def _near_on(path, point):
+    """(how far a point is from a wall's base path in plan, the path's direction at the place
+    nearest it), in the path's own frame. On an outline with corners the direction is None
+    where that place is one of its corners: neither of the two runs passes through there."""
+    flat = App.Vector(point.x, point.y, path.valueAt(path.FirstParameter).z)
+    if isinstance(path, og.WirePath):
+        best, last, closed = None, len(path.parts) - 1, path.isClosed()
+        for i, (e, forward, start) in enumerate(path.parts):
+            gap, along = og._nearest_on(e, flat)
+            if best is None or gap < best[0] - 1e-9:
+                s = along if forward else e.Length - along  # along this run, the way the path goes
+                corner = (s < og.JOIN_MM and (closed or i > 0)) or (e.Length - s < og.JOIN_MM and (closed or i < last))
+                best = (gap, None if corner else path.tangentAt(start + s))
+        return best
+    gap, along = og._nearest_on(path, flat)
+    return gap, path.tangentAt(path.getParameterByLength(along))
+
+
+def join_walls(walls):
+    """Shape the ends of walls that end on each other, as the map draws them and the old editor
+    did (og.junction_corners): a corner of two walls is whole, a wall that ends on the middle
+    of another stops at its face, three walls at a point share it out. Sets StartJoint and
+    EndJoint on every open wall among `walls` (an end that meets nothing: emptied, square).
+
+    Walls meet when an end lies within og.JOIN_MM of another wall's end or of its line, in
+    plan, and both stand on the same level (their bases at one height). An end that lies on
+    a corner of another wall's outline is not joined by that wall: neither of its two runs
+    passes through there, and the old editor, whose walls are single runs, has no such case.
+    Returns how many
+    ends meet other walls and were given their corners. A wall with a shaped top on a smooth
+    curve keeps square ends all the same (og.wall_shape): after the walls are built again,
+    each wall's Proxy.ends_joined says how many of its ends its solid really has shaped."""
+    rows = []
+    for w in walls:
+        if type(getattr(w, "Proxy", None)).__name__ != "Wall" or w.Base is None:
+            continue
+        try:
+            path, closed = base_edge(w, corners=True)
+        except Exception:
+            continue
+        if path is None:
+            continue
+        at = w.Placement  # the wall's own frame in the document's: the walls are held against each other there
+        u0, u1 = (0.0, path.Length) if isinstance(path, og.WirePath) else (path.FirstParameter, path.LastParameter)
+        ends = []
+        for u in (u0, u1):
+            t = path.tangentAt(u)
+            ends.append((at.multVec(path.valueAt(u)), at.Rotation.multVec(App.Vector(t.x, t.y, 0))))
+        rows.append({"wall": w, "path": path, "closed": closed, "at": at, "ends": ends, "sides": og.wall_sides(str(w.Align), m(w.Thickness) * MM),
+                     "half": m(w.Thickness) * MM / 2.0, "level": ends[0][0].z + m(w.BaseOffset) * MM})
+
+    def ray(key, v, sides, half, with_curve, through):
+        # its two faces along the left normal of the direction it leaves the point in (against its curve: the other way round)
+        return {"id": key, "v": (v.x, v.y), "left": sides[1] if with_curve else -sides[0], "right": sides[0] if with_curve else -sides[1],
+                "half": half, "through": through}
+
+    joined = 0
+    for row in rows:
+        w = row["wall"]
+        if row["closed"]:
+            continue
+        for index, name in ((0, "StartJoint"), (1, "EndJoint")):
+            here, tangent = row["ends"][index]
+            rays = [ray("this", tangent if index == 0 else tangent * -1.0, row["sides"], row["half"], index == 0, False)]
+            for other in rows:
+                if other is row or abs(other["level"] - row["level"]) > 1.0:
+                    continue
+                (o_start, o_t0), (o_end, o_t1) = other["ends"]
+                flat = lambda p: App.Vector(p.x - here.x, p.y - here.y, 0).Length  # noqa: E731
+                if not other["closed"] and flat(o_start) < og.JOIN_MM:
+                    rays.append(ray(other["wall"].Name + ":start", o_t0, other["sides"], other["half"], True, False))
+                elif not other["closed"] and flat(o_end) < og.JOIN_MM:
+                    rays.append(ray(other["wall"].Name + ":end", o_t1 * -1.0, other["sides"], other["half"], False, False))
+                else:
+                    gap, direction = _near_on(other["path"], other["at"].inverse().multVec(here))
+                    if gap < og.JOIN_MM and direction is not None:  # (on a corner of an outline nothing passes through: no joint from that wall)
+                        direction = other["at"].Rotation.multVec(App.Vector(direction.x, direction.y, 0))
+                        rays.append(ray(other["wall"].Name + ":on", direction, other["sides"], other["half"], True, True))
+                        rays.append(ray(other["wall"].Name + ":back", direction * -1.0, other["sides"], other["half"], False, True))
+            got = og.junction_corners(rays).get("this", {}) if len(rays) > 1 else {}
+            corners = []
+            if got:
+                # (the ray leaves the meeting point: at the wall's end it runs against the curve, so its left is the curve's right)
+                left, right = (got.get("left"), got.get("right")) if index == 0 else (got.get("right"), got.get("left"))
+                normal = og.Z.cross(tangent)
+                normal.normalize()
+                square = {"left": normal * row["sides"][1], "right": normal * row["sides"][0]}
+                back = row["at"].Rotation.inverted()
+                for side, found in (("left", left), ("right", right)):
+                    corners.append(back.multVec(App.Vector(found[0], found[1], 0) if found is not None else square[side]))
+                joined += 1
+            if [tuple(c) for c in corners] != [tuple(c) for c in getattr(w, name)]:
+                setattr(w, name, corners)
+    return joined
 
 
 def add_opening(wall, position_m, width_m=1.2, height_m=1.3, sill_m=0.9, shape="Arch"):

@@ -37,9 +37,15 @@ own three lines of greeting after it) — is one JSON object:
                 there), as in the .json's notes; envelope and clearance_m: the same as numbers
     pieces      how many the records hold; made: how many objects they became; solids: how
                 many of those are in the .glb
-    elements    per solid: name, piece (its id in the records), type, ifcType, volume_m3,
-                mesh_volume_m3, triangles, and land when the records carry the map's reading
-                of the land at that piece (kept as written, here and in the .json)
+    elements    per solid: name, piece (its id in the records), type, ifcType, volume_m3 (the
+                solid's, by OCCT's adaptive measure), mesh_volume_m3, triangles; box_m, the
+                solid's own box in the building's frame [[x min, y min, z min], [x max, y max,
+                z max]] (x east, y north, z up, before the building is turned; in the map's
+                scale, as the .glb is); for a wall openings (how many are cut through it) and
+                opening_list (each one's at_m along the base curve, width_m, sill_m, height_m,
+                shape, as they stand in the solid); for a floor or a roof holes; and land
+                when the records carry the map's reading of the land at that piece (kept as
+                written, here and in the .json)
     placement   as written into the .json (coordinates, altitude_m, rotation_deg, ...)
     scale       the map's scale for the building: every length is its number times this
     files       the paths written; seconds: how long it took; records: the file read
@@ -110,7 +116,7 @@ def realize(records, out_dir=None, land=None):
             "pieces": len(pieces), "made": len(made["made"]), "solids": len(report["elements"]),
             "elements": [dict({"name": row["name"], "piece": ids.get(row["freecadName"], ""), "type": kinds.get(row["freecadName"], ""), "ifcType": row["ifcType"],
                                "volume_m3": round(row["volume_m3"], 6), "mesh_volume_m3": round(row["mesh_volume_m3"], 6), "triangles": row["triangles"]},
-                              **({"land": row["land"]} if "land" in row else {}))
+                              **{k: row[k] for k in ("box_m", "openings", "opening_list", "holes", "land") if k in row})
                          for row in report["elements"]],
             "placement": report["placement"], "clearance_m": report["clearance_m"],
             "site_notes": list(report["notes"]), "envelope": report.get("envelope"),

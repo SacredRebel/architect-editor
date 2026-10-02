@@ -44,8 +44,10 @@ Every expectation is derived here, not taken from the workbench's own constants:
   E. the IFC, read back by IfcOpenShell: the site's latitude, longitude and elevation equal
      to BRAIN.md's to 1e-6° and 1 mm; the IfcBuilding placed on that site by the same offset
      and turn, its elements placed under it, its reference height and its Organic_Placement
-     property set equal to the sidecar; the same elements in their IFC classes; and every
-     element's world bounds within 3 cm of its GLB bounds on the site.
+     property set equal to the sidecar; the same elements in their IFC classes; every
+     element's world bounds within 3 cm of its GLB bounds on the site; and the file held
+     against its own schema by IfcOpenShell's validation (nothing said), which is shown to
+     speak: of the file's own text with the building's GlobalId taken out it must say so.
 
 It also notes, without judging, where the land file's own zero lies and what FORMAT.md states.
 
@@ -430,8 +432,28 @@ def ifc_facts(path):
            "elementsUnder": under,
            "refHeight": float(building.ElevationOfRefHeight) * scale if building.ElevationOfRefHeight is not None else None,
            "pset": dict(ifcopenshell.util.element.get_psets(building).get("Organic_Placement", {}))}
+    # what IfcOpenShell's own schema check says of the file (every attribute's type, every entity the schema asks for)
+    import ifcopenshell.validate
+
+    logger = ifcopenshell.validate.json_logger()
+    ifcopenshell.validate.validate(f, logger)
+    statements = [str(s.get("message", "")).replace("\n", " ")[:160] for s in logger.statements]
+    # and that this validation can speak of this file at all: the file's own text with the building's GlobalId taken out,
+    # read into memory (nothing is written), must be said to be at fault
+    speaks = None
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
+        hit = re.search(r"(#\d+=\s*IFCBUILDING\()'[^']*'", text)
+        if hit:
+            probe = ifcopenshell.validate.json_logger()
+            ifcopenshell.validate.validate(ifcopenshell.file.from_string(text[:hit.start()] + hit.group(1) + "$" + text[hit.end():]), probe)
+            speaks = [str(s.get("message", "")).replace("\n", " ")[:80] for s in probe.statements]
+    except Exception as exc:
+        speaks = None
+        unread.append("the text with a fault put in could not be validated: %s" % exc)
     return {"lat": to_deg(site.RefLatitude), "lng": to_deg(site.RefLongitude), "elev": float(site.RefElevation or 0.0) * scale,
-            "elements": elements, "unread": unread, "building": bld}
+            "elements": elements, "unread": unread, "building": bld, "schema": f.schema, "statements": statements, "speaks": speaks}
 
 
 def fetch(path):
@@ -804,6 +826,11 @@ def judge(facts):
             continue
         worst = max(worst, max(abs(a - c) for a, c in zip(e["min"] + e["max"], list(w.min(axis=0)) + list(w.max(axis=0)))))
     ok(worst <= 0.03, "E every IFC element's world bounds within 3 cm of its GLB bounds on the site (worst %.4f m)" % worst)
+    said, speaks = ifc.get("statements"), ifc.get("speaks")
+    ok(said == [] and bool(speaks),
+       "E the IFC holds against its own schema (%s), by IfcOpenShell's validation: %s; of the same text with the building's GlobalId taken out, read into memory, it says: %s"
+       % (ifc.get("schema", "?"), "nothing said" if said == [] else "not read" if said is None else "%d statements, the first: %s" % (len(said), said[0]),
+          "NOTHING (it cannot be trusted to speak)" if not speaks else "; ".join(speaks[:2])))
     return oks, fails
 
 
@@ -952,6 +979,8 @@ def forgeries(facts):
         ("the IFC's latitude in whole seconds", "E IFC site", f(whole_seconds)),
         ("the IFC building left on the anchor", "E the IfcBuilding's placement", f(ifc_on_anchor)),
         ("the IFC classes lost", "E IFC elements and classes", f(lose_classes)),
+        ("an IFC that breaks its own schema", "E the IFC holds against its own schema", f(lambda g: g["ifc"]["statements"].append("forged: IfcWall.Name is not of type IfcLabel"))),
+        ("a validation that says nothing of a broken file", "E the IFC holds against its own schema", f(lambda g: g["ifc"].__setitem__("speaks", []))),
         ("a wall half as thick", "A arc wall", f(thinner)),
         ("the land file's roads 8 m off the pack's", "D the map's roads lie along", f(roads_off)),
         ("an element's base 0.15 m above the ground", "D every element that reaches the ground", f(floating)),

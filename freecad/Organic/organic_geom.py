@@ -73,7 +73,13 @@ def volume_of(shape, eps=1.0e-5):
 
 
 def area_of(shape, eps=1.0e-7):
-    """A face's area in mm2, to the relative error eps (see volume_of)."""
+    """A flat face's area in mm2, to the relative error eps (see volume_of).
+
+    For flat faces only: there it agreed with the face's own outline counted by points to the
+    last digit. On a curved face it is not to be trusted: the side of a wall 12.9 m long on a
+    curve through eight points, with a door cut into it, read 45.40 m2 at eps 1e-5 and 1e-7,
+    42.72 at 1e-3 and 41.37 at 1e-9, each time saying its error was nought; the face's
+    triangles (0.05 mm) and its top edge times its height less the door both say 41.09."""
     if _gprop is not None:
         try:
             props = _GProps()
@@ -420,6 +426,163 @@ def open_band(path, d1_mm, d2_mm):
         b0, b1 = b1, b0
     caps = [Part.LineSegment(a0, b0).toShape(), Part.LineSegment(a1, b1).toShape()]
     return Part.Face(Part.Wire(Part.__sortEdges__(list(a.Edges) + list(b.Edges) + caps)))
+
+
+# ---------------------------------------------------------------- walls that end on each other
+# The rule is the old editor's (ports\FROM-ARCHITECT-EDITOR.md, entry 1 (7)) and the map's own
+# (Pieces.junction_corners in the map's pieces.gd): where walls meet at a point, each wall's
+# faces end where they cross its neighbours' faces, and its end is two faces through the
+# meeting point. So a corner of two walls is whole (no notch outside, nothing counted twice
+# inside), a wall that ends on the middle of another stops at that wall's face, and three
+# walls at a point share it out between them.
+MITRE_LIMIT = 10.0  # no crossing farther from the meeting point than this many half thicknesses: that face ends square
+JOIN_MM = 50.0  # two wall ends closer than this are one meeting point (what the map's joining snap leaves between them)
+JOINT_CLEAR_MM = 5.0  # a wall's side is taken back this far beyond where its end's corners reach
+JOINT_BEHIND_MM = 1.0  # and each side must end at least this far behind its own corner, seen along the wall
+
+
+def junction_corners(rays):
+    """Where the faces of the walls that meet at a point cross.
+
+    rays: one for each wall end at the point, two (there and back) for a wall that passes
+    through it: {"id", "v": (x, y) its direction leaving the point, "left", "right": its two
+    faces along the left normal of v, "half": half its thickness, "through": bool}, lengths
+    in one unit. Taken in order round the point, each ray's left face is cut by the right
+    face of the next one anticlockwise; a crossing farther off than MITRE_LIMIT half
+    thicknesses (of the thicker of the two) is none, and parallel faces do not cross.
+    Returns {id: {"left": (x, y), "right": (x, y)}} from the point, each only where there is
+    a crossing; a wall that passes through takes nothing."""
+    order = sorted(rays, key=lambda r: math.atan2(r["v"][1], r["v"][0]))
+    found = {}
+    if len(order) < 2:
+        return found
+    for i, one in enumerate(order):
+        two = order[(i + 1) % len(order)]
+        l1, l2 = math.hypot(*one["v"]), math.hypot(*two["v"])
+        if l1 < 1e-12 or l2 < 1e-12:
+            continue
+        v1, v2 = (one["v"][0] / l1, one["v"][1] / l1), (two["v"][0] / l2, two["v"][1] / l2)
+        p1 = (-v1[1] * one["left"], v1[0] * one["left"])
+        p2 = (-v2[1] * two["right"], v2[0] * two["right"])
+        det = v1[0] * v2[1] - v1[1] * v2[0]
+        if abs(det) < 1e-9:
+            continue
+        k = ((p2[0] - p1[0]) * v2[1] - (p2[1] - p1[1]) * v2[0]) / det
+        x = (p1[0] + v1[0] * k, p1[1] + v1[1] * k)
+        if math.hypot(*x) > MITRE_LIMIT * max(one["half"], two["half"]):
+            continue
+        if not one.get("through"):
+            found.setdefault(one["id"], {})["left"] = x
+        if not two.get("through"):
+            found.setdefault(two["id"], {})["right"] = x
+    return found
+
+
+def _shortened(edge, at, clear_mm):
+    """(an edge without its first clear_mm from the end of it that lies at `at`, where it now
+    ends on that side); None when the edge is not that long."""
+    if clear_mm <= 1e-9:
+        return edge, at
+    if clear_mm > edge.Length - 1.0:
+        return None
+    first = (edge.valueAt(edge.FirstParameter) - at).Length <= (edge.valueAt(edge.LastParameter) - at).Length
+    u = edge.getParameterByLength(clear_mm if first else edge.Length - clear_mm)
+    piece = Part.Edge(edge.Curve, u, edge.LastParameter) if first else Part.Edge(edge.Curve, edge.FirstParameter, u)
+    return piece, edge.valueAt(u)
+
+
+def _trimmed_side(base, side, clear_s, clear_e, first_at, last_at):
+    """A wall's side without what lies over the first clear_s and the last clear_e millimetres
+    of its base curve: (its edges, its new first point, its new last point), first and last as
+    the base runs. The side is an edge under a smooth base (it keeps the base's parameters) or
+    a wire under an outline with corners (cut back along its first and last runs). None when
+    an end run is shorter than what is to be taken off it."""
+    if not isinstance(base, WirePath):
+        u0, u1 = base.FirstParameter, base.LastParameter
+        fa = (base.getParameterByLength(clear_s) - u0) / (u1 - u0)
+        fb = (base.getParameterByLength(base.Length - clear_e) - u0) / (u1 - u0)
+        s0, s1 = side.FirstParameter, side.LastParameter
+        piece = Part.Edge(side.Curve, s0 + fa * (s1 - s0), s0 + fb * (s1 - s0))
+        return [piece], piece.valueAt(piece.FirstParameter), piece.valueAt(piece.LastParameter)
+    edges = list(side.OrderedEdges)
+    p0, _t0, p1, _t1 = wire_ends(side)
+    if (p0 - first_at).Length > (p1 - first_at).Length:  # the side's edges run against the base: take them the base's way
+        edges.reverse()
+    got = _shortened(edges[0], first_at, clear_s)
+    if got is None:
+        return None
+    edges[0], new_first = got
+    got = _shortened(edges[-1], last_at, clear_e)
+    if got is None:
+        return None
+    edges[-1], new_last = got
+    return edges, new_first, new_last
+
+
+def open_band_joined(base, d1, d2, joints):
+    """An open wall's plan face between its two sides (left offsets d1 < d2 in mm), its ends
+    shaped where they meet other walls.
+
+    joints: {"start": (left corner, right corner) or None, "end": the same}: where the wall's
+    left face and its right face end, as vectors from the end point, left and right of the
+    base curve's own direction (junction_corners finds them; a face without a crossing is
+    given its square end). A joined end is two faces through the end point: in one line when
+    the two corners and the point are, a V when they are not (walls of different thickness,
+    three walls at a point). Each side is taken back to just beyond its corners' reach and
+    runs straight from there to its corner. An end without a joint is cut square.
+
+    None when the corners reach further along the wall than it (or its end run) is long: the
+    caller then leaves both ends square."""
+    is_path = isinstance(base, WirePath)
+    length = base.Length
+    u_s, u_e = (0.0, length) if is_path else (base.FirstParameter, base.LastParameter)
+    (p_s, n_s), (p_e, n_e) = _across(base, u_s), _across(base, u_e)
+    out_s, out_e = n_s.cross(Z) * -1.0, n_e.cross(Z)  # the way out of the wall at each end (left x Z runs along the wall)
+
+    def clear_of(corners, out):
+        return 0.0 if not corners else max(abs(c.dot(out)) for c in corners) + JOINT_CLEAR_MM
+
+    at_s, at_e = joints.get("start"), joints.get("end")
+    clear_s, clear_e = clear_of(at_s, out_s), clear_of(at_e, out_e)
+    for _ in range(8):
+        if clear_s + clear_e > length - 10.0:
+            return None
+        edges, ends = [], []
+        for d in (d1, d2):
+            side = open_side(base.wire, d) if is_path else _side(base, d, False)
+            got = _trimmed_side(base, side, clear_s, clear_e, p_s + n_s * d, p_e + n_e * d)
+            if got is None:
+                return None
+            edges += got[0]
+            ends.append((got[1], got[2]))
+        (a0, a1), (b0, b1) = ends  # the right side's two ends, the left side's
+        # each side must end behind its corner, seen along the wall: on a bend a side's end does not lie square
+        # behind the wall's own end (the inner side's runs ahead of it), and a side that passed its corner would
+        # fold the outline over itself. Where one does not, both are taken back further and the band is made again
+        short_s = max([JOINT_BEHIND_MM - (p_s + c - q).dot(out_s) for c, q in ((at_s[1], a0), (at_s[0], b0))]) if at_s else 0.0
+        short_e = max([JOINT_BEHIND_MM - (p_e + c - q).dot(out_e) for c, q in ((at_e[1], a1), (at_e[0], b1))]) if at_e else 0.0
+        if short_s <= 0.0 and short_e <= 0.0:
+            break
+        clear_s += max(0.0, short_s) + (JOINT_CLEAR_MM if short_s > 0.0 else 0.0)
+        clear_e += max(0.0, short_e) + (JOINT_CLEAR_MM if short_e > 0.0 else 0.0)
+    else:
+        return None
+    for pa, pb, point, corners in ((a0, b0, p_s, at_s), (a1, b1, p_e, at_e)):
+        if corners:
+            left, right = corners
+            run = [pa, point + right, point, point + left, pb]
+        else:
+            run = [pa, pb]
+        for q0, q1 in zip(run, run[1:]):
+            if (q1 - q0).Length > 1e-6:
+                edges.append(Part.LineSegment(q0, q1).toShape())
+    try:
+        # (through wire_of: a side that is one long spline is split, or FreeCAD's own Volume reads the wall percent short,
+        # see pieces_of; a wall 12.9 m long on a curve through eight points read 4 % short with each side in one piece)
+        face = Part.Face(wire_of(edges))
+    except Part.OCCError:
+        return None
+    return face if face.isValid() and face.Area > 0 else None
 
 
 def catmull_rom_spans(points, closed=False):
@@ -840,18 +1003,33 @@ def cut_top(prism, edge, closed, d1, d2, z0, band_area, below_mm, top, height_m,
 
 
 def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", top_rise_m=0.0,
-               top_waves=1, openings=(), base_z_m=0.0, foundation_m=0.0):
+               top_waves=1, openings=(), base_z_m=0.0, foundation_m=0.0, joints=None, said=None):
     """A wall of constant thickness on a horizontal centreline, with a shaped top and openings.
 
     The plan is the band between the two offset curves (exact offsets of the centreline), so
     a curved wall has true concentric faces. It is extruded from the foundation to its
     highest point, and a shaped top is cut by a ruled surface through the top line.
     Openings are measured from the wall's base (base_z_m), not from the foundation.
+
+    joints: where an open wall's ends meet other walls ({"start": (left corner, right corner),
+    "end": the same}, see open_band_joined). A wall with a shaped top keeps its ends square:
+    its top line is given along its own length only.
+    said: a dict to be told what was done with the joints: said["joined"] is whether the
+    wall's ends were shaped by them (False: they were given and the ends are square all the same).
     """
     t = thickness_m * MM
     z0 = edge.valueAt(edge.FirstParameter).z
     d1, d2 = wall_sides(align, t)
     shaped = callable(top) or (top != "Flat" and abs(top_rise_m) > 1e-9)
+    joined = None
+    if joints and not closed and (joints.get("start") or joints.get("end")):
+        corners_only = isinstance(edge, WirePath)  # (on an outline with corners a shaped top is made flat below: its ends may be joined)
+        if corners_only or not shaped:
+            joined = open_band_joined(edge, d1, d2, joints)
+            if joined is None:
+                App.Console.PrintWarning("Organic: where this wall meets another its corners reach further than it is long; its ends are left square\n")
+    if said is not None:
+        said["joined"] = joined is not None
     if isinstance(edge, WirePath):
         # an outline with corners: the band between its two true offsets, corners kept
         if edge.isClosed():
@@ -861,7 +1039,7 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
             big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
             band = face_of(big.cut(small))
         else:
-            band = open_band(edge, d1, d2)
+            band = joined if joined is not None else open_band(edge, d1, d2)
         if shaped:
             App.Console.PrintWarning("Organic: a shaped wall top needs a smooth base curve; this one has corners, so its top is flat\n")
             if callable(top):  # heights along it: flat at the lowest of them, so it stays under what it was meant to meet
@@ -877,6 +1055,8 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
             fa, fb = region_offset(edge, -sgn * d1), region_offset(edge, -sgn * d2)
         big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
         band = face_of(big.cut(small))
+    elif joined is not None:
+        band = joined
     else:
         a, b = _side(edge, d1, closed), _side(edge, d2, closed)
         pa0, pa1 = a.valueAt(a.FirstParameter), a.valueAt(a.LastParameter)

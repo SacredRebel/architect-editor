@@ -51,8 +51,19 @@ starts with `REALIZE` and carries the result as JSON; the process ends with 0 wh
 were written. In the result, `notes` is what the records say that the files do not (a type
 not known, a number left out, a piece that could not be built); `site_notes` is what the
 map's own files say of the place the building stands on (a road, the easement, an existing
-building, lane C's build envelope). The two are never mixed. The contract, field by field:
+building, lane C's build envelope). The two are never mixed. Each element of the result says
+its solid's own box (`box_m`: two corners, the shape the map reads), a wall how many openings
+are cut through it (`openings`, and each one in `opening_list`), a floor or a roof its
+`holes`, and its volume by the exact measure. The contract, field by field:
 `exchange\godot\FORMAT.md`, "Realize in FreeCAD". The file's own first lines say the same.
+
+Walls that end on each other are joined as the map joins them (the old editor's rule: a
+corner of two walls is whole, a wall that ends on another stops at its face, three walls
+share a point): `Organic/organic_geom.py`, "walls that end on each other", and
+`organic_objects.join_walls`, called by the import. Only walls of one level are joined; a
+wall with a shaped top on a smooth curve keeps square ends, and the import's notes say how
+many ends that is. `check_import.py` (group J) holds each wall's plan against the old
+editor's own numbers, read from the port note where its code printed them.
 
 Measured on this PC: a room of one round wall with a door, a floor and a dome takes 2.7 to
 3.0 s for the whole process; the 24-piece sample 45 to 65 s.
@@ -79,15 +90,20 @@ measure from the solids, by walking each solid with points (in it or not): where
 of a wall stand at each point of its path and half-way between, where its top is, where an
 opening's two jambs, its sill and its head are, each floor's area, level and thickness, the
 chimney's radius, each roof's top against the spec's own samples and against its expression,
-its thickness, its holes and what it holds. `--self-test` builds forged pieces through the
-same import (a wall thickened outward, an opening 0.40 m along, a roof 0.05 m too high, a
-floor without its courtyards, ...) and must see each rejected by the check meant for it.
+its thickness, its holes and what it holds; round every point where walls end on each other,
+that nothing of the spec's walls is lost and no two walls share space; and every solid's
+volume two ways, FreeCAD's own against OCCT's adaptive measure. `--self-test` builds forged
+pieces through the same import (a wall thickened outward, an opening 0.40 m along, a roof
+0.05 m too high, a floor without its courtyards, walls with butt ends, a joined wall with
+each side in one face, ...) and must see each rejected by the check meant for it.
 
-Johny's concept S01, 2 Oct 2026: 75 pieces, built in 30 s; 18 checks pass and 19 of 19 forged
-pieces are rejected; the whole check takes six minutes (measured: 362 and 365 s), its forged
-pieces another six and a half. The first run of this check
-found 11 of the 50 openings not cut at all, in a house whose every solid was "valid": see
-`OPENING_PAST_MM` in `Organic/organic_geom.py`.
+Johny's concept S01, 2 Oct 2026: 75 pieces, built in 30 s; 20 checks pass and 21 of 21 forged
+pieces are rejected; the whole check takes six to nine minutes (measured: 362 and 365 s
+alone, 473 and 528 s with other runs beside it), its forged pieces five to seven more. The
+first run of this check found 11 of the 50 openings not cut at all, in a house whose every
+solid was "valid": see `OPENING_PAST_MM` in `Organic/organic_geom.py`. The workbench's older
+check found the next fault, on the sent house: a joined wall whose sides were each one face
+on one long spline, which FreeCAD's own Volume read 4 % short (see `pieces_of` there).
 
 ## SulphurMountainSite.FCMacro: the site template
 

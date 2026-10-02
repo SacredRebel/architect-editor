@@ -125,7 +125,10 @@ the `ORGANIC_EXCHANGE_DIR` environment variable or the `ExchangeDir` string unde
   anticlockwise positive), `elevation_m` (NAVD88), `offset_m` (east, north, up from the
   anchor). Also `clearance_m` to the nearest road, easement and existing building,
   `level_above_ground_m` (the building's z = 0 above the map's ground at its origin), notes,
-  and each element's volume.
+  and of each element: its volume (the exact solid's, by OCCT's adaptive measure), its
+  solid's own box in the building's frame (`box_m`: `[[x min, y min, z min], [x max, y max,
+  z max]]`, the shape the map reads), on a wall how many openings are cut through it
+  (`openings`) and each of them (`opening_list`), on a floor or a roof its `holes`.
 - **The GLB** is glTF Y-up in metres: one named node per element with its IFC class in
   `extras`, the same `placement` in the root node's `extras`, and no transform on the root.
   Its triangles enclose each solid's volume. FreeCAD's own glTF exporter is not used, because
@@ -134,7 +137,9 @@ the `ORGANIC_EXCHANGE_DIR` environment variable or the `ExchangeDir` string unde
   (`IfcType` on the object). `IfcSite` is the anchor, with its latitude and longitude to
   millionths of a second (the exporter writes whole seconds). The `IfcBuilding`'s placement
   on the site is the offset and the turn; its elements are placed under it; its property set
-  `Organic_Placement` repeats the numbers.
+  `Organic_Placement` repeats the numbers. The placements and the property set are written
+  by IfcOpenShell's own calls (`api.geometry.edit_object_placement`, `api.pset`), and
+  `check_organic.py` holds the file against its schema with IfcOpenShell's validation.
 - **It says so** when the footprint touches a road, the access easement or an existing
   building (read from the land files in the exchange folder), or when the building's level
   (its z = 0) is more than a metre off the map's ground.
@@ -163,6 +168,17 @@ those points, span for span; an opening stands where the map measured it. What t
 names and this workbench does not know is said in the report view and left out, never
 dropped in silence. Sent back, the building's JSON carries `built_from`.
 
+**Walls that end on each other are joined, as the map joins them** (the old editor's rule;
+`organic_geom.junction_corners`, `organic_objects.join_walls`): an end within 0.05 m of
+another wall's end, or of its line, meets it. Round the meeting point each wall's left face
+ends where it crosses the right face of the next; a wall that passes through takes nothing
+and the wall that ends on it stops at its face; a crossing farther off than ten half
+thicknesses is none. Only walls of one level are joined. A wall with a shaped top on a
+smooth curve keeps square ends (its top line is given along its own length), and an end on
+a corner of another wall's outline is not joined by that wall. The notes say how many ends
+were joined, and how many meet other walls and stay square. A wall's joints are its
+`StartJoint` and `EndJoint` (worked out by the import; empty: a square end).
+
 ## Notes for whoever changes the kernels
 
 - **Build near the origin.** `organic_objects.base_edge` takes a base curve into the object's
@@ -176,7 +192,13 @@ dropped in silence. Sent back, the building's JSON carries `built_from`.
   bounded by one spline of hundreds of spans reports its area several percent off, and a
   solid on it its volume (a wall read 43.4 m³ against 63.0 m³): `wire_of` splits long
   splines before every face. A shaped wall top is cut by ruled faces of at most 8 stations
-  (`TOP_PIECE_STATIONS`); at 16 its volume read up to 0.18 % off.
+  (`TOP_PIECE_STATIONS`); at 16 its volume read up to 0.18 % off. **Every new way to make a
+  face goes through `wire_of`.** The joined end of a wall first made its plan's face
+  directly: a partition 12.9 m long on a curve through eight points then read 9.547 m³ by
+  FreeCAD's own Volume and 9.943 by every other count (the adaptive measure, its triangles,
+  its plan times its height less its door). `check_organic.py` found it on the sent house,
+  because it holds the mesh against FreeCAD's own Volume; `check_spec.py` (V) and
+  `check_import.py` (J) now hold the two measures against each other.
 - **A cut can fail without a word.** OCCT handed a wall back uncut, or cut under some faces
   only, and called it valid, where a shaped top line touched the prism's flat top at its
   crests (24 of 120 trial walls; none since the prism stands 0.5 m above the top line).
@@ -199,9 +221,12 @@ dropped in silence. Sent back, the building's JSON carries `built_from`.
 - **`Shape.Volume` and `Shape.Area` are not exact.** On a 78 m wall with a sampled top the
   volume read 0.16 % too much and its plan's area 0.10 % too much; on a roof 0.36 % too
   little. `organic_geom.volume_of` and `area_of` use OCCT's adaptive measure through
-  pythonocc, which FreeCAD 1.1 ships (`OCC.Core.BRepGProp`): it agreed with a count by strips
-  and with the solid's triangles to 0.001 %. Use them for what is held against a tolerance
-  and for what is reported; they cost seconds on a large solid.
+  pythonocc, which FreeCAD 1.1 ships (`OCC.Core.BRepGProp`): the volume agreed with a count
+  by strips and with the solid's triangles to 0.001 %. Use it for what is held against a
+  tolerance and for what is reported; it costs seconds on a large solid. **`area_of` is for
+  flat faces only**: on a wall's curved side the adaptive area read 10 % too much and said
+  its error was nought, while `Shape.Area` was right. And keep one check on FreeCAD's own
+  Volume (the note on `wire_of` above): the two measures agreeing is a check in itself.
 - **A shell from a height field** is its top face cut to the plan and pushed straight down
   (`field_shell_shape`): under a second for 30 m by 11 m. Cutting the plan's prism by the
   solids above the top and below the underside did not finish in ten minutes.

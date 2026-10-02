@@ -16,10 +16,18 @@ measure from the solids, by walking each solid with points (is this point in it 
 
   H. the house is whole: every wall, floor and roof shell of the spec, and the chimney, is one
      valid solid in the design.
+  V. every solid measures the same two ways: FreeCAD's own Volume (a fixed number of points to
+     a face) within 1 % of OCCT's adaptive measure. A face that spans one long spline, or one
+     that folds, shows as a gap between the two: a joined wall 12.9 m long with each of its
+     sides in one face read 4 % short by the first, and was sound by every other count.
   W. every wall, at every point of its path that no opening covers: its two faces stand where
      the spec's rule puts them (an outer-face path: the path itself and the thickness inward
      of it; a centreline, a glazing axis, a rail axis: half the thickness either side), and
      its top is at the spec's height, or at the spec's top-edge sample of that point.
+  J. where walls end on each other (found from the spec alone: an end within 0.05 m of
+     another wall's end or line, on the same level) they are joined as the map joins them:
+     round every such meeting point, nothing of the spec's own walls is lost and no two walls
+     share space. (The wall's faces are not held to the plain rule within reach of such an end.)
   O. every opening: its two jambs stand half its width either side of the foot of the spec's
      centre, measured along the wall's path; its sill and its head are at the spec's heights.
   F. every floor: its area is the spec's gross area of that level, its top at the level, its
@@ -34,8 +42,9 @@ How close: 0.01 m for faces, jambs, sills, heads and tops of walls; 0.03 m for a
 (its heights stand on a grid of 0.25 m: the grid's own sag at a crease); 0.15 m² for a floor.
 
 --self-test builds forged pieces (a wall thickened outward, an opening 0.4 m along, a roof
-5 cm too high, a floor without its courtyard, ...) through the same import, measures them the
-same way, and must see every one rejected by the check meant for it.
+5 cm too high, a floor without its courtyard, walls with butt ends where they meet, a joined
+wall with each side in one face, ...) through the same import, measures them the same way,
+and must see every one rejected by the check meant for it.
 """
 
 import copy
@@ -63,6 +72,8 @@ CLOSE = 0.01  # metres: faces, jambs, sills, heads, wall tops
 ROOF_CLOSE = 0.03
 FLOOR_CLOSE = 0.15  # m²
 REACH = 0.10  # metres either side of where a face should be that it is looked for
+JOIN = 0.05  # metres: two wall ends closer than this are one meeting point (the map's rule, and the old editor's)
+PLAIN = 0.01  # how far FreeCAD's own Volume may lie from the adaptive measure (a sampled top or a roof leaf reads up to 0.4 % off by it)
 num, rows, ring_of = s2r.num, s2r.rows, s2r.ring_of
 
 
@@ -218,11 +229,106 @@ def round_holes(spec):
     return out
 
 
+_MEETINGS = {}
+
+
+def spec_meetings(spec):
+    """Where the spec's open walls end on other walls of their level, from the spec alone.
+    Returns (skip, meetings): skip = {wall id: {"start": metres, "end": metres}}, how far from
+    such an end the wall's faces are not the plain rule's (absent where the end meets nothing);
+    meetings = [{"key", "at": (x, y), "level", "ends": [(wall id, "start" | "end")], "passing":
+    [wall id], "thick": the thickest wall there}]."""
+    if id(spec) in _MEETINGS:
+        return _MEETINGS[id(spec)]
+    walls = {}
+    for w in spec.get("2_curved_walls", []):
+        pts, repeated = ring_of(rows(w["points_xy_m"]))
+        closed = bool(w.get("closed")) or repeated
+        walls[w["id"]] = {"pts": pts, "closed": closed, "path": Path(pts, closed, per=60), "t": num(w["thickness_m"]), "level": num(w["z_base_m"])}
+    meetings = []
+    for wid, w in walls.items():
+        if w["closed"]:
+            continue
+        for which, point in (("start", w["pts"][0]), ("end", w["pts"][-1])):
+            here = next((m for m in meetings if m["level"] == w["level"] and math.dist(m["at"], point) < JOIN), None)
+            if here is None:
+                here = {"at": point, "level": w["level"], "ends": [], "passing": [], "gap": 0.0}
+                meetings.append(here)
+            here["gap"] = max(here["gap"], math.dist(here["at"], point))  # ends up to JOIN apart count as one point: each wall is cut about its own
+            here["ends"].append((wid, which))
+    for m in meetings:
+        mine = {wid for wid, _which in m["ends"]}
+        for oid, o in walls.items():
+            if oid in mine or o["level"] != m["level"]:
+                continue
+            if o["path"].foot(m["at"])[1] < JOIN:
+                m["passing"].append(oid)
+    meetings = [m for m in meetings if len(m["ends"]) + len(m["passing"]) > 1]
+    skip = {}
+    for m in meetings:
+        m["thick"] = max(walls[wid]["t"] for wid in [e[0] for e in m["ends"]] + m["passing"])
+        m["key"] = "%s at (%.2f, %.2f)" % (" + ".join(sorted(e[0] for e in m["ends"])), m["at"][0], m["at"][1])
+        for wid, which in m["ends"]:
+            skip.setdefault(wid, {})[which] = 0.05 + 2.0 * m["thick"]
+    _MEETINGS[id(spec)] = (skip, meetings)
+    return skip, meetings
+
+
+def in_plain_band(rows_, t, point, margin=0.004):
+    """Whether a point lies in an open wall's plain band by the spec's rule (its centreline, half the thickness either
+    side, cut square at its two ends), keeping `margin` clear of the band's edges. rows_: the centreline as Path.rows."""
+    best = None
+    for i, (a, b) in enumerate(zip(rows_, rows_[1:])):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        d2 = dx * dx + dy * dy
+        if d2 == 0:
+            continue
+        f = ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / d2
+        beyond = (i == 0 and f < 0) or (i == len(rows_) - 2 and f > 1)
+        f = max(0.0, min(1.0, f))
+        off = math.hypot(point[0] - a[0] - dx * f, point[1] - a[1] - dy * f)
+        if best is None or off < best[0]:
+            best = (off, beyond)
+    return best is not None and not best[1] and best[0] <= t / 2.0 - margin
+
+
+def measure_meeting(spec, meeting, shapes):
+    """Round one meeting point: places on a grid of 2 cm, 1 m above the walls' base, asked whether they lie in each
+    wall that ends there and whether the spec's own plain band of any of them holds them."""
+    by_id = {w["id"]: w for w in spec["2_curved_walls"]}
+    ids = [wid for wid, _which in meeting["ends"]]
+    plain = {wid: (Path(ring_of(rows(by_id[wid]["points_xy_m"]))[0], False, per=40).rows, num(by_id[wid]["thickness_m"])) for wid in ids}
+    cx, cy = meeting["at"]
+    z = meeting["level"] + 1.0
+    r = 2.0 * meeting["thick"]
+    step = 0.02
+    passing = [shapes[wid] for wid in meeting["passing"] if wid in shapes]
+    asked = lost = shared = butt = wedge = 0
+    n = int(r / step)
+    for i in range(-n, n + 1):
+        for j in range(-n, n + 1):
+            x, y = cx + i * step + 0.003, cy + j * step + 0.007  # (off the walls' own lines, which run through the point)
+            if math.hypot(x - cx, y - cy) > r:
+                continue
+            inside = sum(1 for wid in ids if is_in(shapes[wid], x, y, z))
+            through = any(is_in(s, x, y, z) for s in passing)
+            banded = any(in_plain_band(p, t, (x, y)) for p, t in plain.values())
+            asked += 1
+            lost += banded and inside == 0 and not through
+            shared += inside >= 2
+            butt += banded and through  # what a butt end would share with the wall it lands on
+            wedge += inside >= 1 and through  # what the joined end shares with it
+    # (two ends that are not quite on one point are each cut about their own: a sliver as wide as the gap between them)
+    return {"asked": asked, "lost": lost, "shared": shared, "butt": butt, "wedge": wedge, "ends": len(ids), "passing": len(meeting["passing"]),
+            "allowed": 0.01 * asked + meeting["gap"] * meeting["thick"] / (step * step)}
+
+
 def measure_wall(spec, w, shape):
     base = num(w["z_base_m"])
     pts, repeated = ring_of(rows(w["points_xy_m"]))
     closed = bool(w.get("closed")) or repeated
     path = Path(pts, closed)
+    meets = spec_meetings(spec)[0].get(w["id"], {})  # how far from each end the faces are a joint's, not the plain rule's
     t = num(w["thickness_m"])
     outer = w.get("reference") == "outer_face" and closed
     side = path.inward  # +1: the inside is to the path's left
@@ -252,7 +358,7 @@ def measure_wall(spec, w, shape):
         return None
 
     out = {"valid": bool(shape.isValid()), "solids": len(shape.Solids), "box": box_of(shape), "volume": og.volume_of(shape) / 1e9, "length": path.total,
-           "faces": [], "tops": [], "points": 0, "covered": 0, "tight": 0, "lost": [], "openings": {}}
+           "faces": [], "tops": [], "points": 0, "covered": 0, "tight": 0, "joined": 0, "lost": [], "openings": {}}
     count = len(pts)
     reach = min(REACH, t / 2.0 - 0.005)
 
@@ -269,6 +375,9 @@ def measure_wall(spec, w, shape):
             s = at_point(i) if not half else (path.at_point(i) + (path.at_point(i + 1) if i + 1 < count else path.total)) / 2.0
             if covered(s) is not None:
                 out["covered"] += 1
+                continue
+            if (meets.get("start") and s < meets["start"]) or (meets.get("end") and s > path.total - meets["end"]):
+                out["joined"] += 1  # within reach of an end that meets other walls: looked at by check J, not here
                 continue
             (x, y), left = path.at(s)
             out["points"] += 1
@@ -460,7 +569,7 @@ def shapes_of(doc):
     return out
 
 
-def built(records, only=None):
+def built(records, only=None, join=True):
     """A records file (or its contents) built in a document of its own: (the document, {id: solid})."""
     data = records if isinstance(records, dict) else json.load(open(records, encoding="utf-8"))
     if only:
@@ -474,7 +583,7 @@ def built(records, only=None):
             want.update(params.get("Holes", []))
         data = dict(data, pieces=[p for p in data["pieces"] if p["id"] in want])
     doc = App.newDocument("SpecCheck")
-    oi.import_built(doc, data)
+    oi.import_built(doc, data, join)
     return doc, shapes_of(doc)
 
 
@@ -482,7 +591,7 @@ def gather(spec, shapes, only=None, without=()):
     facts = {"pieces": {}, "missing": [], "without": [], "areas": {k: num(v) for k, v in spec.get("level_gross_areas_m2", {}).items()},
              "zones": {level: num(spec["structural_and_coordination"][key]) for level, key in (("main", "main_floor_zone_m"), ("mezzanine", "mezzanine_floor_zone_m"))
                        if key in spec.get("structural_and_coordination", {})},
-             "levels": {k: num(v) for k, v in spec["frame"]["levels_m"].items()}, "kinds": {}}
+             "levels": {k: num(v) for k, v in spec["frame"]["levels_m"].items()}, "kinds": {}, "meetings": {}}
     for key, (kind, said) in spec_pieces(spec).items():
         if only and key not in only:
             continue
@@ -496,11 +605,16 @@ def gather(spec, shapes, only=None, without=()):
             continue
         t0 = time.time()
         facts["pieces"][key] = MEASURES[kind](spec, said, shape)
+        facts["pieces"][key]["plain"] = shape.Volume / 1e9  # FreeCAD's own measure, beside the adaptive one in "volume"
         facts["pieces"][key]["seconds"] = time.time() - t0
         if kind == "wall":
             facts["pieces"][key]["thickness"] = num(said["thickness_m"])
         if kind == "floor":
             facts["pieces"][key]["level"] = said["level"]
+    for meeting in spec_meetings(spec)[1]:
+        ids = [wid for wid, _which in meeting["ends"]]
+        if all(wid in facts["pieces"] for wid in ids) and (not only or all(wid in only for wid in ids)) and all(wid in shapes for wid in meeting["passing"]):
+            facts["meetings"][meeting["key"]] = measure_meeting(spec, meeting, shapes)
     return facts
 
 
@@ -520,6 +634,14 @@ def judge(facts):
        "H the house is whole: %d walls, %d floors, %d roof shells and the chimney of the spec are each one valid solid (missing: %s; not one valid solid: %s; left out on purpose and not looked at: %s)"
        % (len(of("wall")), len(of("floor")), len(of("roof")), ", ".join(facts["missing"]) or "none", ", ".join(broken) or "none", ", ".join(facts.get("without", [])) or "none"))
 
+    # V. each solid's volume two ways. FreeCAD's own Volume gives a face a fixed number of points: a face that spans one long
+    # spline (a joined wall's side left in one piece read 4 % short) or one that folds shows as a gap between the two
+    apart = {k: p["plain"] / p["volume"] - 1.0 for k, p in pieces.items() if p.get("volume") and "plain" in p}
+    far = sorted(k for k, v in apart.items() if abs(v) > PLAIN)
+    ok(bool(apart) and not far,
+       "V every solid measures the same two ways: FreeCAD's own Volume lies within %.2f %% of OCCT's adaptive measure on each of %d solids (allowed %.0f %%; further: %s)"
+       % (100 * worst(apart.values()), len(apart), 100 * PLAIN, ", ".join("%s %+.2f %%" % (k, 100 * apart[k]) for k in far) or "none"))
+
     # W. walls
     walls = of("wall")
     if walls:
@@ -528,12 +650,29 @@ def judge(facts):
         lost = ["%s %s" % (k, text) for k in walls for text in pieces[k]["lost"]]
         bad = sorted({k for k in walls if worst([v for pair in pieces[k]["faces"] for v in pair]) > CLOSE})
         ok(not lost and not bad and face_off,
-           "W faces: at %d points of %d wall paths both faces stand where the spec's rule puts them, within %.4f m (allowed %.2f); %d points on a bend tighter than the wall is thick are not measured (off: %s; lost: %s)"
-           % (len(face_off) // 2, len(walls), worst(face_off), CLOSE, sum(pieces[k]["tight"] for k in walls), ", ".join(bad) or "none", "; ".join(lost[:3]) or "none"))
+           "W faces: at %d points of %d wall paths both faces stand where the spec's rule puts them, within %.4f m (allowed %.2f); not measured: %d points on a bend tighter than the wall is thick, %d within reach of an end that meets other walls (off: %s; lost: %s)"
+           % (len(face_off) // 2, len(walls), worst(face_off), CLOSE, sum(pieces[k]["tight"] for k in walls), sum(pieces[k].get("joined", 0) for k in walls),
+              ", ".join(bad) or "none", "; ".join(lost[:3]) or "none"))
         bad = sorted({k for k in walls if worst(pieces[k]["tops"]) > CLOSE})
         ok(not lost and not bad and top_off,
            "W tops: at %d points the wall's top is at the spec's height or at its top-edge sample of that point, within %.4f m (allowed %.2f); %d points stand in an opening that runs to the top (off: %s; lost: %s)"
            % (len(top_off), worst(top_off), CLOSE, sum(pieces[k].get("open_top", 0) for k in walls), ", ".join(bad) or "none", "; ".join(lost[:3]) or "none"))
+
+    # J. where walls end on each other
+    meetings = facts.get("meetings", {})
+    if meetings:
+        asked = sum(m["asked"] for m in meetings.values())
+        lost_m = {k: m["lost"] for k, m in meetings.items() if m["lost"] > m["allowed"]}
+        shared_m = {k: m["shared"] for k, m in meetings.items() if m["shared"] > m["allowed"]}
+        on_wall = {k: m for k, m in meetings.items() if m["passing"]}
+        deep = {k: "%d of %d" % (m["wedge"], m["butt"]) for k, m in on_wall.items() if m["wedge"] > 0.6 * m["butt"] + 3}
+        ok(asked > 0 and not lost_m and not shared_m and not deep,
+           "J where walls end on each other: %d meeting points of %d wall ends; of %d places asked round them, %d of the spec's own walls lie in no wall and %d lie in two walls that end there (allowed at each point: 1 %% of its places, and the sliver between two ends that are not quite on one point); "
+           "%d ends land on a passing wall and stop at its face: they share %d places with it where butt ends would share %d (lost at: %s; shared at: %s; too deep in a passing wall: %s)"
+           % (len(meetings), sum(m["ends"] for m in meetings.values()), asked, sum(m["lost"] for m in meetings.values()), sum(m["shared"] for m in meetings.values()),
+              len(on_wall), sum(m["wedge"] for m in on_wall.values()), sum(m["butt"] for m in on_wall.values()),
+              "; ".join("%s (%d)" % kv for kv in lost_m.items()) or "none", "; ".join("%s (%d)" % kv for kv in shared_m.items()) or "none",
+              "; ".join("%s (%s)" % kv for kv in deep.items()) or "none"))
 
     # O. openings
     openings = [(k, oid, o) for k in walls for oid, o in pieces[k]["openings"].items()]
@@ -603,7 +742,8 @@ def judge(facts):
 
 # ------------------------------------------------------------------ forgeries: forged pieces, built and measured
 def forged_builds(spec, records):
-    """(name, the check meant for it, the id of the piece, the forged records) for each fault."""
+    """(name, the check meant for it, the id of the piece (or the ids, with "butt" for walls built
+    without their joints), the forged records) for each fault."""
     by_id = lambda data: {p["id"]: p for p in data["pieces"]}  # noqa: E731
     out = []
 
@@ -655,6 +795,19 @@ def forged_builds(spec, records):
         forge("%s with its grid one step to the east" % roof, "R %s field" % roof, roof,
               lambda p: p[roof]["params"].update(GridOrigin=[p[roof]["params"]["GridOrigin"][0] + p[roof]["params"]["GridStep"], p[roof]["params"]["GridOrigin"][1]]))
     del walls
+    meeting = next((m for m in spec_meetings(spec)[1] if len(m["ends"]) >= 2), None)
+    if meeting:
+        ids = sorted(wid for wid, _which in meeting["ends"])
+        out.append(("%s with butt ends where they meet" % ", ".join(ids), "J where walls end on each other", tuple(ids) + ("butt",), copy.deepcopy(records)))
+    # the longest wall that ends on another, built with each of its sides in one face (no long spline split)
+    run = lambda wid: sum(math.dist(a, b) for a, b in zip(rows(by_wall[wid]["points_xy_m"]), rows(by_wall[wid]["points_xy_m"])[1:]))  # noqa: E731
+    by_wall = {w["id"]: w for w in spec.get("2_curved_walls", [])}
+    joined = [(run(wid), wid, m) for m in spec_meetings(spec)[1] for wid, _which in m["ends"]]
+    if joined:
+        length, long_wall, at = max(joined, key=lambda row: row[0])
+        ids = sorted({wid for wid, _which in at["ends"]} | set(at["passing"]))
+        out.append(("%s, %.1f m long and joined at an end, with each of its sides in one face" % (long_wall, length), "V every solid measures the same two ways",
+                    tuple(ids) + ("whole",), copy.deepcopy(records)))
     return out
 
 
@@ -664,13 +817,22 @@ def self_test(spec, facts, design_floors):
     for name, expect, key, data in forged:
         doc = None
         try:
-            doc, shapes = built(data, only=[key])
+            keys = [k for k in key if k not in ("butt", "whole")] if isinstance(key, tuple) else [key]
+            split = og.pieces_of
+            if isinstance(key, tuple) and "whole" in key:
+                og.pieces_of = lambda edge, span=16: [og.baked(edge)]  # forged: no long spline is split, so each side of a wall is one face
+            try:
+                doc, shapes = built(data, only=keys, join=not (isinstance(key, tuple) and "butt" in key))
+            finally:
+                og.pieces_of = split
             g = copy.deepcopy(facts)
-            one = gather(spec, shapes, only=[key])
-            g["pieces"].pop(key, None)
+            one = gather(spec, shapes, only=keys)
+            for k in keys:
+                g["pieces"].pop(k, None)
             g["pieces"].update(one["pieces"])
-            g["missing"] = [k for k in g["missing"] if k != key] + one["missing"]
+            g["missing"] = [k for k in g["missing"] if k not in keys] + one["missing"]
             g["kinds"].update(one["kinds"])
+            g["meetings"].update(one["meetings"])
         finally:
             if doc is not None:
                 App.closeDocument(doc.Name)

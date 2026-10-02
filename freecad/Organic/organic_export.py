@@ -41,6 +41,8 @@ import struct
 
 import FreeCAD as App
 
+import organic_geom as og
+
 MM = 1000.0
 # The canonical frame (BRAIN.md §3): the anchor, and the ground there from the map's DEM.
 ANCHOR = {"lng": -119.15536, "lat": 34.4331, "elevation_m": 425.63}
@@ -518,25 +520,21 @@ def envelope_at(out_dir, footprint, anchor=ANCHOR):
 
 # ---------------------------------------------------------------- IFC
 def dms(value):
-    """Decimal degrees as IFC's compound angle: degrees, minutes, seconds, millionths."""
-    sign = -1 if value < 0 else 1
-    v = abs(value)
-    d = int(v)
-    mnt = int((v - d) * 60)
-    s = (v - d - mnt / 60.0) * 3600
-    sec = int(s)
-    micro = int(round((s - sec) * 1e6))
+    """Decimal degrees as IFC's compound angle: degrees, minutes, seconds, millionths of a
+    second. IfcOpenShell's own dd2dms does the splitting; where it rounds up to a whole
+    second it leaves 1,000,000 millionths, which is carried here."""
+    import ifcopenshell.util.geolocation as geo
+
+    parts = [int(c) for c in geo.dd2dms(value, use_us=True)]
+    sign = -1 if any(c < 0 for c in parts) else 1
+    d, mnt, sec, micro = (abs(c) for c in parts)
     if micro >= 1000000:
         sec, micro = sec + 1, micro - 1000000
+    if sec >= 60:
+        mnt, sec = mnt + 1, sec - 60
+    if mnt >= 60:
+        d, mnt = d + 1, mnt - 60
     return tuple(sign * c for c in (d, mnt, sec, micro))
-
-
-def axis_placement(f, m):
-    """A 4 x 4 matrix (the file's length unit) as an IfcAxis2Placement3D."""
-    return f.createIfcAxis2Placement3D(
-        f.createIfcCartesianPoint([float(v) for v in m[:3, 3]]),
-        f.createIfcDirection([float(v) for v in m[:3, 2]]),
-        f.createIfcDirection([float(v) for v in m[:3, 0]]))
 
 
 def place_in_ifc(path, placement, anchor, project_name=None):
@@ -544,11 +542,17 @@ def place_in_ifc(path, placement, anchor, project_name=None):
 
     The exporter writes the site's latitude and longitude in whole seconds (up to ~7 m off
     here), so they are rewritten with their millionths. The site keeps the anchor; the
-    building gets its placement on the site (the offset and the turn); every other product is
-    placed relative to the spatial element that holds it, so the whole building follows."""
+    building gets its placement on the site (the offset and the turn); every other product
+    keeps its place in the building's own frame, so the whole building follows.
+
+    The placements and the property set are written by IfcOpenShell's own calls
+    (api.geometry.edit_object_placement, api.pset), which set each product relative to what
+    holds it (FreeCAD's exporter writes every placement absolute). Until 2 Oct 2026 this was
+    done by hand here; the two gave the same file (every product's world placement to 1e-14),
+    so the hand-written one went."""
     import ifcopenshell
-    import ifcopenshell.guid
-    import ifcopenshell.util.element
+    import ifcopenshell.api.geometry
+    import ifcopenshell.api.pset
     import ifcopenshell.util.placement
     import ifcopenshell.util.unit
     import numpy as np
@@ -568,41 +572,27 @@ def place_in_ifc(path, placement, anchor, project_name=None):
     products = [p for p in f.by_type("IfcProduct") if p.ObjectPlacement is not None]
     world = {p.id(): ifcopenshell.util.placement.get_local_placement(p.ObjectPlacement) for p in products}
     to_building = np.linalg.inv(world.get(building.id(), np.eye(4)))
-    local = {i: to_building @ m for i, m in world.items()}  # every product in the building's frame
 
     off = placement["offset_m"]
     yaw = math.radians(placement["rotation_deg"]["y"])
-    turn = np.eye(4)
+    turn = np.eye(4)  # the building's own frame on the site, in metres
     turn[:3, :3] = [[math.cos(yaw), -math.sin(yaw), 0.0], [math.sin(yaw), math.cos(yaw), 0.0], [0.0, 0.0, 1.0]]
-    turn[:3, 3] = [off["east"] / scale, off["north"] / scale, off["up"] / scale]
-    site_lp = f.createIfcLocalPlacement(None, axis_placement(f, np.eye(4)))
-    building_lp = f.createIfcLocalPlacement(site_lp, axis_placement(f, turn))
-    site.ObjectPlacement = site_lp
-    building.ObjectPlacement = building_lp
-    done = {site.id(): (site_lp, None), building.id(): (building_lp, np.eye(4))}
-
-    def settle(p, trail=()):
-        if p.id() in done:
-            return done[p.id()]
-        holder = ifcopenshell.util.element.get_container(p) or ifcopenshell.util.element.get_aggregate(p)
-        parent_lp, parent_m = building_lp, np.eye(4)
-        if holder is not None and holder.id() in local and holder.id() != site.id() and holder.id() not in trail:
-            parent_lp, parent_m = settle(holder, trail + (p.id(),))
-        m = local[p.id()]
-        p.ObjectPlacement = f.createIfcLocalPlacement(parent_lp, axis_placement(f, np.linalg.inv(parent_m) @ m))
-        done[p.id()] = (p.ObjectPlacement, m)
-        return done[p.id()]
-
+    turn[:3, 3] = [off["east"], off["north"], off["up"]]
+    ifcopenshell.api.geometry.edit_object_placement(f, product=site, matrix=np.eye(4), is_si=True)
+    ifcopenshell.api.geometry.edit_object_placement(f, product=building, matrix=turn, is_si=True)
     for p in products:
-        settle(p)
+        if p.id() in (site.id(), building.id()):
+            continue
+        local = to_building @ world[p.id()]  # where it stands in the building's frame
+        local[:3, 3] *= scale
+        ifcopenshell.api.geometry.edit_object_placement(f, product=p, matrix=turn @ local, is_si=True)
 
     values = (("Longitude", placement["coordinates"][0]), ("Latitude", placement["coordinates"][1]),
               ("AltitudeM", placement["altitude_m"]), ("ElevationM", placement["elevation_m"]),
               ("RotationDegY", placement["rotation_deg"]["y"]),
               ("OffsetEastM", off["east"]), ("OffsetNorthM", off["north"]), ("OffsetUpM", off["up"]))
-    props = [f.createIfcPropertySingleValue(name, None, f.create_entity("IfcReal", float(value)), None) for name, value in values]
-    pset = f.createIfcPropertySet(ifcopenshell.guid.new(), building.OwnerHistory, "Organic_Placement", None, props)
-    f.createIfcRelDefinesByProperties(ifcopenshell.guid.new(), building.OwnerHistory, None, None, [building], pset)
+    pset = ifcopenshell.api.pset.add_pset(f, product=building, name="Organic_Placement")
+    ifcopenshell.api.pset.edit_pset(f, pset=pset, properties={name: f.create_entity("IfcReal", float(value)) for name, value in values})
     f.write(path)
 
 
@@ -661,7 +651,37 @@ FRAME_NOTE = {
     "rotation_deg": "Euler degrees in glTF's axes; y is the turn seen from above, anticlockwise positive",
     "altitude_m": "height of the building's z = 0 above the ground datum at the anchor (datum_m)",
     "level_above_ground_m": "height of the building's z = 0 above the map's ground at its origin (the land file beside this one)",
+    "box_m": "each element's solid in the building's own frame, before the building is turned: [[x min, y min, z min], [x max, y max, z max]], x east, y north, z up",
+    "volume_m3": "each element's solid by OCCT's adaptive measure (to 1e-5 of it); mesh_volume_m3 is what its triangles in the .glb enclose",
 }
+
+
+def box_in(el, frame):
+    """An element's solid in its building's own frame: [[x min, y min, z min], [x max, y max,
+    z max]] in metres, the shape the map reads (exchange/godot/FORMAT.md, BUILD piece 4).
+    Measured on the solid itself, not on its triangles."""
+    shape = global_shape(el).copy()
+    shape.Placement = frame.inverse().multiply(shape.Placement)
+    b = shape.optimalBoundingBox(False, False)
+    return [[round(v / MM, 4) for v in (b.XMin, b.YMin, b.ZMin)], [round(v / MM, 4) for v in (b.XMax, b.YMax, b.ZMax)]]
+
+
+def openings_of(el):
+    """What is cut through an element, for whoever holds it against the map's piece: a wall's
+    openings as they stand in the solid (metres along its base curve to each one's middle,
+    its width along the curve, its sill and height above the wall's base, its shape), and how
+    many closed curves are cut through a floor or a roof. {} for anything else."""
+    out = {}
+    proxy = getattr(el, "Proxy", None)
+    if "OpeningPositions" in el.PropertiesList and hasattr(proxy, "openings"):
+        cut = proxy.openings(el)
+        out["openings"] = len(cut)
+        if cut:
+            out["opening_list"] = [{"at_m": round(o["position_m"], 4), "width_m": round(o["width_m"], 4), "sill_m": round(o["sill_m"], 4),
+                                    "height_m": round(o["height_m"], 4), "shape": str(o["shape"])} for o in cut]
+    if "Holes" in el.PropertiesList:
+        out["holes"] = len(el.Holes or [])
+    return out
 
 
 def export_building(target, out_dir=None, name=None, anchor=None, stem=None, land=None):
@@ -696,10 +716,11 @@ def export_building(target, out_dir=None, name=None, anchor=None, stem=None, lan
     parts, rows = [], []
     for el, mesh in zip(elements, meshes):
         tri = to_gltf(mesh, frame)
-        vol = el.Shape.Volume / 1e9
+        vol = og.volume_of(el.Shape) / 1e9  # Shape.Volume reads a splined solid up to some tenths of a percent off
         extras = {"ifcType": str(getattr(el, "IfcType", "")), "freecadName": el.Name, "volume_m3": round(vol, 4)}
         row = {"name": el.Label, "freecadName": el.Name, "ifcType": extras["ifcType"], "volume_m3": vol,
-               "mesh_volume_m3": mesh_volume(tri[0], tri[2]), "triangles": len(tri[2])}
+               "mesh_volume_m3": mesh_volume(tri[0], tri[2]), "triangles": len(tri[2]), "box_m": box_in(el, frame)}
+        row.update(openings_of(el))
         piece = str(getattr(el, "MapPiece", "") or "")
         if piece:  # a piece that was drawn in the map: its id there, so the map can hold this solid against it
             extras["piece"] = row["piece"] = piece

@@ -200,8 +200,9 @@ def make_building(doc, label):
     return b
 
 
-def import_built(doc, source):
+def import_built(doc, source, join=True):
     """Rebuild a building from a built file (a path) or its contents (a dict) in doc.
+    join: walls that end on each other are joined there (off only for a check's forged fault).
     Returns {"building", "made": {id: object}, "notes": [str], "lost": [str], "name", "format",
     "path", "scale"}: notes is everything said, lost the part of it that names something of the
     file which is not in the building."""
@@ -299,7 +300,18 @@ def import_built(doc, source):
                 x, y = along_map_points(pts, closed, s / scale)
                 moved.append(og.arc_length_at(edge, origin.multVec(App.Vector(x * scale * MM, y * scale * MM, 0.0))))
             obj.OpeningPositions = moved
+    # walls that end on each other are joined there, by the map's own rule (the old editor's): a corner is whole, a
+    # wall that ends on another stops at its face
+    meet = oo.join_walls(list(made.values())) if join else 0
     doc.recompute()
+    # said of the solids as they now are: a wall with a shaped top on a smooth curve keeps square ends
+    joined = sum(int(getattr(obj.Proxy, "ends_joined", 0)) for obj in made.values() if type(obj.Proxy).__name__ == "Wall")
+    ends = lambda n: "1 wall end meets other walls and is" if n == 1 else "%d wall ends meet other walls and are" % n  # noqa: E731
+    if joined:
+        notes.info("%s joined there, as the map joins them" % ends(joined))
+    if meet > joined:
+        notes.info("%s left square, where the map joins them: a wall with a shaped top on a smooth curve has no joined end, nor has a wall shorter than its "
+                   "corners reach" % ends(meet - joined))
     for key, obj in made.items():
         shape = obj.Shape
         solid = type(obj.Proxy).__name__ not in ("PlanCurve", "SacredFigure")
