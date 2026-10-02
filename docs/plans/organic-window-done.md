@@ -76,6 +76,10 @@ map measured them, slabs, shell roofs, leaf roofs, domes, vaults, steps. For lan
 piece the workbench got: a leaf's `Asymmetry`, a dome's `StretchX` / `StretchY` (an oval
 plan), a vault's `Base` (it follows a drawn curve), a `Steps` object (IfcStair), a piece's
 `turn`. What the map read of the land at a piece (`land`) is carried through as written.
+Pressed in the window on the 24-piece sample (`freecad\samples\built-sample.json`), the
+button made 23 pieces (the 24th is of a type it does not know, and it says so), 15 valid
+solids, in 49 s: picture `organic\buttons\27-import-from-the-map.png`, with the vault bent
+along its curve, the steps and the oval dome.
 `realize.py` prints one line starting with `REALIZE` and ends with 0 or 1; in its result
 `notes` is what the records say that the files do not, `site_notes` what the map's files say
 of the place. Measured: a room of a round wall with a door, a floor and a dome 2.7 to 3.0 s;
