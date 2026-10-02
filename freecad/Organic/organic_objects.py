@@ -18,7 +18,7 @@ import organic_sacred as sacred
 
 MM = og.MM
 ICONS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
-IFC_TYPES = ["Wall", "Roof", "Slab", "Member", "Covering", "Column", "Stair", "Building Element Proxy"]
+IFC_TYPES = ["Wall", "Roof", "Slab", "Member", "Covering", "Column", "Stair", "Building Element Proxy", "Curtain Wall", "Railing", "Chimney"]
 
 
 def m(q):
@@ -63,7 +63,17 @@ def set_local(obj, shape):
 SKIPPED_GROUPS = ("Base", "Measures", "IFC", "Attachment", "From the map", "")
 KEYED_TYPES = ("App::PropertyLength", "App::PropertyDistance", "App::PropertyAngle", "App::PropertyFloat", "App::PropertyInteger", "App::PropertyBool",
                "App::PropertyEnumeration", "App::PropertyString", "App::PropertyFloatList", "App::PropertyStringList", "App::PropertyVectorList", "App::PropertyLink",
-               "App::PropertyVector", "App::PropertyPosition")
+               "App::PropertyLinkList", "App::PropertyVector", "App::PropertyPosition")
+
+
+def link_key(obj, name, value):
+    """What a linked curve gives to an object's solid: the curve as it lies in the object's frame."""
+    if value is None or not hasattr(value, "Shape") or value.Shape.isNull():
+        return (name, None)
+    back = obj.Placement.inverse()
+    shape = value.Shape
+    points = [back.multVec(v.Point) for v in shape.Vertexes] + [back.multVec(e.valueAt((e.FirstParameter + e.LastParameter) / 2)) for e in shape.Edges]
+    return (name, value.Name, len(shape.Edges), round(shape.Length, 2), tuple((round(p.x, 2), round(p.y, 2), round(p.z, 2)) for p in points))
 
 
 def shape_key(obj):
@@ -76,13 +86,9 @@ def shape_key(obj):
             continue
         value = getattr(obj, name)
         if kind == "App::PropertyLink":
-            if value is None or not hasattr(value, "Shape") or value.Shape.isNull():
-                own.append((name, None))
-                continue
-            back = obj.Placement.inverse()
-            shape = value.Shape
-            points = [back.multVec(v.Point) for v in shape.Vertexes] + [back.multVec(e.valueAt((e.FirstParameter + e.LastParameter) / 2)) for e in shape.Edges]
-            own.append((name, value.Name, len(shape.Edges), round(shape.Length, 2), tuple((round(p.x, 2), round(p.y, 2), round(p.z, 2)) for p in points)))
+            own.append(link_key(obj, name, value))
+        elif kind == "App::PropertyLinkList":
+            own.append((name, tuple(link_key(obj, name, v) for v in (value or []))))
         elif kind in ("App::PropertyLength", "App::PropertyDistance", "App::PropertyAngle"):
             own.append((name, round(float(value.Value if hasattr(value, "Value") else value), 6)))
         elif kind == "App::PropertyVectorList":
@@ -244,6 +250,8 @@ class Wall(Organic):
         prop(obj, "App::PropertyEnumeration", "Top", g, "the top line", enum=["Flat", "Arch", "Wave", "Slope"])
         distance(obj, "TopRise", g, "the top line's rise above Height", 0.0)
         prop(obj, "App::PropertyInteger", "TopWaves", g, "waves along a Wave top", 3)
+        prop(obj, "App::PropertyFloatList", "TopHeights", g, "the top line as heights above the base (m): one for each point of a base curve through points, in "
+             "their order (on any other curve: spread evenly along it). When given they are the top line: Height, Top and TopRise are not read")
         length(obj, "Foundation", g, "depth the wall runs below its base", 0.0)
         distance(obj, "BaseOffset", g, "the base's height above the base curve", 0.0)
         g = "Openings"
@@ -272,8 +280,21 @@ class Wall(Organic):
         if edge is None:
             edge, closed = og.arc_curve(5.0, 120.0), False
         obj.CentrelineLength = edge.Length / MM
-        set_local(obj, og.wall_shape(edge, closed, m(obj.Thickness), m(obj.Height), obj.Align, obj.Top, m(obj.TopRise),
+        set_local(obj, og.wall_shape(edge, closed, m(obj.Thickness), m(obj.Height), obj.Align, self.top_line(obj, edge, closed) or obj.Top, m(obj.TopRise),
                                      obj.TopWaves, self.openings(obj), m(obj.BaseOffset), m(obj.Foundation)))
+
+    def top_line(self, obj, edge, closed):
+        """The top line as a function, when the wall has TopHeights (else None). On a smooth
+        curve through points with one height for each point, the heights belong to the points."""
+        heights = [float(h) for h in (getattr(obj, "TopHeights", None) or [])]
+        if len(heights) < 2:
+            return None
+        base = obj.Base
+        through_points = (base is not None and type(getattr(base, "Proxy", None)).__name__ == "PlanCurve" and str(base.Kind) == "Points"
+                          and bool(base.Smooth) and not isinstance(edge, og.WirePath))
+        spans = len(heights) if closed else len(heights) - 1
+        at_points = through_points and abs((edge.LastParameter - edge.FirstParameter) - spans) < 1e-6
+        return og.sampled_top(edge, closed, heights, at_points)
 
 
 def add_opening(wall, position_m, width_m=1.2, height_m=1.3, sill_m=0.9, shape="Arch"):
@@ -437,6 +458,7 @@ class Slab(Organic):
         length(obj, "Thickness", g, "slab thickness below its top", 0.20)
         length(obj, "Inset", g, "distance in from the curve", 0.0)
         distance(obj, "BaseOffset", g, "the slab's top above its curve (a raised floor, a step)", 0.0)
+        prop(obj, "App::PropertyLinkList", "Holes", g, "closed curves that are holes in the slab (a courtyard, a stair well), cut straight through it")
 
     def execute(self, obj):
         if self.fresh(obj):
@@ -445,9 +467,92 @@ class Slab(Organic):
         if edge is None:
             return
         shape = og.slab_shape(edge, m(obj.Thickness), m(obj.Inset))
+        shape = og.with_holes(shape, hole_edges(obj))
         if m(obj.BaseOffset):
             shape.translate(App.Vector(0, 0, m(obj.BaseOffset) * MM))
         set_local(obj, shape)
+
+
+def path_in(curve, frame):
+    """A curve object's line in the frame `frame` (a placement in the document's own frame):
+    one smooth edge, or the outline itself when it has corners; and whether it is closed."""
+    outline = getattr(getattr(curve, "Proxy", None), "outline", None)  # a figure's outline, less its construction lines
+    local = (outline(curve) if outline else curve.Shape).copy()
+    local.Placement = frame.inverse().multiply(local.Placement)
+    return og.plan_path(og.baked(local))
+
+
+def hole_edges(obj, frame=None):
+    """An object's Holes as closed plan curves in the object's own frame (or in `frame`)."""
+    out = []
+    for hole in getattr(obj, "Holes", None) or []:
+        if hole is None or not hasattr(hole, "Shape") or hole.Shape.isNull():
+            continue
+        edge, closed = path_in(hole, obj.Placement if frame is None else frame)
+        if not closed:
+            raise ValueError("%s: the hole %s is not a closed curve" % (obj.Label, hole.Label))
+        out.append(edge)
+    return out
+
+
+class Revolved(Organic):
+    """A solid of revolution about its own upright axis: its outline as (radius, height)
+    points, straight between them. A chimney that tapers, a round pier."""
+
+    ifc_type = "Building Element Proxy"
+    icon = "OrganicDome.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Revolved"
+        prop(obj, "App::PropertyVectorList", "Profile", g, "the outline from one end of the axis to the other: each point is (radius, height), in millimetres")
+        if not obj.Profile:
+            obj.Profile = [App.Vector(600, 0, 0), App.Vector(600, 2000, 0), App.Vector(400, 4000, 0)]
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        set_local(obj, og.revolved_shape([(p.x / MM, p.y / MM) for p in obj.Profile]))
+
+
+class HeightFieldShell(Organic):
+    """A roof shell whose top is a height field: its heights on a square grid, cut in plan to a
+    closed curve, with upright holes. Any roof whose form is a formula over a plan outline (a
+    scan or a sculpted surface as well): the formula is worked out on the grid by whoever
+    writes the heights, and is kept beside them as words. The thickness is measured straight
+    down. The shell lies where its base curve does: the grid is in that curve's own frame."""
+
+    ifc_type = "Roof"
+    icon = "OrganicRoof.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Height field shell"
+        prop(obj, "App::PropertyLink", "Base", g, "the closed curve the shell is cut to in plan")
+        prop(obj, "App::PropertyLinkList", "Holes", g, "closed curves that are holes in the shell (a courtyard, a chimney), cut straight through it")
+        length(obj, "Thickness", g, "thickness, straight down from the top", 0.30)
+        prop(obj, "App::PropertyVector", "GridOrigin", g, "where the grid's first height stands (x, y), in the base curve's own frame, in millimetres")
+        length(obj, "GridStep", g, "distance between two heights of the grid, both ways", 0.25)
+        prop(obj, "App::PropertyInteger", "GridColumns", g, "heights in one row of the grid (a row runs along +x; the rows follow in +y)", 2)
+        prop(obj, "App::PropertyFloatList", "Heights", g, "the top's heights above the base curve's own level (m), row after row")
+        prop(obj, "App::PropertyString", "Formula", g, "the formula the heights were worked out from, as words: kept for the record, not read")
+        prop(obj, "App::PropertyFloat", "PlanArea", "Measures", "the shell's area in plan, less its holes (m²)")
+        obj.setEditorMode("PlanArea", 1)
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        base = obj.Base
+        if base is None or not hasattr(base, "Shape") or base.Shape.isNull():
+            return
+        edge, closed = path_in(base, base.Placement)  # in the curve's own frame: the grid's
+        if not closed:
+            raise ValueError("%s needs a closed base curve" % obj.Label)
+        solid, area = og.field_shell_shape(edge, (obj.GridOrigin.x / MM, obj.GridOrigin.y / MM), m(obj.GridStep), obj.GridColumns,
+                                           list(obj.Heights), m(obj.Thickness), hole_edges(obj, base.Placement))
+        obj.PlanArea = area / 1e6
+        solid.Placement = obj.Placement.inverse().multiply(base.Placement)  # from the curve's frame into the shell's own
+        set_local(obj, solid)
 
 
 class Steps(Organic):
@@ -839,6 +944,9 @@ COLOURS = {
     "Stair": (0.70, 0.70, 0.70),
     "Member": (0.80, 0.62, 0.45),
     "Column": (0.72, 0.56, 0.40),
+    "Curtain Wall": (0.72, 0.84, 0.90),
+    "Railing": (0.62, 0.52, 0.36),
+    "Chimney": (0.62, 0.60, 0.56),
 }
 LINE_COLOURS = {"PlanCurve": (0.2, 0.3, 0.8), "SacredFigure": (0.70, 0.45, 0.05), "SunRose": (0.85, 0.45, 0.0)}
 

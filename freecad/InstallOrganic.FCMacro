@@ -24,7 +24,7 @@ except NameError:  # run without a file name
     HERE = os.environ.get("ORGANIC_REPO_FREECAD", r"C:\Playground\Architect-editor\freecad")
 SRC = os.path.join(HERE, "Organic")
 DST = os.path.join(App.getUserAppDataDir(), "Mod", "Organic")
-MODULES = ("organic_geom", "organic_sacred", "organic_biomimetic", "organic_objects", "organic_export", "organic_import", "organic_commands")
+MODULES = ("organic_points", "organic_geom", "organic_sacred", "organic_biomimetic", "organic_objects", "organic_export", "organic_import", "organic_commands")
 
 
 def refresh_window():

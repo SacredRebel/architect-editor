@@ -78,7 +78,18 @@ set new documents to metres.
 - **Curves a wall can follow:** an Organic plan curve, a plan figure's outline, a sketch, a
   Draft B-spline, an arc. An outline with corners keeps them (its wall's top is then flat).
 - **Openings** are five lists on the wall, one entry per opening, in metres: position along
-  the centreline, width, height, sill, shape.
+  the base curve, width, height, sill, shape. A rectangular opening follows its wall: its
+  width is measured along the base curve and each jamb is square to the wall where it stands
+  (a glazed bay that turns 42° over its width is cut true). The arched, pointed and round
+  shapes are a flat outline pushed straight through, square to the wall at their middle.
+- **A wall's top by heights** (`TopHeights`): one height for each point of a base curve
+  through points, and the top is the smooth line through them; any other curve takes them
+  spread evenly along its length. For a wall that follows a roof.
+- **Made from records only, no button yet:** `Revolved` (a solid of revolution from an
+  outline of radius and height: a chimney), `HeightFieldShell` (a roof whose top is given as
+  heights on a grid over a plan outline: a formula, a scan), and `Holes` on a floor slab and
+  on such a roof (closed curves cut straight through). They came with Johny's house spec
+  (`..\spec_to_records.py`); the contract is `exchange\godot\FORMAT.md`.
 - **One solid or several:** a gridshell, a hanging net, a branching column and a veined leaf
   are compounds of solids (laths, branches, ribs). Their volume counts the overlaps at the
   joints twice.
@@ -172,6 +183,28 @@ dropped in silence. Sent back, the building's JSON carries `built_from`.
   `cut_top` also holds every result against the volume the wall must have, tries other
   stations where it does not agree, and raises rather than draw a wall that is not the one
   asked for. Wherever a tool only touches what it cuts, expect the same.
+- **A cut by a solid that shares a plane with what it cuts can take nothing at all.** A
+  door's solid that began exactly in the wall's own bottom was not cut out, and FreeCAD said
+  the two solids shared 0.000 m³: 11 of a house's 50 openings stood shut, each wall "valid".
+  An opening's solid now runs 50 mm past the wall's bottom or flat top where its sill or head
+  lies in it (`OPENING_PAST_MM`), every opening's middle must be open after the cut
+  (`less_openings`), and a wall whose opening stays shut is refused.
+- **`common` can hand a whole solid back, and `cut` agree with it.** Asked what four
+  partitions shared with the house's long exterior wall (a sound solid: one closed shell,
+  tolerances of 0.004 mm), `common` answered with each partition whole (3.3, 3.1, 8.0 and
+  3.8 m³), both ways round, and the partition less the wall came back empty. Counted with
+  points (2,500 places in each partition's box, those that lie in both solids) they share
+  0.06 to 0.12 m³ each: the partition's end in the wall. Where it matters what two solids
+  share, count it with points; two booleans that agree prove nothing.
+- **`Shape.Volume` and `Shape.Area` are not exact.** On a 78 m wall with a sampled top the
+  volume read 0.16 % too much and its plan's area 0.10 % too much; on a roof 0.36 % too
+  little. `organic_geom.volume_of` and `area_of` use OCCT's adaptive measure through
+  pythonocc, which FreeCAD 1.1 ships (`OCC.Core.BRepGProp`): it agreed with a count by strips
+  and with the solid's triangles to 0.001 %. Use them for what is held against a tolerance
+  and for what is reported; they cost seconds on a large solid.
+- **A shell from a height field** is its top face cut to the plan and pushed straight down
+  (`field_shell_shape`): under a second for 30 m by 11 m. Cutting the plan's prism by the
+  solids above the top and below the underside did not finish in ten minutes.
 - **Offset curves** are splines through true offset points every 0.3 m (`OFFSET_STEP_MM`):
   within 1.3 mm of the true offset on a 0.5 m bend, with half the triangles of 0.1 m.
 - **Meshing for the map** (`organic_export.tessellate`) meshes a copy of the whole solid
@@ -184,6 +217,9 @@ dropped in silence. Sent back, the building's JSON carries `built_from`.
   every open object's `Proxy` again. Without both, the window runs the old code.
 - **A click on a mesh** (the terrain) leaves no picked point in the selection; a selection
   observer hears it (`organic_commands.PickWatch`).
+- **A picture from the window:** FreeCAD turns its camera over several frames. An image saved
+  straight after `viewTop()` or `setCameraOrientation()` is taken mid-turn (a "plan" seen at
+  an angle). Wait until the camera node's position and orientation stand still, then save.
 - **A design made without the window** has no view providers: it opens grey and flat.
   `organic_objects.dress` gives them back on opening.
 - `Shape.BoundBox` takes B-spline faces untrimmed. Use `optimalBoundingBox(False, False)`:
@@ -204,8 +240,11 @@ a sample building drawn in the map's words (`freecad/samples/built-sample.json`)
 every piece against a closed form worked out from the file's own numbers;
 `freecad/check_organic.py` holds the kernels against closed forms and a building sent to the
 map against its design, the map's land files, the map's build envelope and the land pack.
-Each forges faults and must reject every one. All three run in the window (through the
-FreeCAD MCP connector) and without it (`freecad/run_headless.py`). What they write on the way
+`freecad/check_spec.py` holds a house built from Johny's spec against the spec itself, solid
+by solid, by walking each with points.
+Each forges faults and must reject every one. The first three run in the window (through the
+FreeCAD MCP connector) and without it (`freecad/run_headless.py`); `check_spec.py` runs
+without it. What they write on the way
 goes into the temp folder and is taken away once read; `ORGANIC_CHECK_KEEP=1` keeps it.
 
 ## Licence

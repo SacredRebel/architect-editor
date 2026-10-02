@@ -21,7 +21,6 @@ the notes it returns, and the building is still made from what it does know.
 """
 
 import json
-import math
 import os
 
 import FreeCAD as App
@@ -29,25 +28,25 @@ import FreeCAD as App
 import organic_export as ox
 import organic_geom as og
 import organic_objects as oo
+from organic_points import STEP, along_map_points, map_points  # noqa: F401  (the map's own sampling of a curve through points)
 
 MM = og.MM
 FORMATS = ("built/1",)
 # the pieces a built file may hold: the workbench's own classes, by their own names
 TYPES = ("PlanCurve", "Wall", "Slab", "ShellRoof", "LeafShell", "Vault", "Dome", "Steps", "SoapFilm", "MinimalShell",
-         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn")
+         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell")
 ALIASES = {"Step": "Slab"}  # a step is a slab that is named a step
 LABELS = {"PlanCurve": "Plan curve", "Wall": "Curved wall", "Slab": "Floor slab", "ShellRoof": "Shell roof", "LeafShell": "Leaf shell roof",
           "Vault": "Ribbed vault", "Dome": "Dome", "Steps": "Steps", "SoapFilm": "Minimal surface", "MinimalShell": "Saddle shell", "SacredFigure": "Plan figure",
           "SacredSolid": "Regular solid", "GeodesicDome": "Geodesic dome", "Gridshell": "Gridshell", "CellularWall": "Cellular wall",
-          "BranchingColumn": "Branching column"}
+          "BranchingColumn": "Branching column", "Revolved": "Solid of revolution", "HeightFieldShell": "Height field shell"}
 # What the map writes on a piece for its own use, which says nothing the piece's other numbers do
 # not say (FORMAT.md, "What the map adds"): the outline a leaf or a dome was fitted over, and how.
 # The leaf's spine, span, ridge and place, the dome's radius, stretch and place are worked out
 # from these by the map and stand in the record too; a vault on a curve takes its length from it.
 PASSED_OVER = {"LeafShell": ("Base", "Overhang", "Rise"), "Dome": ("Base",)}
 # lists of plain numbers that are metres (a list has no unit of its own)
-METRE_LISTS = ("OpeningPositions", "OpeningWidths", "OpeningHeights", "OpeningSills", "RidgeHeights")
-STEP = 0.2  # metres: the map draws a curve as points no further apart than this, and measures along them
+METRE_LISTS = ("OpeningPositions", "OpeningWidths", "OpeningHeights", "OpeningSills", "RidgeHeights", "TopHeights", "Heights")
 
 
 def built_dir():
@@ -109,49 +108,6 @@ def building_placement(doc, placement, notes):
 
 
 # ---------------------------------------------------------------- one piece
-def map_points(points, closed):
-    """A Points curve as the map draws it: its smooth curve as points no more than STEP apart
-    (the map's own sampling), in metres. The map measures an opening's place along these."""
-    p = []
-    for q in points:
-        v = (float(q[0]), float(q[1]))
-        if not p or ((p[-1][0] - v[0]) ** 2 + (p[-1][1] - v[1]) ** 2) ** 0.5 > 0.01:
-            p.append(v)
-    n = len(p)
-    if n < 2:
-        return list(p)
-    if n == 2:
-        closed = False
-    out = []
-    for i in range(n if closed else n - 1):
-        p0 = p[(i - 1) % n] if closed else p[max(i - 1, 0)]
-        p1, p2 = p[i], p[(i + 1) % n]
-        p3 = p[(i + 2) % n] if closed else p[min(i + 2, n - 1)]
-        k = max(2, int(math.ceil(((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5 / STEP)))
-        for j in range(k):
-            t = float(j) / k
-            out.append(tuple(0.5 * ((2.0 * p1[c]) + (p2[c] - p0[c]) * t + (2.0 * p0[c] - 5.0 * p1[c] + 4.0 * p2[c] - p3[c]) * t * t
-                                    + (3.0 * p1[c] - p0[c] - 3.0 * p2[c] + p3[c]) * t * t * t) for c in (0, 1)))
-    if not closed:
-        out.append(p[-1])
-    return out
-
-
-def along_map_points(pts, closed, s):
-    """The point s metres along the map's points of a curve (the short way round a closed one)."""
-    ring = pts + ([pts[0]] if closed else [])
-    total = sum(((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5 for a, b in zip(ring, ring[1:]))
-    if total <= 0:
-        return pts[0]
-    s = s % total if closed else max(0.0, min(total, s))
-    for a, b in zip(ring, ring[1:]):
-        d = ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
-        if s <= d and d > 0:
-            return (a[0] + (b[0] - a[0]) * s / d, a[1] + (b[1] - a[1]) * s / d)
-        s -= d
-    return ring[-1]
-
-
 def set_params(obj, params, made, scale, notes, where):
     """Set an object's properties from a piece's params: the same names, metres into lengths,
     names into choices, a piece's id into a link. What is not a property of the object is named."""
@@ -171,6 +127,15 @@ def set_params(obj, params, made, scale, notes, where):
                     notes.append("%s: %s names %r, which is not a piece made before it" % (where, name, value))
                 else:
                     setattr(obj, name, target)
+            elif kind == "App::PropertyLinkList":  # several pieces by their ids (the holes of a floor or of a roof)
+                found = []
+                for one in (value if isinstance(value, (list, tuple)) else [value]):
+                    target = made.get(str(one))
+                    if target is None:
+                        notes.append("%s: %s names %r, which is not a piece made before it" % (where, name, one))
+                    else:
+                        found.append(target)
+                setattr(obj, name, found)
             elif "ReadOnly" in obj.getEditorMode(name):
                 continue  # something the object works out itself (a length, a measure): not set
             elif kind in ("App::PropertyLength", "App::PropertyDistance"):

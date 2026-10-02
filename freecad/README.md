@@ -10,6 +10,8 @@ web app's build.
 | `QUICKSTART.md` | for Johny: the exact clicks from an empty FreeCAD to a building in the map, with pictures |
 | `realize.py` | a building drawn in the map (`built/1` records) made real without the window: the design, a `.glb`, an `.ifc`, a `.json` and a result. The map's "Realize in FreeCAD" calls it |
 | `check_import.py` | a sample building in the map's records (`samples/built-sample.json`), rebuilt by Import from the map and by `realize.py`, every piece against a closed form; with `--self-test` |
+| `spec_to_records.py` | a house spec (walls as points, openings, roofs as formulas: Johny's `exchange\house\concept\oak_canopy_S01.json`) written as `built/1` records. Plain Python, no FreeCAD; nothing is designed in it |
+| `check_spec.py` | a house built from those records, held against the spec itself: every wall face and top, every opening's jambs, sill and head, the floors, the chimney, the roofs; with `--self-test` (forged pieces, built and measured) |
 | `InstallOrganic.FCMacro` | installs or updates the workbench in `%APPDATA%\FreeCAD\v1-1\Mod\Organic` |
 | `check_toolbar.py` | presses every button's own code, at the origin and where a building stands, against closed forms; with `--self-test` |
 | `check_organic.py` | checks the workbench's solids and the building it sent to the map (its place, the road, the existing buildings, the IFC), with `--self-test` |
@@ -54,6 +56,38 @@ building, lane C's build envelope). The two are never mixed. The contract, field
 
 Measured on this PC: a room of one round wall with a door, a floor and a dome takes 2.7 to
 3.0 s for the whole process; the 24-piece sample 45 to 65 s.
+
+## spec_to_records.py and check_spec.py: Johny's house from his spec
+
+```
+python "C:\Playground\Architect-editor\freecad\spec_to_records.py" <spec.json> <records.json> --floor lower=0.30 --name "Oak Canopy S01"
+& "C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe" "C:\Playground\Architect-editor\freecad\check_spec.py" --pass <spec.json> <design.FCStd | records.json> --without=RS-PAV [--self-test]
+```
+
+`spec_to_records.py` reads a spec of the kind `exchange\house\concept\CHATGPT-PROMPTS.md`
+section 11 asks for and writes the map's records: one plan curve and one wall for each wall
+path (an outer-face path thickened inward, a centreline centred, the top-edge samples as
+`TopHeights`), the openings on their walls' lists, a slab for each floor outline with the
+courtyards as holes, the chimney as a solid of revolution, and each roof shell as a
+`HeightFieldShell`: the spec's own expression worked out on a grid. The rules are at the top
+of the file. What the spec says that the records do not hold goes, line by line, into
+`<records>.notes.txt`. A number the spec does not state is never made up: the lower floor's
+slab is made only because `--floor lower=0.30` says so, and the notes say that.
+
+`check_spec.py` does not read the records. It takes every number from the spec and every
+measure from the solids, by walking each solid with points (in it or not): where both faces
+of a wall stand at each point of its path and half-way between, where its top is, where an
+opening's two jambs, its sill and its head are, each floor's area, level and thickness, the
+chimney's radius, each roof's top against the spec's own samples and against its expression,
+its thickness, its holes and what it holds. `--self-test` builds forged pieces through the
+same import (a wall thickened outward, an opening 0.40 m along, a roof 0.05 m too high, a
+floor without its courtyards, ...) and must see each rejected by the check meant for it.
+
+Johny's concept S01, 2 Oct 2026: 75 pieces, built in 30 s; 18 checks pass and 19 of 19 forged
+pieces are rejected; the whole check takes six minutes (measured: 362 and 365 s), its forged
+pieces another six and a half. The first run of this check
+found 11 of the 50 openings not cut at all, in a house whose every solid was "valid": see
+`OPENING_PAST_MM` in `Organic/organic_geom.py`.
 
 ## SulphurMountainSite.FCMacro: the site template
 

@@ -15,6 +15,12 @@ import math
 import FreeCAD as App
 import Part
 
+try:  # OCCT's own measures with an error bound, through pythonocc, which FreeCAD ships (see volume_of)
+    from OCC.Core.BRepGProp import brepgprop as _gprop
+    from OCC.Core.GProp import GProp_GProps as _GProps
+except Exception:  # a FreeCAD without it: the plain measures
+    _gprop = None
+
 MM = 1000.0
 Z = App.Vector(0, 0, 1)
 Y = App.Vector(0, 1, 0)
@@ -45,6 +51,37 @@ def spline(points, closed=False, parameters=None):
     else:
         c.interpolate(Points=pts, Parameters=list(parameters), PeriodicFlag=closed)
     return c.toShape()
+
+
+def volume_of(shape, eps=1.0e-5):
+    """A solid's volume in mm3, to the relative error eps.
+
+    Shape.Volume is OCCT's plain measure: a fixed number of points to a face, however many
+    spans its splines have. On a wall of 78 m with a sampled top it read 0.16 % too much, and
+    the area of the wall's plan 0.10 % too much; the adaptive measure used here (Gauss-Kronrod,
+    OCCT's own, reached through pythonocc) agreed with the count by strips and with the
+    solid's triangles to 0.001 %. It costs time on a large solid (2.6 s on that wall at 1e-5),
+    so it is for what is reported and for what is held against a tolerance, not for sorting."""
+    if _gprop is not None:
+        try:
+            props = _GProps()
+            _gprop.VolumePropertiesGK(Part.__toPythonOCC__(shape), props, eps)
+            return props.Mass()
+        except Exception:
+            pass
+    return shape.Volume
+
+
+def area_of(shape, eps=1.0e-7):
+    """A face's area in mm2, to the relative error eps (see volume_of)."""
+    if _gprop is not None:
+        try:
+            props = _GProps()
+            _gprop.SurfaceProperties(Part.__toPythonOCC__(shape), props, eps)
+            return props.Mass()
+        except Exception:
+            pass
+    return shape.Area
 
 
 def baked(shape):
@@ -663,7 +700,11 @@ TOP_TOLERANCE = 5.0e-4
 
 
 def top_height(kind, height_m, rise_m, waves, f):
-    """Wall top above its base at a fraction f of the centreline's length (metres)."""
+    """Wall top above its base at a fraction f of the centreline's length (metres). `kind` is
+    one of the named top lines, or the top line itself: a function of f that gives metres
+    (a wall whose top follows heights given along it: sampled_top)."""
+    if callable(kind):
+        return kind(f)
     if kind == "Arch":
         return height_m + rise_m * math.sin(math.pi * f)
     if kind == "Wave":
@@ -671,6 +712,45 @@ def top_height(kind, height_m, rise_m, waves, f):
     if kind == "Slope":
         return height_m + rise_m * f
     return height_m
+
+
+def through_heights(heights, v, closed):
+    """The smooth line through heights given at whole numbers 0, 1, 2, … read at v: between
+    two of them the cubic that runs, at each, parallel to the line between its neighbours (a
+    Catmull-Rom spline, the same rule as a curve through points). Closed: the last height is
+    followed by the first again; open: the ends count twice."""
+    n = len(heights)
+    if n == 1:
+        return heights[0]
+    spans = n if closed else n - 1
+    v = v % spans if closed else max(0.0, min(float(spans), v))
+    i = min(int(math.floor(v)), spans - 1)
+    t = v - i
+    pick = (lambda k: heights[k % n]) if closed else (lambda k: heights[max(0, min(n - 1, k))])
+    p0, p1, p2, p3 = pick(i - 1), pick(i), pick(i + 1), pick(i + 2)
+    return 0.5 * (2.0 * p1 + (p2 - p0) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t * t + (3.0 * p1 - p0 - 3.0 * p2 + p3) * t * t * t)
+
+
+def sampled_top(edge, closed, heights, at_points):
+    """A wall's top line given as heights (m above its base): the function of the fraction of
+    the centreline's length that top_height asks for.
+
+    at_points: the heights belong to the points the base curve runs through, in their order
+    (a curve through points made by points_curve: its parameter counts the points); the top
+    line is then the smooth line through those heights, point for point. Otherwise they are
+    spread evenly along the centreline's length."""
+    heights = [float(h) for h in heights]
+    n = len(heights)
+    spans = n if closed else n - 1
+    length = edge.Length
+    u0 = edge.FirstParameter
+
+    def top(f):
+        f = f % 1.0 if closed else max(0.0, min(1.0, f))
+        v = (edge.getParameterByLength(f * length) - u0) if at_points else f * spans
+        return through_heights(heights, v, closed)
+
+    return top
 
 
 def _across(edge, u):
@@ -752,10 +832,11 @@ def cut_top(prism, edge, closed, d1, d2, z0, band_area, below_mm, top, height_m,
         except (Part.OCCError, ValueError) as exc:
             seen.append(str(exc))
             continue
-        if cut.isValid() and len(cut.Solids) == 1 and abs(cut.Volume / want - 1.0) < TOP_TOLERANCE:
+        holds = volume_of(cut)
+        if cut.isValid() and len(cut.Solids) == 1 and abs(holds / want - 1.0) < TOP_TOLERANCE:
             return cut
-        seen.append("%+.2f %%%s" % (100.0 * (cut.Volume / want - 1.0), "" if cut.isValid() else ", not valid"))
-    raise ValueError("the wall's %s top could not be cut (against what it must hold: %s)" % (top.lower(), "; ".join(seen)))
+        seen.append("%+.2f %%%s" % (100.0 * (holds / want - 1.0), "" if cut.isValid() else ", not valid"))
+    raise ValueError("the wall's %s top could not be cut (against what it must hold: %s)" % ("sampled" if callable(top) else top.lower(), "; ".join(seen)))
 
 
 def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", top_rise_m=0.0,
@@ -770,6 +851,7 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     t = thickness_m * MM
     z0 = edge.valueAt(edge.FirstParameter).z
     d1, d2 = wall_sides(align, t)
+    shaped = callable(top) or (top != "Flat" and abs(top_rise_m) > 1e-9)
     if isinstance(edge, WirePath):
         # an outline with corners: the band between its two true offsets, corners kept
         if edge.isClosed():
@@ -780,9 +862,11 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
             band = face_of(big.cut(small))
         else:
             band = open_band(edge, d1, d2)
-        if top != "Flat" and abs(top_rise_m) > 1e-9:
+        if shaped:
             App.Console.PrintWarning("Organic: a shaped wall top needs a smooth base curve; this one has corners, so its top is flat\n")
-            top = "Flat"
+            if callable(top):  # heights along it: flat at the lowest of them, so it stays under what it was meant to meet
+                height_m = min(top(k / 200.0) for k in range(201))
+            top, shaped = "Flat", False
     elif closed:
         fa = Part.Face(wire_of(_side(edge, d1, closed)))
         fb = Part.Face(wire_of(_side(edge, d2, closed)))
@@ -799,38 +883,138 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
         pb0, pb1 = b.valueAt(b.FirstParameter), b.valueAt(b.LastParameter)
         band = Part.Face(wire_of([a, Part.LineSegment(pa1, pb1).toShape(), b, Part.LineSegment(pb0, pa0).toShape()]))
     band.translate(App.Vector(0, 0, -foundation_m * MM))
-    if top != "Flat" and abs(top_rise_m) > 1e-9:
-        peak = max(height_m, height_m + top_rise_m)
+    if shaped:
+        peak = max(top(k / 400.0) for k in range(401)) if callable(top) else max(height_m, height_m + top_rise_m)
         prism = band.extrude(App.Vector(0, 0, (peak + foundation_m) * MM + TOP_CLEAR_MM))
-        wall = cut_top(prism, edge, closed, d1, d2, z0, band.Area, foundation_m * MM, top, height_m, top_rise_m, top_waves)
+        wall = cut_top(prism, edge, closed, d1, d2, z0, area_of(band), foundation_m * MM, top, height_m, top_rise_m, top_waves)
     else:
         wall = band.extrude(App.Vector(0, 0, (height_m + foundation_m) * MM))
+    voids = []
     for o in openings:
-        wall = solid_of(wall.cut(opening_void(edge, closed, t, d1, d2, **o)))
+        sill, high = o.get("sill_m", 0.9), o.get("sill_m", 0.9) + o.get("height_m", 1.3)
+        # a sill in the wall's own bottom, a head in its flat top: the opening's solid runs on past them (see OPENING_PAST_MM)
+        under = OPENING_PAST_MM if abs(sill + foundation_m) <= 1e-9 else 0.0
+        over = OPENING_PAST_MM if not shaped and high >= height_m - 1e-9 else 0.0
+        voids.append(opening_void(edge, closed, t, d1, d2, under_mm=under, over_mm=over, **o))
+    wall = less_openings(wall, voids, [opening_middle(edge, closed, d1, d2, o["position_m"], o.get("height_m", 1.3), o.get("sill_m", 0.9)) for o in openings])
     wall.translate(App.Vector(0, 0, base_z_m * MM))
     return refined(wall)
 
 
-def opening_outline(width_m, height_m, sill_m, shape="Arch"):
-    """An opening's outline in (along, up) metres: straight runs, arcs, and a closing run."""
+def path_at(edge, closed, s_mm):
+    """The point of a wall's base curve s_mm along it, and the horizontal unit vector to its
+    left there. A closed curve goes round; past an open curve's ends it runs straight on."""
+    length = edge.Length
+    if closed:
+        return _across(edge, edge.getParameterByLength(s_mm % length))
+    inside = max(0.0, min(length, s_mm))
+    p, left = _across(edge, edge.getParameterByLength(inside))
+    return p + left.cross(Z) * (s_mm - inside), left  # left x Z points along the wall
+
+
+def opening_middle(edge, closed, d1, d2, position_m, height_m, sill_m):
+    """The middle of an opening: half-way through the wall and half-way up the opening."""
+    p, left = path_at(edge, closed, position_m * MM if closed else max(0.0, min(edge.Length, position_m * MM)))
+    return p + left * ((d1 + d2) / 2.0) + Z * ((sill_m + height_m / 2.0) * MM)
+
+
+def less_openings(wall, voids, middles):
+    """A wall less its openings' solids: all at once (one cut, however many openings), and one
+    after the other where that does not hold. OCCT's cut can hand a solid back whole, or cut
+    by some of the solids only, and still call it valid: so every opening's middle that lies
+    in the wall before the cut must lie outside it afterwards, and a wall whose opening stays
+    shut is refused rather than drawn."""
+    if not voids:
+        return wall
+    was_in = [wall.isInside(p, 0.5, False) for p in middles]
+    if len(voids) > 1:
+        try:
+            cut = wall.cut(voids)
+            if cut.isValid() and cut.Solids and cut.Volume < wall.Volume and not any(cut.isInside(p, 0.5, False) for p, was in zip(middles, was_in) if was):
+                return solid_of(cut)
+        except Part.OCCError:
+            pass
+    for i, (void, middle, was) in enumerate(zip(voids, middles, was_in)):
+        wall = solid_of(wall.cut(void))
+        if was and wall.isInside(middle, 0.5, False):
+            raise ValueError("the wall's opening %d could not be cut: the wall is still whole at its middle" % (i + 1))
+    return wall
+
+
+def opening_outline(width_m, height_m, sill_m, shape="Arch", under_m=0.0, over_m=0.0):
+    """An opening's outline in (along, up) metres: straight runs, arcs, and a closing run. Its
+    flat bottom is drawn under_m lower and a flat head over_m higher (see OPENING_PAST_MM)."""
     w, h, s = width_m, height_m, sill_m
+    low = s - under_m
     if shape == "Arch":
         spring = max(s, s + h - w / 2)
-        return [(-w / 2, s), (w / 2, s), (w / 2, spring)], [((w / 2, spring), (0.0, spring + w / 2), (-w / 2, spring))], [(-w / 2, spring)]
+        return [(-w / 2, low), (w / 2, low), (w / 2, spring)], [((w / 2, spring), (0.0, spring + w / 2), (-w / 2, spring))], [(-w / 2, spring)]
     if shape == "Pointed":
         spring = max(s, s + h - w * math.sqrt(3) / 2)
         c30, s30 = math.cos(math.radians(30)), math.sin(math.radians(30))
         apex = (0.0, spring + w * math.sqrt(3) / 2)
         right = ((w / 2, spring), (-w / 2 + w * c30, spring + w * s30), apex)
         left = (apex, (w / 2 - w * c30, spring + w * s30), (-w / 2, spring))
-        return [(-w / 2, s), (w / 2, s), (w / 2, spring)], [right, left], [(-w / 2, spring)]
-    return [(-w / 2, s), (w / 2, s), (w / 2, s + h), (-w / 2, s + h)], [], []
+        return [(-w / 2, low), (w / 2, low), (w / 2, spring)], [right, left], [(-w / 2, spring)]
+    return [(-w / 2, low), (w / 2, low), (w / 2, s + h + over_m), (-w / 2, s + h + over_m)], [], []
 
 
-def opening_void(edge, closed, thickness_mm, d1, d2, position_m, width_m, height_m, sill_m=0.9, shape="Arch"):
-    """The solid an opening removes: its outline in the plane square to the centreline at
-    position_m (metres of arc length, the opening's centre), pushed through the wall's
-    thickness plus the bow of a curved wall over the opening's width."""
+# A rectangular opening follows its wall (rect_void): its solid reaches this far beyond the
+# wall's two faces, and is drawn through stations no further apart than this along the curve.
+OPENING_REACH_MM = 200.0
+OPENING_STATION_MM = 100.0
+# An opening whose sill lies in the wall's own bottom (a door, on a wall without a foundation),
+# or whose head lies in a flat wall's top, has its solid run this far on past that plane. Where
+# the two shared it, OCCT's cut took nothing at all and said nothing: of a house's 50 openings,
+# 11 doors and sliders stayed shut (their solids and the wall "shared 0.000 m3"); every one of
+# them was cut once its solid started 50 mm lower.
+OPENING_PAST_MM = 50.0
+
+
+def rect_void(edge, closed, d1, d2, position_m, width_m, height_m, sill_m, under_mm=0.0, over_mm=0.0):
+    """The solid a rectangular opening takes out of a wall on a smooth curve: the wall's own
+    band between the two normals of the base curve half the width before and half the width
+    after the opening's middle, from the sill up by the height. So the width is measured
+    along the base curve and each jamb is square to the wall where it stands, however far the
+    wall turns over the opening (the map cuts its openings the same way).
+
+    None where the wall does not turn at all over the opening (a straight box says the same),
+    and where it turns tighter than the band is wide (the band folds over itself): the caller
+    then cuts straight through, square to the wall at the opening's middle."""
+    length = edge.Length
+    s, half = position_m * MM, width_m * MM / 2.0
+    if not closed:
+        s = max(0.0, min(length, s))
+    n = max(8, int(math.ceil(2.0 * half / OPENING_STATION_MM)))
+    places = [path_at(edge, closed, s - half + 2.0 * half * k / n) for k in range(n + 1)]
+    bend = max(a[1].getAngle(b[1]) for a, b in zip(places, places[1:])) / (2.0 * half / n)  # the tightest turn between two stations, per mm
+    if bend * 2.0 * half < 1e-6:
+        return None
+    reach = min(OPENING_REACH_MM, 0.5 * (1.0 / bend - max(abs(d1), abs(d2))))
+    if reach < 10.0:
+        return None
+    up = Z * (sill_m * MM - under_mm)
+    rows = [[p + left * d + up for p, left in places] for d in (d1 - reach, d2 + reach)]
+    outline = [spline(rows[0]), Part.LineSegment(rows[0][-1], rows[1][-1]).toShape(), spline(rows[1]), Part.LineSegment(rows[1][0], rows[0][0]).toShape()]
+    try:
+        void = Part.Face(Part.Wire(Part.__sortEdges__(outline))).extrude(Z * (height_m * MM + under_mm + over_mm))
+    except Part.OCCError:
+        return None
+    return void if void.isValid() and void.Volume > 0 else None
+
+
+def opening_void(edge, closed, thickness_mm, d1, d2, position_m, width_m, height_m, sill_m=0.9, shape="Arch", under_mm=0.0, over_mm=0.0):
+    """The solid an opening removes.
+
+    A rectangular opening on a smooth curve follows the wall (rect_void). Every other shape,
+    and any opening on an outline with corners, is its outline in the plane square to the
+    centreline at position_m (metres of arc length, the opening's centre), pushed straight
+    through the wall's thickness plus the bow of a curved wall over the opening's width.
+    under_mm, over_mm: how far the solid runs on below its sill and above a flat head."""
+    if shape == "Rect" and not isinstance(edge, WirePath):
+        void = rect_void(edge, closed, d1, d2, position_m, width_m, height_m, sill_m, under_mm, over_mm)
+        if void is not None:
+            return void
     length_m = edge.Length / MM
     pos = position_m % length_m if closed else max(0.0, min(length_m, position_m))
     u = edge.getParameterByLength(pos * MM)
@@ -855,7 +1039,7 @@ def opening_void(edge, closed, thickness_mm, d1, d2, position_m, width_m, height
         r = width_m / 2
         wire = Part.Wire(Part.makeCircle(r * MM, at(0.0, sill_m + r), left))
     else:
-        lines, arcs, closing = opening_outline(width_m, height_m, sill_m, shape)
+        lines, arcs, closing = opening_outline(width_m, height_m, sill_m, shape, under_mm / MM, over_mm / MM if shape == "Rect" else 0.0)
         edges = [Part.LineSegment(at(*q0), at(*q1)).toShape() for q0, q1 in zip(lines, lines[1:])]
         edges += [Part.Arc(at(*q0), at(*qm), at(*q1)).toShape() for q0, qm, q1 in arcs]
         edges.append(Part.LineSegment(at(*(closing[0] if closing else lines[-1])), at(*lines[0])).toShape())
@@ -1409,6 +1593,74 @@ def slab_shape(ring_edge, thickness_m, inset_m=0.0):
     else:
         face = region_offset(ring_edge, -inset_m * MM)
     return solid_of(face.extrude(App.Vector(0, 0, -thickness_m * MM)))
+
+
+def plan_face(closed_edge):
+    """The plan face a closed curve encloses (a smooth edge, or an outline with corners)."""
+    return Part.Face(closed_edge.wire) if isinstance(closed_edge, WirePath) else Part.Face(wire_of(closed_edge))
+
+
+def with_holes(solid, hole_edges):
+    """A solid with upright holes cut through it: one for each closed plan curve, as far up
+    and down as the solid goes (a courtyard through a floor, a chimney through a roof)."""
+    for edge in hole_edges:
+        solid = solid_of(solid.cut(prism_of(plan_face(edge))))
+    return solid
+
+
+def revolved_shape(profile_rz):
+    """A solid of revolution about the vertical axis through its origin: profile_rz is its
+    outline as (radius, height) in metres, from one end of the axis to the other, straight
+    between the points (a chimney that tapers, a round pier, a turned finial)."""
+    pts = [(float(r), float(z)) for r, z in profile_rz]
+    if len(pts) < 2 or any(r < 0 for r, _z in pts) or max(r for r, _z in pts) <= 0:
+        raise ValueError("a solid of revolution needs at least two (radius, height) points, no radius below zero and one above it")
+    ring = [V(0, 0, pts[0][1])] if pts[0][0] > 1e-9 else []
+    ring += [V(r, 0, z) for r, z in pts]
+    if pts[-1][0] > 1e-9:
+        ring.append(V(0, 0, pts[-1][1]))
+    face = Part.Face(Part.makePolygon(ring + [ring[0]]))
+    return solid_of(face.revolve(App.Vector(), Z, 360))
+
+
+def field_shell_shape(outline_edge, origin_xy_m, step_m, columns, heights_m, thickness_m, hole_edges=()):
+    """A shell whose top is a height field: heights (m) on a square grid of step_m, row after
+    row from origin_xy_m (each row along +x, the rows following in +y), `columns` to a row.
+    Its plan is the closed curve outline_edge, less an upright hole for each of hole_edges; its
+    thickness is measured straight down.
+
+    The top is the smooth surface through the grid's points, cut to the plan; the solid is
+    that face pushed straight down by the thickness, so it holds its plan's area times its
+    thickness whatever the surface does. (Cutting the plan's prism by the solids above the
+    top and below the underside, the other way to the same solid, did not finish in ten
+    minutes on a roof of 30 m by 11 m.)
+    Returns (solid, the plan's area in mm2)."""
+    heights = [float(h) for h in heights_m]
+    columns = int(columns)
+    rows = len(heights) // columns if columns > 0 else 0
+    if columns < 2 or rows < 2 or rows * columns != len(heights):
+        raise ValueError("a height field needs at least 2 by 2 heights in whole rows (%d heights in rows of %d)" % (len(heights), columns))
+    x0, y0 = origin_xy_m
+    plan = plan_face(outline_edge)
+    level = plan.BoundBox.ZMin
+    for edge in hole_edges:
+        hole = plan_face(edge)
+        hole.translate(App.Vector(0, 0, level - hole.BoundBox.ZMin))  # a hole drawn at another level is the same hole
+        plan = face_of(plan.cut(hole))
+    box = plan.BoundBox
+    if (box.XMin < x0 * MM - 1.0 or box.XMax > (x0 + (columns - 1) * step_m) * MM + 1.0
+            or box.YMin < y0 * MM - 1.0 or box.YMax > (y0 + (rows - 1) * step_m) * MM + 1.0):
+        raise ValueError("the height field does not reach as far as the shell's outline")
+    surface = Part.BSplineSurface()
+    surface.interpolate([[V(x0 + i * step_m, y0 + j * step_m, heights[j * columns + i]) for j in range(rows)] for i in range(columns)])
+    top = surface.toShape().common(prism_of(plan))
+    if not top.Faces:
+        raise ValueError("the height field and the shell's outline do not meet")
+    parts = [f.extrude(App.Vector(0, 0, -thickness_m * MM)) for f in top.Faces]
+    solid = solid_of(parts[0] if len(parts) == 1 else Part.makeCompound(parts))
+    if not solid.isValid():
+        raise ValueError("the shell could not be built from this height field")
+    return solid, area_of(plan)
 
 
 # ---------------------------------------------------------------- minimal surfaces
