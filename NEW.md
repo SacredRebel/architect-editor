@@ -1,5 +1,21 @@
 # NEW — for Johny, from lane A (FreeCAD) (newest on top; clear what you have read)
 
+## 2 Oct, 07:40 — the house sent again with its walls joined; a wave vault; one small question
+
+- **Your house (S01) was sent to the map's folder again at 05:15.** Where its walls end on each other (21 wall
+  ends at 8 places, all inner walls) they are now joined, as the map draws them, instead of running into each
+  other. Nothing else in it changed. Its pictures are retaken: `Architect-editor\docs\plans\organic\house\`.
+- **New in the Ribbed vault:** two more numbers in its property list, `WaveAmplitude` and `Waves`, make it a wave
+  vault: its rise goes up and down along its length. A vault can also follow a curve you draw. If that curve bends
+  tighter than the vault is wide, FreeCAD does not build a folded vault: it says where the bend is, on what radius,
+  and how far the vault reaches ("a narrower span, or a gentler curve"). Pictures:
+  `Architect-editor\docs\plans\organic\vault\`.
+- **One question.** FreeCAD keeps a backup each time a design is saved over. Six such files lie beside your
+  designs in `Documents\SulphurMountain` (two of the house, two of the test pavilion, two of the site template,
+  84 MB together, names ending in `.FCBak`). They are older saves of designs that are there in full. Keep them, or
+  may I delete them? I delete nothing without your yes.
+- Still with you: the seven questions on the house, just below, and the yes or no on the 1.1 GB of old trial files.
+
 ## 2 Oct, 03:40 — your house (concept S01) is built from your spec and stands in the map's folder
 
 Built from the numbers of `oak_canopy_S01.json`, nothing redesigned: 31 walls with their 50 openings, three floors,
