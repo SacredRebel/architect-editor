@@ -139,7 +139,11 @@ def set_params(obj, params, made, scale, notes, where):
             elif "ReadOnly" in obj.getEditorMode(name):
                 continue  # something the object works out itself (a length, a measure): not set
             elif kind in ("App::PropertyLength", "App::PropertyDistance"):
-                setattr(obj, name, float(value) * scale * MM)
+                want = float(value) * scale * MM
+                setattr(obj, name, want)
+                got = getattr(obj, name).Value
+                if abs(got - want) > 1e-6:  # FreeCAD keeps a length at nought or above (a slab's Inset of -0.1 became 0) and says nothing
+                    notes.append("%s: %s cannot be %g m (a length here is never below nought): it is %g m" % (where, name, float(value), got / MM / scale))
             elif kind == "App::PropertyEnumeration":
                 options = obj.getEnumerationsOfProperty(name)
                 match = next((o for o in options if o.lower() == str(value).strip().lower()), None)
@@ -264,8 +268,19 @@ def import_built(doc, source, join=True):
             set_params(obj, params, made, scale, notes, where)
             if kind == "PlanCurve" and str(obj.Kind) == "Points" and abs(oo.m(obj.Inset)) > 1e-9:
                 notes.append("%s: Inset %.3f m on a curve through points is left out (its points say where it lies)" % (where, oo.m(obj.Inset)))
-            if kind == "Vault" and obj.Base is not None and obj.Ribs > 0:
-                notes.append("%s: its %d ribs are left out (ribs are a straight vault's; this one follows a curve)" % (where, obj.Ribs))
+            if kind == "Vault":
+                asked, waves = oo.m(obj.WaveAmplitude), int(obj.Waves)
+                wave, _count = og.wave_of(str(obj.Profile), oo.m(obj.Rise), asked, waves)
+                if obj.Ribs > 0 and (obj.Base is not None or wave > 0):
+                    notes.append("%s: its %d ribs are left out (ribs are a plain straight vault's; this one %s)"
+                                 % (where, obj.Ribs, "follows a curve" if obj.Base is not None else "is a wave vault"))
+                # what the map draws too is said, and is not a loss
+                if asked > 0 and waves >= 1 and str(obj.Profile) == "Semicircle":
+                    notes.info("%s: a semicircle has one rise for its span: its wave of %.2f m is not there (nor is it on the map)" % (where, asked))
+                elif wave > 0 and wave < asked - 1e-9:
+                    notes.info("%s: its wave of %.2f m is taken as %.2f m: a trough keeps %.1f m of rise (as on the map)" % (where, asked, wave, og.WAVE_TROUGH_M))
+                if str(obj.Profile) == "Segmental" and oo.m(obj.Rise) > oo.m(obj.Span) / 2 + 1e-9:
+                    notes.info("%s: a segmental arch is at most a semicircle: its rise of %.2f m is taken as %.2f m (as on the map)" % (where, oo.m(obj.Rise), oo.m(obj.Span) / 2))
             based = getattr(obj, "Base", None) if "Base" in obj.PropertiesList else None
             if based is not None and piece.get("placement"):
                 notes.append("%s: it stands on %s, which says where it lies; its own placement is left out" % (where, based.Label))
@@ -314,7 +329,24 @@ def import_built(doc, source, join=True):
                    "corners reach" % ends(meet - joined))
     for key, obj in made.items():
         shape = obj.Shape
-        solid = type(obj.Proxy).__name__ not in ("PlanCurve", "SacredFigure")
+        kind = type(obj.Proxy).__name__
+        solid = kind not in ("PlanCurve", "SacredFigure")
         if "Invalid" in obj.State or shape.isNull() or (solid and (not shape.Solids or not shape.isValid())):
-            notes.append("%s %r (%s): it could not be built from these numbers" % (type(obj.Proxy).__name__, key, obj.Label))
+            why = refusal(obj)
+            notes.append("%s %r (%s): it could not be built from these numbers%s" % (kind, key, obj.Label, ": " + why if why else ""))
+            continue
+        for row in getattr(obj.Proxy, "ends_turned", None) or []:  # a vault too wide for the turn its curve makes at an end
+            notes.info("%s %r (%s): at its %s its curve turns on a radius of %.2f m over %.2f m, and the vault reaches %.2f m to either side of it: its sections there "
+                       "are turned up to %.1f° off square to the curve, so that its inner edge keeps running forward and does not fold over itself (the map draws them square)"
+                       % (kind, key, obj.Label, row["end"], row["radius_m"], row["length_m"], row["reach_m"], row["angle_deg"]))
     return {"building": b, "made": made, "notes": list(notes), "lost": notes.lost(), "name": name, "format": fmt, "path": path, "scale": scale}
+
+
+def refusal(obj):
+    """Why an object could not be built: the words its own making refused it with, as FreeCAD
+    keeps them on the object ("" when it keeps none)."""
+    try:
+        said = str(obj.getStatusString())
+    except Exception:
+        return ""
+    return "" if said in ("", "Valid", "Touched", "Invalid", "Error") else said

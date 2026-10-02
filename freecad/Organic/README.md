@@ -38,7 +38,7 @@ For Johny, click by click, from an empty FreeCAD to a building in the map:
 | Opening | an opening where you clicked the wall: a door (1.0 × 2.2 m) when you click near its foot, a window (1.2 × 1.3 m, sill 0.9 m) higher up; rectangular, arched, pointed or round | plugin-eco openings |
 | Leaf shell roof | a shell from a ridge with four heights, an eave and a curl, with ribs; footings under its tips | plugin-eco leaf shell |
 | Shell roof on a closed wall | eaves + rise (1 − ρ^2.2) from the pole to the wall, drooping to the overhang | plugin-eco organic roof |
-| Ribbed vault | a barrel vault on an ellipse, semicircle, segmental, pointed, catenary or parabola, with ribs; a plinth under its springings | plugin-eco vault, plugin-hagia-sophia arch |
+| Ribbed vault | a barrel vault on an ellipse, semicircle, segmental, pointed, catenary or parabola, with ribs; a plinth under its springings; along an open curve when one is selected; a wave vault when `WaveAmplitude` and `Waves` are set | plugin-eco vault, plugin-hagia-sophia arch; the wave: lane R's study (Dieste's vaults) |
 | Catenary arch | a free-standing arch; `ThrustInMiddleThird` is the Poleni check; the same plinth | plugin-hagia-sophia arch |
 | Dome | ellipse, sphere, catenary, parabola or onion meridian, with an oculus | plugin-hagia-sophia dome |
 | Minimal surface | a membrane on a closed curve, lifted by a mast ring | plugin-eco minimal surface |
@@ -85,6 +85,16 @@ set new documents to metres.
 - **A wall's top by heights** (`TopHeights`): one height for each point of a base curve
   through points, and the top is the smooth line through them; any other curve takes them
   spread evenly along its length. For a wall that follows a roof.
+- **A wave vault** is a vault with two more numbers: `WaveAmplitude` (how far its rise goes
+  up and down along it) and `Waves` (whole waves along its length, the first crest at its
+  start). Every section is the vault's own arch for the rise there; a trough keeps 0.2 m of
+  rise; a semicircle has one rise for its span and takes no wave; it has no ribs.
+- **A vault along a curve** (its `Base`: any open plan curve) stands square to the curve at
+  every place. A curve that bends tighter than the vault reaches to either side would fold
+  it over itself: the vault is then not built, and its error says where, on what radius, and
+  how far it reaches. At the two ends of a curve drawn in the map the curve turns sharply
+  over its first decimetres (the map's curve leaves its end point at half speed); there the
+  last sections are turned a little off square instead, and the import says by how much.
 - **Made from records only, no button yet:** `Revolved` (a solid of revolution from an
   outline of radius and height: a chimney), `HeightFieldShell` (a roof whose top is given as
   heights on a grid over a plan outline: a formula, a scan), and `Holes` on a floor slab and
@@ -227,6 +237,35 @@ were joined, and how many meet other walls and stay square. A wall's joints are 
   flat faces only**: on a wall's curved side the adaptive area read 10 % too much and said
   its error was nought, while `Shape.Area` was right. And keep one check on FreeCAD's own
   Volume (the note on `wire_of` above): the two measures agreeing is a check in itself.
+- **OCCT's loft, and its surface through points, sag between sections, and say nothing.**
+  A wave vault lofted through 73 sections (`Part.makeLoft`, and `BRepOffsetAPI_ThruSections`
+  through pythonocc) lay 13.7 mm under its wave half-way between its first two sections, and
+  a plain vault lofted along 30 m of curve 1 mm beside it, while every section itself was
+  met and the volume agreed with the sections summed to 0.001 %: no check on volume, validity
+  or the sections sees it. `Part.BSplineSurface.interpolate` through the same points lay
+  24.8 mm off (the same approximation underneath). Held to a cubic the loft is right on a
+  straight wave vault and 64 mm off on a curved one; and where the sections change form (a
+  wave so deep that the arch at its trough is nearly flat) it never finishes. A vault along
+  a curve and a wave vault are therefore built section by section (`sectioned_vault`): each
+  section worked out as points, the inside and the outside each a surface made of plain
+  curve interpolations (every section's line through its points, then each pole of those
+  lines through the stations: `surface_through`), the feet, toes, plinth and ends flat or
+  ruled faces between the same lines, all sewn into one solid. R's wave vault of 18 m: its
+  crown within 0.003 mm of the wave between sections, FreeCAD's own Volume and the adaptive
+  one within 0.0001 % of the sections summed, built in 0.4 s. **A check on a lofted or
+  interpolated surface must look between the sections**, not only at them.
+- **A plain interpolation of a curve lies flat at its ends** (no curvature there): through
+  stations 0.19 to 0.25 m apart a wave's crest read 0.1 mm low and a vault's axis 0.4 mm
+  beside its curve in the first interval. `curve_through` gives each end the direction its own first
+  five points show; where the points set out slowly and then stride (the inner edge of a
+  vault at the turned end of its curve) that slope comes out backward, and the end leaves
+  along its first two points instead.
+- **Faces of a surface through many stations are cut into pieces** (`SECTION_FACE_STATIONS`,
+  16 along, 8 across), like the edges in `wire_of`, and for the same reason. They are not
+  merged again: `refined` (removeSplitter) would put them back into one face.
+- **FreeCAD keeps the words an object was refused with**: `obj.getStatusString()` gives the
+  text of the error its `execute` raised. The import puts it into its note ("it could not be
+  built from these numbers: …"), so a refusal reaches the map with its reason.
 - **A shell from a height field** is its top face cut to the plan and pushed straight down
   (`field_shell_shape`): under a second for 30 m by 11 m. Cutting the plan's prism by the
   solids above the top and below the underside did not finish in ten minutes.

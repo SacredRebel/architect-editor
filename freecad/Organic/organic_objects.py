@@ -413,12 +413,19 @@ def add_opening(wall, position_m, width_m=1.2, height_m=1.3, sill_m=0.9, shape="
 # ---------------------------------------------------------------- vaults and arches
 class Vault(Organic):
     """A barrel vault (or, short, an arch) along the object's +Y, springing from its base; or,
-    with a Base, along that open plan curve (the map's vault on a drawn spine).
+    with a Base, along that open plan curve (the map's vault on a drawn spine), every section
+    square to it. A curve that turns tighter than the vault is wide would fold it: inside the
+    curve that is refused; at an end of the curve (the map's own curve turns sharply there)
+    the last sections are turned a little off square instead, and ends_turned says so.
 
     Profiles: Ellipse (plugin-eco's barrel), Semicircle, Segmental and Pointed (exact
     circles), Catenary (the hanging-chain arch, plugin-hagia-sophia's fit) and Parabola.
-    Ribs are arches of RibWidth that stand RibDepth under the intrados (a straight vault's
-    only). ThrustInMiddleThird is plugin-hagia-sophia's Poleni check on the ring."""
+    Ribs are arches of RibWidth that stand RibDepth under the intrados (a plain straight
+    vault's only). With WaveAmplitude and Waves it is a wave vault (lane R's, the map's): its
+    rise goes up and down along its length, Rise + WaveAmplitude at a crest (the first at its
+    start), Rise - WaveAmplitude at a trough, every section its Profile for the rise there.
+    ThrustInMiddleThird is plugin-hagia-sophia's Poleni check on the ring (of a wave vault:
+    at its crest and at its trough, the worse of the two)."""
 
     ifc_type = "Roof"
     icon = "OrganicVault.svg"
@@ -437,6 +444,8 @@ class Vault(Organic):
         length(obj, "RibWidth", g, "rib width along the barrel", 0.25)
         length(obj, "RibDepth", g, "rib depth under the intrados", 0.15)
         length(obj, "Plinth", g, "depth of a plinth under the springings, below the base: for ground that falls away (0: none)", 0.0)
+        length(obj, "WaveAmplitude", g, "a wave vault: how far the rise goes up and down along the vault, from Rise + this at a crest to Rise - this at a trough (0: a plain vault)", 0.0)
+        prop(obj, "App::PropertyInteger", "Waves", g, "a wave vault: whole waves along the vault's length, the first crest at its start (0: a plain vault)", 0)
         prop(obj, "App::PropertyBool", "ThrustInMiddleThird", "Measures", "Poleni: the catenary of the ring's centreline stays within its middle third")
         prop(obj, "App::PropertyFloat", "ThrustDeviation", "Measures", "the largest distance of that catenary from the centreline (m)")
         for p in ("ThrustInMiddleThird", "ThrustDeviation"):
@@ -446,15 +455,22 @@ class Vault(Organic):
         if self.fresh(obj):
             return
         spine, closed = base_edge(obj)
-        if spine is not None:
-            if closed:
-                raise ValueError("%s runs along an open curve; this one is closed" % obj.Label)
-            shape = og.vault_on_curve(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), spine, m(obj.Plinth))
+        if spine is not None and closed:
+            raise ValueError("%s runs along an open curve; this one is closed" % obj.Label)
+        amplitude, waves = og.wave_of(str(obj.Profile), m(obj.Rise), m(obj.WaveAmplitude), obj.Waves)
+        said = {}
+        if amplitude > 0:  # a wave vault: no ribs (they are a plain straight vault's)
+            shape, _must = og.wave_vault_shape(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), m(obj.VaultLength), amplitude, waves, m(obj.Plinth), spine, said)
+        elif spine is not None:
+            shape = og.vault_on_curve(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), spine, m(obj.Plinth), said)
         else:
             shape = og.vault_shape(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), m(obj.VaultLength),
                                    obj.Ribs, m(obj.RibWidth), m(obj.RibDepth), m(obj.Plinth))
-        ok, worst = og.thrust_line_ok(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness))
-        obj.ThrustInMiddleThird, obj.ThrustDeviation = bool(ok), float(worst)
+        self.ends_turned = list(said.get("turned") or [])  # the ends of its curve where its sections stand off square (og.curve_frames)
+        # the thrust line of the plain vault; of a wave vault, at its crest and at its trough: the worse of the two
+        rises = (m(obj.Rise) + amplitude, m(obj.Rise) - amplitude) if amplitude > 0 else (m(obj.Rise),)
+        read = [og.thrust_line_ok(obj.Profile, m(obj.Span), rise, m(obj.Thickness)) for rise in rises]
+        obj.ThrustInMiddleThird, obj.ThrustDeviation = all(bool(ok) for ok, _worst in read), max(float(worst) for _ok, worst in read)
         set_local(obj, shape)
 
 

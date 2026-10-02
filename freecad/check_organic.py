@@ -12,7 +12,10 @@ Every expectation is derived here, not taken from the workbench's own constants:
   A. kernels against closed forms: a wall on an arc (t H R θ) and on a circle (2π R t H), a
      straight wall less a rectangular opening, a semicircular vault (π/2 (Ro² - Ri²) L), the
      same on a plinth (two stems t L p more, its lowest point p below the springings), a
-     hemispherical dome (2/3 π (R³ - (R-t)³)); walls with a shaped top on an arc and on
+     hemispherical dome (2/3 π (R³ - (R-t)³)); a straight vault of every profile built section
+     by section, as a vault along a curve and a wave vault are (each section's area in closed
+     form: a circle arch's ring, a pointed arch's two rings, and for a hanging chain, a
+     parabola and an ellipse the band t L + t² φ with its toes and its plinth); walls with a shaped top on an arc and on
      smooth curves through points, open and closed (t L times the top line's mean height,
      L the curve's cubic spans integrated here); a top cut that does nothing refused by the
      kernel, not drawn; and every kernel, the leaf shell and the organic roof included, a
@@ -124,6 +127,76 @@ def smooth_length(points, closed, steps=400):
         h = 1.0 / steps
         total += h / 3 * (speed(0.0) + speed(1.0) + sum((4 if k % 2 else 2) * speed(k * h) for k in range(1, steps)))
     return total
+
+
+def circle_band(span, rise, t):
+    """The section (m²) of a vault on a circle arch: what lies above the springing line between
+    the arch's circle and the same circle t larger. (A disc of radius r above a line h over
+    its centre holds r² acos(h / r) - h sqrt(r² - h²).)"""
+    half = span / 2
+    rho = (half * half + rise * rise) / (2 * rise)
+    h = rho - rise  # how far the centre lies under the springing line
+    part = lambda r: r * r * math.acos(h / r) - h * math.sqrt(r * r - h * h)  # noqa: E731
+    return part(rho + t) - part(rho)
+
+
+def circle_foot(span, rise, t):
+    """How wide such a vault's foot is on the springing line (m): from the arch's springing out
+    to where the larger circle comes down (t on a semicircle, more on a flatter arch)."""
+    half = span / 2
+    rho = (half * half + rise * rise) / (2 * rise)
+    return math.sqrt((rho + t) ** 2 - (rho - rise) ** 2) - half
+
+
+def pointed_band(span, rise, t):
+    """The section (m²) of a vault on a pointed arch: two arcs about (±d, 0) through the
+    springings and the apex, and the same two t larger. (A disc of radius r on the far side
+    of an upright line d from its centre holds r² acos(d / r) - d sqrt(r² - d²); the half of
+    it above the springing line, twice.)"""
+    half = span / 2
+    d = (rise * rise - half * half) / span
+    part = lambda r: r * r * math.acos(d / r) - d * math.sqrt(r * r - d * d)  # noqa: E731
+    return part(half + d + t) - part(half + d)
+
+
+def offset_band(length, slope, t, plinth=0.0):
+    """The section (m²) of a vault whose outside lies t off its inside line along its normal:
+    t times the line's length, plus t² times half the angle it turns through (it leaves one
+    springing at `slope` and reaches the other at minus that); the two toes, where the outside
+    is carried on straight to the springing line (t² / slope together; none on an upright
+    springing); and under each foot, t / sin φ wide, a stem `plinth` deep."""
+    phi = math.atan(slope) if slope != float("inf") else math.pi / 2
+    toes = 0.0 if slope == float("inf") else t * t / slope
+    return t * length + t * t * phi + toes + 2 * plinth * t / math.sin(phi)
+
+
+def chain_line(span, rise):
+    """(the length, the slope at its springing) of the hanging chain z = a (cosh(span / 2a) -
+    cosh(x / a)) that rises `rise` over `span`; a found here by halving."""
+    lo, hi = 1e-6 * span, 1e6 * span
+    for _ in range(200):
+        mid = math.sqrt(lo * hi)
+        over = span / 2 / mid
+        if over > 700.0 or mid * (math.cosh(over) - 1.0) > rise:
+            lo = mid
+        else:
+            hi = mid
+    a = math.sqrt(lo * hi)
+    return 2 * a * math.sinh(span / 2 / a), math.sinh(span / 2 / a)
+
+
+def parabola_line(span, rise):
+    """(the length, the slope at its springing) of the parabola z = rise (1 - (2x / span)²)."""
+    half, m = span / 2, 4 * rise / span
+    return half * math.sqrt(1 + m * m) + half / m * math.asinh(m), m
+
+
+def ellipse_line(span, rise, steps=20000):
+    """(the length, the slope at its springing: upright) of the half ellipse x = span / 2 cos k,
+    z = rise sin k, its speed summed here by Simpson's rule."""
+    speed = lambda k: math.hypot(span / 2 * math.sin(k), rise * math.cos(k))  # noqa: E731
+    h = math.pi / steps
+    return h / 3 * (speed(0.0) + speed(math.pi) + sum((4 if k % 2 else 2) * speed(k * h) for k in range(1, steps))), float("inf")
 
 
 
@@ -555,6 +628,18 @@ def read_facts():
         "smooth ring through points, arch top": (og.wall_shape(ring, True, 0.3, 1.8, top="Arch", top_rise_m=0.9),
                                                  0.3 * smooth_length(RING_POINTS, True) * (1.8 + 0.9 * 2 / math.pi)),
         "catenary vault, ribs": (og.vault_shape("Catenary", 6.0, 4.0, 0.25, 8.0, ribs=3), None),
+        # the vault built section by section (how a vault along a curve and a wave vault are made), here straight and
+        # plain, every profile against its own section's closed form times its length
+        "semicircular vault, section by section": (og.sectioned_vault("Semicircle", 6.0, 3.0, 0.3, 8.0)[0], circle_band(6.0, 3.0, 0.3) * 8.0),
+        "segmental vault on a plinth, section by section": (og.sectioned_vault("Segmental", 6.0, 2.0, 0.25, 8.0, plinth_m=0.6)[0],
+                                                            (circle_band(6.0, 2.0, 0.25) + 2 * circle_foot(6.0, 2.0, 0.25) * 0.6) * 8.0),
+        "pointed vault, section by section": (og.sectioned_vault("Pointed", 6.0, 4.0, 0.25, 8.0)[0], pointed_band(6.0, 4.0, 0.25) * 8.0),
+        "catenary vault on a plinth, section by section": (og.sectioned_vault("Catenary", 6.0, 4.0, 0.25, 8.0, plinth_m=0.6)[0],
+                                                           offset_band(*chain_line(6.0, 4.0), 0.25, 0.6) * 8.0),
+        "flat catenary vault, section by section": (og.sectioned_vault("Catenary", 4.0, 1.0, 0.15, 8.0)[0], offset_band(*chain_line(4.0, 1.0), 0.15) * 8.0),
+        "parabolic vault on a plinth, section by section": (og.sectioned_vault("Parabola", 6.0, 3.0, 0.2, 8.0, plinth_m=0.6)[0],
+                                                            offset_band(*parabola_line(6.0, 3.0), 0.2, 0.6) * 8.0),
+        "elliptic vault, section by section": (og.sectioned_vault("Ellipse", 6.0, 2.5, 0.15, 8.0)[0], offset_band(*ellipse_line(6.0, 2.5), 0.15) * 8.0),
         "leaf shell": (og.leaf_shell_shape(16.0, 10.0, (0.4, 5.4, 6.0, 0.4), 0.4, 1.0, 0.2, 0.15, 2.0, outline="Pointed"), None),
         "leaf shell on footings": (og.leaf_shell_shape(16.0, 10.0, (0.4, 5.4, 6.0, 0.4), 0.4, 1.0, 0.2, 0.15, 2.0, outline="Pointed", plinth_m=0.6), None),
         "organic roof": (og.organic_roof_shape(lob, 3.2, 2.4, 0.8, 0.2), None),
@@ -871,6 +956,15 @@ def forgeries(facts):
         g["kernels"]["arc wall"]["volume"] /= 2
         g["kernels"]["arc wall"]["mesh"] /= 2
 
+    def without_toes(g):
+        """A vault built section by section whose outside stops square at its springings, where
+        the plain vault's is carried on to the springing line: the two toes less (t² / slope,
+        along its 8 m), by every measure of it."""
+        kernel = g["kernels"]["flat catenary vault, section by section"]
+        toes = 0.15 * 0.15 / chain_line(4.0, 1.0)[1] * 8.0
+        kernel["volume"] -= toes
+        kernel["mesh"] -= toes
+
     def written(g, de=0.0, dn=0.0, du=0.0):
         """What the export wrote, moved: the sidecar, the GLB's own block, the IFC."""
         for pl in (g["sidecar"]["placement"], g["glb_placement"]):
@@ -982,6 +1076,7 @@ def forgeries(facts):
         ("an IFC that breaks its own schema", "E the IFC holds against its own schema", f(lambda g: g["ifc"]["statements"].append("forged: IfcWall.Name is not of type IfcLabel"))),
         ("a validation that says nothing of a broken file", "E the IFC holds against its own schema", f(lambda g: g["ifc"].__setitem__("speaks", []))),
         ("a wall half as thick", "A arc wall", f(thinner)),
+        ("a vault built section by section without its toes", "A flat catenary vault, section by section", f(without_toes)),
         ("the land file's roads 8 m off the pack's", "D the map's roads lie along", f(roads_off)),
         ("an element's base 0.15 m above the ground", "D every element that reaches the ground", f(floating)),
         ("the plinth left out of the vault", "A vault on a plinth", f(no_stem)),

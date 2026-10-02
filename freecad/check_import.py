@@ -43,8 +43,26 @@ out here from the file's own numbers, not taken from the workbench:
      these cases by three counts: FreeCAD's own Volume, the adaptive measure, and its plan
      times its height less its openings (a long wall on a curve, joined at its end, with
      each side in one face reads 4 % short by the first: its sides must be in pieces).
+  V. wave vaults (a Vault with WaveAmplitude and Waves: lane R's, the map's) and vaults along a
+     drawn curve: R's two reference cases, their numbers read here from R's own port note
+     (ports\\FROM-RESEARCH.md in the map's repository, section 5): the crown at a crest and at
+     a trough and the height at a quarter span on a crest, read off the solid on upright
+     lines; the crown at some fifty places along its axis, between its sections too, against
+     R's formula (OCCT's loft left a wave vault 13.7 mm low between its first two sections
+     with every section met); its top; its underside's area; its volume by three counts
+     against the closed form worked out here (a hanging chain's band, its toes and its plinth,
+     summed along the wave). A wave vault along a drawn curve: its crown and its middle at 14
+     places along the curve as walked here, its end faces square, its volume against the same
+     closed form, Part's own check. A vault wider than its curve turns at its start, which
+     the map draws: its first sections turned, the end face off square by what the vault says
+     and the note says, the same vault with every section left square crossing itself. A
+     vault on a bend too tight for it: not built, the note saying where, on what radius and
+     how far the vault reaches, each worked out here too. And what is not built as asked, each
+     with its note: a wave on a semicircle, a wave deeper than the vault is high, ribs under a
+     wave, a segmental arch asked higher than a semicircle.
   N. nothing dropped in silence: the sample's one unknown type and one unknown parameter are
-     both named in the notes, and nothing else is.
+     both named in the notes, and nothing else is; and a number that cannot be (a floor's
+     Inset below nought: a length here is never below nought) is named, not changed in silence.
   T. there and back: the imported building sent to the map again says the same longitude,
      latitude, altitude and turn the file said, and names the file it came from.
   Z. realized: the same file through realize.py (what the map calls, FreeCAD without its
@@ -193,6 +211,13 @@ def scaled_sample():
     }
 
 
+def refused_sample():
+    """A floor asked 0.1 m beyond its curve: an Inset below nought, which a length here cannot be."""
+    return {"format": "built/1", "name": "Refused sample",
+            "pieces": [{"id": "c", "type": "PlanCurve", "params": {"Kind": "Circle", "Radius": 2.0}},
+                       {"id": "s", "type": "Slab", "params": {"Base": "c", "Thickness": 0.2, "Inset": -0.1}}]}
+
+
 def line_wall(key, a, b, thick, height=2.5, smooth=False, **more):
     """Two records: a line from a to b, and the wall on it."""
     return [{"id": "c-" + key, "type": "PlanCurve", "name": "Line " + key, "params": {"Kind": "Points", "Points": [list(a), list(b)], "Closed": False, "Smooth": smooth}},
@@ -314,6 +339,280 @@ def port_note():
         key, value = line.split(" = ", 1)
         points = [(float(u), float(v)) for u, v in re.findall(r"\((-?\d+\.\d+), (-?\d+\.\d+)\)", value)]
         out[key.strip()] = points if points else value.strip()
+    return out
+
+
+RESEARCH_NOTE = os.environ.get("PLAYGROUND_RESEARCH_NOTE", r"C:\Playground\Spatial Map\spatial-map\ports\FROM-RESEARCH.md")
+WAVE_THICKNESS = 0.12  # lane R's own record of the wave vault (pattern card P-005): one layer of brick
+WAVE_SPINE = [[0.0, 0.0], [4.0, 1.5], [8.0, 0.0], [12.0, -1.0]]
+WAVE_ON_CURVE = {"Span": 2.4, "Rise": 1.6, "Thickness": 0.15, "Plinth": 0.4, "WaveAmplitude": 0.4, "Waves": 2}
+# a curve the map draws a wide vault on, though it turns sharply at its start: a short first span, then a long one
+# turned 20° (the map's curve leaves its end point at half speed, and the map does not measure its first 0.6 m)
+HOOK_SPINE = [[0.0, 0.0], [3.0, 0.0], [10.52, 2.74], [18.0, 6.0]]
+WAVE_ON_HOOK = {"Span": 4.0, "Rise": 2.4, "Thickness": 0.15, "Plinth": 0.4, "WaveAmplitude": 0.5, "Waves": 3}
+# a curve with a bend inside it that a vault of this width cannot follow (the map refuses it too)
+TIGHT_SPINE = [[0.0, 0.0], [5.0, 0.0], [5.5, 2.5], [10.0, 2.5]]
+VAULT_ON_TIGHT = {"Profile": "Catenary", "Span": 4.0, "Rise": 2.4, "Thickness": 0.15, "VaultLength": 6.0, "Ribs": 0}
+WAVE_PLAIN = {"Profile": "Catenary", "Span": 4.0, "Rise": 2.0, "Thickness": 0.15, "VaultLength": 8.0, "Ribs": 0, "Plinth": 0.0, "WaveAmplitude": 0.4, "Waves": 2}
+# where along a curve a vault on it is read: close to its two ends, and at places that fall between its sections
+CURVE_FRACTIONS = (0.004, 0.03, 0.0625, 0.125, 0.19, 0.25, 0.31, 0.4, 0.5, 0.63, 0.75, 0.875, 0.97, 0.996)
+
+
+def research_wave_cases():
+    """Lane R's two reference cases of the wave vault, as R's port note states them (section 5;
+    R counts heights from the plinth's foot): {"A": {...}, "B": {...}} with Span, Rise,
+    VaultLength, WaveAmplitude, Waves, Plinth, and crest, trough, quarter (the crown at a crest
+    and at a trough, the height at a quarter span on a crest) and surface (m2). {} when the
+    note is not there."""
+    try:
+        with open(RESEARCH_NOTE, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return {}
+    out = {}
+    said = r"Reference case ([AB]) \S+ Span ([\d.]+), Rise ([\d.]+), VaultLength ([\d.]+), WaveAmplitude ([\d.]+), Waves (\d+), Plinth ([\d.]+)\*\*:(.*?)(?:\n\s*\n|\Z)"
+    for found in re.finditer(said, text, re.S):
+        body = " ".join(found.group(8).split())
+        crown = re.search(r"crown ([\d.]+)(?: at a crest,| /) ([\d.]+)", body)
+        quarter = re.search(r"quarter span on a crest ([\d.]+)", body)
+        surface = re.search(r"surface ([\d.]+) m", body)
+        if crown and quarter and surface:
+            out[found.group(1)] = {"Span": float(found.group(2)), "Rise": float(found.group(3)), "VaultLength": float(found.group(4)), "WaveAmplitude": float(found.group(5)),
+                                   "Waves": int(found.group(6)), "Plinth": float(found.group(7)), "crest": float(crown.group(1)), "trough": float(crown.group(2)),
+                                   "quarter": float(quarter.group(1)), "surface": float(surface.group(1))}
+    return out
+
+
+def wave_cases(ref):
+    """Wave vaults, and vaults along a drawn curve, as records: {case: its pieces}. R's two
+    reference cases (their numbers as read from R's note), one along a drawn curve, one wider
+    than its curve turns at its start, one on a bend too tight for it, and four where something
+    is not built as asked."""
+    out = {}
+    for letter, r in sorted(ref.items()):
+        out[letter] = [{"id": "v", "type": "Vault", "name": "Wave vault " + letter,
+                        "params": {"Profile": "Catenary", "Span": r["Span"], "Rise": r["Rise"], "Thickness": WAVE_THICKNESS, "VaultLength": r["VaultLength"], "Ribs": 0,
+                                   "Plinth": r["Plinth"], "WaveAmplitude": r["WaveAmplitude"], "Waves": r["Waves"]}}]
+    out["curve"] = [{"id": "c", "type": "PlanCurve", "name": "Wave spine", "params": {"Kind": "Points", "Points": WAVE_SPINE, "Closed": False}},
+                    {"id": "v", "type": "Vault", "name": "Wave vault on a curve", "params": dict({"Base": "c", "Profile": "Catenary", "VaultLength": 6.0, "Ribs": 0}, **WAVE_ON_CURVE)}]
+    out["hook"] = [{"id": "c", "type": "PlanCurve", "name": "Spine with a sharp start", "params": {"Kind": "Points", "Points": HOOK_SPINE, "Closed": False}},
+                   {"id": "v", "type": "Vault", "name": "Wide wave vault on a curve", "params": dict({"Base": "c", "Profile": "Catenary", "VaultLength": 6.0, "Ribs": 0}, **WAVE_ON_HOOK)}]
+    out["tight"] = [{"id": "c", "type": "PlanCurve", "name": "Spine with a tight bend", "params": {"Kind": "Points", "Points": TIGHT_SPINE, "Closed": False}},
+                    {"id": "v", "type": "Vault", "name": "Vault on a bend too tight", "params": dict({"Base": "c"}, **VAULT_ON_TIGHT)}]
+    out["semicircle"] = [{"id": "v", "type": "Vault", "name": "Wave asked of a semicircle", "params": dict(WAVE_PLAIN, Profile="Semicircle")}]
+    out["deep"] = [{"id": "v", "type": "Vault", "name": "Wave deeper than the vault", "params": dict(WAVE_PLAIN, Rise=1.0, WaveAmplitude=2.0)}]
+    out["ribbed"] = [{"id": "v", "type": "Vault", "name": "Wave vault with ribs", "params": dict(WAVE_PLAIN, Ribs=4)}]
+    out["segmental"] = [{"id": "v", "type": "Vault", "name": "Segmental arch asked too high", "params": dict(WAVE_PLAIN, Profile="Segmental", Rise=3.0, WaveAmplitude=0.0, Waves=0)}]
+    return out
+
+
+def smooth_walk(points, steps=2000):
+    """The map's smooth curve through open points, walked finely: [(metres along, x, y)]."""
+    out, total, last = [], 0.0, None
+    for i in range(len(points) - 1):
+        for k in range(steps + 1 if i == len(points) - 2 else steps):
+            q = smooth_point(points, i, k / steps)
+            if last is not None:
+                total += math.dist(last, q)
+            out.append((total, q[0], q[1]))
+            last = q
+    return out
+
+
+def curve_places(points, fractions):
+    """(the length of the map's smooth curve through points, [(metres along, x, y, tx, ty)] at
+    those fractions of it: where the curve is there, and which way it runs)."""
+    walk = smooth_walk(points)
+    total = walk[-1][0]
+    out = []
+    for f in fractions:
+        s = min(total, max(0.0, f * total))
+        k = next(i for i in range(1, len(walk)) if walk[i][0] >= s or i == len(walk) - 1)
+        a, b = walk[k - 1], walk[k]
+        t, d = (s - a[0]) / (b[0] - a[0]), math.dist(a[1:], b[1:])
+        out.append((s, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, (b[1] - a[1]) / d, (b[2] - a[2]) / d))
+    return total, out
+
+
+def circle_radius(a, b, d):
+    """The radius of the circle through three plan points (inf when they lie in line)."""
+    twice = abs((b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]))
+    return math.dist(a, b) * math.dist(b, d) * math.dist(d, a) / (2.0 * twice) if twice > 1e-12 else float("inf")
+
+
+def tightest_radius(points):
+    """The smallest radius the map's smooth curve through points turns on, anywhere along it,
+    and how far along: by the circle through every three neighbours of its fine walk."""
+    walk = smooth_walk(points)
+    return min((circle_radius(a[1:], b[1:], d[1:]), b[0]) for a, b, d in zip(walk, walk[1:], walk[2:]) if math.dist(a[1:], b[1:]) > 1e-9 and math.dist(b[1:], d[1:]) > 1e-9)
+
+
+def map_tightest(points, step=0.2):
+    """The map's own measure of a drawn curve's tightest bend (pieces.gd, tightest, written
+    out again here): the curve as the map holds it, points no more than 0.2 m apart on each
+    span; the circle through each point and the points three before and three after it; the
+    first three and the last three points are not measured."""
+    pts = []
+    for i in range(len(points) - 1):
+        k = max(2, int(math.ceil(math.dist(points[i], points[i + 1]) / step)))
+        pts += [smooth_point(points, i, j / k) for j in range(k)]
+    pts.append(tuple(points[-1]))
+    return min([circle_radius(pts[i - 3], pts[i], pts[i + 3]) for i in range(3, len(pts) - 3)] or [float("inf")])
+
+
+def chain_parameter(span, rise):
+    """a of the hanging chain z = a (cosh(span / 2a) - cosh(x / a)) that rises `rise` over
+    `span`, found here by halving (the workbench has its own)."""
+    lo, hi = 1e-6 * span, 1e6 * span
+    for _ in range(200):
+        mid = math.sqrt(lo * hi)
+        over = span / 2 / mid
+        if over > 700.0 or mid * (math.cosh(over) - 1.0) > rise:
+            lo = mid
+        else:
+            hi = mid
+    return math.sqrt(lo * hi)
+
+
+def chain_section(span, rise, thick, plinth=0.0):
+    """(the area in m² of a vault's section on a hanging chain, in closed form; how far its
+    foot reaches from its middle). The band `thick` outside the chain holds thick times the
+    chain's length plus thick² times half the angle the chain turns through; each toe (the
+    outside carried on straight to the springing line) thick² / (2 tan φ), φ the chain's slope
+    at its springing; each plinth stem is as wide as the foot, thick / sin φ."""
+    a = chain_parameter(span, rise)
+    slope = math.sinh(span / 2 / a)
+    phi = math.atan(slope)
+    area = thick * 2.0 * a * slope + thick * thick * phi + thick * thick / slope + 2.0 * plinth * thick / math.sin(phi)
+    return area, span / 2 + thick / math.sin(phi)
+
+
+def wave_volume(par, length, steps=400):
+    """A wave vault's volume in closed form (m³): its section's area at the rise of each place
+    (chain_section), summed along its length by Simpson's rule."""
+    area = lambda s: chain_section(par["Span"], par["Rise"] + par["WaveAmplitude"] * math.cos(2 * math.pi * par["Waves"] * s / length),  # noqa: E731
+                                   par["Thickness"], par.get("Plinth", 0.0))[0]
+    return length / steps / 3.0 * (area(0.0) + area(length) + 4.0 * sum(area(length * k / steps) for k in range(1, steps, 2))
+                                   + 2.0 * sum(area(length * k / steps) for k in range(2, steps, 2)))
+
+
+def wave_facts(doc, ref):
+    """Each case of wave_cases() made by the button's own import and read off its solid.
+
+    A straight one: the height of its underside (the lowest of the solid on an upright line)
+    over its axis at a crest, at a trough and at its start, at a quarter span on a crest, and
+    at some fifty places along its axis, between its sections too (the furthest of them from
+    the wave's formula); its lowest and highest point; the area of its underside (the curved faces
+    that have the solid above them and air below); its volume by FreeCAD's own measure, by the
+    adaptive one and by its triangles.
+
+    One along a drawn curve: the height of its underside over the curve, and how far its
+    middle (between its two legs, 0.6 m above its springings, on a level line square to the
+    curve) lies beside the curve, at CURVE_FRACTIONS of the curve as this check walks it; how
+    far each of its two end faces stands off square to the curve there; what the vault itself
+    says of turned ends; whether Part's own check finds the solid crossing itself; its volume.
+    The wide one once more with the kernel's guard off (every section square to the curve):
+    what Part's check finds then.
+
+    And of each: what the notes say."""
+    import MeshPart
+    import organic_geom as og
+
+    def sound(shape):
+        try:
+            shape.check(True)  # the kernel's own search for a solid that crosses itself
+            return True
+        except Exception:
+            return False
+
+    def made(name, pieces, guard=True):
+        og.GUARD_FOLDS = guard
+        try:
+            res = imported(doc, {"format": "built/1", "name": "Wave " + name, "pieces": pieces}, "wave-%s%s.json" % (name.lower(), "" if guard else "-square"))
+        finally:
+            og.GUARD_FOLDS = True
+        b, vault = res["building"], res["made"].get("v")
+        row = {"notes": [n for n in res["notes"] if "states no placement" not in n], "lost": list(res["lost"]), "built": False}
+        if vault is None or vault.Shape.isNull() or len(vault.Shape.Solids) != 1 or not vault.Shape.isValid():
+            return row, None, None
+        shape = vault.Shape.copy()
+        shape.Placement = b.Placement.inverse().multiply(shape.Placement)
+        row.update(built=True, turned=[dict(r) for r in getattr(vault.Proxy, "ends_turned", [])])
+        return row, vault, shape
+
+    out = {}
+    cases = wave_cases(ref)
+    for name, pieces in cases.items():
+        row, vault, shape = made(name, pieces)
+        out[name] = row
+        if shape is None:
+            continue
+        box = shape.optimalBoundingBox(False, False)
+
+        def under(x, y, level=(1.0, 0.0)):
+            """The lowest of the solid on the upright line through (x, y). An upright line that passes through a seam
+            between two faces can come back with nothing (it did, at one place of fourteen, with a seam along the crown;
+            and at another, on a seam across the vault). It is then asked again 2 mm to either side along `level`, the
+            way the height does not change; and if a seam runs that way too, 2 mm before and after the place the other
+            way, and the mean of those two is taken (on a wave that is within a thousandth of a millimetre)."""
+            def lowest(px, py):
+                hit = shape.common(Part.makeLine(App.Vector(px * MM, py * MM, box.ZMin - 1000.0), App.Vector(px * MM, py * MM, box.ZMax + 1000.0)))
+                zs = [v.Point.z / MM for v in hit.Vertexes]
+                return min(zs) if zs else None
+
+            for d in (0.0, 0.002, -0.002):
+                z = lowest(x + level[0] * d, y + level[1] * d)
+                if z is not None:
+                    return z
+            pair = [lowest(x - level[1] * d, y + level[0] * d) for d in (0.002, -0.002)]
+            return sum(pair) / 2.0 if None not in pair else None
+
+        par = next(q["params"] for q in pieces if q["id"] == "v")
+        row.update(foot=box.ZMin / MM, top=box.ZMax / MM)
+        spine = next((q["params"]["Points"] for q in pieces if q["id"] == "c"), None)
+        if spine is not None:
+            total, places = curve_places(spine, CURVE_FRACTIONS)
+            crowns, beside = [], []
+            for s, x, y, tx, ty in places:
+                crowns.append((s / total, under(x, y, (ty, -tx))))
+                right, p = App.Vector(ty, -tx, 0), App.Vector(x * MM, y * MM, 600.0)
+                hit = shape.common(Part.makeLine(p - right * 30000.0, p + right * 30000.0))
+                across = sorted((v.Point - p).dot(right) for v in hit.Vertexes)
+                beside.append((s / total, (across[1] + across[2]) / 2.0 / MM if len(across) == 4 else None))
+            ends = []
+            for (x, y), toward in ((spine[0], spine[1]), (spine[-1], spine[-2])):  # the map's curve leaves its end along the line to the next point
+                tx, ty = (toward[0] - x) / math.dist((x, y), toward), (toward[1] - y) / math.dist((x, y), toward)
+                flat = [f for f in shape.Faces if type(f.Surface).__name__ == "Plane" and abs(f.Surface.Axis.z) < 1e-6
+                        and abs((App.Vector(x * MM, y * MM, 0) - f.Surface.Position).dot(f.Surface.Axis)) < 1.0]
+                face = max(flat, key=lambda f: f.Area) if flat else None
+                ends.append(None if face is None else math.degrees(math.acos(min(1.0, abs(face.Surface.Axis.x * tx + face.Surface.Axis.y * ty)))))
+            row.update(crowns=crowns, beside=beside, ends=ends, length=total, measured=vault.Base.Shape.Length / MM if vault.Base is not None else None,
+                       plain=shape.Volume / 1e9, exact=og.volume_of(shape) / 1e9, sound=sound(shape))
+            continue
+        length, count = par["VaultLength"], max(1, int(par.get("Waves") or 1))
+        crest_y, trough_y = -length / 2 + length / count, -length / 2 + length / count / 2  # the second crest, the first trough
+        row.update(crest=under(0.0, crest_y), trough=under(0.0, trough_y), start=under(0.0, -length / 2 + 0.01), quarter=under(par["Span"] / 4, crest_y, (0.0, 1.0)))
+        if name in ref:
+            worst = 0.0
+            along = sorted({round(length * k / 40.0, 6) for k in range(1, 40)}
+                           | {round(e, 6) for d in (0.02, 0.05, 0.1, 0.15, 0.2, 0.3) for e in (d, length - d)})  # every 40th of its length, and close to its two ends
+            for s in along:
+                z = under(0.0, -length / 2 + s)
+                worst = max(worst, abs(z - (par["Rise"] + par["WaveAmplitude"] * math.cos(2 * math.pi * par["Waves"] * s / length))) if z is not None else float("inf"))
+            below = 0.0
+            for face in shape.Faces:
+                if type(face.Surface).__name__ == "Plane" or face.BoundBox.ZLength < 1.0:
+                    continue
+                u0, u1, v0, v1 = face.ParameterRange
+                at = face.valueAt((u0 + u1) / 2, (v0 + v1) / 2)
+                if shape.isInside(at + App.Vector(0, 0, 5.0), 0.001, False) and not shape.isInside(at - App.Vector(0, 0, 5.0), 0.001, True):
+                    below += face.Area
+            mesh = MeshPart.meshFromShape(Shape=shape.copy(), LinearDeflection=2.0, AngularDeflection=0.1, Relative=False)
+            row.update(between=worst, places=len(along), underside=below / 1e6, plain=shape.Volume / 1e9, exact=og.volume_of(shape) / 1e9, mesh=mesh.Volume / 1e9, triangles=mesh.CountFacets)
+    # the wide vault once more with every section left square to its curve: the fault the turned end is there to prevent
+    if "hook" in out:
+        row, _vault, shape = made("hook", cases["hook"], guard=False)
+        out["hook"]["square"] = {"built": row["built"], "sound": sound(shape) if shape is not None else None, "notes": row["notes"]}
     return out
 
 
@@ -488,6 +787,13 @@ def gather():
                            "open_there": not inside(b2, wall, 1.5, 0.0, 1.5), "solid_before": inside(b2, wall, 0.5, 0.0, 1.5), "scale": res2["scale"]}
         # walls that end on each other
         facts["joints"] = joint_facts(doc)
+        # wave vaults
+        facts["research"] = research_wave_cases()
+        facts["waves"] = wave_facts(doc, facts["research"])
+        # a number a property cannot take
+        res3 = imported(doc, refused_sample(), "refused-sample.json")
+        floor = res3["made"]["s"]
+        facts["refused"] = {"notes": list(res3["notes"]), "lost": list(res3["lost"]), "volume": floor.Shape.Volume / 1e9, "inset": floor.Inset.Value / MM}
     finally:
         App.closeDocument(doc.Name)
     # Z. the same file realized, as the map calls for it: realize.py's own function, the design saved, the files read back here
@@ -812,12 +1118,123 @@ def judge(facts):
        % (len(measured), 100 * off_plain, 100 * off_exact, long_wall.get("plain", float("nan")), long_wall.get("exact", float("nan")), long_wall.get("counted", float("nan")),
           long_wall.get("curved", 0), shared("long")["places"], asked))
 
+    # V. wave vaults: lane R's own numbers (read from R's note, heights there counted from the plinth's foot) against
+    # heights read off the solids
+    research, waves = facts.get("research") or {}, facts.get("waves") or {}
+    off = lambda got, want: abs(got - want) if got is not None else float("inf")  # noqa: E731
+    nan = float("nan")
+    for letter in ("A", "B"):
+        r, w = research.get(letter) or {}, waves.get(letter) or {}
+        lift = r.get("Plinth", 0.0)
+        heights = [(w.get(k), r.get(v)) for k, v in (("crest", "crest"), ("trough", "trough"), ("start", "crest"), ("quarter", "quarter"))]
+        closed = wave_volume(dict(r, Thickness=WAVE_THICKNESS), r["VaultLength"]) if r else nan  # the section's area in closed form, summed along the vault here
+        top = r["Rise"] + r["WaveAmplitude"] + WAVE_THICKNESS if r else nan  # over a crest the outside stands the thickness above the crown
+        ok(bool(r) and w.get("built") and all(g is not None and abs(g + lift - want) <= 0.001 for g, want in heights) and off(w.get("foot"), -lift) <= 0.001
+           and w.get("between", float("inf")) <= 0.001 and off(w.get("top"), top) <= 0.001 and abs(w.get("underside", 0.0) / r["surface"] - 1.0) <= 0.003
+           and abs(w["exact"] / closed - 1.0) <= 0.0005 and abs(w["plain"] / closed - 1.0) <= 0.001 and abs(w["mesh"] / closed - 1.0) <= 0.003,
+           "V lane R's wave vault, reference case %s (%s): counted from the plinth's foot, the crown stands %s at a crest, %s at a trough and %s at its start, and the underside %s at a "
+           "quarter span on a crest (R: %s, %s, %s, %s; within 0.001 m); at %s places along its axis, between its sections too, the crown lies within %.5f m of R's wave (0.001 allowed); "
+           "its top %.4f m over its springings (the crest and the thickness: %.4f); its underside %.2f m² (R: %s); it holds %.4f m³ by the adaptive measure, %.4f by FreeCAD's own, "
+           "%.4f by its %s triangles (its section's area in closed form, summed along it here: %.4f; within 0.05, 0.1 and 0.3 %%)"
+           % (letter, "span %g m, rise %g ± %g m, %d waves over %g m" % (r["Span"], r["Rise"], r["WaveAmplitude"], r["Waves"], r["VaultLength"]) if r else "R's NOTE IS NOT THERE: " + RESEARCH_NOTE,
+              *("%.4f" % (w[k] + lift) if w.get(k) is not None else "nothing" for k in ("crest", "trough", "start", "quarter")),
+              r.get("crest"), r.get("trough"), r.get("crest"), r.get("quarter"), w.get("places"), w.get("between", nan), w.get("top", nan), top, w.get("underside", nan), r.get("surface"),
+              w.get("exact", nan), w.get("plain", nan), w.get("mesh", nan), w.get("triangles"), closed))
+
+    def on_curve(w, par, first=0.0, last=1.0):
+        """Of a vault along a curve: (how far its crown lies from the wave at the worst of the places read, how far its
+        middle lies beside the curve at the worst of those between `first` and `last` of its length, how many of each)."""
+        crown = max([off(got, par["Rise"] + par["WaveAmplitude"] * math.cos(2 * math.pi * par["Waves"] * f)) for f, got in w.get("crowns", [])] or [float("inf")])
+        mids = [abs(m) if m is not None else float("inf") for f, m in w.get("beside", []) if first <= f <= last]
+        return crown, max(mids or [float("inf")]), len(w.get("crowns", [])), len(mids)
+
+    w = waves.get("curve") or {}
+    par = WAVE_ON_CURVE
+    crown, beside, n_crown, n_beside = on_curve(w, par)
+    closed = wave_volume(par, w["length"]) if w.get("length") else nan
+    ok(w.get("built") and n_crown == len(CURVE_FRACTIONS) and crown <= 0.001 and n_beside == len(CURVE_FRACTIONS) and beside <= 0.001
+       and off(w.get("measured"), w.get("length", 0.0)) <= 0.001 and off(w.get("foot"), -par["Plinth"]) <= 0.001
+       and abs(w["exact"] / closed - 1.0) <= 0.0005 and abs(w["plain"] / closed - 1.0) <= 0.001 and w.get("sound") and w.get("turned") == []
+       and all(e is not None and e <= 0.05 for e in (w.get("ends") or [None])) and not w.get("lost"),
+       "V a wave vault along a drawn curve (%.3f m by its cubic spans walked here; %s by FreeCAD), span %g m, rise %g ± %g m, %d waves: at %d places along the curve, close to its ends "
+       "and between its sections, its crown stands within %.5f m of the wave (0.001 allowed) and its middle, 0.6 m above its springings, within %.5f m of the curve (0.001 allowed); "
+       "its two end faces stand %s° off square to the curve; it holds %.4f m³ by the adaptive measure, %.4f by FreeCAD's own (its section's area in closed form, summed along the "
+       "curve's length here: %.4f; within 0.05 and 0.1 %%); Part's own check finds it %s; on its plinth %.2f m down"
+       % (w.get("length", nan), "%.3f" % w["measured"] if w.get("measured") is not None else "not read", par["Span"], par["Rise"], par["WaveAmplitude"], par["Waves"], n_crown, crown, beside,
+          " and ".join("%.3f" % e if e is not None else "nothing" for e in w.get("ends", [])), w.get("exact", nan), w.get("plain", nan), closed,
+          "sound" if w.get("sound") else "CROSSING ITSELF", par["Plinth"]))
+
+    # a vault wider than its curve turns at its start: the map draws it (it does not measure a curve's first 0.6 m); here its first sections are turned, and said to be
+    w = waves.get("hook") or {}
+    par = WAVE_ON_HOOK
+    u, v = [HOOK_SPINE[1][c] - HOOK_SPINE[0][c] for c in (0, 1)], [HOOK_SPINE[2][c] - HOOK_SPINE[1][c] for c in (0, 1)]
+    start_radius = math.hypot(*u) ** 3 / (4.0 * abs(u[0] * v[1] - u[1] * v[0]))  # the map's curve at its very start: its end point counts twice
+    reach = chain_section(par["Span"], par["Rise"] - par["WaveAmplitude"], par["Thickness"])[1]  # the foot of its flattest section
+    need, seen = par["Span"] / 2 + par["Thickness"], map_tightest(HOOK_SPINE)  # the map's own rule for a vault on a curve, and its own measure of this one
+    rows = w.get("turned") or []
+    row = rows[0] if len(rows) == 1 else {}
+    said = [n for n in w.get("notes", []) if "off square" in n]
+    square = w.get("square") or {}
+    zone = row.get("length_m", float("inf")) / w["length"] if w.get("length") else float("inf")
+    crown, beside, n_crown, n_beside = on_curve(w, par, first=zone + 0.02, last=1.0)
+    closed = wave_volume(par, w["length"]) if w.get("length") else nan
+    ok(w.get("built") and seen >= need and start_radius < reach and row.get("end") == "start" and start_radius - 0.005 <= row.get("radius_m", 0.0) < reach
+       and abs(row.get("reach_m", 0.0) - reach) <= 0.005 and row.get("angle_deg", 0.0) > 0.05 and (w.get("ends") or [None])[0] is not None and w["ends"][1] is not None
+       and abs(w["ends"][0] - row["angle_deg"]) <= 0.05 and w["ends"][1] <= 0.05 and w.get("sound") and square.get("built") and square.get("sound") is False
+       and n_crown == len(CURVE_FRACTIONS) and crown <= 0.001 and n_beside >= len(CURVE_FRACTIONS) - 4 and beside <= 0.001
+       and abs(w["exact"] / closed - 1.0) <= 0.001 and len(said) == 1 and "start" in said[0] and "%.1f°" % row["angle_deg"] in said[0] and not w.get("lost"),
+       "V a vault wider than its curve turns at its start is built with its first sections turned, and says so: span %g m on a curve whose first span is %.1f m and whose second, "
+       "%.1f m, turns %.0f° from it; the map draws it (its own measure of the curve's tightest bend, which leaves out the first and last 0.6 m: %.2f m; it asks half the span and the "
+       "thickness, %.2f m), yet the curve leaves its start on a radius of %.3f m (|u|³ / 4 |u × v|, worked out here) and the vault's foot reaches %.3f m from it (worked out here); "
+       "the vault says its %s is turned %.3f° over %.3f m (radius there %.3f m, reach %.3f m), its end faces stand %s° off square to the curve, read off the solid, and the note "
+       "says it; Part's own check finds it %s, and the same vault with every section left square %s; its crown within %.5f m of the wave at %d places and its middle within %.5f m "
+       "of the curve at %d places beyond the turned stretch; it holds %.4f m³ (in closed form, its sections square: %.4f; 0.1 %% allowed)"
+       % (par["Span"], math.hypot(*u), math.hypot(*v), math.degrees(math.atan2(abs(u[0] * v[1] - u[1] * v[0]), u[0] * v[0] + u[1] * v[1])), seen, need, start_radius, reach,
+          row.get("end", "NOTHING"), row.get("angle_deg", nan), row.get("length_m", nan), row.get("radius_m", nan), row.get("reach_m", nan),
+          " and ".join("%.3f" % e if e is not None else "nothing" for e in w.get("ends", [])), "sound" if w.get("sound") else "CROSSING ITSELF",
+          "crossing itself" if square.get("sound") is False else "SOUND TOO (the fault this guards against does not show)" if square.get("built") else "NOT BUILT",
+          crown, n_crown, beside, n_beside, w.get("exact", nan), closed))
+
+    # a bend inside the curve that the vault cannot follow: not built, and the note says why
+    w = waves.get("tight") or {}
+    par = VAULT_ON_TIGHT
+    bend, where = tightest_radius(TIGHT_SPINE)
+    reach = chain_section(par["Span"], par["Rise"], par["Thickness"])[1]
+    need, seen = par["Span"] / 2 + par["Thickness"], map_tightest(TIGHT_SPINE)
+    lost_note = (w.get("lost") or [""])[0]
+    told = re.search(r"([\d.]+) m along, it turns on a radius of ([\d.]+) m, and the vault reaches ([\d.]+) m", lost_note)
+    ok(bool(w) and not w.get("built") and len(w.get("lost", [])) == 1 and "could not be built" in lost_note and bool(told) and bend < reach and seen < need
+       and abs(float(told.group(2)) - bend) <= 0.05 and abs(float(told.group(1)) - where) <= 0.25 and abs(float(told.group(3)) - reach) <= 0.01,
+       "V a vault on a bend too tight for it is not built, and the note says why: the curve turns on a radius of %.3f m at %.2f m along (the circle through every three "
+       "neighbours of its walk, here), the vault's foot reaches %.3f m from it; the map refuses it too (its own measure: %.2f m, against %.2f m); the note: %s"
+       % (bend, where, reach, seen, need, lost_note or "NOTHING IS SAID"))
+    semi, deep, ribbed, seg = (waves.get(k) or {} for k in ("semicircle", "deep", "ribbed", "segmental"))
+    half = WAVE_PLAIN["Span"] / 2
+    said = lambda row, *words: any(all(word in n for word in words) for n in row.get("notes", []))  # noqa: E731
+    lost = lambda row, *words: any(all(word in n for word in words) for n in row.get("lost", []))  # noqa: E731
+    ok(all(row.get("built") for row in (semi, deep, ribbed, seg))
+       and off(semi.get("crest"), half) <= 0.001 and off(semi.get("trough"), half) <= 0.001 and said(semi, "semicircle", "wave") and not semi.get("lost")
+       and off(deep.get("crest"), 1.8) <= 0.002 and off(deep.get("trough"), 0.2) <= 0.002 and said(deep, "taken as 0.80 m") and not deep.get("lost")
+       and off(ribbed.get("crest"), 2.4) <= 0.002 and off(ribbed.get("trough"), 1.6) <= 0.002 and lost(ribbed, "4 ribs are left out", "wave vault")
+       and off(seg.get("crest"), half) <= 0.001 and off(seg.get("top"), half + WAVE_PLAIN["Thickness"]) <= 0.001 and said(seg, "at most a semicircle") and not seg.get("lost"),
+       "V what is not built as asked is built as the map draws it, and said: a wave asked of a semicircle is left out (its crown %s and %s m at what would be a crest and a trough; "
+       "half its span: %.1f); a wave of 2.0 m on a rise of 1.0 m is taken as 0.8 (crest %s, trough %s: a trough keeps 0.2 m); a wave vault's ribs are left out, and named as lost "
+       "(crest %s, trough %s); a segmental arch asked 3.0 m high on a span of %.1f m is a semicircle (%s m)"
+       % (*("%.4f" % v if v is not None else "nothing" for v in (semi.get("crest"), semi.get("trough"))), half,
+          *("%.4f" % v if v is not None else "nothing" for v in (deep.get("crest"), deep.get("trough"), ribbed.get("crest"), ribbed.get("trough"))),
+          WAVE_PLAIN["Span"], "%.4f" % seg["crest"] if seg.get("crest") is not None else "nothing"))
+
     # N. nothing dropped in silence
     notes = facts["notes"]
     pool = [x for x in notes if "x-pool" in x and "not known" in x]
     colour = [x for x in notes if "c-bench" in x and "Colour" in x and "left out" in x]
     ok(len(pool) == 1 and len(colour) == 1 and len(notes) == 2 and "x-pool" not in made,
        "N what was not understood is said, and nothing else: %s" % ("; ".join(notes) or "no note at all"))
+    refused = facts.get("refused") or {}
+    whole = math.pi * 2.0 ** 2 * 0.2
+    ok(any("Inset" in n and "-0.1" in n for n in refused.get("lost", [])) and abs(refused.get("inset", 1.0)) <= 1e-9 and abs(refused.get("volume", 0.0) - whole) <= 0.001 * whole,
+       "N a number that cannot be is named, not changed in silence: a floor asked 0.1 m beyond its curve (Inset -0.1; a length here is never below nought) is made on its curve "
+       "(%.4f m³; π r² t = %.4f) and the notes say: %s" % (refused.get("volume", float("nan")), whole, "; ".join(refused.get("lost", [])) or "NOTHING"))
 
     # T. there and back
     back = facts.get("back", {})
@@ -914,7 +1331,40 @@ def forgeries(facts):
         j["shared"].update(volume=0.15 * 0.1 * JOINT_HEIGHT, places=int(0.15 * 0.1 / (JOINT_CELL * JOINT_CELL)))
         j["outer"] = 0
 
+    def wave(case, **values):
+        return lambda g: g["waves"][case].update(values)
+
     return [
+        ("a wave vault built plain", "V lane R's wave vault, reference case B",
+         f(lambda g: g["waves"]["B"].update(crest=g["research"]["B"]["Rise"], trough=g["research"]["B"]["Rise"], start=g["research"]["B"]["Rise"]))),
+        ("a wave that begins at a trough", "V lane R's wave vault, reference case A",
+         f(lambda g: g["waves"]["A"].update(crest=g["waves"]["A"]["trough"], trough=g["waves"]["A"]["crest"], start=g["waves"]["A"]["trough"]))),
+        ("a parabola where a hanging chain was asked", "V lane R's wave vault, reference case B",
+         f(lambda g: g["waves"]["B"].update(quarter=g["waves"]["B"]["crest"] * 0.75))),
+        ("a wave vault half as thick, by every measure of it", "V lane R's wave vault, reference case A",
+         f(lambda g: g["waves"]["A"].update(plain=g["waves"]["A"]["plain"] / 2, exact=g["waves"]["A"]["exact"] / 2, mesh=g["waves"]["A"]["mesh"] / 2))),
+        ("a wave vault that sags between its sections (OCCT's loft left this one 13.7 mm low half-way between its first two)", "V lane R's wave vault, reference case A",
+         f(wave("A", between=0.0137))),
+        ("a wave vault's top a thickness short", "V lane R's wave vault, reference case B", f(lambda g: g["waves"]["B"].update(top=g["waves"]["B"]["top"] - WAVE_THICKNESS))),
+        ("lane R's note not there to hold the wave against", "V lane R's wave vault, reference case A", f(lambda g: g["research"].clear())),
+        ("a wave along a curve counted along its chord", "V a wave vault along a drawn curve",
+         f(lambda g: g["waves"]["curve"].__setitem__("crowns", [(fr, (z + 0.12) if 0.2 < fr < 0.3 else z) for fr, z in g["waves"]["curve"]["crowns"]]))),
+        ("a vault lying 4 mm beside its curve between two of its sections", "V a wave vault along a drawn curve",
+         f(lambda g: g["waves"]["curve"].__setitem__("beside", [(fr, 0.004 if 0.3 < fr < 0.32 else m) for fr, m in g["waves"]["curve"]["beside"]]))),
+        ("a vault on a curve without its toes", "V a wave vault along a drawn curve",
+         f(lambda g: g["waves"]["curve"].update(exact=g["waves"]["curve"]["exact"] * 0.99, plain=g["waves"]["curve"]["plain"] * 0.99))),
+        ("a vault that crosses itself at the start of its curve", "V a vault wider than its curve", f(wave("hook", sound=False))),
+        ("a check that cannot see a vault crossing itself", "V a vault wider than its curve", f(lambda g: g["waves"]["hook"]["square"].update(sound=True))),
+        ("a turned end not said", "V a vault wider than its curve",
+         f(lambda g: g["waves"]["hook"].update(notes=[n for n in g["waves"]["hook"]["notes"] if "off square" not in n]))),
+        ("an end face said to be turned that stands square", "V a vault wider than its curve", f(wave("hook", ends=[0.0, 0.0]))),
+        ("a vault built on a bend too tight for it", "V a vault on a bend too tight", f(wave("tight", built=True))),
+        ("a vault refused without its reason", "V a vault on a bend too tight",
+         f(lambda g: g["waves"]["tight"].update(lost=[n.split(": the curve")[0] for n in g["waves"]["tight"]["lost"]]))),
+        ("a wave drawn on a semicircle", "V what is not built as asked", f(wave("semicircle", crest=WAVE_PLAIN["Span"] / 2 + 0.4))),
+        ("a wave cut back without a word", "V what is not built as asked", f(lambda g: g["waves"]["deep"]["notes"].clear())),
+        ("ribs dropped without a word", "V what is not built as asked", f(lambda g: g["waves"]["ribbed"]["lost"].clear())),
+        ("a segmental arch built as a horseshoe", "V what is not built as asked", f(wave("segmental", crest=3.0, top=3.15))),
         ("two walls at a corner left butting", "J two walls of two thicknesses", f(butting)),
         ("the corner of two walls counted twice", "J two walls of two thicknesses", f(lambda g: g["joints"]["W2"]["shared"].update(places=40))),
         ("the port note not there to hold the walls against", "J two walls of two thicknesses", f(lambda g: g["port_note"].clear())),
@@ -958,6 +1408,7 @@ def forgeries(facts):
         ("the steps one short", "P the steps", f(lambda g: g["made"]["st-1"].update(count=5, rise=1.02 / 5, run=0.6))),
         ("the map's scale not applied", "X a building the map shows", f(unscaled)),
         ("a note swallowed", "N what was not understood", f(lambda g: g["notes"].pop())),
+        ("a number changed without a word", "N a number that cannot be", f(lambda g: g["refused"]["lost"].clear())),
         ("the way back a metre off", "T sent to the map again", f(lambda g: g["back"]["placement"].__setitem__("coordinates", [g["back"]["placement"]["coordinates"][0] + 1.0 / 91916.198, g["back"]["placement"]["coordinates"][1]]))),
         ("the sample in the repository another one", "I the sample kept", f(lambda g: g["repo_sample"].__setitem__("name", "another"))),
         ("realize calling itself complete with a piece left out", "Z realized without the window", f(lambda g: g["realized"]["result"].__setitem__("complete", True))),

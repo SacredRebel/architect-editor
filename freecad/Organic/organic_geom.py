@@ -1274,6 +1274,8 @@ def arch_profile_face(profile, span_m, rise_m, thickness_m, inner_extra_m=0.0):
     if profile in ("Semicircle", "Segmental", "Pointed"):
         if profile == "Semicircle":
             rise_m = half
+        if profile == "Segmental":
+            rise_m = min(rise_m, half)  # at most a semicircle, as the map draws it (higher, the circle would bulge wider than its span)
         if profile == "Pointed":
             rise_m = max(rise_m, half * 1.0001)
             d = (rise_m ** 2 - half ** 2) / span_m
@@ -1345,59 +1347,412 @@ def vault_shape(profile, span_m, rise_m, thickness_m, length_m, ribs=0, rib_widt
     return refined(solid)
 
 
-VAULT_STATION_MM = 250.0  # a vault on a curve is lofted through its arch at stations no further apart than this
+# A vault along a curve, and a wave vault, are made section by section, without OCCT's loft and
+# without its surface through points. Both of those go through an approximation that sags between
+# the first sections of a long vault: a wave vault of 73 sections lay 13.7 mm under its wave
+# half-way between the first two, a plain vault along 30 m of curve 1 mm beside its curve, while
+# every section itself was met and the volume agreed to 0.001 %, so nothing said it was off. And
+# it never finishes when the sections change form (a wave so deep that the arch at its trough is
+# nearly flat). Here each section is worked out as points, and the surfaces through them are
+# plain cubic interpolations of curves: each section's line through its points, then each of
+# those lines' poles through the stations, at even parameters both ways.
+VAULT_STATION_MM = 250.0  # the stations of a straight vault built section by section are no further apart than this
+CURVE_STATION_MM = 125.0  # and along a curve than this (the map's own curve turns sharply in its first and last half metre)
+WAVE_STATIONS = 32  # sections to one wave, at least (the map's own count)
+WAVE_TROUGH_M = 0.2  # a wave never takes a vault's rise below this: the map's own limit
+ARCH_POINTS = 32  # places along a section's inside line
+SECTION_FACE_STATIONS = 16  # stations to one face at most (FreeCAD's own Volume gives a face a fixed number of points: see pieces_of)
+SECTION_FACE_PLACES = 11  # and places across a section (three faces to a line of 32: none of their seams runs along the crown)
 
 
-def vault_section(profile, span_m, rise_m, thickness_m, plinth_m=0.0):
-    """A vault's cross-section as one face in the XZ plane: the arch's band and, with a plinth,
-    a stem under each springing."""
-    band = arch_profile_face(profile, span_m, rise_m, thickness_m)
-    if plinth_m <= 0:
-        return band
-    # the band's outline with each foot (an edge on Z = 0) replaced by three: down, across, up
+def _even_keys(dense, count):
+    """count + 1 places at even steps of length along a line given densely as (key, x, z): the
+    keys there."""
+    lengths = [0.0]
+    for a, b in zip(dense, dense[1:]):
+        lengths.append(lengths[-1] + math.hypot(b[1] - a[1], b[2] - a[2]))
+    out, k = [], 0
+    for i in range(count + 1):
+        want = lengths[-1] * i / count
+        while k < len(lengths) - 2 and lengths[k + 1] < want:
+            k += 1
+        f = 0.0 if lengths[k + 1] == lengths[k] else (want - lengths[k]) / (lengths[k + 1] - lengths[k])
+        out.append(dense[k][0] + (dense[k + 1][0] - dense[k][0]) * min(1.0, max(0.0, f)))
+    return out
+
+
+def arch_section(profile, span_m, rise_m, thickness_m, count=ARCH_POINTS):
+    """An arch's section as points, in its own plane (x across, z up, metres; its springings at
+    (-span/2, 0) and (span/2, 0)): (the inside line, the outside line, the left toe, the right
+    toe). A line is a list of runs of points from left to right; a run is smooth (a pointed
+    arch has two to a line, meeting at its apex). The outside line lies thickness_m off the
+    inside line along its normal; of a circle it is the same circle, larger, down to the
+    springing line. A toe is where the outside line, carried on straight along its own
+    direction, meets the springing line (its own end, when it ends there)."""
+    half, t = span_m / 2.0, thickness_m
+    if profile in ("Catenary", "Parabola", "Ellipse"):
+        if profile == "Catenary":
+            a = catenary_parameter(span_m, rise_m)
+            at = lambda k: (k, a * (math.cosh(half / a) - math.cosh(k / a)), 1.0, -math.sinh(k / a))  # noqa: E731  (x, z, the way the line runs)
+            keys = [-half + span_m * i / 2000.0 for i in range(2001)]
+        elif profile == "Parabola":
+            at = lambda k: (k, rise_m * (1 - (k / half) ** 2), 1.0, -2.0 * rise_m * k / (half * half))  # noqa: E731
+            keys = [-half + span_m * i / 2000.0 for i in range(2001)]
+        else:  # the key is the angle, from pi at the left springing down to 0
+            at = lambda k: (half * math.cos(k), rise_m * math.sin(k), half * math.sin(k), -rise_m * math.cos(k))  # noqa: E731
+            keys = [math.pi * (1 - i / 2000.0) for i in range(2001)]
+        chosen = _even_keys([(k,) + at(k)[:2] for k in keys], count)
+        inside, outside = [], []
+        for k in chosen:
+            x, z, tx, tz = at(k)
+            n = math.hypot(tx, tz)
+            inside.append((x, z))
+            outside.append((x - t * tz / n, z + t * tx / n))  # to the left of the way the line runs: up and out
+        inside[0], inside[-1] = (-half, 0.0), (half, 0.0)
+        toes = []
+        for (ox, oz), k, back in ((outside[0], chosen[0], -1.0), (outside[-1], chosen[-1], 1.0)):
+            _x, _z, tx, tz = at(k)
+            n = math.hypot(tx, tz)
+            dx, dz = back * tx / n, back * tz / n  # on along its own direction, away from the arch
+            if oz <= 1e-9:
+                toes.append((ox, 0.0))
+            elif dz >= -1e-6:
+                raise ValueError("the arch is too flat at its springing for its thickness: its outside never comes down to the springing line")
+            else:
+                toes.append((ox + dx * oz / -dz, 0.0))
+        return [inside], [outside], toes[0], toes[1]
+    if profile in ("Semicircle", "Segmental"):
+        h = half if profile == "Semicircle" else min(rise_m, half)
+        rho = (half * half + h * h) / (2.0 * h)
+        cz = h - rho  # the centre: on the springing line for a semicircle, under it for a segment
+        lines = []
+        for r in (rho, rho + t):
+            top = math.acos(max(-1.0, min(1.0, -cz / r)))  # how far from the upright the circle meets the springing line
+            run = [(r * math.sin(-top + 2.0 * top * i / count), cz + r * math.cos(-top + 2.0 * top * i / count)) for i in range(count + 1)]
+            run[0], run[-1] = (run[0][0], 0.0), (run[-1][0], 0.0)
+            lines.append(run)
+        return [lines[0]], [lines[1]], lines[1][0], lines[1][-1]
+    if profile == "Pointed":
+        h = max(rise_m, half * 1.0001)
+        d = (h * h - half * half) / span_m
+        rho = half + d
+        lines = []
+        for r in (rho, rho + t):  # two arcs, about (d, 0) and (-d, 0), meeting over the middle
+            apex = math.sqrt(r * r - d * d)
+            end = math.atan2(apex, -d)  # the left arc runs from the angle pi, on the springing line, down to this one
+            n = max(2, count // 2)
+            left = [(d + r * math.cos(math.pi - (math.pi - end) * i / n), r * math.sin(math.pi - (math.pi - end) * i / n)) for i in range(n + 1)]
+            left[0], left[-1] = (d - r, 0.0), (0.0, apex)
+            lines.append([left, [(-x, z) for x, z in reversed(left)]])
+        return lines[0], lines[1], lines[1][0][0], lines[1][1][-1]
+    raise ValueError("%s is not an arch this kernel knows" % profile)
+
+
+def curve_through(points, parameters):
+    """The cubic through points at even parameters (OCCT's plain interpolation of a curve), its
+    two ends leaving in the direction the points themselves show there (each end's slope from
+    its first five points). Left without the two directions the curve has no curvature at its
+    ends and lies off between its first points: a wave's crest 0.1 mm low, a vault's axis 0.4 mm
+    beside its curve. Where the points set out slowly and then stride (the inner edge of a
+    vault at the turned end of its curve), five points make that slope too small, or backward:
+    an end then leaves along its first two points."""
+    pts = list(points)
+    c = Part.BSplineCurve()
+    if len(pts) >= 5:
+        h = parameters[1] - parameters[0]
+        start = (pts[0] * -25.0 + pts[1] * 48.0 + pts[2] * -36.0 + pts[3] * 16.0 + pts[4] * -3.0) * (1.0 / (12.0 * h))
+        end = (pts[-1] * 25.0 + pts[-2] * -48.0 + pts[-3] * 36.0 + pts[-4] * -16.0 + pts[-5] * 3.0) * (1.0 / (12.0 * h))
+        first, last = (pts[1] - pts[0]) * (1.0 / h), (pts[-1] - pts[-2]) * (1.0 / h)
+        if start.dot(first) < 0.5 * first.dot(first):
+            start = first
+        if end.dot(last) < 0.5 * last.dot(last):
+            end = last
+        if start.Length > 1e-9 and end.Length > 1e-9:  # (a line that stays in one place has no direction to give)
+            c.interpolate(Points=pts, Parameters=list(parameters), InitialTangent=start, FinalTangent=end, Scale=False)
+            return c
+    c.interpolate(Points=pts, Parameters=list(parameters))
+    return c
+
+
+def surface_through(grid):
+    """The surface through a grid of points [row][column] (mm), cubic both ways, rows and
+    columns each at even parameters 0 to 1: every row's line through its points, then each
+    pole of those lines through the rows. Curve interpolations only (see the note above)."""
+    rows, cols = len(grid), len(grid[0])
+    u = [i / float(rows - 1) for i in range(rows)]
+    v = [j / float(cols - 1) for j in range(cols)]
+    lines = [curve_through(row, v) for row in grid]
+    first = lines[0]
+    if any(line.NbPoles != first.NbPoles for line in lines):
+        raise ValueError("the sections are not of one make")
+    rails = [curve_through([line.getPole(k + 1) for line in lines], u) for k in range(first.NbPoles)]
+    if any(rail.NbPoles != rails[0].NbPoles for rail in rails):
+        raise ValueError("the sections' lines are not of one make along the vault")
+    poles = [[rails[k].getPole(n + 1) for k in range(first.NbPoles)] for n in range(rails[0].NbPoles)]
+    surface = Part.BSplineSurface()
+    surface.buildFromPolesMultsKnots(poles, rails[0].getMultiplicities(), first.getMultiplicities(), rails[0].getKnots(), first.getKnots(),
+                                     False, False, rails[0].Degree, first.Degree)
+    return surface
+
+
+def _cuts(count, piece):
+    """0 to 1 cut at grid places, no more than `piece` steps to a part."""
+    parts = int(math.ceil(count / float(piece)))
+    marks = sorted({int(round(count * k / float(parts))) for k in range(parts + 1)})
+    return [mark / float(count) for mark in marks]
+
+
+def vault_by_sections(profile, span_m, rises_m, thickness_m, frames, plinth_m=0.0):
+    """A vault through its sections: rises_m[i] is the rise at station i, frames[i] its
+    (origin, right) there (mm vectors: a section's x runs along `right`, its z upward); the
+    stations stand at even steps. The inside and the outside are each a surface through all
+    the sections' points; the feet, the toes, the plinth's faces and the two ends are flat or
+    ruled faces between the same lines; every face spans a few stations only; all are sewn
+    into one solid. A vault whose springing, shoulder or toe line runs backward anywhere (the
+    sections cross each other there) raises VaultFolds."""
+    made = {}  # a rise comes more than once (a plain vault has one; a wave goes up as it came down)
+    for rise in rises_m:
+        if round(rise, 12) not in made:
+            made[round(rise, 12)] = arch_section(profile, span_m, rise, thickness_m)
+    sections = [made[round(rise, 12)] for rise in rises_m]
+    place = lambda i, q: frames[i][0] + frames[i][1] * (q[0] * MM) + Z * (q[1] * MM)  # noqa: E731
+    n = len(sections)
+    u = [i / float(n - 1) for i in range(n)]
+    u_cuts = _cuts(n - 1, SECTION_FACE_STATIONS)
+    faces, skins = [], []
+    for which in (0, 1):  # the inside, the outside
+        for run in range(len(sections[0][which])):
+            grid = [[place(i, q) for q in sections[i][which][run]] for i in range(n)]
+            surface = surface_through(grid)
+            v_cuts = _cuts(len(grid[0]) - 1, SECTION_FACE_PLACES)
+            skins.append((surface, v_cuts))
+            for ua, ub in zip(u_cuts, u_cuts[1:]):
+                for va, vb in zip(v_cuts, v_cuts[1:]):
+                    faces.append(surface.toShape(ua, ub, va, vb))
     down = Z * (-plinth_m * MM)
-    edges = []
-    for e in band.OuterWire.Edges:
-        ends = [v.Point for v in e.Vertexes]
-        middle = e.valueAt((e.FirstParameter + e.LastParameter) / 2)
-        if len(ends) == 2 and all(abs(p.z) < 1e-6 for p in ends + [middle]):  # a foot lies on Z = 0 (an arch only ends there)
-            a, b = ends
-            edges += [Part.LineSegment(a, a + down).toShape(), Part.LineSegment(a + down, b + down).toShape(), Part.LineSegment(b + down, b).toShape()]
-        else:
-            edges.append(e)
-    return Part.Face(Part.Wire(Part.__sortEdges__(edges)))
+    forward = [Z.cross(right) for _origin, right in frames]  # the way each section faces
+    ends = {0: [], n - 1: []}  # the straight pieces of the two end faces
+    for side in (0, 1):  # left, right
+        corner = lambda i, line: sections[i][line][0][0] if side == 0 else sections[i][line][-1][-1]  # noqa: E731
+        spring_at = [place(i, corner(i, 0)) for i in range(n)]
+        shoulder_at = [place(i, corner(i, 1)) for i in range(n)]
+        toe_at = [place(i, sections[i][2 + side]) for i in range(n)]
+        has_toe = any((a - b).Length > 1e-3 for a, b in zip(toe_at, shoulder_at))
+        spring, shoulder = curve_through(spring_at, u), curve_through(shoulder_at, u)
+        toe = curve_through(toe_at, u) if has_toe else shoulder
+        for rail in (spring, shoulder, toe) if GUARD_FOLDS else ():  # each must run forward all the way: one that turns back has folded the vault
+            for i in range(n - 1):
+                for part in (0.0, 0.25, 0.5, 0.75, 1.0):
+                    if rail.getD1((i + part) / float(n - 1))[1].dot(forward[i if part < 0.5 else i + 1]) <= 0:
+                        raise VaultFolds(i + part)
+        for ua, ub in zip(u_cuts, u_cuts[1:]):
+            e_spring, e_toe = Part.Edge(spring, ua, ub), Part.Edge(toe, ua, ub)
+            if has_toe:  # the toe: the outside carried straight on down to the springing line
+                faces.append(Part.makeRuledSurface(Part.Edge(shoulder, ua, ub), e_toe))
+            if plinth_m > 0:
+                low_in, low_out = e_spring.copy(), e_toe.copy()
+                low_in.translate(down)
+                low_out.translate(down)
+                faces += [e_spring.extrude(down), e_toe.extrude(down), Part.makeRuledSurface(low_in, low_out)]
+            else:  # the foot, in the springing line's plane
+                faces.append(Part.makeRuledSurface(e_spring, e_toe))
+        for i in ends:
+            chain = [spring_at[i]] + ([spring_at[i] + down, toe_at[i] + down] if plinth_m > 0 else []) + [toe_at[i]] + ([shoulder_at[i]] if has_toe else [])
+            ends[i] += [Part.LineSegment(p, q).toShape() for p, q in zip(chain, chain[1:]) if (q - p).Length > 1e-6]
+    for i, at in ((0, 0.0), (n - 1, 1.0)):
+        edges = list(ends[i])
+        for surface, v_cuts in skins:
+            line = surface.uIso(at)
+            edges += [Part.Edge(line, va, vb) for va, vb in zip(v_cuts, v_cuts[1:])]  # cut where the surface's own faces are
+        faces.append(Part.Face(Part.Wire(Part.__sortEdges__(edges))))
+    shell = Part.Shell(faces)
+    shell.sewShape()
+    solid = Part.Solid(shell)
+    if solid.Volume < 0:
+        solid.reverse()
+    return solid
 
 
-def vault_on_curve(profile, span_m, rise_m, thickness_m, spine, plinth_m=0.0):
-    """A vault whose barrel follows an open plan curve (the map's vault on a drawn spine): its
-    arch, square to the curve at every place, carried along it; springing from the curve's own
-    height, with a plinth under its springings. No ribs.
+def section_area(profile, span_m, rise_m, thickness_m, plinth_m=0.0):
+    """A section's area in mm2, counted from its own points (2,000 along its inside line), the
+    plinth's two stems with it."""
+    inside, outside, tl, tr = arch_section(profile, span_m, rise_m, thickness_m, 2000)
+    ring = [q for run in inside for q in run] + [tr] + [q for run in reversed(outside) for q in reversed(run)] + [tl]
+    area = 0.5 * abs(sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(ring, ring[1:] + ring[:1])))
+    return (area + plinth_m * (abs(tr[0] - inside[-1][-1][0]) + abs(inside[0][0][0] - tl[0]))) * MM * MM
 
-    The solid is lofted through the arch at stations along the curve. A section square to a
-    plan curve sweeps its own area times the length its centroid travels, and the arch's
-    centroid lies on the curve: the solid must hold area x length, and is refused when it does
-    not (a curve that bends tighter than half the vault's width folds it)."""
-    section = vault_section(profile, span_m, rise_m, thickness_m, plinth_m)
-    wire = section.OuterWire
+
+# A vault's sections stand square to its curve. Where the curve turns more between two sections
+# than the vault's width allows (the turn, times how far the vault reaches to either side, against
+# the distance between the two), the inner edge of the second lies behind that of the first: the
+# vault folds over itself. The map's smooth curve turns sharpest at its two ends, whatever is
+# drawn: its end point counts twice, so the curve leaves it at half speed, on a radius of
+# |u|² / (4 |v| sin θ) (u its first span, v its second, θ the turn between them: 1.6 m for two
+# spans of 4.3 m that turn 41°), and is straighter within 0.8 m. The map does not measure a
+# curve's first and last 0.6 m, so it draws a wide vault there all the same.
+FOLD_LIMIT = 0.98  # between two sections a curve may turn up to this much of what would fold the vault
+# at an end of the curve the last sections turn no more than this much of it from one to the next: the vault's inner
+# edge then sets out at a quarter of the curve's own pace or more, which a smooth line through its points can follow
+END_TURN = 0.75
+GUARD_FOLDS = True  # (off only for a check's forged fault: every section stays square to the curve, nothing is refused, and a vault may fold)
+
+
+def curve_frames(spine, count, reach_m):
+    """Where count + 1 sections stand at even steps along an open plan curve, for a vault that
+    reaches reach_m to either side of it: ([(origin, right)], how far each section is turned
+    off square to the curve (radians), what was turned).
+
+    Every section is square to the curve. A stretch between two sections over which the curve
+    turns more than the vault's width allows would fold the vault. Inside the curve that is
+    refused, with the place and the radius (as the map refuses it). At an end of the curve the
+    sections are turned instead, as little as it takes: over the stretches there that would
+    fold (or the last stretch alone, when it turns more than END_TURN of what would fold the
+    vault) each section turns from its neighbour by END_TURN of it and no more, so the last
+    ones, and the end face with them, stand a little off square. `turned` says it, one row for
+    each such end: {"end", "length_m" (those stretches), "angle_deg" (the most a section is
+    turned), "radius_m" (the tightest of those stretches), "reach_m"}."""
     length = spine.Length
-    count = max(8, int(math.ceil(length / VAULT_STATION_MM)))
-    sections = []
+    step = length / count / MM  # metres
+    at, heading = [], []
     for i in range(count + 1):
         u = spine.getParameterByLength(min(length, length * i / count))
         p, tan = spine.valueAt(u), spine.tangentAt(u)
         tan = App.Vector(tan.x, tan.y, 0)
         tan.normalize()
-        right = tan.cross(Z)  # the section's x: to the right of the way the curve runs (a straight vault along +Y: +X)
-        m = App.Matrix(right.x, tan.x, 0, p.x, right.y, tan.y, 0, p.y, 0, 0, 1, p.z, 0, 0, 0, 1)
-        at = wire.copy()
-        at.transformShape(m, True)  # into the geometry
-        sections.append(at)
-    solid = solid_of(Part.makeLoft(sections, True, False))
-    want = section.Area * length
-    if not solid.isValid() or abs(solid.Volume / want - 1.0) > 0.005:
-        raise ValueError("the vault could not be carried along this curve (it holds %.2f %% off its section's area times the curve's length%s): "
-                         "the curve bends tighter than the vault is wide" % (100.0 * (solid.Volume / want - 1.0), "" if solid.isValid() else ", and is not valid"))
-    return refined(solid)
+        at.append((p, tan))
+        angle = math.atan2(tan.y, tan.x)
+        heading.append(angle if not heading else heading[-1] + math.remainder(angle - heading[-1], 2 * math.pi))
+    frames = [(p, tan.cross(Z)) for p, tan in at]  # a section's x: to the right of the way the curve runs
+    lean, turned = [0.0] * (count + 1), []
+    turn = [abs(heading[i + 1] - heading[i]) for i in range(count)]  # from each section to the next
+    if not GUARD_FOLDS:
+        return frames, lean, turned
+    folds = [t * reach_m > FOLD_LIMIT * step for t in turn]
+    first = next((i for i in range(count) if not folds[i]), count)  # the first stretch that does not fold, and the last
+    last = next((i for i in range(count - 1, -1, -1) if not folds[i]), -1)
+    inside = [i for i in range(first, last + 1) if folds[i]] if first <= last else list(range(count))
+    if inside:
+        worst = max(inside, key=lambda i: turn[i])
+        raise ValueError("the curve bends tighter than the vault is wide: %.2f m along, it turns on a radius of %.2f m, and the vault reaches %.2f m to either side of it "
+                         "(its inner side would fold over itself): a narrower span, or a gentler curve" % (step * (worst + 0.5), step / turn[worst], reach_m))
+    most = END_TURN / reach_m * step
+    start = range(0, first) if first > 0 else range(0, 1 if turn[0] > most else 0)
+    end = range(last + 1, count) if last < count - 1 else range(count - 1 if turn[count - 1] > most else count, count)
+    face = list(heading)  # the way each section faces
+    for i in reversed(start):  # (the section that ends these stretches inside the curve stays square)
+        face[i] = min(max(heading[i], face[i + 1] - most), face[i + 1] + most)
+    for i in end:
+        face[i + 1] = min(max(heading[i + 1], face[i] - most), face[i] + most)
+    for name, stretches in (("start", start), ("end", end)):
+        if not len(stretches):
+            continue
+        for i in set(stretches) | {j + 1 for j in stretches}:
+            lean[i] = heading[i] - face[i]
+            if abs(lean[i]) > 1e-12:
+                frames[i] = (at[i][0], App.Vector(math.sin(face[i]), -math.cos(face[i]), 0))
+        tightest = step / max(turn[i] for i in stretches)
+        for i in stretches:  # the inner edge must still run forward
+            if math.cos(max(abs(lean[i]), abs(lean[i + 1]))) * step - reach_m * abs(face[i + 1] - face[i]) < (1.0 - FOLD_LIMIT) * step:
+                raise ValueError("the curve bends tighter than the vault is wide over the %s %.2f m of it (on a radius of %.2f m; the vault reaches %.2f m to either side of it), "
+                                 "too far for its sections there to be turned without folding: a narrower span, or a gentler curve"
+                                 % ("first" if name == "start" else "last", step * len(stretches), tightest, reach_m))
+        turned.append({"end": name, "length_m": step * len(stretches), "angle_deg": math.degrees(max(abs(lean[j]) for i in stretches for j in (i, i + 1))),
+                       "radius_m": tightest, "reach_m": reach_m})
+    return frames, lean, turned
+
+
+class VaultFolds(ValueError):
+    """A vault built section by section whose edge runs backward: .station is where (a section's
+    number, with the part of the way to the next)."""
+
+    def __init__(self, station):
+        ValueError.__init__(self, "the vault folds over itself")
+        self.station = station
+
+
+def sectioned_vault(profile, span_m, rise_m, thickness_m, length_m, amplitude_m=0.0, waves=0, plinth_m=0.0, spine=None, said=None):
+    """A vault built section by section: along +Y, centred on the origin, length_m long; or,
+    with a spine, along that open plan curve, each section square to it (the curve's length
+    rules; see curve_frames for a curve that turns tighter than the vault is wide). With an
+    amplitude and whole waves its rise goes up and down along it (wave_rise). Springing from
+    Z = 0 (the curve's own height), a plinth under its springings. No ribs.
+    said: a dict that is given "turned", curve_frames' rows (none: []).
+
+    Returns (solid, the volume it must hold: its sections' areas summed along its length. A
+    section square to a plan curve sweeps its area times the length its centroid travels, and
+    an arch's centroid lies over the curve; one turned off square, that times the cosine of
+    the turn). The solid is refused when it does not hold that."""
+    length = spine.Length if spine is not None else length_m * MM
+    count = max(8, int(math.ceil(length / (CURVE_STATION_MM if spine is not None else VAULT_STATION_MM))), int(math.ceil(WAVE_STATIONS * abs(waves))))
+    count += count % 2  # even: the areas are summed by Simpson's rule
+    rises = [wave_rise(length * i / count, rise_m, amplitude_m, waves, length) if waves else rise_m for i in range(count + 1)]
+    lean, turned = [0.0] * (count + 1), []
+    if spine is None:
+        frames = [(Y * (length * i / count - length / 2), App.Vector(1, 0, 0)) for i in range(count + 1)]
+    else:
+        reach = max(max(abs(tl[0]), abs(tr[0])) for _in, _out, tl, tr in (arch_section(profile, span_m, r, thickness_m, 8) for r in (min(rises), max(rises))))
+        frames, lean, turned = curve_frames(spine, count, reach)
+    if said is not None:
+        said["turned"] = turned
+    try:
+        solid = vault_by_sections(profile, span_m, rises, thickness_m, frames, plinth_m)
+    except VaultFolds as fold:
+        raise ValueError("the curve bends tighter than the vault is wide: %.2f m along, the vault's inner edge would run backward (it would fold over itself): "
+                         "a narrower span, or a gentler curve" % (length / count / MM * fold.station))
+    area = {}
+    for rise in rises:
+        if round(rise, 12) not in area:
+            area[round(rise, 12)] = section_area(profile, span_m, rise, thickness_m, plinth_m)
+    areas = [area[round(rise, 12)] * math.cos(lean[i]) for i, rise in enumerate(rises)]
+    step = length / count
+    want = step / 3 * (areas[0] + areas[-1] + 4 * sum(areas[1:-1:2]) + 2 * sum(areas[2:-1:2]))
+    if not solid.isValid() or len(solid.Solids) != 1 or abs(solid.Volume / want - 1.0) > 0.005:
+        raise ValueError("the vault could not be built section by section (it holds %.2f %% off its sections' areas summed along its length%s)"
+                         % (100.0 * (solid.Volume / want - 1.0), "" if solid.isValid() else ", and is not valid"))
+    return solid, want
+
+
+def vault_on_curve(profile, span_m, rise_m, thickness_m, spine, plinth_m=0.0, said=None):
+    """A vault whose barrel follows an open plan curve (the map's vault on a drawn spine): its
+    arch, square to the curve at every place, carried along it; springing from the curve's own
+    height, with a plinth under its springings. No ribs. A curve that bends tighter inside
+    than the vault reaches from it is refused, with the place and the radius; one that does so
+    at an end has its last sections turned (curve_frames; said["turned"] names it)."""
+    return sectioned_vault(profile, span_m, rise_m, thickness_m, 0.0, 0.0, 0, plinth_m, spine, said)[0]
+
+
+def wave_rise(s, rise_m, amplitude_m, waves, length_m):
+    """A wave vault's rise s along it from its start (s and the length in one unit): rise_m at
+    its mean, amplitude_m more at a crest (the first at the start), `waves` whole waves along
+    the length. Lane R's formula (a straight vault: s = y + length / 2), and the map's."""
+    return rise_m + amplitude_m * math.cos(2 * math.pi * waves * s / length_m)
+
+
+def wave_of(profile, rise_m, amplitude_m, waves):
+    """(the wave's amplitude as it is built, its whole waves) for a vault's WaveAmplitude and
+    Waves, by the map's own rule: no wave with fewer than one wave or without an amplitude;
+    none on a semicircle, which has one rise for its span; the amplitude cut back so that a
+    trough keeps WAVE_TROUGH_M of rise. (0.0, 0) when there is no wave."""
+    count = int(waves)
+    if count < 1 or amplitude_m <= 0 or profile == "Semicircle":
+        return 0.0, 0
+    amplitude = min(float(amplitude_m), max(0.0, max(WAVE_TROUGH_M, rise_m) - WAVE_TROUGH_M))
+    return (amplitude, count) if amplitude > 1e-9 else (0.0, 0)
+
+
+def wave_vault_shape(profile, span_m, rise_m, thickness_m, length_m, amplitude_m, waves, plinth_m=0.0, spine=None, said=None):
+    """A vault whose rise goes up and down as a wave along its length (Eladio Dieste's Gaussian
+    vaults: the wave gives a thin vault depth against buckling). Along +Y, centred on the
+    origin, length_m long; or, with a spine, along that open plan curve, square to it at every
+    place (the curve's length rules, and the wave is counted along it from its start). Every
+    cross-section is its profile's own arch for the rise there, plinth and all; the thickness
+    is measured in the cross-section. Returns (solid, the volume it must hold: see
+    sectioned_vault, and there for `said`)."""
+    if profile == "Semicircle":
+        raise ValueError("a semicircle has one rise for its span: choose another profile for a wave vault")
+    if rise_m - abs(amplitude_m) < WAVE_TROUGH_M - 1e-9:
+        raise ValueError("the wave is deeper than the vault is high: a trough must keep %.1f m of rise (rise %.2f m, amplitude %.2f m)" % (WAVE_TROUGH_M, rise_m, amplitude_m))
+    return sectioned_vault(profile, span_m, rise_m, thickness_m, length_m, amplitude_m, waves, plinth_m, spine, said)
 
 
 def steps_shape(low_m, high_m, width_m=1.2, count=0, foundation_m=0.3):
@@ -1438,6 +1793,8 @@ def thrust_line_ok(profile, span_m, rise_m, thickness_m):
     and crown stays within its middle third (max normal offset <= thickness / 6)."""
     if profile == "Semicircle":
         rise_m = span_m / 2
+    if profile == "Segmental":
+        rise_m = min(rise_m, span_m / 2)
     mid_span, mid_rise = span_m + thickness_m, rise_m + thickness_m / 2
     a = catenary_parameter(mid_span, mid_rise)
     half = mid_span / 2
@@ -1976,45 +2333,6 @@ def translation_shell_shape(span_m, length_m, rise_x_m, rise_y_m, eave_m, thickn
     arch = (0.0, 2.0, 0.0)
     face = quadratic_patch((-hs, 0.0, hs), (-hl, 0.0, hl), [[eave_m + rise_x_m * arch[i] + rise_y_m * arch[j] for j in range(3)] for i in range(3)])
     return solid_of(thicken_up(face, thickness_m * MM))
-
-
-def wave_rise(y, rise_m, amplitude_m, waves, length_m):
-    """A wave vault's rise at y (m): rise_m at its mean, amplitude_m more at a crest (the
-    first at y = -length/2), `waves` whole waves along the length."""
-    return rise_m + amplitude_m * math.cos(2 * math.pi * waves * (y + length_m / 2) / length_m)
-
-
-WAVE_STATIONS = 16  # sections in one wave, at least
-
-
-def wave_vault_shape(profile, span_m, rise_m, thickness_m, length_m, amplitude_m, waves, plinth_m=0.0):
-    """A vault along +Y, centred on the origin, whose rise goes up and down as a wave along its
-    length (Eladio Dieste's Gaussian vaults: the wave gives a thin vault depth against
-    buckling). Every cross-section is the straight vault's own for the rise there, plinth and
-    all; the thickness is measured in the cross-section. Returns (solid, the volume it must
-    hold: its sections' areas summed along the length)."""
-    if profile == "Semicircle":
-        raise ValueError("a semicircle has one rise for its span: choose another profile for a wave vault")
-    low = rise_m - abs(amplitude_m)
-    if low <= 0.02 * span_m:
-        raise ValueError("the wave is deeper than the vault is high: its troughs would lie flat (rise %.2f m, amplitude %.2f m)" % (rise_m, amplitude_m))
-    count = max(8, int(math.ceil(length_m * MM / VAULT_STATION_MM)), int(math.ceil(WAVE_STATIONS * abs(waves))))
-    count += count % 2  # even: the areas are summed by Simpson's rule
-    wires, areas = [], []
-    for i in range(count + 1):
-        y = -length_m / 2 + length_m * i / count
-        section = vault_section(profile, span_m, wave_rise(y, rise_m, amplitude_m, waves, length_m), thickness_m, plinth_m)
-        wire = section.OuterWire.copy()
-        wire.translate(Y * (y * MM))
-        wires.append(wire)
-        areas.append(section.Area)
-    step = length_m * MM / count
-    want = step / 3 * (areas[0] + areas[-1] + 4 * sum(areas[1:-1:2]) + 2 * sum(areas[2:-1:2]))
-    solid = solid_of(Part.makeLoft(wires, True, False))
-    if not solid.isValid() or abs(solid.Volume / want - 1.0) > 0.005:
-        raise ValueError("the wave vault could not be built (it holds %.2f %% off its sections' areas summed along its length%s)"
-                         % (100.0 * (solid.Volume / want - 1.0), "" if solid.isValid() else ", and is not valid"))
-    return refined(solid), want
 
 
 GROIN_HALF = math.pi / 8  # half a lobe: four saddles 45° apart make eight lobes

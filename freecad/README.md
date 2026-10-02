@@ -9,7 +9,7 @@ web app's build.
 | `Organic/` | the Organic workbench: three toolbars (Organic, Sacred, Biomimetic) of real solids, Send to the map and Import from the map. See `Organic/README.md` |
 | `QUICKSTART.md` | for Johny: the exact clicks from an empty FreeCAD to a building in the map, with pictures |
 | `realize.py` | a building drawn in the map (`built/1` records) made real without the window: the design, a `.glb`, an `.ifc`, a `.json` and a result. The map's "Realize in FreeCAD" calls it |
-| `check_import.py` | a sample building in the map's records (`samples/built-sample.json`), rebuilt by Import from the map and by `realize.py`, every piece against a closed form; with `--self-test` |
+| `check_import.py` | a sample building in the map's records (`samples/built-sample.json`), rebuilt by Import from the map and by `realize.py`, every piece against a closed form; walls that end on each other against the old editor's numbers; wave vaults against lane R's; vaults along a drawn curve; with `--self-test` |
 | `spec_to_records.py` | a house spec (walls as points, openings, roofs as formulas: Johny's `exchange\house\concept\oak_canopy_S01.json`) written as `built/1` records. Plain Python, no FreeCAD; nothing is designed in it |
 | `check_spec.py` | a house built from those records, held against the spec itself: every wall face and top, every opening's jambs, sill and head, the floors, the chimney, the roofs; with `--self-test` (forged pieces, built and measured) |
 | `InstallOrganic.FCMacro` | installs or updates the workbench in `%APPDATA%\FreeCAD\v1-1\Mod\Organic` |
@@ -32,7 +32,7 @@ $env:ORGANIC_HEADLESS = 'install,pavilion,selftest,toolbar'
 
 Steps, in the order given: `install`, `pavilion`, `check`, `selftest` (check_organic with its
 forgeries), `toolbar` (check_toolbar with its forgeries; about 8 minutes), `import`
-(check_import with its forgeries; about 3 minutes), `site` and `sitecheck` (a trial of the
+(check_import with its forgeries; about 4 minutes), `site` and `sitecheck` (a trial of the
 site template into `SITE_FCSTD`), `picture`, `tools`.
 `ORGANIC_HEADLESS_LOG` names a file that gets a copy of what is printed. The process ends
 with 0 when every step passed. What needs the window: the site template people open (its
@@ -64,6 +64,17 @@ share a point): `Organic/organic_geom.py`, "walls that end on each other", and
 wall with a shaped top on a smooth curve keeps square ends, and the import's notes say how
 many ends that is. `check_import.py` (group J) holds each wall's plan against the old
 editor's own numbers, read from the port note where its code printed them.
+
+A wave vault (a `Vault` with `WaveAmplitude` and `Waves`) and a vault along a drawn curve
+are built section by section (`Organic/organic_geom.py`, `sectioned_vault`), not lofted:
+OCCT's loft left a wave vault 13.7 mm under its wave between two sections with every
+section met (`Organic/README.md`, the notes for whoever changes the kernels). A curve that
+bends tighter than the vault reaches to either side is refused inside the curve, and the
+note says where, on what radius and how far the vault reaches; at an end of the curve, where
+the map's own curve turns sharpest, the last sections are turned a little off square
+instead, and the note says by how much. `check_import.py` (group V) holds the wave vault
+against lane R's own numbers, read from R's note, and against the section's closed form
+summed along the wave.
 
 Measured on this PC: a room of one round wall with a door, a floor and a dome takes 2.7 to
 3.0 s for the whole process; the 24-piece sample 45 to 65 s.
