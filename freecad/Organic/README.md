@@ -101,7 +101,8 @@ the `ORGANIC_EXCHANGE_DIR` environment variable or the `ExchangeDir` string unde
   `altitude_m` above the 425.63 m datum, `rotation_deg` (`y` is the turn seen from above,
   anticlockwise positive), `elevation_m` (NAVD88), `offset_m` (east, north, up from the
   anchor). Also `clearance_m` to the nearest road, easement and existing building,
-  `floor_above_ground_m`, notes, and each element's volume.
+  `level_above_ground_m` (the building's z = 0 above the map's ground at its origin), notes,
+  and each element's volume.
 - **The GLB** is glTF Y-up in metres: one named node per element with its IFC class in
   `extras`, the same `placement` in the root node's `extras`, and no transform on the root.
   Its triangles enclose each solid's volume. FreeCAD's own glTF exporter is not used, because
@@ -112,8 +113,8 @@ the `ORGANIC_EXCHANGE_DIR` environment variable or the `ExchangeDir` string unde
   on the site is the offset and the turn; its elements are placed under it; its property set
   `Organic_Placement` repeats the numbers.
 - **It says so** when the footprint touches a road, the access easement or an existing
-  building (read from the land files in the exchange folder), or when the floor is more than
-  a metre off the map's ground.
+  building (read from the land files in the exchange folder), or when the building's level
+  (its z = 0) is more than a metre off the map's ground.
 - A document whose BIM Site states another origin than the anchor is moved by the
   difference, so the building still lands in its real place.
 

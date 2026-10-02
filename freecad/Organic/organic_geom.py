@@ -47,6 +47,22 @@ def spline(points, closed=False, parameters=None):
     return c.toShape()
 
 
+def baked(shape):
+    """A shape with any placement of its own written into its geometry.
+
+    A shape moved as a whole (translate, rotate, or taken from a moved object) carries the
+    move as a placement beside its geometry. Two things lose it: assigning the shape to an
+    object (the object's placement replaces it), and Edge.split (it cuts the bare curve). A
+    slab on a curve 5 m from its building's origin lay at the origin for both reasons."""
+    own = shape.Placement
+    if own.isIdentity():
+        return shape
+    out = shape.copy()
+    out.Placement = App.Placement()
+    out.transformShape(own.toMatrix(), True)  # copy = True: into the geometry
+    return out
+
+
 def pieces_of(edge, span=16):
     """A B-spline edge of many spans as several edges.
 
@@ -54,6 +70,7 @@ def pieces_of(edge, span=16):
     face bounded by one spline of hundreds of spans reports its area percent off, and a
     solid built on it its volume: a 0.45 m wall on a lobed ring read 43.4 m³ against its
     63.0 m³. Split into edges of at most `span` spans, the same shape reads true."""
+    edge = baked(edge)
     c = edge.Curve
     if not isinstance(c, Part.BSplineCurve) or c.NbPoles <= 2 * span:
         return [edge]

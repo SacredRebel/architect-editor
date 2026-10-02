@@ -425,7 +425,7 @@ class ExportGodot(Command):
         at, off = rep["placement"], rep["placement"]["offset_m"]
         turn = at["rotation_deg"]["y"]
         say("sent %s — %d elements to %s" % (rep["name"], len(rep["elements"]), os.path.dirname(rep["paths"]["glb"])))
-        say("it stands %.1f m east, %.1f m north of the anchor, its floor at %.2f m, turned %.1f° %s (lng %.7f, lat %.7f)"
+        say("it stands %.1f m east, %.1f m north of the anchor, its level (z = 0) at %.2f m, turned %.1f° %s (lng %.7f, lat %.7f)"
             % (off["east"], off["north"], at["elevation_m"], abs(turn), "clockwise" if turn < 0 else "anticlockwise",
                at["coordinates"][0], at["coordinates"][1]))
         for kind, metres in sorted(rep["clearance_m"].items()):

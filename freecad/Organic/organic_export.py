@@ -572,6 +572,7 @@ FRAME_NOTE = {
     "ifc": "IfcSite at the anchor; the IfcBuilding's placement on the site is offset_m and the turn; elements relative to the building",
     "rotation_deg": "Euler degrees in glTF's axes; y is the turn seen from above, anticlockwise positive",
     "altitude_m": "height of the building's z = 0 above the ground datum at the anchor (datum_m)",
+    "level_above_ground_m": "height of the building's z = 0 above the map's ground at its origin (the land file beside this one)",
 }
 
 
@@ -621,13 +622,13 @@ def export_building(target, out_dir=None, name=None, anchor=None):
     ground = ground_at(land_dir(out_dir), off["east"], off["north"])
     above = None if ground is None else round(off["up"] - ground, 2)
     if above is not None and abs(above) > 1.0:
-        notes.append("its floor is %.1f m %s the map's ground there" % (abs(above), "above" if above > 0 else "below"))
+        notes.append("its level (z = 0) is %.1f m %s the map's ground there" % (abs(above), "above" if above > 0 else "below"))
 
     stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     source = os.path.basename(doc.FileName) if doc.FileName else doc.Label
     write_glb(glb, parts, label, {"placement": placement, "frame": FRAME_NOTE, "source": source, "exported": stamp})
     write_ifc(ifc, elements, frame, placement, anchor, label)
-    report = {"name": label, "placement": placement, "clearance_m": clearance, "floor_above_ground_m": above, "notes": notes, "frame": FRAME_NOTE,
+    report = {"name": label, "placement": placement, "clearance_m": clearance, "level_above_ground_m": above, "notes": notes, "frame": FRAME_NOTE,
               "files": {"glb": stem + ".glb", "ifc": stem + ".ifc"}, "source": source, "exported": stamp,
               "generator": "FreeCAD %s, Organic workbench" % ".".join(App.Version()[:3]), "elements": rows}
     with open(side, "w", encoding="utf-8") as fh:

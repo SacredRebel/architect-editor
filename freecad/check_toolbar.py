@@ -19,6 +19,11 @@ Every expectation is derived here, not taken from the workbench:
      shape wherever the building stands (its volume there within 0.05 % of the one at the
      origin). Every option of every list (plan curves, wall tops and sides, opening shapes,
      vault and dome profiles, leaf outlines, figures, solids) makes a valid shape.
+  M. moved: what a kernel moves or turns as a whole is where it says, in the object's own
+     frame, with the building 116 m out and turned: the vault centred on its origin, a solid
+     standing on its face or vertex (twice the inradius; a √(2/3)), the five-eighths dome on
+     its cut, the catenoid on the ground, a slab on a ring 5 m off lying there, a wall with
+     its base lifted, a turned S-curve. (An object's placement replaces its shape's own.)
   O. the Organic toolbar against closed forms: the curved wall t H R θ; the opening's volume
      as the integral of the chord through the wall's ring over the opening's outline; the
      arch's height (rise + ring) and its thrust line; the dome's and the saddle's boxes; the
@@ -37,7 +42,8 @@ Every expectation is derived here, not taken from the workbench:
      level, within the crown.
 
 --self-test forges faults into what was read (a solid not valid, a hole in a mesh, a part
-left at the document's origin, a shape that changes when the building turns, the wall half
+left at the document's origin, a shape that changes when the building turns, a solid's own
+move dropped, a slab left at the origin, the wall half
 as thick, the opening twice as wide, the sun 1° off, the building turned the wrong way, a
 part left behind by the turn, a snap off its module, a report row missing, the net out of
 balance, the net off its paraboloid, the cells closed, a rib above the shell, a column tip
@@ -363,6 +369,57 @@ def options():
     return out
 
 
+def moves():
+    """Objects whose shape is moved or turned as a whole by its kernel, or stands on a curve
+    away from the building's origin: their boxes in their own frame, in metres. (An object's
+    placement replaces its shape's own, so such a move is lost unless it is in the geometry.)"""
+    doc, b = scene(True)
+    out = {}
+    try:
+        def box(obj):
+            s = obj.Shape.copy()
+            s.Placement = App.Placement()
+            bb = s.optimalBoundingBox()
+            return (bb.XMin / MM, bb.YMin / MM, bb.ZMin / MM, bb.XMax / MM, bb.YMax / MM, bb.ZMax / MM)
+
+        def made(label, cls, setup):
+            obj = oc.place(oo.make(cls, "Moved", label, doc), doc)
+            setup(obj)
+            doc.recompute()
+            out[label] = box(obj)
+            return obj
+
+        made("vault", oo.Vault, lambda o: None)
+        made("icosahedron on a face", oo.SacredSolid, lambda o: setattr(o, "Kind", "Icosahedron"))
+
+        def vertex(o):
+            o.Kind, o.Standing = "Tetrahedron", "On a vertex"
+        made("tetrahedron on a vertex", oo.SacredSolid, vertex)
+        made("geodesic dome, five eighths", oo.GeodesicDome, lambda o: setattr(o, "Portion", 0.625))
+        made("catenoid", oo.MinimalShell, lambda o: setattr(o, "Kind", "Catenoid"))
+        ring = oc.place(oo.make(oo.PlanCurve, "Ring", "ring", doc), doc)
+        ring.Kind, ring.Radius = "Circle", 1200.0
+        ring.Placement = b.Placement.multiply(App.Placement(App.Vector(0, -5000, 180), App.Rotation()))
+        arc = oc.place(oo.make(oo.PlanCurve, "Arc", "arc", doc), doc)
+        arc.Kind = "Arc"
+        doc.recompute()
+
+        def on_ring(o):
+            o.Base, o.Thickness = ring, 620.0
+        made("slab on a ring 5 m off", oo.Slab, on_ring)
+
+        def lifted(o):
+            o.Base, o.BaseOffset = arc, 500.0
+        made("wall, its base 0.5 m up", oo.Wall, lifted)
+
+        def turned(o):
+            o.Kind, o.Turn = "S-curve", 90.0
+        made("S-curve turned 90°", oo.PlanCurve, turned)
+    finally:
+        App.closeDocument(doc.Name)
+    return out
+
+
 def refused():
     """The commands that need a selection, pressed without one: each must say so."""
     doc, _b = scene(False)
@@ -408,8 +465,8 @@ def sun_facts():
 
 
 def read_facts():
-    return {"origin": pressed(False), "turned": pressed(True), "options": options(), "refused": refused(), "net": net_facts(),
-            "sun": sun_facts(), "anchor": canonical_frame()}
+    return {"origin": pressed(False), "turned": pressed(True), "options": options(), "moves": moves(), "refused": refused(),
+            "net": net_facts(), "sun": sun_facts(), "anchor": canonical_frame()}
 
 
 # ------------------------------------------------------------------ judge
@@ -456,6 +513,27 @@ def judge(facts):
     ok(all(said.get(k) for k in ("Organic_ShellRoof", "Organic_Slab", "Organic_Opening")),
        "P pressed without a selection, the shell roof, the slab and the opening say what to select (%s)" % "; ".join("%s: %s" % kv for kv in sorted(said.items())))
 
+    # M. a shape's own move is kept (boxes in the object's own frame, the building 116 m out and turned)
+    mv = facts["moves"]
+    near = lambda got, want, tol=0.003: got is not None and all(abs(g - w) <= tol for g, w in zip(got, want))
+    pick = lambda label, idx: tuple(mv[label][i] for i in idx) if label in mv else None
+    ok(near(pick("vault", (1, 4, 2, 5)), (-8.0, 8.0, 0.0, 3.65)),
+       "M the vault lies centred on its own origin: y %s, z %s (16 m long, rise 3.5 + shell 0.15)" % (pick("vault", (1, 4)), pick("vault", (2, 5))))
+    tall = 2 * 3.0 * math.sqrt(3) / 12 * (3 + math.sqrt(5))  # twice the inradius of an icosahedron of edge 3
+    ok(near(pick("icosahedron on a face", (2, 5)), (0.0, tall)),
+       "M the icosahedron stands on a face: z %s (twice its inradius: %.4f)" % (pick("icosahedron on a face", (2, 5)), tall))
+    ok(near(pick("tetrahedron on a vertex", (2, 5)), (0.0, 3.0 * math.sqrt(2.0 / 3.0))),
+       "M the tetrahedron stands on a vertex: z %s (its height a √(2/3) = %.4f)" % (pick("tetrahedron on a vertex", (2, 5)), 3.0 * math.sqrt(2.0 / 3.0)))
+    ok(near(pick("geodesic dome, five eighths", (2, 5)), (0.0, 7.5)),
+       "M the five-eighths geodesic dome stands on its cut: z %s (1.25 R = 7.5)" % (pick("geodesic dome, five eighths", (2, 5)),))
+    ok(near(pick("catenoid", (2, 5)), (0.0, 8.0)), "M the catenoid stands on the ground: z %s (its height 8)" % (pick("catenoid", (2, 5)),))
+    ok(near(pick("slab on a ring 5 m off", (0, 3, 1, 4, 2, 5)), (-1.2, 1.2, -6.2, -3.8, -0.44, 0.18), 0.006),
+       "M a slab on a ring 5 m from its building's origin and 0.18 m up lies there: x %s, y %s, z %s"
+       % (pick("slab on a ring 5 m off", (0, 3)), pick("slab on a ring 5 m off", (1, 4)), pick("slab on a ring 5 m off", (2, 5))))
+    ok(near(pick("wall, its base 0.5 m up", (2, 5)), (0.5, 3.2)), "M a wall with its base 0.5 m up stands there: z %s" % (pick("wall, its base 0.5 m up", (2, 5)),))
+    ok(near(pick("S-curve turned 90°", (0, 3, 1, 4)), (-1.5, 1.5, 0.0, 12.0), 0.01),
+       "M an S-curve turned 90° runs along y: x %s, y %s" % (pick("S-curve turned 90°", (0, 3)), pick("S-curve turned 90°", (1, 4))))
+
     # O. the Organic toolbar
     alng, alat, aelev = facts["anchor"]
     nb = here["New organic building"]
@@ -471,19 +549,23 @@ def judge(facts):
     ok(o["openings"] == 1 and abs(o["removed"] - took) <= 0.002 * took,
        "O Opening: it takes %.4f m³ out of the wall (the chord through the ring, integrated over the arch: %.4f)" % (o["removed"], took))
     ar = here["Catenary arch"]
-    ok(abs(ar["box"][5] - (3.81 + 0.6)) <= 0.002 and abs((ar["box"][4] - ar["box"][1]) - 1.2) <= 0.001 and ar["thrust"] and ar["deviation"] <= 0.6 / 6,
-       "O Catenary arch: %.3f m high (rise 3.81 + ring 0.6), %.3f m deep, its thrust line %.4f m from the ring's middle (within the middle third: %s)"
-       % (ar["box"][5], ar["box"][4] - ar["box"][1], ar["deviation"], ar["thrust"]))
+    ok(abs(ar["box"][5] - (3.81 + 0.6)) <= 0.002 and abs(ar["box"][1] + 0.6) <= 0.001 and abs(ar["box"][4] - 0.6) <= 0.001 and ar["thrust"] and ar["deviation"] <= 0.6 / 6,
+       "O Catenary arch: %.3f m high (rise 3.81 + ring 0.6), 1.2 m deep about its own origin (y %.3f..%.3f), its thrust line %.4f m from the ring's middle (within the middle third: %s)"
+       % (ar["box"][5], ar["box"][1], ar["box"][4], ar["deviation"], ar["thrust"]))
     d = here["Dome"]
     ok(max(abs(d["box"][0] + 5), abs(d["box"][3] - 5), abs(d["box"][1] + 5), abs(d["box"][4] - 5), abs(d["box"][2]), abs(d["box"][5] - 5.5)) <= 0.005,
        "O Dome: 10 m across, 5.5 m high (%.3f..%.3f, %.3f..%.3f, %.3f..%.3f)" % (d["box"][0], d["box"][3], d["box"][1], d["box"][4], d["box"][2], d["box"][5]))
     s = here["Saddle shell"]
     # z = k x y, k = rise / (a/2 b/2); at a corner the shell's normal leans out, and its thickness with it
     k = 1.5 / 16.0
-    side = 8.0 + 2 * 0.15 * (4 * k) / math.sqrt(1 + 2 * (4 * k) ** 2)
-    ok(abs((s["box"][3] - s["box"][0]) - side) <= 0.005 and abs((s["box"][4] - s["box"][1]) - side) <= 0.005 and abs(s["box"][5] - 1.5) <= 0.005,
-       "O Saddle shell: 8 m by 8 m, its corners 1.5 m up; with its thickness leaning out at the corners %.3f m by %.3f m (worked out here: %.3f)"
-       % (s["box"][3] - s["box"][0], s["box"][4] - s["box"][1], side))
+    lean = math.sqrt(1 + 2 * (4 * k) ** 2)
+    side = 8.0 + 2 * 0.15 * (4 * k) / lean
+    foot = 0.15 * (1 - 1 / lean)  # its low corners: the shell's thickness, less its lean, above the ground
+    ok(abs((s["box"][3] - s["box"][0]) - side) <= 0.005 and abs((s["box"][4] - s["box"][1]) - side) <= 0.005
+       and abs(s["box"][5] - (2 * 1.5 + 0.15)) <= 0.005 and abs(s["box"][2] - foot) <= 0.005,
+       "O Saddle shell: 8 m by 8 m, standing on its two low corners (%.3f m up; worked out here %.3f), its high ones %.3f m up (twice the rise + the shell); "
+       "with its thickness leaning out, %.3f m by %.3f m (worked out here: %.3f)"
+       % (s["box"][2], foot, s["box"][5], s["box"][3] - s["box"][0], s["box"][4] - s["box"][1], side))
     sl = here["Floor slab"]
     exact = math.pi * 64 * 0.2
     ok(abs(sl["volume"] - exact) <= 0.001 * exact, "O Floor slab on a circle of radius 8 m: %.4f m³ (π r² t = %.4f)" % (sl["volume"], exact))
@@ -630,6 +712,8 @@ def forgeries(facts):
         ("a part left at the document's origin", "P Leaf shell roof at the spot, turned: made at the building", f(lambda g: g["turned"]["Leaf shell roof"].update(offset=(112.0, -31.0, 6.07), twist=30.0))),
         ("a shape that changes when the building turns", "P Curved wall: the same shape", f(lambda g: g["turned"]["Curved wall"].__setitem__("volume", g["turned"]["Curved wall"]["volume"] * 1.002))),
         ("an option that fails", "P every option", f(lambda g: g["options"].__setitem__("vault Pointed", False))),
+        ("a solid's own move dropped", "M the icosahedron stands on a face", f(lambda g: g["moves"].__setitem__("icosahedron on a face", (-2.78, -2.58, -2.267, 2.78, 2.58, 2.267)))),
+        ("a slab left at the origin", "M a slab on a ring", f(lambda g: g["moves"].__setitem__("slab on a ring 5 m off", (-1.2, -1.2, -0.62, 1.2, 1.2, 0.0)))),
         ("the wall half as thick", "O Curved wall", f(lambda g: g["origin"]["Curved wall"].__setitem__("volume", g["origin"]["Curved wall"]["volume"] / 2))),
         ("the opening twice as wide", "O Opening", f(lambda g: g["origin"]["Opening"].__setitem__("removed", g["origin"]["Opening"]["removed"] * 2))),
         ("the building not at the anchor", "O New organic building", f(lambda g: g["origin"]["New organic building"].__setitem__("lng", -119.155333))),

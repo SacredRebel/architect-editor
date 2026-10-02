@@ -45,9 +45,14 @@ def distance(obj, name, group, tip, metres):
 
 
 def set_local(obj, shape):
-    """Assign a shape built in the object's own frame, keeping its placement."""
+    """Assign a shape built in the object's own frame, keeping the object's placement.
+
+    A shape that was moved or turned as a whole (translate, rotate, or built on a moved edge)
+    carries that move as its own placement, and an object's placement replaces its shape's:
+    the move would be lost (a vault was not centred, a solid did not stand on its face, a slab
+    on a curve 5 m away lay at the origin). The move is written into the geometry first."""
     pl = obj.Placement
-    obj.Shape = shape
+    obj.Shape = og.baked(shape)
     obj.Placement = pl
 
 
@@ -65,7 +70,7 @@ def base_edge(obj, closed_required=False, corners=False):
     outline = getattr(getattr(base, "Proxy", None), "outline", None)  # a figure's outline, less its construction lines
     local = (outline(base) if outline else base.Shape).copy()
     local.Placement = obj.Placement.inverse().multiply(local.Placement)
-    edge, closed = (og.plan_path if corners else og.plan_edge)(local)
+    edge, closed = (og.plan_path if corners else og.plan_edge)(og.baked(local))  # the curve itself in this frame
     if closed_required and not closed:
         raise ValueError("%s needs a closed base curve" % obj.Label)
     return edge, closed

@@ -142,7 +142,7 @@ def draw(export=None, out_dir=OUT, land=None):
             ax.add_collection(PolyCollection(tris, facecolors="#3b3b3b", edgecolors="none", label="existing buildings"))
         if ring:
             ax.plot([p[0] for p in ring], [p[1] for p in ring], color="#b03030", linewidth=1.2, label="surveyed boundary")
-        for _name, tris, rgb in parts:
+        for _name, tris, rgb in sorted(parts, key=lambda part: part[1][:, :, 2].max()):  # seen from above: the highest part last
             w = on_site(tris, place)
             ax.add_collection(PolyCollection(w[:, :, :2], facecolors=rgb, edgecolors="none"))
         ax.plot([0], [0], marker="+", color="k", markersize=10)
@@ -167,7 +167,7 @@ def draw(export=None, out_dir=OUT, land=None):
             ax.set_ylim(here[1] - half, here[1] + half)
             ax.set_title("Where it stands: contours every 1 m", fontsize=10)
     clear = side.get("clearance_m", {})
-    fig.suptitle("%s — %.1f m E, %.1f m N of the anchor, floor at %.2f m, turned %.0f° %s; clear of: %s"
+    fig.suptitle("%s — %.1f m E, %.1f m N of the anchor, its level (z = 0) at %.2f m, turned %.0f° %s; clear of: %s"
                  % (side["name"], here[0], here[1], place["elevation_m"], abs(place["rotation_deg"]["y"]),
                     "clockwise" if place["rotation_deg"]["y"] < 0 else "anticlockwise",
                     ", ".join("%s %.0f m" % (k.replace("_", " "), v) for k, v in sorted(clear.items()))), fontsize=10)

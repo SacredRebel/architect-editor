@@ -72,7 +72,7 @@ On the file as reopened, **25 checks pass** and **9 of 9 forgeries are rejected*
   - FreeCAD 1.1.4 built-ins: Mesh (terrain, contours), Part (wires, faces, envelope), Draft (dimensions), BIM (the georeferenced Site), PySide/Qt and pivy (in the check). FreeCAD is LGPL-2.1-or-later, runs as its own program, and nothing from it is copied here;
   - Playground-Os `mind/brain/TOOLS.md`, read for the tool order.
 - **Checked and skipped:**
-  - Claude Code skills: none covers FreeCAD.
+  - The skills installed for this window: none covers FreeCAD.
   - The Addon Manager's GeoData and similar add-ons: the pack already gives the georeference and the terrain.
   - The 19 catalogued packages in `FreeCAD\packages` (`UNIFY-A.md`): none is needed for a site template.
   - IfcOpenShell 0.8.4 (LGPL-3.0, bundled with FreeCAD): no IFC in F1.

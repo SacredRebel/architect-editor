@@ -2,9 +2,11 @@
 """build_test_pavilion — the test building, built again and sent to the map.
 
 A test building, not a house design: a curved room wall with a wave top and five openings, a
-garden wall on an S-curve with an arched gate, a leaf-shell roof on footings, and a ribbed
-catenary vault as the way in. It makes the same objects as the Organic toolbar's buttons, with
-the same properties, so the result is the one a user gets by pressing them.
+garden wall on an S-curve with an arched gate, a leaf-shell roof on footings, a ribbed catenary
+vault as the way in, a floor two risers above the ground, and a round step at each door (so
+the map's walker has a floor and steps to climb). It makes the same objects as the Organic
+toolbar's buttons, with the same properties, so the result is the one a user gets by pressing
+them.
 
 Runs inside FreeCAD 1.1 (the window through the FreeCAD MCP connector, or freecadcmd):
 
@@ -12,7 +14,7 @@ Runs inside FreeCAD 1.1 (the window through the FreeCAD MCP connector, or freeca
     build()
 
 Where it stands: SPOT metres east and north of the anchor (C:\\Playground\\BRAIN.md §3), its
-floor on the map's own ground there, turned TURN degrees clockwise. The spot is the flattest
+level (z = 0) on the map's own ground there, turned TURN degrees clockwise. The spot is the flattest
 one on the parcel where a footprint of 11 m radius stays 3 m clear of the roads and of the
 access easement, 6 m clear of the existing buildings and 6.1 m inside the surveyed boundary;
 check_organic measures the building's real footprint against the map's files and the land pack.
@@ -33,6 +35,8 @@ import organic_objects as oo  # noqa: E402
 MM = 1000.0
 SPOT = (-112.0, 31.0)  # metres east, north of the anchor
 TURN = 30.0            # degrees clockwise seen from above: the spine points to bearing 120°
+RISER = 0.18           # metres: the step is one riser above the ground, the floor two
+BELOW = 0.44           # metres the floor and the steps reach below the building's level, into the ground
 DESIGN = os.environ.get("ORGANIC_DESIGN") or os.path.join(os.path.expanduser("~"), "Documents", "SulphurMountain", "Organic-test-pavilion.FCStd")
 
 
@@ -62,10 +66,10 @@ def build(spot=SPOT, turn=TURN, design=DESIGN, send=True, out_dir=None):
     b = Arch.makeBuilding([], name="OrganicBuilding")
     b.Label = "Organic test pavilion"
     site.addObject(b)
-    floor = ox.ground_at(ox.land_dir(out_dir), spot[0], spot[1])
-    if floor is None:
+    level = ox.ground_at(ox.land_dir(out_dir), spot[0], spot[1])
+    if level is None:
         raise RuntimeError("the map's land file in %s has no ground under %.1f m E, %.1f m N" % (ox.land_dir(out_dir), spot[0], spot[1]))
-    b.Placement = App.Placement(App.Vector(spot[0] * MM, spot[1] * MM, floor * MM), App.Rotation(App.Vector(0, 0, 1), -turn))
+    b.Placement = App.Placement(App.Vector(spot[0] * MM, spot[1] * MM, level * MM), App.Rotation(App.Vector(0, 0, 1), -turn))
 
     def place(obj, local=None):
         obj.Placement = b.Placement.multiply(local if local is not None else obj.Placement)
@@ -82,7 +86,7 @@ def build(spot=SPOT, turn=TURN, design=DESIGN, send=True, out_dir=None):
     w1.OpeningPositions = [2.8, 6.2, 9.2, 12.2, 15.6]
     w1.OpeningWidths = [0.9, 0.8, 1.1, 0.8, 0.9]
     w1.OpeningHeights = [1.4, 0.8, 2.2, 0.8, 1.4]
-    w1.OpeningSills = [0.9, 1.2, 0.0, 1.2, 0.9]
+    w1.OpeningSills = [0.9, 1.2, 2 * RISER, 1.2, 0.9]  # the back door's sill is the floor
     w1.OpeningShapes = ["Arch", "Round", "Pointed", "Round", "Arch"]
     # 3. the garden wall: an S-curve, a wall with an arch top and an arched gate
     c2 = place(oo.make(oo.PlanCurve, "PlanCurve", "Plan curve", doc), App.Placement(App.Vector(-5.5 * MM, 6.8 * MM, 0), App.Rotation()))
@@ -98,23 +102,33 @@ def build(spot=SPOT, turn=TURN, design=DESIGN, send=True, out_dir=None):
     leaf.RidgeHeights = [0.4, 5.4, 6.2, 0.4]
     leaf.Eave, leaf.Curvature, leaf.Thickness, leaf.RibSpacing, leaf.RibDepth = 0.4 * MM, 0.2, 0.15 * MM, 2.0 * MM, 0.12 * MM
     leaf.Plinth = 0.6 * MM
-    # 5. the vault: the way in
-    v = place(oo.make(oo.Vault, "Vault", "Entrance vault", doc), App.Placement(App.Vector(0, -4.6 * MM, 0), App.Rotation()))
+    # 5. the vault: the way in. It is 5 m long about its own origin: from 4.6 m outside the
+    # room's centre to 0.4 m inside it, where it has stood since the first pavilion.
+    v = place(oo.make(oo.Vault, "Vault", "Entrance vault", doc), App.Placement(App.Vector(0, -2.1 * MM, 0), App.Rotation()))
     v.Profile, v.Span, v.Rise, v.Thickness, v.VaultLength = "Catenary", 2.8 * MM, 3.0 * MM, 0.2 * MM, 5.0 * MM
     v.Ribs, v.RibWidth, v.RibDepth = 3, 0.25 * MM, 0.12 * MM
+    # 6. the floor, two risers up inside the room, and a round step at each door
+    rings = []
+    for label, radius, x, y, top in (("Floor", 4.0, 0.0, 0.0, 2 * RISER), ("Entrance step", 1.2, 0.0, -5.0, RISER), ("Garden step", 0.9, 0.0, 5.35, RISER)):
+        ring = place(oo.make(oo.PlanCurve, "PlanCurve", "Plan curve", doc), App.Placement(App.Vector(x * MM, y * MM, top * MM), App.Rotation()))
+        ring.Kind, ring.Radius = "Circle", radius * MM
+        doc.recompute()
+        slab = place(oo.make(oo.Slab, "Slab", label, doc))
+        slab.Base, slab.Thickness = ring, (top + BELOW) * MM
+        rings.append(ring)
     doc.recompute()
     if App.GuiUp:
-        for c in (c1, c2):
+        for c in [c1, c2] + rings:
             c.ViewObject.Visibility = False
 
     solids = [o for o in b.Group if hasattr(o, "Shape") and o.Shape.Solids]
     bad = [o.Label for o in solids if not o.Shape.isValid() or len(o.Shape.Solids) != 1]
     for o in solids:
         print("%-18s %-5s %-10s volume %8.3f m³" % (o.Label, o.IfcType, type(o.Proxy).__name__, o.Shape.Volume / 1e9))
-    print("built in %.1f s at %.1f m E, %.1f m N, floor %+.2f m from the anchor's ground, turned %.1f°; not one valid solid: %s"
-          % (time.time() - t0, spot[0], spot[1], floor, turn, bad or "none"))
-    if bad or len(solids) != 4:
-        raise RuntimeError("the pavilion is not four valid solids: %s" % (", ".join(bad) or "%d solids" % len(solids)))
+    print("built in %.1f s at %.1f m E, %.1f m N, its level %+.2f m from the anchor's ground, turned %.1f°; not one valid solid: %s"
+          % (time.time() - t0, spot[0], spot[1], level, turn, bad or "none"))
+    if bad or len(solids) != 7:
+        raise RuntimeError("the pavilion is not seven valid solids: %s" % (", ".join(bad) or "%d solids" % len(solids)))
     os.makedirs(os.path.dirname(design), exist_ok=True)
     doc.saveAs(design)
     print("saved", design)
