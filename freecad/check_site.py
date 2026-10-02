@@ -8,9 +8,11 @@ Runs inside FreeCAD 1.1 (the GUI through the FreeCAD MCP connector, or freecadcm
 
 Every expectation is derived here, independently of the macro that built the file:
 
-  A. georeference — the Site's longitude/latitude equal the pack's chimney (models.json
-     origin of oak-leaf-massing); elevation 425.90 m; declination 0; the stored UTM 11N
-     equals positions.csv and a transverse Mercator projection computed here.
+  A. georeference — the canonical frame, read from C:\\Playground\\BRAIN.md §3 itself: the
+     Site's longitude and latitude equal the anchor, its elevation the ground datum there;
+     declination 0. The pack's own DEM under the anchor reads that ground within 5 cm. The
+     stored UTM 11N equals a transverse Mercator projection computed here (Krüger's series;
+     the macro uses Snyder's), which first has to reproduce every UTM in positions.csv.
   B. property line against the 11 survey calls (bearing and distance, not the ring's
      coordinates): every edge's length within 0.03 m of its call, and every edge's
      line bearing, less one common rotation (the survey's basis of bearings), within
@@ -19,7 +21,7 @@ Every expectation is derived here, independently of the macro that built the fil
      here with the pack frame's own formula.
   D. terrain, pixel for pixel: 400 mesh vertices against the terrarium tiles decoded by
      Qt (a different PNG decoder from the macro's): at a pixel centre within 5 cm, and
-     at that pixel's elevation less 425.90 m within 1 cm.
+     at that pixel's elevation less the ground datum within 1 cm.
   E. terrain against positions.csv: the mesh height under each placed point against the
      DEM elevation the pack's own script recorded there (RMS ≤ 0.15 m, worst ≤ 0.35 m).
   F. setbacks: the front edge is the one with the most road frontage (recomputed here);
@@ -32,11 +34,15 @@ Every expectation is derived here, independently of the macro that built the fil
   J. with the GUI only: each dimension's text as drawn (Draft's text transform in the
      scene graph) runs along its edge of the survey ring, reading from the bottom or
      the right (within 0.5°). Without the GUI nothing is drawn, and J says SKIP.
+  K. roads: the county's road centrelines are drawn where the terrain reaches: every
+     drawn point within 5 mm in plan of the county's line (converted here), and every
+     county vertex on the terrain among the drawn points.
 
 --self-test forges faults into what was read (the boundary moved 1 m east, north
-flipped, the datum at the DEM's 425.625 m, the terrain 0.5 m high, a structure gone,
-the setbacks on the wrong front, UTM easting and northing swapped, millimetres, and
-with the GUI a dimension label upside down) and must see every one rejected.
+flipped, the retired 425.90 m datum, the origin at the retired models.json point, the
+terrain 0.5 m high, a structure gone, the setbacks on the wrong front, UTM easting and
+northing swapped, millimetres, a road centreline 2 m off, the roads not drawn, and with
+the GUI a dimension label upside down) and must see every one rejected.
 """
 
 import copy
@@ -55,9 +61,24 @@ PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.ap
 FCSTD = os.environ.get("SITE_FCSTD") or os.path.join(
     os.path.expanduser("~"), "Documents", "SulphurMountain", "SulphurMountain-site.FCStd"
 )
-DATUM_M = 425.90
+BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
 SETBACKS_M = {"front": 6.10, "side": 1.52, "rear": 4.57}
 FOOT_M = 0.3048
+
+
+def canonical_frame():
+    """(lng, lat, ground m) of the anchor, as BRAIN.md §3 states them."""
+    with open(BRAIN, encoding="utf-8") as fh:
+        text = fh.read().replace("\u2212", "-").replace("*", "")
+    section = text.split("## 3.", 1)[1].split("## 4.", 1)[0]
+    origin = re.search(r"lng\s*(-?\d+\.\d+),\s*lat\s*(-?\d+\.\d+)", section)
+    ground = re.search(r"(\d+\.\d+)\s*m NAVD88", section)
+    if not origin or not ground:
+        raise RuntimeError("BRAIN.md §3 no longer states the anchor and its ground datum")
+    return float(origin.group(1)), float(origin.group(2)), float(ground.group(1))
+
+
+ANCHOR_LNG, ANCHOR_LAT, DATUM_M = canonical_frame()
 
 
 def fetch(path, binary=False, attempts=3):
@@ -75,10 +96,10 @@ def fetch(path, binary=False, attempts=3):
 
 
 # ------------------------------------------------------------------ independent maths
-def pack_to_local(frame, chimney):
+def pack_to_local(frame, anchor):
     kx, ky = frame["metres_per_deg_lng"], frame["metres_per_deg_lat"]
-    cx = (chimney[0] - frame["origin_lng"]) * kx
-    cy = (chimney[1] - frame["origin_lat"]) * ky
+    cx = (anchor[0] - frame["origin_lng"]) * kx
+    cy = (anchor[1] - frame["origin_lat"]) * ky
     to = lambda lng, lat: ((lng - frame["origin_lng"]) * kx - cx, (lat - frame["origin_lat"]) * ky - cy)
     back = lambda x, y: (frame["origin_lng"] + (x + cx) / kx, frame["origin_lat"] + (y + cy) / ky)
     return to, back
@@ -213,12 +234,17 @@ def read_facts(doc):
     base = App.Vector(sum(p.x for p in pts) / len(pts), sum(p.y for p in pts) / len(pts), 0)
     env = obj("BuildableEnvelope")
     dims = sorted((o for o in doc.Objects if o.Name.startswith("Dimension")), key=lambda o: int(o.Label.split()[-1]))
+    roads = [[[(v.X / 1000.0, v.Y / 1000.0) for v in w.OrderedVertexes] for w in o.Shape.Wires]
+             for o in doc.Objects if o.Name.startswith("Road") and o.isDerivedFrom("Part::Feature")]
+    bb = mesh.BoundBox
     return {
+        "roads": roads,
+        "terrain_box": (bb.XMin / 1000.0, bb.YMin / 1000.0, bb.XMax / 1000.0, bb.YMax / 1000.0),
         "lng": site.Longitude,
         "lat": site.Latitude,
         "elevation": site.Elevation.Value / 1000.0,
         "declination": site.Declination.Value,
-        "utm": (getattr(site, "ChimneyUtm11N_E", None), getattr(site, "ChimneyUtm11N_N", None)),
+        "utm": (getattr(site, "AnchorUtm11N_E", None), getattr(site, "AnchorUtm11N_N", None)),
         "units": getattr(doc, "UnitSystem", ""),
         "corners": corners,
         "terrain": [(p.x / 1000.0, p.y / 1000.0, p.z / 1000.0) for p in sample],
@@ -245,18 +271,20 @@ def judge(facts, pack, extra):
         (oks if cond else fails).append(msg)
 
     frame = pack["frame"]
-    chimney = extra["chimney"]
-    to_local, to_ll = pack_to_local(frame, chimney)
+    anchor = extra["anchor"]
+    to_local, to_ll = pack_to_local(frame, anchor)
 
-    # A. georeference
-    ok(abs(facts["lng"] - chimney[0]) < 1e-9 and abs(facts["lat"] - chimney[1]) < 1e-9, "A site at the chimney: %.7f, %.7f (pack %.7f, %.7f)" % (facts["lng"], facts["lat"], chimney[0], chimney[1]))
-    ok(abs(facts["elevation"] - DATUM_M) < 1e-6, "A datum %.3f m (425.90)" % facts["elevation"])
+    # A. georeference: the canonical frame of BRAIN.md §3
+    ok(abs(facts["lng"] - anchor[0]) < 1e-9 and abs(facts["lat"] - anchor[1]) < 1e-9, "A site at the anchor: %.7f, %.7f (BRAIN.md §3: %.5f, %.4f)" % (facts["lng"], facts["lat"], anchor[0], anchor[1]))
+    ok(abs(facts["elevation"] - DATUM_M) < 1e-6, "A ground datum %.3f m (BRAIN.md §3: %.2f)" % (facts["elevation"], DATUM_M))
     ok(abs(facts["declination"]) < 1e-9, "A declination %.3f° (true north = +Y)" % facts["declination"])
-    pe, pn = extra["positions_utm"]
-    ce, cn = utm(*chimney)
+    ok(abs(extra["anchor_dem"] - DATUM_M) <= 0.05, "A the pack's DEM under the anchor reads %.3f m (BRAIN.md §3: %.2f)" % (extra["anchor_dem"], DATUM_M))
+    rows = [r for r in extra["positions"] if r.get("utm")]
+    worst_utm = max((math.hypot(utm(r["lng"], r["lat"])[0] - r["utm"][0], utm(r["lng"], r["lat"])[1] - r["utm"][1]) for r in rows), default=float("inf"))
+    ok(len(rows) >= 10 and worst_utm <= 0.05, "A the projection computed here reproduces %d UTM pairs of positions.csv (worst %.3f m)" % (len(rows), worst_utm))
+    ce, cn = utm(*anchor)
     fe, fn = facts["utm"]
-    ok(fe is not None and abs(fe - pe) < 1e-3 and abs(fn - pn) < 1e-3, "A stored UTM 11N (%s, %s) = positions.csv (%.3f, %.3f)" % (fe, fn, pe, pn))
-    ok(fe is not None and abs(fe - ce) < 0.05 and abs(fn - cn) < 0.05, "A stored UTM 11N within 5 cm of the projection computed here (%.3f, %.3f)" % (ce, cn))
+    ok(fe is not None and abs(fe - ce) < 0.05 and abs(fn - cn) < 0.05, "A stored UTM 11N (%s, %s) within 5 cm of that projection (%.3f, %.3f)" % (fe, fn, ce, cn))
 
     # B. against the survey calls
     corners = facts["corners"]
@@ -300,7 +328,7 @@ def judge(facts, pack, extra):
         except Exception:  # a vertex over ground the pack has no tile for
             worst_z = float("inf")
     ok(worst_pos <= 0.05, "D 400 terrain vertices at pixel centres (worst %.3f m)" % worst_pos)
-    ok(worst_z <= 0.01, "D 400 terrain vertices at their pixel's elevation less 425.90 m, decoded by Qt (worst %.4f m)" % worst_z)
+    ok(worst_z <= 0.01, "D 400 terrain vertices at their pixel's elevation less %.2f m, decoded by Qt (worst %.4f m)" % (DATUM_M, worst_z))
 
     # E. terrain against positions.csv
     diffs = []
@@ -364,6 +392,18 @@ def judge(facts, pack, extra):
     ok(abs(facts["north"]) <= 1.0, "I the north arrow points +Y (%.2f°)" % facts["north"])
     ok(bool(re.search(r"\bm\b|Meter|MKS", facts["units"] or "")) and "mm" not in (facts["units"] or ""), "I unit system in metres (%s)" % facts["units"])
 
+    # K. the county's road centrelines, drawn as far as the terrain reaches
+    box = facts["terrain_box"]
+    county_lines = [[to_local(*p) for p in line] for line in extra["road_lines"]]
+    county_segs = [(a, b) for line in county_lines for a, b in zip(line, line[1:])]
+    drawn = [p for road in facts["roads"] for wire in road for p in wire]
+    off_line = max((min(segment_distance(p, a, b) for a, b in county_segs) for p in drawn), default=float("inf"))
+    on_terrain = [p for line in county_lines for p in line if box[0] + 3 <= p[0] <= box[2] - 3 and box[1] + 3 <= p[1] <= box[3] - 3]
+    missed = max((min(math.hypot(p[0] - q[0], p[1] - q[1]) for q in drawn) for p in on_terrain), default=0.0) if drawn else float("inf")
+    ok(len(drawn) >= 2 and off_line <= 0.005 and missed <= 0.005,
+       "K %d county road centrelines drawn: every drawn point within 5 mm of the county's line (worst %.4f m), every one of its %d vertices on the terrain drawn (worst %.4f m)"
+       % (len(facts["roads"]), off_line, len(on_terrain), missed))
+
     # J. the dimension text as drawn: along its edge, reading from the bottom or the right
     labels = facts.get("labels")
     if labels is not None:
@@ -379,23 +419,23 @@ def judge(facts, pack, extra):
 
 def pack_expectations():
     pack = fetch("pack.json")
-    models = fetch("models.json")
     survey = fetch("survey.geojson")
     county = fetch("county.geojson")
     roofs = fetch("roofs.geojson")
-    oak = next(m for m in models["models"] if m["id"] == "oak-leaf-massing")
     lines = fetch("positions.csv", binary=True).decode("utf-8").splitlines()
     head = lines[0].split(",")
     positions = []
-    chimney_utm = None
     for line in lines[1:]:
         rec = dict(zip(head, line.split(",")))
         try:
-            positions.append({"lng": float(rec["lng"]), "lat": float(rec["lat"]), "elev_m": float(rec["elev_m"])})
+            row = {"lng": float(rec["lng"]), "lat": float(rec["lat"]), "elev_m": float(rec["elev_m"])}
         except (KeyError, ValueError):
             continue
-        if rec["id"] == "oak-leaf-massing":
-            chimney_utm = (float(rec["utm11_e"]), float(rec["utm11_n"]))
+        try:
+            row["utm"] = (float(rec["utm11_e"]), float(rec["utm11_n"]))
+        except (KeyError, ValueError):
+            pass
+        positions.append(row)
     boundary = next(f for f in survey["features"] if f["properties"].get("layer") == "boundary")
     ring = [tuple(p) for p in boundary["geometry"]["coordinates"][0]]
     ring = ring[:-1] if ring[0] == ring[-1] else ring
@@ -412,17 +452,26 @@ def pack_expectations():
         if p.get("county_footprint") is None:
             structures.append({"kind": str(p.get("kind")).split(" (")[0], "ring": f["geometry"]["coordinates"][0][:-1], "base": float(p["ground_m"]), "height": float(p["roof_m"])})
     z = int(pack["layers"]["terrain"].get("maxzoom", 17))
+    tiles = QtTiles(pack["layers"]["terrain"]["template"], z)
+    # the pack's DEM under the anchor, bilinear between the four pixel centres around it
+    fx, fy = tile_pixel(ANCHOR_LNG, ANCHOR_LAT, z, tiles.size)
+    ix, iy = int(math.floor(fx - 0.5)), int(math.floor(fy - 0.5))
+    tx, ty = fx - 0.5 - ix, fy - 0.5 - iy
+    anchor_dem = ((tiles.elevation(ix, iy) * (1 - tx) + tiles.elevation(ix + 1, iy) * tx) * (1 - ty)
+                  + (tiles.elevation(ix, iy + 1) * (1 - tx) + tiles.elevation(ix + 1, iy + 1) * tx) * ty)
     return pack, {
-        "chimney": tuple(oak["origin"]),
-        "positions_utm": chimney_utm,
+        "anchor": (ANCHOR_LNG, ANCHOR_LAT),
+        "anchor_dem": anchor_dem,
         "positions": positions,
         "ring": ring,
         "calls": calls,
         "perimeter_ft": boundary["properties"]["perimeter_ft"],
         "area_acres": boundary["properties"]["area_acres"],
         "roads": [list(zip(f["geometry"]["coordinates"], f["geometry"]["coordinates"][1:])) for f in county["features"] if f["geometry"]["type"] == "LineString"],
+        "road_lines": [[tuple(q[:2]) for q in f["geometry"]["coordinates"]] for f in county["features"]
+                       if f["properties"].get("layer") == "road" and f["geometry"]["type"] == "LineString"],
         "structures": structures,
-        "tiles": QtTiles(pack["layers"]["terrain"]["template"], z),
+        "tiles": tiles,
         "zoom": z,
     }
 
@@ -444,12 +493,15 @@ def forgeries(facts):
     return upside_down + [
         ("the property line 1 m east", f(lambda g: g.__setitem__("corners", [(x + 1.0, y) for x, y in g["corners"]]))),
         ("north flipped", f(flip)),
-        ("the datum at the DEM's 425.625 m", f(lambda g: g.__setitem__("elevation", 425.625))),
+        ("the retired 425.90 m datum", f(lambda g: g.__setitem__("elevation", 425.90))),
+        ("the origin at the retired models.json point", f(lambda g: (g.__setitem__("lng", -119.155333), g.__setitem__("lat", 34.433118)))),
         ("the terrain 0.5 m high", f(lambda g: (g.__setitem__("terrain", [(x, y, z + 0.5) for x, y, z in g["terrain"]]), g.__setitem__("terrain_offset", 0.5)))),
         ("a structure gone", f(lambda g: g.__setitem__("structures", g["structures"][1:]))),
         ("the setbacks on the wrong front", f(lambda g: (g.__setitem__("front", 1), g.__setitem__("envelope_area", g["envelope_area"] * 1.04)))),
         ("UTM easting and northing swapped", f(lambda g: g.__setitem__("utm", tuple(reversed(g["utm"]))))),
         ("millimetres", f(lambda g: g.__setitem__("units", "Standard (mm, kg, s, °)"))),
+        ("a road centreline 2 m off", f(lambda g: g.__setitem__("roads", [[[(x + 2.0, y) for x, y in wire] for wire in road] for road in g["roads"]]))),
+        ("the roads not drawn", f(lambda g: g.__setitem__("roads", []))),
     ]
 
 

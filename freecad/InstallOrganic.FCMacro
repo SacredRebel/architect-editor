@@ -30,8 +30,8 @@ def install():
     shutil.copytree(SRC, DST, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     if DST not in sys.path:
         sys.path.append(DST)
-    for name in ("organic_geom", "organic_objects", "organic_export", "organic_commands"):
-        if name in sys.modules:
+    for name in ("organic_geom", "organic_sacred", "organic_biomimetic", "organic_objects", "organic_export", "organic_commands"):
+        if name in sys.modules:  # in the order they build on each other
             importlib.reload(sys.modules[name])
     if App.GuiUp:
         import FreeCADGui as Gui

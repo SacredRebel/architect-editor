@@ -1,18 +1,14 @@
 # STATUS — Agent A
-updated: 2026-09-29
-phase: **FreeCAD lane: organic structures.** This follows the architect's 29 Sep note of Johny's final direction: "structure and houses only". Work stays local: commits are save points and there are no PRs.
-- **F1, the site template, is done** as a local save point on `eco/freecad-site` (`7aea750e`, `freecad-site-done.md`).
-  - `freecad/SulphurMountainSite.FCMacro` builds the site from the live pack.
-  - `freecad/check_site.py` passes 25 checks and rejects 9 of 9 forgeries.
+updated: 2026-10-01
+phase: **FreeCAD lane: organic structures.** This follows the architect's 29 Sep note of Johny's final direction ("structure and houses only") and the unified layer of 1 Oct (`C:\Playground\CLAUDE.md`, `RULES.md`, `BRAIN.md`). Work stays local: commits are save points and there are no PRs. The running log is `UPDATES.md` at the repository's root.
+- **The Organic workbench is done as far as it can be without FreeCAD's window** (`organic-done.md`), on `eco/organic`.
+  - **26 buttons in three toolbars** (Organic 14, Sacred 7, Biomimetic 5), installed in `%APPDATA%\FreeCAD\v1-1\Mod\Organic` and equal to the repository.
+  - **The test pavilion stands on the map at a clear spot**, 112 m west and 31 m north of the anchor, turned 30°, its position carried explicitly (`FORMAT.md` §3a; lane E reads it and places it to 0.000 m).
+  - **Checks, all green:** `check_organic.py` 34 checks and 17 of 17 forgeries; `check_toolbar.py` 132 checks, 26 commands, 21 of 21 forgeries; `check_site.py` on a trial of the re-based site template 26 checks and 11 of 11 forgeries (its J needs the window).
+  - **Written:** `ORGANIC-SCAN.md` (two scans), `C:\Playground\knowledge\DESIGN-LANGUAGE.md`, 13 trace files in `knowledge\tools\`, lessons in `knowledge\LESSONS.md`.
+  - **Open:** the window-only parts (the real site template file, every button clicked once, FreeCAD screenshots); the stale `.git\index.lock`, which keeps save points off the branch (they are under `refs/backup/eco-organic-savepoint`); Johny's house concept is not in `exchange\house\concept\` yet.
+- **F1, the site template** (`eco/freecad-site`, `7aea750e`, `freecad-site-done.md`) is re-based on the canonical frame and now draws the county's road centrelines.
   - F2 (plans) and F3 (IFC P1) are dropped under the new direction.
-- **Now:** an Organic toolbar for FreeCAD, on `eco/organic` (save point `f4c14757`). Not done yet.
-  - **The scan is written:** `ORGANIC-SCAN.md`, one table.
-  - **The workbench is built and installed:** `freecad/Organic`, 14 toolbar commands, in `%APPDATA%\FreeCAD\v1-1\Mod\Organic`. Its kernels match closed forms: an arc wall, a circle wall, a semicircular vault and a hemispherical dome to 0.000 %.
-  - **The test pavilion is made and sent:** a curved room wall with five openings, an S-curved garden wall, a leaf shell roof and a ribbed catenary vault. One click wrote `organic-test-pavilion.glb`, `.ifc` and `.json` into `exchange\godot\`.
-  - **`freecad/check_organic.py` is not green:** 18 of 20 checks passed on its first run.
-    - The leaf's tips hang 0.02–0.39 m above the map's terrain. This is a design fault and is being fixed.
-    - The check's IFC reader returned nothing. The reader is rewritten and still has to be re-run.
-  - **Still to do:** re-run the check with `--self-test`, take the screenshot in the Godot map, write the done-file.
 - The web editor stays paused as it was. The full picture for a fresh start is **`HANDOVER.md`**, built 29 Sep on `eco/handover-0929`.
 direction (29 Sep 2026):
 - The map moves to Godot 4.7.2 as a desktop app (lane E). Houses are designed in Blender 5.2.2 and FreeCAD 1.1.4 directly.

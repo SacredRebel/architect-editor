@@ -1,20 +1,27 @@
 # Organic — a FreeCAD workbench for organic architecture
 
-Curved walls, shells, vaults, leaf roofs and domes as real, closed, parametric solids in
-metres, and one button that stands the building on the site in the Godot map.
+Curved walls, shells, vaults, leaf roofs and domes; figures of proportion, regular solids and
+the sun's directions; nets, cellular walls, veined shells and branching columns. All as real,
+parametric solids in metres, and one button that stands the building on the site in the Godot
+map.
 
-It is ported from this repository's plugin-eco and plugin-hagia-sophia. Those draw display
-meshes whose underside is a copy of the top. Here every thickness is a true offset, every
-opening is a cut, and every result is a solid that takes booleans, reports its volume and
+The words in plain language, with what each form is for: `C:\Playground\knowledge\DESIGN-LANGUAGE.md`.
+
+The organic forms are ported from this repository's plugin-eco and plugin-hagia-sophia. Those
+draw display meshes whose underside is a copy of the top. Here every thickness is a true
+offset, every opening is a cut, and every result takes booleans, reports its volume and
 exports to IFC.
 
 ## Install
 
 Run `freecad/InstallOrganic.FCMacro` in FreeCAD 1.1 (Macro ▸ Macros…). It copies this folder
-to `%APPDATA%\FreeCAD\v1-1\Mod\Organic` and loads it. After that the **Organic** workbench
-and toolbar are there on every start. Run the macro again after pulling changes.
+to `%APPDATA%\FreeCAD\v1-1\Mod\Organic` and loads it. After that the **Organic** workbench,
+with its three toolbars, is there on every start. Run the macro again after pulling changes
+(or, with FreeCAD closed, `ORGANIC_HEADLESS=install` and `freecad/run_headless.py`).
 
-## The toolbar
+## The three toolbars
+
+### Organic
 
 | Button | Makes | From |
 |---|---|---|
@@ -23,7 +30,7 @@ and toolbar are there on every start. Run the macro again after pulling changes.
 | Plan curve | lobed, circle, arc, S-curve, oval, leaf, shell, golden and log spirals, vesica | plugin-eco plans, plugin-geometry |
 | Curved wall | a wall of real thickness on any open or closed curve, with a flat, arched, waved or sloped top | plugin-eco smooth wall |
 | Opening | a rectangular, arched, pointed or round opening where you clicked the wall | plugin-eco openings |
-| Leaf shell roof | a shell from a ridge with four heights, an eave and a curl, with ribs | plugin-eco leaf shell |
+| Leaf shell roof | a shell from a ridge with four heights, an eave and a curl, with ribs; footings under its tips | plugin-eco leaf shell |
 | Shell roof on a closed wall | eaves + rise (1 − ρ^2.2) from the pole to the wall, drooping to the overhang | plugin-eco organic roof |
 | Ribbed vault | a barrel vault on an ellipse, semicircle, segmental, pointed, catenary or parabola, with ribs | plugin-eco vault, plugin-hagia-sophia arch |
 | Catenary arch | a free-standing arch; `ThrustInMiddleThird` is the Poleni check | plugin-hagia-sophia arch |
@@ -33,57 +40,117 @@ and toolbar are there on every start. Run the macro again after pulling changes.
 | Floor slab | a slab filling a closed curve | — |
 | Send to the map | `<name>.glb`, `<name>.ifc`, `<name>.json` in the exchange folder | — |
 
-Every length is a FreeCAD length property, so a metre document shows metres. The toolbar
-sets new documents to metres.
+### Sacred
 
-- **Curves a wall can follow:** an Organic plan curve, a sketch, a Draft B-spline, an arc.
+| Button | Makes |
+|---|---|
+| Plan figure | vesica piscis, seed and flower of life, golden and root rectangles, turned squares, polygon, star, module grid: an outline to build on, with its construction lines |
+| Regular solid | tetrahedron, cube, octahedron, dodecahedron, icosahedron, by edge, on a face or a vertex |
+| Geodesic dome | an icosahedron cut by frequency and pushed out to a sphere, with a real thickness; a hemisphere or more |
+| Sun rose | where the sun rises and sets at the year's eight stations, at the building's spot, from the land pack (over the ridge line, or on a level horizon) |
+| Turn to the sun | turns the building about its own origin so that its front, back or an end faces north, east, south, west or one of those sunrises or sunsets |
+| Snap to proportion | puts the selected objects' governing dimensions on whole modules and sets the dependent ones to the system's nearest ratio |
+| Proportions report | a spreadsheet: each object's dimensions in metres and modules, its ratio, the nearest ratio of the system and of any system, and how far off |
+
+The system (Golden, Root 2, Root 3, Musical, Palladio, Fibonacci) and the module are the two
+properties of the document's **Proportions** object, made on first use.
+
+### Biomimetic
+
+| Button | Makes | Method |
+|---|---|---|
+| Gridshell | a net of laths over a closed curve, standing | force density: every node in balance |
+| Hanging net | the same net, hung | the same |
+| Cellular wall | a wall opened into cells between ribs | Voronoi cells of scattered seeds, drawn back and rounded |
+| Veined leaf shell | a leaf shell whose ribs are grown as veins | space colonisation; widths by Murray's law |
+| Branching column | a column that forks like a tree, its tips level | r_parent^e = n r_child^e |
+
+Every length is a FreeCAD length property, so a metre document shows metres. The toolbars
+set new documents to metres.
+
+- **Curves a wall can follow:** an Organic plan curve, a plan figure's outline, a sketch, a
+  Draft B-spline, an arc. An outline with corners keeps them (its wall's top is then flat).
 - **Openings** are five lists on the wall, one entry per opening, in metres: position along
   the centreline, width, height, sill, shape.
+- **One solid or several:** a gridshell, a hanging net, a branching column and a veined leaf
+  are compounds of solids (laths, branches, ribs). Their volume counts the overlaps at the
+  joints twice.
 
 ## A building in minutes
 
 1. **New organic building**, then set its Placement to where it stands on the site. The
-   frame is the site macro's: origin at the land pack's chimney, Z = 0 at 425.90 m, +Y true
-   north.
-2. **Plan curve**, then **Curved wall** with the curve selected. Click the wall and press
-   **Opening** for each window and door.
-3. **Leaf shell roof**, **Ribbed vault** or **Dome**; move each by its Placement.
-4. Select the building and press **Send to the map**.
+   frame is the canonical one (`C:\Playground\BRAIN.md` §3), the same as the site
+   template's: the origin at the anchor, lng −119.15536, lat 34.4331; Z = 0 on the ground
+   there, 425.63 m; +X east, +Y true north. Move the building, not its parts.
+2. **Plan curve** or **Plan figure**, then **Curved wall** with it selected. Click the wall
+   and press **Opening** for each window and door.
+3. **Leaf shell roof**, **Ribbed vault**, **Dome** or **Gridshell**; move each by its
+   Placement.
+4. **Sun rose**, **Turn to the sun**; **Snap to proportion**, **Proportions report**.
+5. Select the building and press **Send to the map**.
 
 ## Send to the map
 
 The export writes into `C:\Playground\exchange\godot` by default. To change the folder, set
 the `ORGANIC_EXCHANGE_DIR` environment variable or the `ExchangeDir` string under
-`BaseApp/Preferences/Mod/Organic`.
+`BaseApp/Preferences/Mod/Organic`. The contract is `exchange\godot\FORMAT.md` §3a.
 
-- **The frame is that folder's own (`FORMAT.md`).**
-  - Units are metres and the GLB is glTF Y-up: +X east, +Y up, +Z south.
-  - The origin is the chimney anchor at lng −119.15536, lat 34.4331, 425.90 m.
-  - The design document's origin is its BIM Site's (the land pack's chimney, lng −119.155333,
-    lat 34.433118). The export moves the building by the difference, 2.48 m east and 2.00 m
-    north, so it lands in its real place.
-  - Nothing is re-centred.
-- **The GLB** has one named node per element, with its IFC class in `extras`. Its
-  triangles enclose each solid's volume. FreeCAD's own glTF exporter is not used, because
+- **The building keeps its own origin** (its BIM building's placement). Its geometry is
+  written in its own frame; where it stands is stated beside it.
+- **The JSON** has `placement`: `coordinates` [lng, lat] of the building's origin,
+  `altitude_m` above the 425.63 m datum, `rotation_deg` (`y` is the turn seen from above,
+  anticlockwise positive), `elevation_m` (NAVD88), `offset_m` (east, north, up from the
+  anchor). Also `clearance_m` to the nearest road, easement and existing building,
+  `floor_above_ground_m`, notes, and each element's volume.
+- **The GLB** is glTF Y-up in metres: one named node per element with its IFC class in
+  `extras`, the same `placement` in the root node's `extras`, and no transform on the root.
+  Its triangles enclose each solid's volume. FreeCAD's own glTF exporter is not used, because
   it drops placements.
 - **The IFC** is IFC4 from FreeCAD's BIM exporter, with each element in its IFC class
-  (`IfcType` on the object). The exporter writes the site's latitude and longitude in whole
-  seconds, so the export rewrites them with their millionths.
-- **The JSON** records the frame, the offset, the source file and each element's volume.
+  (`IfcType` on the object). `IfcSite` is the anchor, with its latitude and longitude to
+  millionths of a second (the exporter writes whole seconds). The `IfcBuilding`'s placement
+  on the site is the offset and the turn; its elements are placed under it; its property set
+  `Organic_Placement` repeats the numbers.
+- **It says so** when the footprint touches a road, the access easement or an existing
+  building (read from the land files in the exchange folder), or when the floor is more than
+  a metre off the map's ground.
+- A document whose BIM Site states another origin than the anchor is moved by the
+  difference, so the building still lands in its real place.
 
-## Notes for whoever changes the kernels (`organic_geom.py`)
+## Notes for whoever changes the kernels
 
+- **Build near the origin.** `organic_objects.base_edge` takes a base curve into the object's
+  own frame before anything is built on it. OCCT lost a wave-topped wall 116 m out and turned
+  30°, and measured its volume differently in every placement.
 - `Part.OffsetCurve` edges and offset surfaces make faces that OCCT's booleans treat as
   self-intersecting: a cut silently does nothing. Offsets here are exact lines and circles,
-  or splines through offset points; offset surfaces are converted to NURBS.
-- OCCT measures area and volume per edge with a fixed number of points. A face bounded by
-  one spline of hundreds of spans reports its area several percent off, and a solid on it
-  its volume (a wall read 43.4 m³ against 63.0 m³). `wire_of` splits long splines before
-  every face.
+  or splines through offset points; offset surfaces are converted to NURBS. Outlines with
+  corners are offset as wires (`makeOffset2D`, intersection joins).
+- OCCT measures area and volume per edge and per face with a fixed number of points. A face
+  bounded by one spline of hundreds of spans reports its area several percent off, and a
+  solid on it its volume (a wall read 43.4 m³ against 63.0 m³): `wire_of` splits long
+  splines before every face. A shaped wall top is cut by ruled faces of at most 8 stations
+  (`TOP_PIECE_STATIONS`); at 16 its volume read up to 0.18 % off.
 - `Shape.BoundBox` takes B-spline faces untrimmed. Use `optimalBoundingBox()`.
+- `removeSplitter` can raise on a sound solid: `refined` keeps the solid then.
+- Do not fuse solids that meet in a point (a branching column's forks): the result was
+  wrong, and one such union ended the process. Leave them a compound.
+- Sweep rectangles, not rounds, along splines: a round lath meshes into about 200,000
+  triangles.
+- Arch's `makeSite` and `makeBuilding` build in the active document.
+
+## Checks
+
+`freecad/check_toolbar.py` presses every button's own code twice (at the origin, and 116 m
+out turned 30°) and holds the results against closed forms; `freecad/check_organic.py` holds a
+building sent to the map against its design, the map's land files and the land pack. Each
+forges faults and must reject every one.
 
 ## Licence
 
 MIT; see `LICENSE`, which keeps the notices of plugin-eco (Pascal Group Inc.) and of the
-Hagia Sophia plugin (ActArtech), whose maths is ported here. FreeCAD (LGPL-2.1-or-later)
-and IfcOpenShell (LGPL-3.0-or-later) are used as programs; nothing of theirs is copied.
+Hagia Sophia plugin (ActArtech), whose maths is ported here. The force density and space
+colonisation methods are written here from their published descriptions; the branch radius
+law and the geodesic subdivision follow three.js (MIT). FreeCAD (LGPL-2.1-or-later),
+IfcOpenShell (LGPL-3.0-or-later), numpy, scipy and shapely (BSD) are used as installed;
+nothing of theirs is copied.

@@ -11,6 +11,8 @@
 
 It works in metres, georeferenced to the pack. Done means Johny opens the file and sees the site with exact dimensions.
 **Superseded:** later on 29 Sep, Johny's final direction limits the lane to structure and houses (organic architecture). F2 (plans) and F3 (IFC P1) are not started. `eco/unify-p1` stays parked.
+**Re-based 1 Oct:** the frame this file describes is retired: the `models.json` chimney, with Z = 0 at 425.90 m. The macro and its check now use the canonical frame of `C:\Playground\BRAIN.md` §3: the anchor at lng −119.15536, lat 34.4331, with Z = 0 on the ground there, 425.63 m. The numbers below are from the first build and stay as its record.
+**Checked on the new frame, 1 Oct:** a trial build in `freecadcmd` (into a scratch file) passes **26 checks** (A to I and the new K; the pack's DEM under the anchor reads 425.625 m) and rejects **11 of 11 forgeries**; J says SKIP there, because nothing is drawn without the window. The macro now also draws the county's road centrelines (group "Roads"), and check K holds them against `county.geojson`. **Still to do in the window:** run the macro for the real file (colours, line styles, dimension text) and J.
 
 ## What was made
 

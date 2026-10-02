@@ -19,6 +19,10 @@ MM = 1000.0
 Z = App.Vector(0, 0, 1)
 Y = App.Vector(0, 1, 0)
 BIG = 1.0e6  # mm: 1 km, for trimming boxes
+# A shaped wall top is cut by ruled faces of at most this many stations each. At 16, OCCT read
+# a wave-topped arc wall's volume up to 0.18 % off, and differently for each direction the arc
+# starts in; at 8 it reads the closed form (t L (H + rise/2)) to four decimals in every direction.
+TOP_PIECE_STATIONS = 8
 
 
 def V(x, y, z=0.0):
@@ -74,6 +78,19 @@ def solid_of(shape):
     if not solids:
         raise ValueError("the construction produced no solid")
     return Part.makeCompound(solids)
+
+
+def refined(solid):
+    """The solid with the seams its booleans left merged away. OCCT's merge can give up on a
+    solid that is sound (a wave-topped wall did, 116 m from the origin and turned 30°): the
+    solid is then kept as it is, seams and all."""
+    try:
+        merged = solid.removeSplitter()
+        if merged.isValid() and len(merged.Solids) == len(solid.Solids):
+            return solid_of(merged)
+    except Part.OCCError:
+        pass
+    return solid_of(solid)
 
 
 def fuse_all(shapes):
@@ -182,6 +199,86 @@ def plan_edge(shape, step_m=0.2):
     n = max(24, int(math.ceil(wire.Length / (step_m * MM))))
     pts = [App.Vector(p.x, p.y, z0) for p in wire.discretize(Number=n + 1)]
     return spline(pts, closed=closed), closed
+
+
+class WirePath:
+    """A closed plan outline that has corners (a polygon, a star, a vesica, a seed of life),
+    walked by arc length. It answers what the wall kernels ask of an edge (Length, valueAt,
+    tangentAt, curvatureAt, with the parameter the distance along it in mm), so a wall keeps
+    the outline's true lines, arcs and corners; fitting one spline through a corner rounds it
+    and folds the wall's offsets there."""
+
+    def __init__(self, wire):
+        self.wire = wire
+        self.parts, at = [], 0.0
+        for e in wire.OrderedEdges:
+            self.parts.append((e, e.Orientation != "Reversed", at))
+            at += e.Length
+        self.Length = at
+        self.FirstParameter, self.LastParameter = 0.0, at
+
+    def _at(self, s):
+        s = s % self.Length if self.wire.isClosed() else max(0.0, min(self.Length, s))
+        e, forward, start = next(p for p in reversed(self.parts) if s >= p[2] - 1e-9)
+        along = max(0.0, min(e.Length, s - start))
+        return e, e.getParameterByLength(along if forward else e.Length - along), forward
+
+    def getParameterByLength(self, s):
+        return s
+
+    def valueAt(self, s):
+        e, u, _forward = self._at(s)
+        return e.valueAt(u)
+
+    def tangentAt(self, s):
+        e, u, forward = self._at(s)
+        t = e.tangentAt(u)
+        return t if forward else t * -1.0
+
+    def curvatureAt(self, s):
+        e, u, _forward = self._at(s)
+        return e.curvatureAt(u)
+
+    def isClosed(self):
+        return self.wire.isClosed()
+
+    def discretize(self, Number=97):
+        return self.wire.discretize(Number=Number)
+
+
+def has_corners(wire, degrees=2.0):
+    """Whether a wire's edges meet anywhere at an angle (more than `degrees`)."""
+    edges = wire.OrderedEdges
+    if len(edges) < 2:
+        return False
+    ends = []
+    for e in edges:
+        forward = e.Orientation != "Reversed"
+        a, b = e.tangentAt(e.FirstParameter), e.tangentAt(e.LastParameter)
+        ends.append((a, b) if forward else (b * -1.0, a * -1.0))
+    joints = list(zip(ends, ends[1:] + (ends[:1] if wire.isClosed() else [])))
+    return any(a[1].getAngle(b[0]) > math.radians(degrees) for a, b in joints)
+
+
+def plan_path(shape, step_m=0.2):
+    """A base curve for a wall: plan_edge's one smooth edge, or, for a closed outline with
+    corners, the outline itself as a WirePath. Returns (edge or WirePath, closed)."""
+    edges = shape.Edges
+    if len(edges) > 1:
+        wire = Part.Wire(Part.__sortEdges__(edges))
+        if wire.isClosed() and has_corners(wire):
+            return WirePath(wire), True
+    return plan_edge(shape, step_m)
+
+
+def face_offset(face, d_mm):
+    """A plan face grown by d (shrunk if negative), its corners kept as corners."""
+    if abs(d_mm) < 1e-9:
+        return face
+    faces = face.makeOffset2D(d_mm, 2).Faces
+    if not faces:
+        raise ValueError("the offset of %.3f m left nothing" % (d_mm / MM))
+    return max(faces, key=lambda f: f.Area)
 
 
 def arc_curve(radius_m, angle_deg, start_deg=0.0):
@@ -423,7 +520,17 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     t = thickness_m * MM
     z0 = edge.valueAt(edge.FirstParameter).z
     d1, d2 = wall_sides(align, t)
-    if closed:
+    if isinstance(edge, WirePath):
+        # an outline with corners: the band between its two true offsets, corners kept
+        face = Part.Face(edge.wire)
+        sgn = 1.0 if is_ccw(edge) else -1.0
+        fa, fb = face_offset(face, -sgn * d1), face_offset(face, -sgn * d2)
+        big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
+        band = face_of(big.cut(small))
+        if top != "Flat" and abs(top_rise_m) > 1e-9:
+            App.Console.PrintWarning("Organic: a shaped wall top needs a smooth base curve; this one has corners, so its top is flat\n")
+            top = "Flat"
+    elif closed:
         fa = Part.Face(wire_of(_side(edge, d1, closed)))
         fb = Part.Face(wire_of(_side(edge, d2, closed)))
         if not (fa.isValid() and fb.isValid()):
@@ -456,8 +563,8 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
                 row.append(App.Vector(q.x, q.y, z))
         params = [f for _u, f in st] + ([1.0] if closed else [])
         # both top lines split at the same parameters, so the ruled faces pair up and each
-        # stays short enough for OCCT to measure (see pieces_of)
-        n = max(1, int(math.ceil(len(st) / 16.0)))
+        # stays short enough for OCCT to measure (see pieces_of and TOP_PIECE_STATIONS)
+        n = max(1, int(math.ceil(len(st) / float(TOP_PIECE_STATIONS))))
         cuts = [k / n for k in range(1, n)]
         e0, e1 = spline(rows[0], closed, params), spline(rows[1], closed, params)
         w0 = Part.Wire(e0.split(cuts).Edges) if cuts else Part.Wire(e0)
@@ -467,7 +574,7 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     for o in openings:
         wall = solid_of(wall.cut(opening_void(edge, closed, t, d1, d2, **o)))
     wall.translate(App.Vector(0, 0, base_z_m * MM))
-    return solid_of(wall.removeSplitter())
+    return refined(wall)
 
 
 def opening_outline(width_m, height_m, sill_m, shape="Arch"):
@@ -624,7 +731,7 @@ def vault_shape(profile, span_m, rise_m, thickness_m, length_m, ribs=0, rib_widt
             parts.append(rib)
     solid = fuse_all(parts)
     solid.translate(Y * (-length_m * MM / 2))
-    return solid_of(solid.removeSplitter())
+    return refined(solid)
 
 
 def thrust_line_ok(profile, span_m, rise_m, thickness_m):
@@ -710,7 +817,7 @@ def dome_shape(profile, radius_m, rise_m, thickness_m, oculus_m=0.0):
         shell = band.revolve(App.Vector(0, 0, 0), Z, 360)
     if oculus_m > 0:
         shell = shell.cut(Part.makeCylinder(oculus_m * MM, (rise_m + t + 2) * MM, V(0, 0, -1)))
-    return solid_of(shell.removeSplitter())
+    return refined(shell)
 
 
 # ---------------------------------------------------------------- leaf shells (plugin-eco eco-shell)
@@ -789,11 +896,16 @@ def smooth_ridge(ridge, heights, per_segment=12):
 
 def leaf_shell_shape(spine_m=26.0, span_m=13.0, ridge_heights=(3.0, 7.2, 9.8, 3.0), eave_m=3.0,
                      rise=1.0, curvature=0.15, thickness_m=0.12, rib_spacing_m=2.5, rib_depth_m=0.1,
-                     rib_width_m=0.12, outline="Ellipse"):
+                     rib_width_m=0.12, outline="Ellipse", plinth_m=0.0, foot_m=0.0,
+                     veins=False, vein_sources=180, vein_seed=1):
     """plugin-eco's leaf shell roof as a solid: its height field (eco_shell_height) fitted with a
     B-spline surface, thickened by a true normal offset and cut to the outline. Heights are
     above the object's base. Ribs, every rib_spacing along the spine, are deeper strips that
-    bite into the shell from below."""
+    bite into the shell from below; with `veins` they follow a leaf's venation instead, grown
+    from the stem end (organic_biomimetic.venation), each as wide as Murray's law gives it.
+    With a plinth, each tip of the leaf stands on a footing: the leaf's own plan within foot_m
+    of the tip, solid from inside the shell down to plinth_m below the base, so a shell whose
+    tips come down to the ground reaches it."""
     pts, ridge = leaf_plan(spine_m, span_m, outline)
     heights = [eave_m + (h - eave_m) * (rise if rise > 0 else 1.0) for h in ridge_heights]
     ridge, heights = smooth_ridge(ridge, heights)
@@ -808,7 +920,7 @@ def leaf_shell_shape(spine_m=26.0, span_m=13.0, ridge_heights=(3.0, 7.2, 9.8, 3.
     outline_face = Part.Face(Part.makePolygon([V(x, y) for x, y in pts] + [V(*pts[0])]))
     prism = prism_of(outline_face)
     shell = thicken_surface(face, thickness_m * MM).common(prism)
-    if rib_spacing_m and rib_spacing_m > 0 and rib_depth_m > 0:
+    if not veins and rib_spacing_m and rib_spacing_m > 0 and rib_depth_m > 0:
         deep = thicken_surface(face, (thickness_m / 2 + rib_depth_m) * MM, overlap_mm=thickness_m / 2 * MM)
         strips = []
         n = int(2 * hl // rib_spacing_m)
@@ -819,7 +931,28 @@ def leaf_shell_shape(spine_m=26.0, span_m=13.0, ridge_heights=(3.0, 7.2, 9.8, 3.
             strips.append(Part.makeBox(rib_width_m * MM, 2 * hw * 1.2 * MM, BIG, V(x - rib_width_m / 2, -hw * 1.2, -BIG / 2 / MM)))
         if strips:
             shell = shell.fuse(deep.common(fuse_all(strips)).common(prism))
-    return solid_of(shell.removeSplitter())
+    if plinth_m and plinth_m > 0:
+        foot = foot_m if foot_m and foot_m > 0 else max(0.8, 0.06 * 2 * hl)
+        top = max(heights) + 1.0
+        mid = face.copy()
+        mid.translate(App.Vector(0, 0, -thickness_m / 2 * MM))
+        below = mid.extrude(App.Vector(0, 0, -(top + plinth_m + 1.0) * MM))  # all that lies under the shell
+        keep = Part.makeBox(4 * hl * MM, 4 * hw * MM, (top + plinth_m) * MM, V(-2 * hl, -2 * hw, -plinth_m))
+        feet = [Part.makeBox(foot * MM, 2 * hw * 1.2 * MM, BIG, V(x0, -hw * 1.2, -BIG / 2 / MM)) for x0 in (-hl, hl - foot)]
+        shell = shell.fuse(below.common(fuse_all(feet)).common(prism).common(keep))
+    shell = refined(shell)
+    if veins and rib_depth_m > 0:
+        import organic_biomimetic as ob  # it builds on this module
+
+        # The vein ribs are swept solids beside the shell, a compound with it, not cut from a
+        # thickened surface as the straight ribs are: that boolean took two minutes for a leaf.
+        step = max(0.3, 0.028 * 2 * hl)
+        nodes, parent = ob.venation(pts, (-hl * 0.97, 0.0), sources=int(vein_sources), seed=vein_seed,
+                                    step_m=step, kill_m=1.2 * step, reach_m=2 * hl)
+        widths = ob.murray_widths(parent, tip_m=rib_width_m * 0.6, widest_m=rib_width_m * 4)
+        top_at = lambda x, y: eco_shell_height(x, y, pts, ridge, heights, eave_m, curvature)
+        return Part.makeCompound([shell] + ob.vein_ribs(nodes, parent, widths, top_at, thickness_m, rib_depth_m))
+    return shell
 
 
 # ---------------------------------------------------------------- organic roofs (plugin-eco organic building)
@@ -885,7 +1018,7 @@ def organic_roof_shape(ring_edge, eaves_m, rise_m, overhang_m, thickness_m):
     roof = thicken_surface(face, thickness_m * MM).common(prism)
     if not (roof.Solids and roof.isValid()):
         roof = face.extrude(App.Vector(0, 0, -thickness_m * MM)).common(prism)
-    return solid_of(roof.removeSplitter())
+    return refined(roof)
 
 
 def slab_shape(ring_edge, thickness_m, inset_m=0.0):

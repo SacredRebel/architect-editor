@@ -5,10 +5,10 @@ Builds ``SulphurMountain-site.FCStd`` from https://sulphur-mountain-world.vercel
 at run time; nothing from the pack is bundled here (the pack's rule: terrain and
 imagery are streamed from their publishers, never bulk-copied).
 
-Frame of the document:
+Frame of the document (the canonical frame, ``C:\\Playground\\BRAIN.md`` §3):
   * metres (the document's unit system is set to metres);
-  * origin (0, 0, 0) = the Oak Leaf chimney (the pack's ``models.json`` origin of
-    ``oak-leaf-massing``), Z = 0 at the 425.90 m datum (the Oak Leaf main floor);
+  * origin (0, 0, 0) = the anchor, lng -119.15536, lat 34.4331 (WGS84), on the ground
+    there: Z = 0 at 425.63 m NAVD88;
   * +X east, +Y true north (the pack frame is equirectangular WGS84, x east, y north).
 
 What it draws, and from which layer:
@@ -17,6 +17,8 @@ What it draws, and from which layer:
   * property line: ``survey.geojson`` boundary (11 corners), draped on the terrain,
     with its 11 horizontal distances dimensioned; the 16 ft access easement; the
     4 found monuments;
+  * roads: the county's road centrelines (``county.geojson``), draped, as far as the
+    terrain reaches. The county gives no width; a building belongs clear of them;
   * setbacks: this repository's Ventura RE/AE typical yards (front 6.10 m, side
     1.52 m, rear 4.57 m; height limit 10.67 m; confirm with the AHJ). The front is
     the edge with the most frontage within 8 m of a county road centreline, the
@@ -26,7 +28,7 @@ What it draws, and from which layer:
     the warehouse the county does not map. Each records the terrain under it
     (``TerrainUnderM``) and the drift from its base (``TerrainDriftM``): the county
     bases and the 2018 terrain disagree by up to about a metre;
-  * the chimney origin, a north arrow, and a BIM Site carrying the georeference.
+  * the anchor, a north arrow, and a BIM Site carrying the georeference.
 
 Run: FreeCAD 1.1 ▸ Macro ▸ Macros… ▸ this file (or through the FreeCAD MCP
 connector). Output: ``SITE_FCSTD`` if set, else
@@ -49,14 +51,17 @@ import Part
 
 try:
     import FreeCADGui as Gui
-except ImportError:  # freecadcmd
+except ImportError:
+    Gui = None
+if not App.GuiUp:  # freecadcmd has the module, without a window behind it
     Gui = None
 
 PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
 OUT = os.environ.get("SITE_FCSTD") or os.path.join(
     os.path.expanduser("~"), "Documents", "SulphurMountain", "SulphurMountain-site.FCStd"
 )
-DATUM_M = 425.90  # the Oak Leaf main floor: Z = 0
+ANCHOR = (-119.15536, 34.4331)  # lng, lat: the canonical origin (BRAIN.md §3)
+DATUM_M = 425.63  # the ground at the anchor, NAVD88: Z = 0
 MARGIN_M = 40.0  # terrain beyond the parcel's box
 GRID_STEP_PX = 2  # one terrain vertex per second 1 m pixel
 CONTOUR_M = 1.0
@@ -90,14 +95,14 @@ def fetch(path, binary=False, attempts=3):
 
 
 class Frame:
-    """The pack's frame (equirectangular at origin_lat), re-centred on the chimney."""
+    """The pack's frame (equirectangular at origin_lat), re-centred on the anchor."""
 
-    def __init__(self, frame, chimney_lnglat):
+    def __init__(self, frame, anchor_lnglat):
         self.lng0 = frame["origin_lng"]
         self.lat0 = frame["origin_lat"]
         self.kx = frame["metres_per_deg_lng"]
         self.ky = frame["metres_per_deg_lat"]
-        self.cx, self.cy = self.pack_xy(*chimney_lnglat)
+        self.cx, self.cy = self.pack_xy(*anchor_lnglat)
 
     def pack_xy(self, lng, lat):
         return (lng - self.lng0) * self.kx, (lat - self.lat0) * self.ky
@@ -113,6 +118,24 @@ class Frame:
 def V(x, y, z=0.0):
     """Metres → a FreeCAD vector (internal millimetres)."""
     return App.Vector(x * MM, y * MM, z * MM)
+
+
+def utm11n(lng, lat):
+    """WGS84 → UTM zone 11N easting, northing (m): the transverse Mercator series of
+    USGS Professional Paper 1395 (Snyder), eq. 8-9 and 8-10."""
+    a, e2, k0 = 6378137.0, 0.00669437999014, 0.9996
+    ep2 = e2 / (1 - e2)
+    phi, dlam = math.radians(lat), math.radians(lng + 117.0)
+    n = a / math.sqrt(1 - e2 * math.sin(phi) ** 2)
+    t, c, aa = math.tan(phi) ** 2, ep2 * math.cos(phi) ** 2, dlam * math.cos(phi)
+    m = a * ((1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * phi
+             - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * math.sin(2 * phi)
+             + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * math.sin(4 * phi)
+             - (35 * e2 ** 3 / 3072) * math.sin(6 * phi))
+    x = k0 * n * (aa + (1 - t + c) * aa ** 3 / 6 + (5 - 18 * t + t * t + 72 * c - 58 * ep2) * aa ** 5 / 120) + 500000.0
+    y = k0 * (m + n * math.tan(phi) * (aa * aa / 2 + (5 - t + 9 * c + 4 * c * c) * aa ** 4 / 24
+                                       + (61 - 58 * t + t * t + 600 * c - 330 * ep2) * aa ** 6 / 720))
+    return x, y
 
 
 # --------------------------------------------------------------------------- terrain
@@ -305,11 +328,13 @@ def style(doc):
     paint("PropertyLine", LineColor=(0.85, 0.10, 0.10), LineWidth=4.0)
     paint("PropertyLinePlan", Visibility=False)
     paint("BuildableEnvelope", DisplayMode="Wireframe", LineColor=(0.10, 0.55, 0.20), LineWidth=2.0, DrawStyle="Dashed")
-    paint("ChimneyOrigin", colour=(0.85, 0.10, 0.10))
+    paint("Anchor", colour=(0.85, 0.10, 0.10))
     paint("NorthArrow", LineColor=(0.0, 0.0, 0.0), LineWidth=3.0)
     for obj in doc.Objects:
         if obj.Name.startswith("Easement"):
             paint(obj.Name, LineColor=(0.95, 0.55, 0.05), LineWidth=2.0, DrawStyle="Dashdot")
+        elif obj.Name.startswith("Road") and obj.Name != "RoadGroup":
+            paint(obj.Name, LineColor=(0.25, 0.25, 0.25), LineWidth=4.0)
         elif obj.Name.startswith("Existing"):
             paint(obj.Name, colour=(0.82, 0.82, 0.86))
         elif obj.Name.startswith("Monument"):
@@ -332,15 +357,12 @@ def style(doc):
 def build():
     started = datetime.datetime.now(datetime.timezone.utc)
     pack = fetch("pack.json")
-    models = fetch("models.json")
     survey = fetch("survey.geojson")
     county = fetch("county.geojson")
     roofs = fetch("roofs.geojson")
     terrain_index = fetch(pack["layers"]["terrain"]["index"])
 
-    oak = next(m for m in models["models"] if m["id"] == "oak-leaf-massing")
-    chimney = tuple(oak["origin"])
-    frame = Frame(pack["frame"], chimney)
+    frame = Frame(pack["frame"], ANCHOR)
 
     boundary_f = next(f for f in survey["features"] if f["properties"].get("layer") == "boundary")
     boundary_ll = ring_open(boundary_f["geometry"]["coordinates"][0])
@@ -461,6 +483,35 @@ def build():
             m = add(doc, "Part::Feature", "Monument", p.get("label", "monument"), g_survey)
             m.Shape = Part.makeCylinder(0.15 * MM, 1.0 * MM, V(x, y, zz))
 
+    # --- county road centrelines, draped, as far as the terrain reaches. The county's data has
+    # no width (the Godot map draws them 6.1 m wide, an assumption of the land pack's).
+    g_roads = add(doc, "App::DocumentObjectGroup", "RoadGroup", "Roads (county centrelines; no width in the county's data)")
+    reach = (min(p[0] for p in grid[0]) / MM + 1.0, min(line[0][1] for line in grid) / MM + 1.0,
+             max(p[0] for p in grid[0]) / MM - 1.0, max(line[0][1] for line in grid) / MM - 1.0)  # the terrain's box, less 1 m
+    for f in county["features"]:
+        p = f["properties"]
+        if p.get("layer") != "road" or f["geometry"]["type"] != "LineString":
+            continue
+        pts = [frame.local(*q[:2]) for q in f["geometry"]["coordinates"]]
+        runs, run = [], []
+        for a, b in zip(pts, pts[1:]):
+            n = max(1, int(math.ceil(math.hypot(b[0] - a[0], b[1] - a[1]) / 2.0)))
+            for k in range(n + (1 if b is pts[-1] else 0)):  # corners exact, a point every 2 m between
+                x, y = a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n
+                if reach[0] <= x <= reach[2] and reach[1] <= y <= reach[3]:
+                    run.append(V(x, y, dem.at(*frame.lnglat(x, y)) - DATUM_M + 0.10))
+                elif run:
+                    runs.append(run)
+                    run = []
+        if run:
+            runs.append(run)
+        lines = [Part.makePolygon(r) for r in runs if len(r) >= 2]
+        if lines:
+            road = add(doc, "Part::Feature", "Road", "%s (county centreline)" % p.get("name", "road"), g_roads)
+            road.Shape = Part.makeCompound(lines)
+            set_meta(road, "RoadName", str(p.get("name", "")))
+            set_meta(road, "Authority", "county.geojson centreline; width unknown to the county")
+
     # --- setbacks: parcel minus a buffer of each edge at its role's distance.
     # Front = the edge with the most frontage: its length within 8 m of a road centreline
     # (county road centrelines); SITE_FRONT_EDGE (1-based) overrides.
@@ -544,8 +595,9 @@ def build():
             {"Kind": kind, "BaseM": float(p["ground_m"]), "HeightM": float(p["roof_m"]), "Authority": "derived: 2018 lidar roof plane"},
         )
 
-    # --- chimney origin, north arrow, BIM site with the georeference
-    marker = add(doc, "Part::Feature", "ChimneyOrigin", "Chimney origin (0,0,0) — datum 425.90 m", g_ref)
+    # --- the anchor, north arrow, BIM site with the georeference
+    anchor_ground = dem.at(*ANCHOR)
+    marker = add(doc, "Part::Feature", "Anchor", "Anchor (0, 0, 0): lng %.5f, lat %.4f, ground %.2f m" % (ANCHOR[0], ANCHOR[1], DATUM_M), g_ref)
     marker.Shape = Part.makeCylinder(0.3 * MM, 3.0 * MM, V(0, 0, 0))
     xs = [p[0] for p in boundary]
     ys = [p[1] for p in boundary]
@@ -563,12 +615,12 @@ def build():
     try:
         import Arch
 
-        site = Arch.makeSite([g_terrain, g_survey, g_rules, g_existing, g_ref], name="Site")
+        site = Arch.makeSite([g_terrain, g_survey, g_roads, g_rules, g_existing, g_ref], name="Site")
     except Exception as exc:
         App.Console.PrintWarning("site: BIM Site unavailable (%s); using a plain group\n" % exc)
         site = add(doc, "App::DocumentObjectGroup", "Site", "Site")
     site.Label = "Sulphur Mountain site"
-    for prop, value in (("Longitude", chimney[0]), ("Latitude", chimney[1]), ("Declination", 0.0)):
+    for prop, value in (("Longitude", ANCHOR[0]), ("Latitude", ANCHOR[1]), ("Declination", 0.0)):
         if prop in site.PropertiesList:
             setattr(site, prop, value)
     if "Elevation" in site.PropertiesList:
@@ -577,21 +629,17 @@ def build():
     set_meta(site, "PackVersion", pack.get("version", ""))
     set_meta(site, "PackGenerated", pack.get("generated", ""))
     set_meta(site, "Fetched", started.isoformat(timespec="seconds"))
-    set_meta(site, "ChimneyLng", float(chimney[0]))
-    set_meta(site, "ChimneyLat", float(chimney[1]))
-    set_meta(site, "ChimneyPackX", float(frame.cx))
-    set_meta(site, "ChimneyPackY", float(frame.cy))
+    set_meta(site, "AnchorLng", float(ANCHOR[0]))
+    set_meta(site, "AnchorLat", float(ANCHOR[1]))
+    set_meta(site, "AnchorPackX", float(frame.cx))
+    set_meta(site, "AnchorPackY", float(frame.cy))
     set_meta(site, "DatumM", DATUM_M)
     set_meta(site, "Frame", json.dumps(pack["frame"]))
-    set_meta(site, "Axes", "X east, Y true north, Z up; metres; Z = elevation - 425.90 m")
-    positions = fetch("positions.csv", binary=True).decode("utf-8").splitlines()
-    head = positions[0].split(",")
-    row = next((r.split(",") for r in positions[1:] if r.startswith("oak-leaf-massing,")), None)
-    if row:
-        rec = dict(zip(head, row))
-        set_meta(site, "ChimneyUtm11N_E", float(rec["utm11_e"]))
-        set_meta(site, "ChimneyUtm11N_N", float(rec["utm11_n"]))
-        set_meta(site, "ChimneyDemElevM", float(rec["elev_m"]))
+    set_meta(site, "Axes", "X east, Y true north, Z up; metres; Z = elevation - %.2f m (the ground at the anchor)" % DATUM_M)
+    east, north = utm11n(*ANCHOR)
+    set_meta(site, "AnchorUtm11N_E", float(east))
+    set_meta(site, "AnchorUtm11N_N", float(north))
+    set_meta(site, "AnchorDemElevM", float(anchor_ground), "the pack's DEM under the anchor")
     set_meta(site, "Sources", "; ".join("%s (%s)" % (s.get("id"), s.get("date", "")) for s in pack.get("sources", [])))
     set_meta(site, "Licences", "terrain: USGS 3DEP, public domain; pack layers: the pack's own work; this macro: MIT")
 

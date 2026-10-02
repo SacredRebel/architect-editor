@@ -65,6 +65,40 @@
 | `TOOLS.md`: the FreeCAD, Blender and Godot connectors | none: they drive the applications | the FreeCAD one, yes | MIT |
 | `SCAN-BIOMIMICRY.md` items | papers, image scans, simulations, agent skills | no †: none is a geometry tool for FreeCAD or Python | mostly MIT; the "Pinnacle" items carry a non-standard licence with paid commercial use, so they never enter |
 
+## The second scan, 1 Oct 2026: biomimetic structure and sacred geometry
+
+**Brief:** architect → FreeCAD lane, 1 Oct, step 5: search the tool pool (`C:\AI-Work\Sacred-Rebel Ai\Tools & Skills\`, 25 folders, 577 archives), the Addon Manager and `knowledge\` for (a) gridshells, rib growth, Voronoi and cellular walls, catenary nets, leaf-vein ribs; (b) proportion systems, a base module, plan figures, spirals, geodesic and regular solids, solar and cardinal orientation. Each row has a trace file in `C:\Playground\knowledge\tools\`.
+
+| Tool | Shape it makes | Works in FreeCAD 1.1.4 | Licence |
+|---|---|---|---|
+| **The tool pool** | | | |
+| three.js `TreeGenerator.js` | a branching tree: radii by the pipe model, children turned by the golden angle | no (JavaScript, display triangles). **Method taken:** Biomimetic ▸ Branching column | MIT |
+| three.js `PolyhedronGeometry.js` | a geodesic sphere by frequency (class I) | no. **Method taken:** Sacred ▸ Geodesic dome | MIT |
+| three.js cloth example | a hanging net by relaxation | no. Not taken: the force density method is exact and needs no tuning | MIT |
+| `sacred-geometry-main` (`patterns.js`) | vesica, seed and flower of life, Metatron's cube, golden spiral | no. **Constructions confirmed against it:** Sacred ▸ Plan figure | MIT |
+| `sacred-geometry-blender` | φ-based solids, Merkaba, Fibonacci spiral, torus knot, as Blender scripts | no (Blender; C runs them there). The solids' coordinates agree with this repository's kit | MIT |
+| `mySacredGeometryOpenSCADModels` | regular solids from Schläfli symbols, geodesic chord factors | no (OpenSCAD). Formulas read as a cross-check only | CC BY-SA 4.0 (share-alike: nothing copied) |
+| `SacredGeometry-main`, `canvasLab`, `Whorld`, `PotterDraw` | circle lattices, star and lobed rings, fluted shells of revolution | no. Read as method; nothing taken | **GPL**: never code |
+| `Architecture\Biomimic\` (85 archives) | none: essays, websites, robots, ML | no geometry in any | mixed; five "Pinnacle" items forbid commercial use: never |
+| scikit-image | iso-curves, minimum-cost paths, skeletons on rasters | not needed: the nets here are vector | BSD-3 |
+| **Inside FreeCAD 1.1.4** | | | |
+| scipy 1.16.3 `spatial.Voronoi`, `ConvexHull` | Voronoi cells; a solid's faces from its vertices | **yes**: Biomimetic ▸ Cellular wall; Sacred ▸ Regular solid, Geodesic dome | BSD-3 |
+| shapely 2.1.2 | polygon offsets, unions, distances | **yes**: cell outlines; the export's road and building clearance | BSD-3 |
+| numpy 1.26.4 `linalg.solve` | the equilibrium of a net | **yes**: Biomimetic ▸ Gridshell, Hanging net | BSD-3 |
+| matplotlib 3.10.8 | pictures without a window | **yes**: `docs/plans/freecad/*.png` | BSD-style |
+| **Methods from the literature, written here** | | | |
+| Force density method (Schek 1974) | a net in equilibrium: a catenary net, a gridshell | **yes**: `organic_biomimetic.force_density` | this repository's MIT code |
+| Space colonisation (Runions et al. 2005), Murray's law | a leaf's venation; vessel widths | **yes**: Biomimetic ▸ Veined leaf shell | this repository's MIT code |
+| NOAA's solar equations (in plugin-eco) | the sun's position; rising and setting azimuths | **yes**: the check on the land pack's sun; the offline fallback | public domain; MIT port |
+| **The land pack** | | | |
+| `sky-events.json` (lane C) | where the sun rises and sets at the year's eight stations, on a level horizon and over the ridge | **yes**, read over the network: Sacred ▸ Sun rose, Turn to the sun | the pack's own |
+| **Addon Manager, read again** | | | |
+| Curves 0.6.81 | iso-curves on a face; Gordon surfaces | not installed: no form finding, cells, veins or proportion in it | LGPL-2.1-or-later |
+| CurvedShapes 1.00.15 | curved arrays; notched slotted ribs | not installed: for fabrication later | LGPL |
+| Lattice2 1.1 | arrays of placements | not installed: it arranges copies, it makes no lattice | LGPL-2.0-or-later |
+
+**Not found anywhere** (pool, add-ons, `knowledge\`): gridshell form finding, venation, a Voronoi panel generator, a √2 or silver-ratio module system, proportion snapping, a real sun or true-north calculation. These were built (`organic_biomimetic.py`, `organic_sacred.py`) or taken from the land pack.
+
 ## What the scan decided
 
 - **Port, don't wrap.** The repository's generators are short maths and MIT. In FreeCAD they become real solids on the Part kernel: every thickness a true offset, every opening a cut.

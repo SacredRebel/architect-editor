@@ -6,13 +6,31 @@ web app's build.
 
 | Here | What it is |
 |---|---|
-| `Organic/` | the Organic workbench: organic architecture as real solids, and Send to the map. See `Organic/README.md` |
+| `Organic/` | the Organic workbench: three toolbars (Organic, Sacred, Biomimetic) of real solids, and Send to the map. See `Organic/README.md` |
 | `InstallOrganic.FCMacro` | installs or updates the workbench in `%APPDATA%\FreeCAD\v1-1\Mod\Organic` |
-| `check_organic.py` | checks the workbench's solids and the building it sent to the map, with `--self-test` |
+| `check_toolbar.py` | presses every button's own code, at the origin and where a building stands, against closed forms; with `--self-test` |
+| `check_organic.py` | checks the workbench's solids and the building it sent to the map (its place, the road, the existing buildings, the IFC), with `--self-test` |
+| `build_test_pavilion.py` | builds the test building with the toolbar's own objects and sends it to the map |
 | `SulphurMountainSite.FCMacro` | builds the site template from the live land pack |
 | `check_site.py` | checks the site template against the pack, with `--self-test` |
+| `draw_placement.py`, `draw_tools.py` | pictures from the files themselves: a building where it stands; what the Sacred and Biomimetic toolbars make (`docs/plans/freecad/`) |
+| `run_headless.py` | runs any of the above without FreeCAD's window, in `freecadcmd` |
 
 Designs (`*.FCStd`) are not kept here; they live in `%USERPROFILE%\Documents\SulphurMountain`.
+
+## Without the window: run_headless.py
+
+```
+$env:ORGANIC_HEADLESS = 'install,pavilion,selftest,toolbar'
+& "C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe" "C:\Playground\Architect-editor\freecad\run_headless.py"
+```
+
+Steps, in the order given: `install`, `pavilion`, `check`, `selftest` (check_organic with its
+forgeries), `toolbar` (check_toolbar with its forgeries; about 8 minutes), `site` and
+`sitecheck` (a trial of the site template into `SITE_FCSTD`), `picture`, `tools`.
+`ORGANIC_HEADLESS_LOG` names a file that gets a copy of what is printed. The process ends
+with 0 when every step passed. What needs the window: the site template people open (its
+colours, line styles and dimension text), and check_site's J.
 
 ## SulphurMountainSite.FCMacro: the site template
 
@@ -20,17 +38,20 @@ It builds `SulphurMountain-site.FCStd` from the live land pack at
 https://sulphur-mountain-world.vercel.app/. Every run fetches the pack; nothing from it is
 stored here.
 
-- **Frame.** The unit is metres. The origin (0, 0, 0) is the Oak Leaf chimney, the pack's
-  origin of `oak-leaf-massing` in `models.json`. Z = 0 is the 425.90 m datum, the Oak Leaf
-  main floor. +X points east and +Y true north. The BIM Site holds the chimney's
-  longitude and latitude, elevation 425.90 m and declination 0, plus its UTM 11N
-  coordinates from `positions.csv`.
+- **Frame.** The canonical one (`C:\Playground\BRAIN.md` §3). The unit is metres. The
+  origin (0, 0, 0) is the anchor, lng −119.15536, lat 34.4331, on the ground there:
+  Z = 0 is 425.63 m NAVD88. +X points east and +Y true north. The BIM Site holds the
+  anchor's longitude and latitude, elevation 425.63 m and declination 0, plus its UTM 11N
+  coordinates and the pack's DEM reading under it.
 - **Terrain.** USGS 3DEP 1 m terrarium tiles give one vertex per second pixel, at the
   pixel's own centre and value. Contours are drawn every 1 m, with an index contour every
   5 m.
 - **Survey.** The property line has 11 corners draped on the terrain, plus a flat copy at
   Z = 0. Its 11 horizontal distances are dimensioned. Also drawn: the 16 ft access
   easement and the 4 found monuments.
+- **Roads.** The county's road centrelines (`county.geojson`), draped, as far as the
+  terrain reaches. The county gives no width (the Godot map draws them 6.1 m wide). A
+  building belongs clear of them and of the easement.
 - **Setbacks.** These are the typical Ventura RE/AE yards from
   `packages/plugin-eco/src/eco-jurisdiction-ventura.ts`: front 6.10 m, side 1.52 m,
   rear 4.57 m, height limit 10.67 m. Confirm them with the AHJ. The front is the edge with
@@ -69,8 +90,9 @@ independently of the macro:
 - H: the dimensions.
 - I: north and units.
 - J: each dimension's text as drawn, along its edge and readable.
+- K: the county's road centrelines, drawn where the terrain reaches.
 
-`--self-test` forges nine faults and must see every one rejected.
+`--self-test` forges eleven faults (twelve with the window) and must see every one rejected.
 
 ```python
 # in FreeCAD's Python console, or through the connector

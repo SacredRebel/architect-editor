@@ -12,7 +12,9 @@ import os
 import FreeCAD as App
 import Part
 
+import organic_biomimetic as ob
 import organic_geom as og
+import organic_sacred as sacred
 
 MM = og.MM
 ICONS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
@@ -49,22 +51,21 @@ def set_local(obj, shape):
     obj.Placement = pl
 
 
-def set_global(obj, shape):
-    """Assign a shape built in document coordinates (it follows a base curve), keeping the
-    object's placement: the shape is taken into the placement's frame first."""
-    pl = obj.Placement
-    s = shape.copy()
-    s.transformShape(pl.inverse().toMatrix(), True)
-    obj.Shape = s
-    obj.Placement = pl
+def base_edge(obj, closed_required=False, corners=False):
+    """The object's Base as one smooth horizontal edge in the object's own frame, and whether
+    it is closed. With `corners`, a closed outline that has corners comes back as it is (an
+    og.WirePath), for walls, which keep them.
 
-
-def base_edge(obj, closed_required=False):
-    """The object's Base as one smooth horizontal edge and whether it is closed."""
+    Solids are built there, near the origin, wherever the building stands and however it is
+    turned: OCCT's booleans and its volume integration lose accuracy with distance from the
+    origin (a wave-topped wall built 116 m out and turned 30° could not be finished)."""
     base = getattr(obj, "Base", None)
     if base is None or not hasattr(base, "Shape") or base.Shape.isNull():
         return None, False
-    edge, closed = og.plan_edge(base.Shape)
+    outline = getattr(getattr(base, "Proxy", None), "outline", None)  # a figure's outline, less its construction lines
+    local = (outline(base) if outline else base.Shape).copy()
+    local.Placement = obj.Placement.inverse().multiply(local.Placement)
+    edge, closed = (og.plan_path if corners else og.plan_edge)(local)
     if closed_required and not closed:
         raise ValueError("%s needs a closed base curve" % obj.Label)
     return edge, closed
@@ -201,16 +202,12 @@ class Wall(Organic):
         return out
 
     def execute(self, obj):
-        edge, closed = base_edge(obj)
+        edge, closed = base_edge(obj, corners=True)
         if edge is None:
             edge, closed = og.arc_curve(5.0, 120.0), False
-            follow = False
-        else:
-            follow = True
         obj.CentrelineLength = edge.Length / MM
-        shape = og.wall_shape(edge, closed, m(obj.Thickness), m(obj.Height), obj.Align, obj.Top, m(obj.TopRise),
-                              obj.TopWaves, self.openings(obj), m(obj.BaseOffset), m(obj.Foundation))
-        (set_global if follow else set_local)(obj, shape)
+        set_local(obj, og.wall_shape(edge, closed, m(obj.Thickness), m(obj.Height), obj.Align, obj.Top, m(obj.TopRise),
+                                     obj.TopWaves, self.openings(obj), m(obj.BaseOffset), m(obj.Foundation)))
 
 
 def add_opening(wall, position_m, width_m=1.2, height_m=1.3, sill_m=0.9, shape="Arch"):
@@ -303,12 +300,18 @@ class LeafShell(Organic):
         length(obj, "RibSpacing", g, "ribs across the spine every (0: none)", 2.5)
         length(obj, "RibDepth", g, "rib depth under the shell", 0.10)
         length(obj, "RibWidth", g, "rib width", 0.12)
+        length(obj, "Plinth", g, "depth of a footing under each tip, below the base (0: none)", 0.0)
+        length(obj, "Foot", g, "length of each footing along the spine (0: 6 % of the spine)", 0.0)
+        prop(obj, "App::PropertyEnumeration", "RibPattern", g, "straight ribs across the spine, or ribs grown as a leaf's veins", enum=["Straight", "Veins"])
+        prop(obj, "App::PropertyInteger", "VeinSources", g, "veins: how many points the veins grow towards (more: a finer pattern)", 180)
+        prop(obj, "App::PropertyInteger", "VeinSeed", g, "veins: another number, another pattern", 1)
 
     def execute(self, obj):
         heights = list(obj.RidgeHeights) if len(obj.RidgeHeights) == 4 else [3.0, 7.2, 9.8, 3.0]
         set_local(obj, og.leaf_shell_shape(m(obj.Spine), m(obj.LeafSpan), heights, m(obj.Eave), obj.RiseFactor,
                                            obj.Curvature, m(obj.Thickness), m(obj.RibSpacing), m(obj.RibDepth),
-                                           m(obj.RibWidth), obj.Outline))
+                                           m(obj.RibWidth), obj.Outline, m(obj.Plinth), m(obj.Foot),
+                                           obj.RibPattern == "Veins", max(20, obj.VeinSources), obj.VeinSeed))
 
 
 # ---------------------------------------------------------------- roofs, slabs, films on a closed base
@@ -332,7 +335,7 @@ class ShellRoof(Organic):
         edge, _closed = base_edge(obj, closed_required=True)
         if edge is None:
             return
-        set_global(obj, og.organic_roof_shape(edge, m(obj.Eaves), m(obj.Rise), m(obj.Overhang), m(obj.Thickness)))
+        set_local(obj, og.organic_roof_shape(edge, m(obj.Eaves), m(obj.Rise), m(obj.Overhang), m(obj.Thickness)))
 
 
 class Slab(Organic):
@@ -352,7 +355,7 @@ class Slab(Organic):
         edge, _closed = base_edge(obj, closed_required=True)
         if edge is None:
             return
-        set_global(obj, og.slab_shape(edge, m(obj.Thickness), m(obj.Inset)))
+        set_local(obj, og.slab_shape(edge, m(obj.Thickness), m(obj.Inset)))
 
 
 class SoapFilm(Organic):
@@ -373,14 +376,12 @@ class SoapFilm(Organic):
 
     def execute(self, obj):
         edge, _closed = base_edge(obj, closed_required=True)
-        follow = edge is not None
         if edge is None:
             edge = og.arc_curve(6.0, 360.0)
         if m(obj.BaseOffset):
             edge = edge.copy()
             edge.translate(App.Vector(0, 0, m(obj.BaseOffset) * MM))
-        shape = og.soap_film_shape(edge, m(obj.MastHeight), m(obj.MastRadius), m(obj.Thickness))
-        (set_global if follow else set_local)(obj, shape)
+        set_local(obj, og.soap_film_shape(edge, m(obj.MastHeight), m(obj.MastRadius), m(obj.Thickness)))
 
 
 class MinimalShell(Organic):
@@ -404,6 +405,252 @@ class MinimalShell(Organic):
             shape = og.catenoid_shape(m(obj.SizeX), m(obj.SizeY), m(obj.Thickness))
         else:
             shape = og.hypar_shape(m(obj.SizeX), m(obj.SizeY), m(obj.Rise), m(obj.Thickness))
+        set_local(obj, shape)
+
+
+# ---------------------------------------------------------------- the Sacred tab
+class SacredFigure(Organic):
+    """A plan figure of proportion: its outline (which walls, slabs, roofs and nets can stand
+    on) and the construction that makes it. Size is its radius, short side or module; Count
+    its rings, squares, steps, sides, points or cells."""
+
+    ifc_type = "Building Element Proxy"
+    icon = "SacredFigure.svg"
+
+    def setup(self, obj):
+        g = "Figure"
+        prop(obj, "App::PropertyEnumeration", "Kind", g, "the figure", enum=sacred.FIGURES)
+        length(obj, "Size", g, "radius of its circles or polygon; short side of a rectangle; the module of a grid", 4.0)
+        prop(obj, "App::PropertyInteger", "Count", g, "rings (flower), squares (golden), steps (turned squares), sides (polygon), points (star), cells along X (grid)", 6)
+        prop(obj, "App::PropertyInteger", "Step", g, "star: join every Step-th point", 2)
+        prop(obj, "App::PropertyEnumeration", "Root", g, "root rectangle: 1 : sqrt of", enum=["2", "3", "5"])
+        prop(obj, "App::PropertyInteger", "CellsY", g, "grid: cells along Y (0: as many as along X)", 0)
+        prop(obj, "App::PropertyAngle", "Turn", g, "rotation of the figure", 0.0)
+        prop(obj, "App::PropertyBool", "Construction", g, "draw the construction lines with the outline", True)
+        prop(obj, "App::PropertyFloat", "OutlineArea", "Measures", "area inside the outline (m²)")
+        prop(obj, "App::PropertyFloat", "OutlineLength", "Measures", "length of the outline (m)")
+        for p in ("OutlineArea", "OutlineLength"):
+            obj.setEditorMode(p, 1)
+
+    def figure(self, obj):
+        outline, extra = sacred.figure(obj.Kind, m(obj.Size), obj.Count, obj.Step, int(obj.Root), obj.CellsY)
+        shapes = [outline] + (list(extra) if obj.Construction else [])
+        for s in shapes:
+            s.rotate(App.Vector(), og.Z, float(obj.Turn))
+        return shapes
+
+    def execute(self, obj):
+        shapes = self.figure(obj)
+        obj.OutlineLength = shapes[0].Length / MM
+        obj.OutlineArea = Part.Face(shapes[0]).Area / MM / MM
+        set_local(obj, Part.makeCompound(shapes))
+
+    def outline(self, obj):
+        """The outline alone, in document coordinates: what a wall or a roof takes as its base."""
+        wire = self.figure(obj)[0]
+        wire.Placement = obj.Placement.multiply(wire.Placement)
+        return wire
+
+
+class SacredSolid(Organic):
+    """One of the five regular solids, of a given edge, standing on a face or a vertex."""
+
+    ifc_type = "Building Element Proxy"
+    icon = "SacredSolid.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Solid"
+        prop(obj, "App::PropertyEnumeration", "Kind", g, "the solid", enum=sacred.SOLIDS)
+        length(obj, "Edge", g, "length of an edge", 3.0)
+        prop(obj, "App::PropertyEnumeration", "Standing", g, "how it stands on its base", enum=["On a face", "On a vertex", "Centred"])
+        prop(obj, "App::PropertyFloat", "Circumradius", "Measures", "radius of the sphere through its vertices (m)")
+        obj.setEditorMode("Circumradius", 1)
+
+    def execute(self, obj):
+        e = m(obj.Edge)
+        obj.Circumradius = max(math.sqrt(x * x + y * y + z * z) for x, y, z in sacred.platonic_vertices(obj.Kind, e))
+        set_local(obj, sacred.platonic_solid(obj.Kind, e, obj.Standing))
+
+
+class GeodesicDome(Organic):
+    """A geodesic dome shell: an icosahedron's faces cut into Frequency² triangles and pushed
+    out to the sphere, with a real thickness; Portion of the sphere's height stands."""
+
+    ifc_type = "Roof"
+    icon = "SacredGeodesic.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Geodesic dome"
+        length(obj, "Radius", g, "radius of the sphere through its outer vertices", 6.0)
+        prop(obj, "App::PropertyInteger", "Frequency", g, "each icosahedron edge cut into this many struts (1-8)", 3)
+        length(obj, "Thickness", g, "shell thickness", 0.15)
+        prop(obj, "App::PropertyFloat", "Portion", g, "how much of the sphere's height stands: 0.5 a hemisphere, 0.625 a five-eighths dome", 0.5)
+        prop(obj, "App::PropertyInteger", "Panels", "Measures", "triangles of the whole sphere at this frequency")
+        obj.setEditorMode("Panels", 1)
+
+    def execute(self, obj):
+        nu = max(1, min(8, obj.Frequency))
+        obj.Panels = 20 * nu * nu
+        set_local(obj, sacred.geodesic_dome(m(obj.Radius), nu, m(obj.Thickness), obj.Portion))
+
+
+class SunRose(Organic):
+    """Where the sun rises and sets on the land through the year, drawn from the rose's own
+    spot: true north, the cardinal directions, the solstices and equinoxes (long rays) and
+    the cross-quarter days (short rays). The azimuths are the land pack's own."""
+
+    ifc_type = "Building Element Proxy"
+    icon = "SacredSun.svg"
+    HORIZONS = ["Terrain (the ridge line seen from there)", "Flat (a level horizon)"]
+
+    def setup(self, obj):
+        g = "Sun"
+        length(obj, "Size", g, "length of the north ray", 12.0)
+        prop(obj, "App::PropertyEnumeration", "Horizon", g, "the horizon the sun is seen to rise and set over", enum=self.HORIZONS)
+        prop(obj, "App::PropertyFloatList", "Sunrise", g, "sunrise azimuths, degrees from true north (in the order of Events)")
+        prop(obj, "App::PropertyFloatList", "Sunset", g, "sunset azimuths, degrees from true north (in the order of Events)")
+        prop(obj, "App::PropertyStringList", "Events", g, "the year's stations", [label for _key, label in sacred.EVENTS])
+        prop(obj, "App::PropertyString", "Source", g, "where the azimuths come from")
+        prop(obj, "App::PropertyString", "ReadFor", g, "the horizon and place the stored azimuths were read for")
+        for p in ("Sunrise", "Sunset", "Events", "Source", "ReadFor"):
+            obj.setEditorMode(p, 1)
+
+    def place_of(self, obj):
+        """(lng, lat) of the rose, from the document's site and the rose's own position."""
+        import organic_export as ox
+
+        origin = ox.document_origin(obj.Document)
+        kx, ky = ox.METRES_PER_DEG
+        return origin["lng"] + obj.Placement.Base.x / MM / kx, origin["lat"] + obj.Placement.Base.y / MM / ky
+
+    def azimuths(self, obj):
+        return {key: (obj.Sunrise[i], obj.Sunset[i]) for i, (key, _label) in enumerate(sacred.EVENTS)}
+
+    def execute(self, obj):
+        lng, lat = self.place_of(obj)
+        wanted = "%s|%.5f|%.5f" % (obj.Horizon, lng, lat)
+        if obj.ReadFor != wanted or len(obj.Sunrise) != len(sacred.EVENTS):
+            az, source = sacred.site_azimuths(lng, lat, obj.Horizon)
+            obj.Sunrise = [float(az[key][0]) for key, _label in sacred.EVENTS]
+            obj.Sunset = [float(az[key][1]) for key, _label in sacred.EVENTS]
+            obj.Source, obj.ReadFor = source, wanted
+        rose = sacred.sun_rose(self.azimuths(obj), m(obj.Size))
+        base = obj.Placement.Base
+        obj.Shape = rose
+        obj.Placement = App.Placement(base, App.Rotation())  # the rose never turns with a building: its north is true north
+
+
+class Proportions(Organic):
+    """The proportion system and the module this document's buildings are set out in. The
+    Sacred tab's snap and report read them here."""
+
+    icon = "SacredSnap.svg"
+
+    def setup(self, obj):
+        g = "Proportions"
+        prop(obj, "App::PropertyEnumeration", "System", g, "the family of ratios", enum=sacred.SYSTEM_NAMES)
+        length(obj, "Module", g, "the base module every governing dimension is a whole number of", sacred.FOOT)
+
+    def execute(self, obj):
+        pass
+
+
+# ---------------------------------------------------------------- the Biomimetic tab
+class Gridshell(Organic):
+    """A net of laths over a closed base curve, found by the force density method: every
+    node in balance between its laths and its load. Standing, it is a gridshell; Hanging, a
+    catenary net. Without a base: a circle of radius 6 m."""
+
+    ifc_type = "Member"
+    icon = "BioGridshell.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Net"
+        prop(obj, "App::PropertyLink", "Base", g, "the closed boundary the laths end on")
+        length(obj, "Spacing", g, "distance between laths", 1.0)
+        length(obj, "Rise", g, "height of the highest node above the boundary (the lowest, below it, when hanging)", 3.0)
+        length(obj, "LathWidth", g, "width of a lath, lying in the net", 0.08)
+        length(obj, "LathDepth", g, "depth of a lath, square to the net", 0.05)
+        prop(obj, "App::PropertyBool", "Hanging", g, "hang the net below its boundary instead of standing it above", False)
+        length(obj, "EdgeBeam", g, "side of a square beam along the boundary (0: none)", 0.15)
+        prop(obj, "App::PropertyInteger", "Laths", "Measures", "number of laths")
+        prop(obj, "App::PropertyFloat", "LathLength", "Measures", "total length of the laths (m)")
+        prop(obj, "App::PropertyFloat", "Residual", "Measures", "largest unbalanced force on a node, over the node load")
+        for p in ("Laths", "LathLength", "Residual"):
+            obj.setEditorMode(p, 1)
+
+    def execute(self, obj):
+        edge, _closed = base_edge(obj, closed_required=True)
+        if edge is None:
+            edge = og.arc_curve(6.0, 360.0)
+        shape, laths, total, residual = ob.net_shape(edge, m(obj.Spacing), m(obj.Rise), m(obj.LathWidth), m(obj.LathDepth),
+                                                    obj.Hanging, m(obj.EdgeBeam))
+        obj.Laths, obj.LathLength, obj.Residual = laths, total, residual
+        set_local(obj, shape)
+
+
+class CellularWall(Organic):
+    """A wall on a base curve opened into Voronoi cells between ribs, as bone and dragonfly
+    wings are: one solid. Without a base: an arc of radius 5 m."""
+
+    ifc_type = "Wall"
+    icon = "BioCells.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Cellular wall"
+        prop(obj, "App::PropertyLink", "Base", g, "the plan curve the wall follows")
+        length(obj, "Thickness", g, "wall thickness", 0.30)
+        length(obj, "Height", g, "wall height above its base", 3.0)
+        prop(obj, "App::PropertyEnumeration", "Align", g, "the wall's side of its base curve", enum=["Center", "Left", "Right"])
+        length(obj, "Cell", g, "size of a cell", 0.8)
+        length(obj, "Rib", g, "width of the ribs between cells", 0.12)
+        length(obj, "Margin", g, "solid band at the foot, the top and the ends", 0.3)
+        prop(obj, "App::PropertyInteger", "Seed", g, "another number, another pattern", 1)
+        length(obj, "Foundation", g, "depth the wall runs below its base", 0.0)
+        distance(obj, "BaseOffset", g, "the base's height above the base curve", 0.0)
+        prop(obj, "App::PropertyFloat", "OpenFraction", "Measures", "the cells' share of the wall face")
+        obj.setEditorMode("OpenFraction", 1)
+
+    def execute(self, obj):
+        edge, closed = base_edge(obj, corners=True)
+        if edge is None:
+            edge, closed = og.arc_curve(5.0, 120.0), False
+        shape, cells, face = ob.cellular_wall_shape(edge, closed, m(obj.Thickness), m(obj.Height), m(obj.Cell), m(obj.Rib), m(obj.Margin),
+                                                    obj.Seed, obj.Align, m(obj.BaseOffset), m(obj.Foundation))
+        obj.OpenFraction = cells / face if face else 0.0
+        set_local(obj, shape)
+
+
+class BranchingColumn(Organic):
+    """A column that branches like a tree: at each level every branch splits and fans out,
+    thinning by r_parent^e = n r_child^e. Its tips stand level at Height, each under a cap."""
+
+    ifc_type = "Column"
+    icon = "BioColumn.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Branching column"
+        length(obj, "Height", g, "height of the tips above the base", 5.0)
+        length(obj, "Trunk", g, "height of the first fork", 2.2)
+        prop(obj, "App::PropertyInteger", "Levels", g, "how many times it forks (1-4)", 2)
+        prop(obj, "App::PropertyInteger", "Branches", g, "branches at each fork (2-5)", 3)
+        length(obj, "Spread", g, "radius of the crown: no tip stands further from the trunk's axis", 2.5)
+        length(obj, "TrunkRadius", g, "radius of the trunk at its foot", 0.18)
+        prop(obj, "App::PropertyFloat", "Exponent", g, "e in r_parent^e = n r_child^e: 3 Murray's law, 2 Leonardo's rule, 2.3 measured on trees", 2.3)
+        length(obj, "TipRadius", g, "smallest radius of a branch", 0.04)
+        prop(obj, "App::PropertyAngle", "Fan", g, "how widely a fork's branches fan out about their branch", 110.0)
+        prop(obj, "App::PropertyVectorList", "Tips", "Measures", "where the tips stand, in the column's own frame (mm)")
+        obj.setEditorMode("Tips", 1)
+
+    def execute(self, obj):
+        shape, tips = ob.branching_column(m(obj.Height), m(obj.Trunk), max(1, min(4, obj.Levels)), max(2, min(5, obj.Branches)),
+                                          m(obj.Spread), m(obj.TrunkRadius), max(1.5, obj.Exponent), m(obj.TipRadius), float(obj.Fan))
+        obj.Tips = [og.V(*t) for t in tips]
         set_local(obj, shape)
 
 
@@ -440,7 +687,9 @@ COLOURS = {
     "Roof": (0.55, 0.66, 0.50),
     "Slab": (0.70, 0.70, 0.70),
     "Member": (0.80, 0.62, 0.45),
+    "Column": (0.72, 0.56, 0.40),
 }
+LINE_COLOURS = {"PlanCurve": (0.2, 0.3, 0.8), "SacredFigure": (0.70, 0.45, 0.05), "SunRose": (0.85, 0.45, 0.0)}
 
 
 def make(cls, name, label=None, doc=None):
@@ -456,7 +705,7 @@ def make(cls, name, label=None, doc=None):
             mat = App.Material()
             mat.DiffuseColor = colour
             obj.ViewObject.ShapeAppearance = [mat]
-        if cls is PlanCurve:
-            obj.ViewObject.LineColor = (0.2, 0.3, 0.8)
+        if cls.__name__ in LINE_COLOURS:
+            obj.ViewObject.LineColor = LINE_COLOURS[cls.__name__]
             obj.ViewObject.LineWidth = 2.0
     return obj
