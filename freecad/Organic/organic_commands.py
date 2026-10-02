@@ -9,14 +9,15 @@ A command's work is its make(): it takes the document and, where it acts on a se
 selected objects, so it runs the same from a button and from a script without a window.
 """
 
+import math
 import os
 
 import FreeCAD as App
 import FreeCADGui as Gui
-import Part
 
 import organic_export as ox
 import organic_geom as og
+import organic_import as oi
 import organic_objects as oo
 import organic_sacred as sacred
 
@@ -44,16 +45,26 @@ def is_building(obj):
 
 
 def active_building(doc):
-    """The BIM building the user made active (double-click in the tree), else the only one."""
+    """The BIM building the user made active in this document (double-click in the tree), else
+    the only one it has. A building made active in another open document is not this one's."""
     if App.GuiUp:
         try:
-            b = Gui.ActiveDocument.ActiveView.getActiveObject("Arch")
-            if b is not None:
+            b = Gui.getDocument(doc.Name).ActiveView.getActiveObject("Arch")
+            if b is not None and b.Document.Name == doc.Name:
                 return b
         except Exception:
             pass
     buildings = [o for o in doc.Objects if is_building(o)]
     return buildings[0] if len(buildings) == 1 else None
+
+
+def make_active(building):
+    """Make a building the one new Organic objects go into (as a double-click in the tree does)."""
+    if App.GuiUp:
+        try:
+            Gui.getDocument(building.Document.Name).ActiveView.setActiveObject("Arch", building)
+        except Exception:
+            pass
 
 
 def place(obj, doc):
@@ -76,11 +87,50 @@ def selection():
     return list(Gui.Selection.getSelection()) if App.GuiUp else []
 
 
+class PickWatch:
+    """Remembers where the last click in the 3D view landed. FreeCAD keeps the clicked point
+    of a solid's face in the selection itself, but not that of a terrain mesh: this hears it."""
+
+    def __init__(self):
+        self.last = None
+
+    def addSelection(self, doc, obj, sub, pnt):
+        clicked = pnt is not None and any(abs(c) > 1e-9 for c in pnt)  # a selection made in the tree carries (0, 0, 0)
+        self.last = (doc, obj, App.Vector(*pnt)) if clicked else None
+
+    def removeSelection(self, doc, obj, sub):
+        self.last = None
+
+    def clearSelection(self, doc):
+        self.last = None
+
+
+try:
+    _WATCH
+except NameError:
+    _WATCH = None
+if App.GuiUp:
+    if _WATCH is not None:  # this module loaded again: the old ear is taken off first
+        try:
+            Gui.Selection.removeObserver(_WATCH)
+        except Exception:
+            pass
+    _WATCH = PickWatch()
+    Gui.Selection.addObserver(_WATCH)
+
+
 def picks():
     """[(object, the point clicked on it or None)] for what is selected in the window."""
     if not App.GuiUp:
         return []
-    return [(s.Object, s.PickedPoints[0] if s.PickedPoints else None) for s in Gui.Selection.getSelectionEx()]
+    out = []
+    for s in Gui.Selection.getSelectionEx():
+        point = s.PickedPoints[0] if s.PickedPoints else None
+        heard = _WATCH.last if _WATCH is not None else None
+        if point is None and heard is not None and heard[0] == s.Object.Document.Name and heard[1] == s.Object.Name:
+            point = heard[2]
+        out.append((s.Object, point))
+    return out
 
 
 def curves_in(selected):
@@ -97,23 +147,7 @@ def curves_in(selected):
     return [c for c in out if c is not None]
 
 
-def arc_length_at(edge, point):
-    """Metres along an edge to the point on it nearest `point`."""
-    if isinstance(edge, og.WirePath):  # an outline with corners: the nearest of points 5 cm apart along it
-        n = max(8, int(edge.Length / 50.0))
-        flat = App.Vector(point.x, point.y, edge.valueAt(0.0).z)
-        return min((edge.Length * k / n for k in range(n)), key=lambda s: (edge.valueAt(s) - flat).Length) / MM
-    c = edge.Curve
-    u0, u1 = edge.FirstParameter, edge.LastParameter
-    u = c.parameter(App.Vector(point.x, point.y, edge.valueAt(u0).z))
-    if c.isPeriodic():  # a circle answers in 0..2π, an arc's own range may lie beyond it
-        period = c.LastParameter - c.FirstParameter
-        while u < u0:
-            u += period
-        while u > u1:
-            u -= period
-    u = min(max(u, u0), u1)
-    return Part.Edge(c, u0, u).Length / MM if u > u0 + 1e-12 else 0.0
+arc_length_at = og.arc_length_at  # metres along a wall's line to the point clicked on it
 
 
 def finish(doc, objs, label):
@@ -163,28 +197,18 @@ class NewBuilding(Command):
     pixmap = "OrganicBuilding.svg"
     menu = "New organic building"
     tip = ("A BIM building on a georeferenced site (the canonical frame: metres, the origin at the anchor, "
-           "+Y true north, Z = 0 on the ground there, 425.63 m). Double-click it in the tree to make it "
-           "active: new Organic objects go into it, at its placement. Move the building to put it on the site.")
+           "+Y true north, Z = 0 on the ground there, 425.63 m). Click the land first (the site template's "
+           "terrain) and the building stands where you clicked, on the ground there; without a click it "
+           "stands at the origin. Double-click it in the tree to make it active: new Organic objects go "
+           "into it, at its placement.")
 
-    def make(self, doc):
-        import Arch
-
-        App.setActiveDocument(doc.Name)  # Arch builds in the active document, whichever one it is given
-        site = next((o for o in doc.Objects if hasattr(o, "Longitude") and hasattr(o, "Latitude") and o.Name.startswith("Site")), None)
-        if site is None:
-            site = Arch.makeSite([], name="Site")
-            site.Label = "Site (anchor frame)"
-            site.Longitude, site.Latitude = ox.ANCHOR["lng"], ox.ANCHOR["lat"]
-            site.Elevation = ox.ANCHOR["elevation_m"] * MM
-            site.Declination = 0.0
-        b = Arch.makeBuilding([], name="OrganicBuilding")
-        b.Label = "Organic building"
-        site.addObject(b)
-        if App.GuiUp:
-            try:
-                Gui.ActiveDocument.ActiveView.setActiveObject("Arch", b)
-            except Exception:
-                pass
+    def make(self, doc, picked=None):
+        b = oi.make_building(doc, "Organic building")
+        spot = next((p for o, p in (picks() if picked is None else picked) if p is not None and o.isDerivedFrom("Mesh::Feature")), None)
+        if spot is not None:  # the land (a terrain mesh) was clicked first: the building stands there, on the ground that was clicked
+            b.Placement = App.Placement(App.Vector(spot.x, spot.y, spot.z), App.Rotation())
+            say("the building stands where the land was clicked: %.2f m east, %.2f m north of the document's origin, %+.2f m" % (spot.x / MM, spot.y / MM, spot.z / MM))
+        make_active(b)
         return [b]
 
 
@@ -228,12 +252,17 @@ class Wall(Command):
         return walls
 
 
+DOOR = dict(width_m=1.0, height_m=2.2, sill_m=0.0, shape="Arch")   # the map's build mode sets the same door
+DOOR_BELOW = 0.6  # metres above the wall's base: a click below this is a door, above it a window
+
+
 class Opening(Command):
     pixmap = "OrganicOpening.svg"
     menu = "Opening"
-    tip = ("An arched opening in the selected Organic wall, centred where you clicked it (or at the middle "
-           "of the wall). Edit its width, height, sill and shape (Rect, Arch, Pointed, Round) in the "
-           "wall's Openings lists.")
+    tip = ("An arched opening in the selected Organic wall, centred where you clicked it: a door (1.0 x 2.2 m "
+           "from the floor) when you click the wall near its foot, a window (1.2 x 1.3 m, sill 0.9 m) when "
+           "you click higher up; a window at the middle of the wall when it was selected in the tree. Edit "
+           "width, height, sill and shape (Rect, Arch, Pointed, Round) in the wall's Openings lists.")
 
     def make(self, doc, picked=None):
         done = []
@@ -243,8 +272,15 @@ class Opening(Command):
             edge, _closed = oo.base_edge(w, corners=True)  # in the wall's own frame, as the click must be
             if edge is None:
                 edge = og.arc_curve(5.0, 120.0)
-            pos = arc_length_at(edge, w.Placement.inverse().multVec(point)) if point is not None else edge.Length / MM / 2
-            oo.add_opening(w, pos)
+            door = False
+            if point is not None:
+                local = w.Placement.inverse().multVec(point)
+                pos = arc_length_at(edge, local)
+                door = (local.z - edge.valueAt(edge.FirstParameter).z) / MM - oo.m(w.BaseOffset) < DOOR_BELOW
+            else:
+                pos = edge.Length / MM / 2
+            oo.add_opening(w, pos, **(DOOR if door else {}))
+            say("%s: a %s, %.2f m along it" % (w.Label, "door" if door else "window", pos))
             done.append(w)
         if not done:
             raise ValueError("select an Organic wall (click on it where the opening goes)")
@@ -274,6 +310,7 @@ class ArchCmd(Command):
         a.Span, a.Rise, a.Thickness, a.VaultLength = 7.62 * MM, 3.81 * MM, 0.6 * MM, 1.2 * MM
         a.Ribs = 0
         a.IfcType = "Member"
+        oo.paint(a)  # a member's colour, not the roof's it was made with
         return [place(a, doc)]
 
 
@@ -349,7 +386,7 @@ class SoapFilm(Command):
 
 
 class Hypar(Command):
-    pixmap = "OrganicFilm.svg"
+    pixmap = "OrganicSaddle.svg"
     menu = "Saddle shell"
     tip = "A hyperbolic-paraboloid shell (switch Kind to Catenoid for the minimal-surface tower)."
 
@@ -399,7 +436,35 @@ class Grow(Command):
         return [w, r, s]
 
 
-# ---------------------------------------------------------------- to the map
+# ---------------------------------------------------------------- from the map, to the map
+class ImportMap(Command):
+    pixmap = "OrganicImport.svg"
+    menu = "Import from the map"
+    tip = ("Rebuilds a building that was drawn in the map (exchange\\godot\\built\\<name>.json: its plan "
+           "curves, walls with their openings, floors and steps, roofs, domes, vaults) out of this "
+           "toolbar's own objects, at its place on the site: every number set in the map is the same "
+           "property here, every wall a real solid. Says what it did not understand.")
+
+    def make(self, doc, path=None):
+        if path is None:
+            if not App.GuiUp:
+                raise ValueError("no file given")
+            folder = oi.built_dir()
+            path = ask_file(self.menu, folder if os.path.isdir(folder) else ox.exchange_dir(), "Buildings drawn in the map (*.json)")
+            if not path:
+                return []
+        res = oi.import_built(doc, path)
+        b = res["building"]
+        make_active(b)
+        at = b.Placement
+        say("%s: %d elements rebuilt from %s; it stands %.2f m east, %.2f m north of the document's origin, %+.2f m, turned %.1f°"
+            % (res["name"], len(res["made"]), os.path.basename(path), at.Base.x / MM, at.Base.y / MM, at.Base.z / MM, ox.yaw_of(at)))
+        for note in res["notes"]:
+            App.Console.PrintWarning("Organic: %s\n" % note)
+        self.last = res
+        return [b]
+
+
 class ExportGodot(Command):
     pixmap = "OrganicExport.svg"
     menu = "Send to the map"
@@ -490,6 +555,12 @@ class SunRoseCmd(Command):
         b = active_building(doc)
         if b is not None:  # at the building, but of the site: it does not turn when the building does
             rose.Placement = App.Placement(b.Placement.Base, App.Rotation())
+            reach = 0.0  # how far the building reaches from its origin in plan: the rose shows beyond it
+            for el in ox.elements_of(b):
+                bb = el.Shape.optimalBoundingBox(False, False)  # from the geometry: a plain BoundBox reads the window's triangles when there are any
+                reach = max([reach] + [math.hypot(x - b.Placement.Base.x, y - b.Placement.Base.y) for x in (bb.XMin, bb.XMax) for y in (bb.YMin, bb.YMax)])
+            if reach > 0:
+                rose.Size = max(12.0, math.ceil(1.6 * reach / MM)) * MM
         site = next((o for o in doc.Objects if getattr(o, "IfcType", "") == "Site"), None)
         if site is not None:
             site.addObject(rose)
@@ -536,6 +607,47 @@ class Orient(Command):
         b.Placement = App.Placement(b.Placement.Base, App.Rotation(og.Z, yaw))
         say("%s: its %s side now faces %s, bearing %.2f° from true north (%s)" % (b.Label, axis or "-Y", direction, bearing, source))
         return [b]
+
+
+def show_table(title, rows, note=""):
+    """A small window with a table (its first row the headings), beside the design, not modal."""
+    try:
+        from PySide import QtCore, QtWidgets
+    except ImportError:
+        return None
+    dlg = QtWidgets.QDialog(Gui.getMainWindow())
+    dlg.setObjectName("OrganicTable")
+    dlg.setWindowTitle(title)
+    dlg.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+    layout = QtWidgets.QVBoxLayout(dlg)
+    table = QtWidgets.QTableWidget(max(0, len(rows) - 1), len(rows[0]) if rows else 0, dlg)
+    if rows:
+        table.setHorizontalHeaderLabels([str(c) for c in rows[0]])
+    for r, row in enumerate(rows[1:]):
+        for c, value in enumerate(row):
+            item = QtWidgets.QTableWidgetItem(str(value))
+            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+            table.setItem(r, c, item)
+    table.resizeColumnsToContents()
+    layout.addWidget(table)
+    if note:
+        layout.addWidget(QtWidgets.QLabel(note, dlg))
+    close = QtWidgets.QPushButton("Close", dlg)
+    close.clicked.connect(dlg.close)
+    layout.addWidget(close)
+    dlg.resize(min(1300, table.horizontalHeader().length() + 90), min(640, 150 + 31 * max(1, len(rows) - 1)))
+    dlg.show()
+    return dlg
+
+
+def ask_file(title, folder, pattern):
+    """A file chosen in the usual window; None when it is closed."""
+    try:
+        from PySide import QtWidgets
+    except ImportError:
+        return None
+    path, _filter = QtWidgets.QFileDialog.getOpenFileName(Gui.getMainWindow(), title, folder, pattern)
+    return path or None
 
 
 def proportions_of(doc):
@@ -594,8 +706,18 @@ class Report(Command):
         sheet.clearAll()
         for r, row in enumerate(rows):
             for c, value in enumerate(row):
-                sheet.set("%s%d" % (chr(ord("A") + c), r + 1), str(value))
+                # as text: a sheet shows a number rounded to the user's decimals (2.24 for 1 : 2.2361)
+                sheet.set("%s%d" % (chr(ord("A") + c), r + 1), "'" + str(value))
+        for c, width in enumerate((150, 170, 80, 80, 110, 110, 110, 160, 80, 110, 110, 80)):
+            sheet.setColumnWidth(chr(ord("A") + c), width)
         say("proportions report: %d rows, system %s, module %.4f m" % (len(rows) - 1, p.System, oo.m(p.Module)))
+        if App.GuiUp:  # shown at once in a small window: opening the sheet itself would leave this workbench
+            try:
+                self.window.close()  # the one before, if it is still open
+            except Exception:
+                pass
+            self.window = show_table("Proportions report: %s, module %.4f m" % (p.System, oo.m(p.Module)), rows,
+                                     "Kept in the document as the spreadsheet \"Proportions report\".")
         return [sheet]
 
 
@@ -685,6 +807,7 @@ COMMANDS = [
     ("Organic_Hypar", Hypar()),
     ("Organic_Slab", Slab()),
     ("Organic_ExportGodot", ExportGodot()),
+    ("Organic_ImportMap", ImportMap()),
 ]
 SACRED_COMMANDS = [
     ("Sacred_Figure", Figure()),
@@ -704,9 +827,24 @@ BIO_COMMANDS = [
 ]
 ALL = dict(COMMANDS + SACRED_COMMANDS + BIO_COMMANDS)
 
+# FreeCAD keeps the first object a command name was registered with, for as long as it runs. When
+# this module is loaded again (the installer does, to update a running FreeCAD), each button
+# keeps its object and that object is given this code, so the toolbar runs what the files say.
+try:
+    _REGISTERED
+except NameError:
+    _REGISTERED = {}
 if App.GuiUp:
-    for _name, _cmd in ALL.items():
-        Gui.addCommand(_name, _cmd)
+    for _name, _cmd in list(ALL.items()):
+        if _name in _REGISTERED:
+            _REGISTERED[_name].__class__ = type(_cmd)
+            ALL[_name] = _REGISTERED[_name]
+        else:
+            Gui.addCommand(_name, _cmd)
+            _REGISTERED[_name] = _cmd
+    COMMANDS = [(n, ALL[n]) for n, _c in COMMANDS]
+    SACRED_COMMANDS = [(n, ALL[n]) for n, _c in SACRED_COMMANDS]
+    BIO_COMMANDS = [(n, ALL[n]) for n, _c in BIO_COMMANDS]
 
 NAMES = [n for n, _c in COMMANDS]
 SACRED_NAMES = [n for n, _c in SACRED_COMMANDS]

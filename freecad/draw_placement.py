@@ -18,6 +18,7 @@ files, not screenshots of the map: the map's own pictures are lane E's.
 import json
 import math
 import os
+import pathlib
 import sys
 import urllib.request
 
@@ -26,7 +27,10 @@ if os.path.join(HERE, "Organic") not in sys.path:
     sys.path.insert(0, os.path.join(HERE, "Organic"))
 import organic_export as ox  # noqa: E402
 
-PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
+# The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
+# first (the dataset of record), its published copy only where that folder is not there.
+LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
 OUT = os.path.join(os.path.dirname(HERE), "docs", "plans", "freecad")
 DRIVEWAY_SPOT = (-77.52, -33.00)  # where the first pavilion stood (29 Sep), metres from the anchor
 

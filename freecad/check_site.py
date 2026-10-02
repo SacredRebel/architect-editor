@@ -49,6 +49,7 @@ import copy
 import json
 import math
 import os
+import pathlib
 import random
 import re
 import sys
@@ -57,7 +58,10 @@ import urllib.request
 
 import FreeCAD as App
 
-PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
+# The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
+# first (the dataset of record), its published copy only where that folder is not there.
+LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
 FCSTD = os.environ.get("SITE_FCSTD") or os.path.join(
     os.path.expanduser("~"), "Documents", "SulphurMountain", "SulphurMountain-site.FCStd"
 )
@@ -88,8 +92,9 @@ def fetch(path, binary=False, attempts=3):
             with urllib.request.urlopen(req, timeout=60) as r:
                 data = r.read()
             break
-        except OSError as exc:  # timeouts and dropped connections are retried; a 4xx answer is final
-            if attempt == attempts - 1 or getattr(exc, "code", 500) < 500:
+        except OSError as exc:  # timeouts and dropped connections are retried; a 4xx answer is final,
+            # and so is anything from the pack's folder on this PC: a file that is not there will not come
+            if PACK.startswith("file:") or attempt == attempts - 1 or getattr(exc, "code", 500) < 500:
                 raise
             time.sleep(2 + 3 * attempt)
     return data if binary else json.loads(data.decode("utf-8"))
@@ -174,11 +179,14 @@ class QtTiles:
         tx, ox = divmod(px, self.size)
         ty, oy = divmod(py, self.size)
         if (tx, ty) not in self.cache:
+            self.cache[(tx, ty)] = None  # asked for once: a tile the pack does not have is not asked for again
             data = fetch(self.template.replace("{z}", str(self.z)).replace("{x}", str(tx)).replace("{y}", str(ty)), binary=True)
             image = self.QImage()
             if not image.loadFromData(data, "PNG"):
                 raise RuntimeError("Qt could not decode tile %s/%s" % (tx, ty))
             self.cache[(tx, ty)] = image
+        if self.cache[(tx, ty)] is None:
+            raise LookupError("the pack has no tile %s/%s" % (tx, ty))
         rgb = self.cache[(tx, ty)].pixel(ox, oy)
         r, g, b = (rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255
         return r * 256 + g + b / 256.0 - 32768.0

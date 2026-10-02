@@ -28,12 +28,17 @@ Every expectation is derived here, not taken from the workbench:
   O. the Organic toolbar against closed forms: the curved wall t H R θ; the opening's volume
      as the integral of the chord through the wall's ring over the opening's outline; the
      arch's height (rise + ring) and its thrust line; the dome's and the saddle's boxes; the
-     slab π r² t; the grown building's parts; the site of a new building against BRAIN.md §3;
-     the files and the placement "Send to the map" writes.
+     slab π r² t; the grown building's parts; the site of a new building against BRAIN.md §3,
+     and where it stands after a click on the land (there) or on anything else (the origin);
+     a wall on a line of straight runs through given points (t H L, its corners kept); the
+     files and the placement "Send to the map" writes, and the same triangles for every
+     element when the building is sent again from another place, turned another way.
+     ("Import from the map", the toolbar's other way, has its own check: check_import.py.)
   S. the Sacred toolbar: the seed of life's outline 4 π r; the icosahedron 5 (3 + √5) / 12 a³;
      the geodesic dome's vertices on its sphere and its shell inside the sphere's; this
      workbench's own sun (NOAA's equations) against the land pack's (astronomy-engine) at all
-     eight stations of the year, within 0.1°; the sun rose's azimuths against the pack's file;
+     eight stations of the year, within 0.1°; the sun rose's azimuths against the pack's file,
+     and its size against the building it is drawn for (it shows beyond it);
      "Turn to the sun": the building's own -Y axis at the pack's bearing, its parts carried
      along; the snap against the ratios and the module worked out here; the report's rows.
   B. the Biomimetic toolbar: the net's nodes in balance (forces summed here) and on the
@@ -44,8 +49,10 @@ Every expectation is derived here, not taken from the workbench:
 
 --self-test forges faults into what was read (a solid not valid, a hole in a mesh, a part
 left at the document's origin, a shape that changes when the building turns, a solid's own
-move dropped, a slab left at the origin, a vault's plinth left out, the wall half
-as thick, the opening twice as wide, the sun 1° off, the building turned the wrong way, a
+move dropped, a slab left at the origin, a vault's plinth left out, a click on the land
+ignored, a building set on a clicked wall, corners rounded off, the sun rose hidden under its
+building, the wall half as thick, the opening twice as wide, an element meshed anew by where
+its building stands, the sun 1° off, the building turned the wrong way, a
 part left behind by the turn, a snap off its module, a report row missing, the net out of
 balance, the net off its paraboloid, the cells closed, a rib above the shell, a column tip
 short) and must see every one rejected by the check meant for it.
@@ -55,7 +62,9 @@ import copy
 import json
 import math
 import os
+import pathlib
 import re
+import shutil
 import sys
 import tempfile
 import urllib.request
@@ -70,9 +79,32 @@ import organic_commands as oc  # noqa: E402
 import organic_export as ox  # noqa: E402
 import organic_geom as og  # noqa: E402
 import organic_objects as oo  # noqa: E402
+
+# the folders this check sends its trial buildings into: taken away again once they have been read, unless
+# ORGANIC_CHECK_KEEP=1 asks to look at them
+SCRATCH = []
+
+
+def scratch(prefix):
+    folder = tempfile.mkdtemp(prefix=prefix)
+    SCRATCH.append(folder)
+    return folder
+
+
+def tidy():
+    keep = os.environ.get("ORGANIC_CHECK_KEEP") == "1"
+    while SCRATCH:
+        folder = SCRATCH.pop()
+        if keep:
+            print("kept", folder)
+        else:
+            shutil.rmtree(folder, ignore_errors=True)
 import organic_sacred as sacred  # noqa: E402
 
-PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
+# The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
+# first (the dataset of record), its published copy only where that folder is not there.
+LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
 BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
 MM = 1000.0
 PHI = (1 + 5 ** 0.5) / 2
@@ -154,12 +186,19 @@ def scene(turned):
     return doc, b
 
 
+def true_box(shape):
+    """A shape's box from its geometry. Asked without saying so, OCCT takes the triangles the
+    shape was last drawn or measured with when it has any: in the window a displayed solid's
+    box was up to 66 mm off its true one, and a plain BoundBox takes spline faces untrimmed."""
+    return shape.optimalBoundingBox(False, False)
+
+
 def solid_facts(obj, building):
     shape = obj.Shape
     rel = building.Placement.inverse().multiply(obj.Placement)
     local = shape.copy()
     local.Placement = App.Placement()
-    bb = local.optimalBoundingBox()
+    bb = true_box(local)
     return {
         "label": obj.Label, "error": "Invalid" in obj.State, "solids": len(shape.Solids),
         "valid": bool(shape.Solids) and all(s.isValid() for s in shape.Solids),
@@ -211,10 +250,9 @@ def pressed(turned):
                                  spread=oo.m(obj.Spread), height=oo.m(obj.Height))
             if case == "Veined leaf shell":
                 solids = obj.Shape.Solids
-                top = max(s.BoundBox.ZMax for s in solids[:1])
                 out[case].update(ribs=len(solids) - 1, ribs_valid=all(s.isValid() for s in solids[1:]),
-                                 rib_top=max(s.optimalBoundingBox().ZMax for s in solids[1:]) / MM if len(solids) > 1 else float("nan"),
-                                 shell_top=solids[0].optimalBoundingBox().ZMax / MM)
+                                 rib_top=max(true_box(s).ZMax for s in solids[1:]) / MM if len(solids) > 1 else float("nan"),
+                                 shell_top=true_box(solids[0]).ZMax / MM)
 
         ring = circle_curve(doc, 8.0)
         slab = press("Organic_Slab", doc, selected=[ring])[0]
@@ -245,10 +283,23 @@ def pressed(turned):
             doc.recompute()
             out[case] = solid_facts(press("Organic_Wall", doc, selected=[fig])[0], b)
 
+        # a line of straight runs through given points (what a wall drawn in the map stands on), and a wall on it
+        line = press("Organic_PlanCurve", doc)[0]
+        line.Kind, line.Smooth = "Points", False
+        line.Points = [App.Vector(x * MM, y * MM, 0) for x, y in CORNER_POINTS]
+        doc.recompute()
+        out["A wall on corner points"] = dict(solid_facts(press("Organic_Wall", doc, selected=[line])[0], b), edges=len(line.Shape.Edges))
+
         rose = press("Sacred_SunRose", doc)[0]
+        reach = 0.0  # how far the building's solids reach from its origin in plan, from their own corners
+        for o in b.Group:
+            if getattr(o, "Shape", None) is not None and o.Shape.Solids and o.Name != rose.Name:
+                bb = true_box(o.Shape)
+                reach = max([reach] + [math.hypot(x - b.Placement.Base.x, y - b.Placement.Base.y) for x in (bb.XMin, bb.XMax) for y in (bb.YMin, bb.YMax)])
         out["Sun rose"] = {"sunrise": list(rose.Sunrise), "sunset": list(rose.Sunset), "source": rose.Source, "horizon": str(rose.Horizon),
                            "turn": math.degrees(rose.Placement.Rotation.Angle), "error": "Invalid" in rose.State,
-                           "at": ((rose.Placement.Base - b.Placement.Base).Length) / MM, "lnglat": oc.place_of(doc, rose)}
+                           "at": ((rose.Placement.Base - b.Placement.Base).Length) / MM, "lnglat": oc.place_of(doc, rose),
+                           "size": oo.m(rose.Size), "reach": reach / MM}
 
         vault = next(o for o in doc.Objects if oc.is_kind(o, "Vault") and o.Label == "Ribbed vault")
         before = (oo.m(vault.Span), oo.m(vault.Rise), oo.m(vault.VaultLength))
@@ -275,12 +326,18 @@ def pressed(turned):
             out["Turn to the sun"] = {"bearing": math.degrees(math.atan2(front.x, front.y)) % 360.0, "lnglat": oc.place_of(doc2, b2),
                                       "carried": (after.Base - child.Base).Length / MM + abs(after.Rotation.Angle - child.Rotation.Angle),
                                       "moved": (b2.Placement.Base - (SPOT.Base if turned else App.Vector())).Length / MM}
-            folder = tempfile.mkdtemp(prefix="organic-toolbar-")
+            folder = scratch("organic-toolbar-")
             rep = oc.ALL["Organic_ExportGodot"].send([b2], folder)
             out["Send to the map"] = {"files": sorted(os.listdir(folder)), "elements": len(rep["elements"]), "placement": rep["placement"],
                                       "base": (b2.Placement.Base.x / MM, b2.Placement.Base.y / MM, b2.Placement.Base.z / MM),
                                       "yaw": math.degrees(math.atan2(b2.Placement.Rotation.multVec(App.Vector(1, 0, 0)).y,
-                                                                     b2.Placement.Rotation.multVec(App.Vector(1, 0, 0)).x))}
+                                                                     b2.Placement.Rotation.multVec(App.Vector(1, 0, 0)).x)),
+                                      "meshes": [(r["name"], r["triangles"], r["mesh_volume_m3"]) for r in rep["elements"]]}
+            # the same building somewhere else, turned another way, sent again: the same triangles
+            b2.Placement = App.Placement(b2.Placement.Base + App.Vector(7300.0, -4100.0, 900.0), App.Rotation(og.Z, ox.yaw_of(b2.Placement) + 37.0))
+            doc2.recompute()
+            again = oc.ALL["Organic_ExportGodot"].send([b2], scratch("organic-toolbar-"))
+            out["Send to the map"]["resent"] = [(r["name"], r["triangles"], r["mesh_volume_m3"]) for r in again["elements"]]
         finally:
             App.closeDocument(doc2.Name)
     finally:
@@ -380,7 +437,7 @@ def moves():
         def box(obj):
             s = obj.Shape.copy()
             s.Placement = App.Placement()
-            bb = s.optimalBoundingBox()
+            bb = true_box(s)
             return (bb.XMin / MM, bb.YMin / MM, bb.ZMin / MM, bb.XMax / MM, bb.YMax / MM, bb.ZMax / MM)
 
         def made(label, cls, setup):
@@ -417,6 +474,81 @@ def moves():
         def turned(o):
             o.Kind, o.Turn = "S-curve", 90.0
         made("S-curve turned 90°", oo.PlanCurve, turned)
+    finally:
+        App.closeDocument(doc.Name)
+    return out
+
+
+def kept():
+    """A building moved and turned: its solids go with it and are not built again (building a
+    house again at every move costs as long as building it); a changed number, or a changed
+    base curve, does build them again."""
+    doc, b = scene(False)
+    out = {}
+    try:
+        ring = oc.place(oo.make(oo.PlanCurve, "Ring", "ring", doc), doc)
+        ring.Kind, ring.Radius = "Circle", 3000.0
+        doc.recompute()
+        wall = oc.place(oo.make(oo.Wall, "Wall", "wall", doc), doc)
+        wall.Base = ring
+        dome = oc.place(oo.make(oo.Dome, "Dome", "dome", doc), doc)
+        doc.recompute()
+        n0 = (wall.Proxy.builds, dome.Proxy.builds)
+        centre = true_box(wall.Shape).Center
+        volume = wall.Shape.Volume
+        to = App.Placement(App.Vector(7000, -3000, 500), App.Rotation(App.Vector(0, 0, 1), 75.0))
+        b.Placement = to
+        doc.recompute()
+        out["builds after the move"] = (wall.Proxy.builds - n0[0], dome.Proxy.builds - n0[1])
+        out["carried"] = (true_box(wall.Shape).Center - to.multVec(centre)).Length / MM  # the circle wall's box centre is its own centre: it turns with the building
+        out["volume after the move"] = wall.Shape.Volume / volume
+        out["valid after the move"] = bool(wall.Shape.isValid())
+        wall.Height = 3500.0
+        doc.recompute()
+        out["builds after a taller wall"] = wall.Proxy.builds - n0[0]
+        out["volume after a taller wall"] = wall.Shape.Volume / volume
+        ring.Radius = 4000.0
+        doc.recompute()
+        out["builds after a wider ring"] = wall.Proxy.builds - n0[0]
+        out["line after a wider ring"] = wall.CentrelineLength
+    finally:
+        App.closeDocument(doc.Name)
+    return out
+
+
+def clicked():
+    """New organic building pressed after a click: on the land (a terrain mesh) the building
+    stands at the clicked point; on anything else it stands at the document's origin."""
+    import Mesh
+
+    SCENES[0] += 1
+    doc = App.newDocument("ToolbarCheck%d" % SCENES[0], "Toolbar check %d" % SCENES[0], True, True)
+    out = {}
+    try:
+        land = doc.addObject("Mesh::Feature", "Terrain")
+        mesh = Mesh.Mesh()
+        a, b, c, d = App.Vector(-20e3, -20e3, 0), App.Vector(20e3, -20e3, 2e3), App.Vector(20e3, 20e3, 4e3), App.Vector(-20e3, 20e3, 2e3)
+        mesh.addFacet(a, b, c)
+        mesh.addFacet(a, c, d)
+        land.Mesh = mesh
+        box = doc.addObject("Part::Box", "Box")
+        doc.recompute()
+        on_land = oc.ALL["Organic_NewBuilding"].make(doc, picked=[(land, App.Vector(5e3, 7e3, 2.6e3))])[0]
+        on_box = oc.ALL["Organic_NewBuilding"].make(doc, picked=[(box, App.Vector(3e3, 3e3, 10e3))])[0]
+        out["on the land"] = tuple(v / MM for v in on_land.Placement.Base)
+        out["on a box"] = tuple(v / MM for v in on_box.Placement.Base)
+        # a wall in the building on the land (a straight run of 8 m), clicked near its foot, then at window height
+        line = oc.ALL["Organic_PlanCurve"].make(doc)[0]
+        line.Kind, line.Smooth, line.Points = "Points", False, [App.Vector(0, 0, 0), App.Vector(8e3, 0, 0)]
+        line.Placement = on_box.Placement
+        doc.recompute()
+        wall = oc.ALL["Organic_Wall"].make(doc, selected=[line])[0]
+        doc.recompute()
+        oc.ALL["Organic_Opening"].make(doc, picked=[(wall, wall.Placement.multVec(App.Vector(2e3, -150, 300)))])
+        oc.ALL["Organic_Opening"].make(doc, picked=[(wall, wall.Placement.multVec(App.Vector(6e3, -150, 1500)))])
+        doc.recompute()
+        out["openings"] = [tuple(round(v, 6) for v in o) for o in zip(wall.OpeningPositions, wall.OpeningWidths, wall.OpeningHeights, wall.OpeningSills)]
+        out["wall valid"] = bool(wall.Shape.isValid()) and len(wall.Shape.Solids) == 1
     finally:
         App.closeDocument(doc.Name)
     return out
@@ -467,14 +599,18 @@ def sun_facts():
 
 
 def read_facts():
-    return {"origin": pressed(False), "turned": pressed(True), "options": options(), "moves": moves(), "refused": refused(),
-            "net": net_facts(), "sun": sun_facts(), "anchor": canonical_frame()}
+    try:
+        return {"origin": pressed(False), "turned": pressed(True), "options": options(), "moves": moves(), "kept": kept(), "refused": refused(), "clicked": clicked(),
+                "net": net_facts(), "sun": sun_facts(), "anchor": canonical_frame()}
+    finally:
+        tidy()
 
 
 # ------------------------------------------------------------------ judge
 SOLID_CASES = ["Curved wall", "Opening", "Leaf shell roof", "Ribbed vault", "Catenary arch", "Dome", "Saddle shell", "Regular solid",
                "Geodesic dome", "Branching column", "Veined leaf shell", "Floor slab", "Shell roof on a closed wall", "Minimal surface",
-               "Gridshell", "Hanging net", "Cellular wall", "A wall on a figure", "A wall on a hexagon", "A wall on a vesica"]
+               "Gridshell", "Hanging net", "Cellular wall", "A wall on a figure", "A wall on a hexagon", "A wall on a vesica", "A wall on corner points"]
+CORNER_POINTS = [(0.0, 0.0), (5.0, 0.0), (8.0, 4.0), (8.0, 9.0), (3.0, 11.0)]  # metres: four straight runs, three corners, not closed
 COMPOUNDS = {"Branching column", "Veined leaf shell", "Gridshell", "Hanging net"}  # several solids by design
 OFFSETS = {}  # every command makes its object at the building's own origin
 
@@ -540,13 +676,35 @@ def judge(facts):
     ok(near(pick("S-curve turned 90°", (0, 3, 1, 4)), (-1.5, 1.5, 0.0, 12.0), 0.01),
        "M an S-curve turned 90° runs along y: x %s, y %s" % (pick("S-curve turned 90°", (0, 3)), pick("S-curve turned 90°", (1, 4))))
 
+    kp = facts["kept"]
+    ok(kp["builds after the move"] == (0, 0) and kp["carried"] <= 1e-3 and abs(kp["volume after the move"] - 1.0) <= 1e-9 and kp["valid after the move"],
+       "M a building moved and turned 75°: its wall and its dome go with it (the wall's centre within %.6f m of where the move puts it) and are not built again (%d and %d builds)"
+       % ((kp["carried"],) + kp["builds after the move"]))
+    ok(kp["builds after a taller wall"] == 1 and abs(kp["volume after a taller wall"] - 3.5 / 2.7) <= 1e-6
+       and kp["builds after a wider ring"] == 2 and abs(kp["line after a wider ring"] - 2 * math.pi * 4.0) <= 0.01,
+       "M a changed number builds the solid again (a wall 3.5 m high for 2.7: %.4f times the volume, 3.5 / 2.7 = %.4f), and so does a changed base curve (its line %.3f m, 2 π 4 = %.3f)"
+       % (kp["volume after a taller wall"], 3.5 / 2.7, kp["line after a wider ring"], 2 * math.pi * 4.0))
+
     # O. the Organic toolbar
     alng, alat, aelev = facts["anchor"]
     nb = here["New organic building"]
     ok(abs(nb["lng"] - alng) < 1e-9 and abs(nb["lat"] - alat) < 1e-9 and abs(nb["elevation"] - aelev) < 1e-6 and nb["buildings"] == 1 and nb["in_site"],
        "O New organic building: one building in a site at %.5f, %.4f, %.2f m (BRAIN.md §3: %.5f, %.4f, %.2f)" % (nb["lng"], nb["lat"], nb["elevation"], alng, alat, aelev))
+    ck = facts["clicked"]
+    ok(math.dist(ck["on the land"], (5.0, 7.0, 2.6)) <= 1e-9 and math.dist(ck["on a box"], (0.0, 0.0, 0.0)) <= 1e-9,
+       "O New organic building after a click on the land stands where the land was clicked (%.1f, %.1f, %+.1f m); after a click on anything else, at the origin (%.1f, %.1f, %.1f)"
+       % (ck["on the land"] + ck["on a box"]))
+    op = ck.get("openings", [])
+    ok(ck.get("wall valid") and len(op) == 2 and math.dist(op[0], (2.0, 1.0, 2.2, 0.0)) <= 1e-6 and math.dist(op[1], (6.0, 1.2, 1.3, 0.9)) <= 1e-6,
+       "O Opening after a click on a wall: near its foot (0.3 m up) a door, 1.0 x 2.2 m from the floor, 2.0 m along; higher (1.5 m up) a window, 1.2 x 1.3 m, sill 0.9 m, 6.0 m along (%s)" % (op,))
     pc = here["Plan curve"]
     ok(not pc["error"] and pc["closed"] and pc["length"] > 30, "O Plan curve: a closed lobed plan, %.2f m round" % pc["length"])
+    cp = here["A wall on corner points"]
+    runs = sum(math.dist(p, q) for p, q in zip(CORNER_POINTS, CORNER_POINTS[1:]))
+    exact = 0.30 * 2.70 * runs  # a band of constant width about a line with mitred corners: width x the line's length
+    ok(cp["edges"] == len(CORNER_POINTS) - 1 and abs(cp["volume"] - exact) <= 0.0005 * exact,
+       "O A wall on a line through %d given points, straight runs: %.4f m³ (t H L = %.4f, L = %.3f m): its %d corners are corners"
+       % (len(CORNER_POINTS), cp["volume"], exact, runs, len(CORNER_POINTS) - 2))
     w = here["Curved wall"]
     exact = 0.30 * 2.70 * 6.0 * math.radians(120.0)
     ok(abs(w["volume"] - exact) <= 0.001 * exact, "O Curved wall: %.4f m³ (t H R θ = %.4f)" % (w["volume"], exact))
@@ -590,6 +748,10 @@ def judge(facts):
            and abs((pl["rotation_deg"]["y"] - sm["yaw"] + 180) % 360 - 180) <= 0.001,
            "O Send to the map %s: %s; the placement written is the building's own (%.2f E, %.2f N, %+.2f m, turned %+.2f°)"
            % (where, ", ".join(sm["files"]), pl["offset_m"]["east"], pl["offset_m"]["north"], pl["offset_m"]["up"], pl["rotation_deg"]["y"]))
+        ok(len(sm["meshes"]) == len(sm["resent"]) == 3
+           and all(a[0] == b[0] and a[1] == b[1] and abs(a[2] - b[2]) <= 1e-6 * a[2] for a, b in zip(sm["meshes"], sm["resent"])),
+           "O Sent again %s from 8 m away and turned 37° more, every element has the triangles it had (%s; then %s)"
+           % (where, ", ".join("%s %d" % (n, t) for n, t, _v in sm["meshes"]), ", ".join("%d" % t for _n, t, _v in sm["resent"])))
 
     # S. the Sacred toolbar
     fg = here["Plan figure"]
@@ -628,6 +790,9 @@ def judge(facts):
         ok(not ro["error"] and max(gaps) <= 1e-9 and ro["turn"] <= 1e-9 and ro["at"] <= 1e-6 and "land pack" in ro["source"],
            "S Sun rose %s: sixteen azimuths as the pack's file has them for the observer nearest it (worst %.2g°), at the building, not turned with it (%.3g°)"
            % (where, max(gaps), ro["turn"]))
+        ok(abs(ro["size"] - max(12.0, math.ceil(1.6 * ro["reach"]))) <= 1e-6 and ro["size"] > ro["reach"],
+           "S Sun rose %s: its north ray, %.0f m, shows beyond the building, which reaches %.1f m from its origin (1.6 times that, rounded up; 12 m at least)"
+           % (where, ro["size"], ro["reach"]))
         tu = f["Turn to the sun"]
         want = pack_azimuth(sun["sky"], tu["lnglat"], "june_solstice", "sunrise", "true")
         ok(abs((tu["bearing"] - want + 180) % 360 - 180) <= 1e-6 and tu["carried"] <= 1e-6 and tu["moved"] <= 1e-6,
@@ -721,10 +886,21 @@ def forgeries(facts):
         ("a solid's own move dropped", "M the icosahedron stands on a face", f(lambda g: g["moves"].__setitem__("icosahedron on a face", (-2.78, -2.58, -2.267, 2.78, 2.58, 2.267)))),
         ("a slab left at the origin", "M a slab on a ring", f(lambda g: g["moves"].__setitem__("slab on a ring 5 m off", (-1.2, -1.2, -0.62, 1.2, 1.2, 0.0)))),
         ("a vault's plinth left out", "M a vault's plinth", f(lambda g: g["moves"].__setitem__("vault on a plinth", g["moves"]["vault"]))),
+        ("a solid built again at every move", "M a building moved and turned", f(lambda g: g["kept"].__setitem__("builds after the move", (1, 1)))),
+        ("a solid left behind by a move", "M a building moved and turned", f(lambda g: g["kept"].__setitem__("carried", 7.6))),
+        ("a changed number not built", "M a changed number", f(lambda g: g["kept"].update({"builds after a taller wall": 0, "volume after a taller wall": 1.0}))),
+        ("a changed base curve not built", "M a changed number", f(lambda g: g["kept"].update({"builds after a wider ring": 1, "line after a wider ring": 2 * math.pi * 3.0}))),
+        ("the building left at the origin though the land was clicked", "O New organic building after a click", f(lambda g: g["clicked"].__setitem__("on the land", (0.0, 0.0, 0.0)))),
+        ("a building set on a wall that was clicked", "O New organic building after a click", f(lambda g: g["clicked"].__setitem__("on a box", (3.0, 3.0, 10.0)))),
+        ("a door where a window was meant", "O Opening after a click", f(lambda g: g["clicked"]["openings"].__setitem__(1, (6.0, 1.0, 2.2, 0.0)))),
+        ("the corners of a line through points rounded off", "O A wall on a line through", f(lambda g: g["origin"]["A wall on corner points"].update(edges=1, volume=g["origin"]["A wall on corner points"]["volume"] * 0.992))),
+        ("the sun rose hidden under its building", "S Sun rose at the origin: its north ray", f(lambda g: g["origin"]["Sun rose"].__setitem__("size", 12.0))),
         ("the wall half as thick", "O Curved wall", f(lambda g: g["origin"]["Curved wall"].__setitem__("volume", g["origin"]["Curved wall"]["volume"] / 2))),
         ("the opening twice as wide", "O Opening", f(lambda g: g["origin"]["Opening"].__setitem__("removed", g["origin"]["Opening"]["removed"] * 2))),
         ("the building not at the anchor", "O New organic building", f(lambda g: g["origin"]["New organic building"].__setitem__("lng", -119.155333))),
         ("the placement written off by a metre", "O Send to the map at the spot", f(lambda g: g["turned"]["Send to the map"]["placement"]["offset_m"].__setitem__("east", g["turned"]["Send to the map"]["placement"]["offset_m"]["east"] + 1.0))),
+        ("an element meshed anew by where its building stands", "O Sent again at the spot",
+         f(lambda g: g["turned"]["Send to the map"]["resent"].__setitem__(0, (g["turned"]["Send to the map"]["resent"][0][0], g["turned"]["Send to the map"]["resent"][0][1] + 96, g["turned"]["Send to the map"]["resent"][0][2])))),
         ("the sun 1° off", "S the sun worked out here", f(sun_off)),
         ("the rose turned with the building", "S Sun rose at the spot", f(lambda g: g["turned"]["Sun rose"].__setitem__("turn", 30.0))),
         ("the building turned the wrong way", "S Turn to the sun at the origin", f(lambda g: g["origin"]["Turn to the sun"].__setitem__("bearing", (360.0 - g["origin"]["Turn to the sun"]["bearing"]) % 360.0))),
@@ -756,7 +932,8 @@ def run(self_test=None):
     if fails:
         print("check_toolbar FAILED (%d of %d)" % (len(fails), len(oks) + len(fails)))
         return False
-    print("check_toolbar OK (%d checks; %d commands pressed in two places)" % (len(oks), len(oc.ALL)))
+    print("check_toolbar OK (%d checks; %d commands pressed in two places; the %dth, Import from the map, is held by check_import)"
+          % (len(oks), len(oc.ALL) - 1, len(oc.ALL)))
     if not self_test:
         return True
     caught = 0

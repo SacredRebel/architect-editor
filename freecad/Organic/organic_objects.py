@@ -18,7 +18,7 @@ import organic_sacred as sacred
 
 MM = og.MM
 ICONS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
-IFC_TYPES = ["Wall", "Roof", "Slab", "Member", "Covering", "Column", "Building Element Proxy"]
+IFC_TYPES = ["Wall", "Roof", "Slab", "Member", "Covering", "Column", "Stair", "Building Element Proxy"]
 
 
 def m(q):
@@ -54,6 +54,46 @@ def set_local(obj, shape):
     pl = obj.Placement
     obj.Shape = og.baked(shape)
     obj.Placement = pl
+    proxy = getattr(obj, "Proxy", None)
+    if proxy is not None:  # what this solid was built from, and how often it has been built
+        proxy._key = getattr(proxy, "_pending", None)
+        proxy.builds = getattr(proxy, "builds", 0) + 1
+
+
+SKIPPED_GROUPS = ("Base", "Measures", "IFC", "Attachment", "From the map", "")
+KEYED_TYPES = ("App::PropertyLength", "App::PropertyDistance", "App::PropertyAngle", "App::PropertyFloat", "App::PropertyInteger", "App::PropertyBool",
+               "App::PropertyEnumeration", "App::PropertyString", "App::PropertyFloatList", "App::PropertyStringList", "App::PropertyVectorList", "App::PropertyLink",
+               "App::PropertyVector", "App::PropertyPosition")
+
+
+def shape_key(obj):
+    """Everything an object's solid is made from: its own numbers and, in the object's own
+    frame, the curve it stands on. Where the object stands is not among them."""
+    own = []
+    for name in sorted(obj.PropertiesList):
+        kind = obj.getTypeIdOfProperty(name)
+        if kind not in KEYED_TYPES or obj.getGroupOfProperty(name) in SKIPPED_GROUPS:
+            continue
+        value = getattr(obj, name)
+        if kind == "App::PropertyLink":
+            if value is None or not hasattr(value, "Shape") or value.Shape.isNull():
+                own.append((name, None))
+                continue
+            back = obj.Placement.inverse()
+            shape = value.Shape
+            points = [back.multVec(v.Point) for v in shape.Vertexes] + [back.multVec(e.valueAt((e.FirstParameter + e.LastParameter) / 2)) for e in shape.Edges]
+            own.append((name, value.Name, len(shape.Edges), round(shape.Length, 2), tuple((round(p.x, 2), round(p.y, 2), round(p.z, 2)) for p in points)))
+        elif kind in ("App::PropertyLength", "App::PropertyDistance", "App::PropertyAngle"):
+            own.append((name, round(float(value.Value if hasattr(value, "Value") else value), 6)))
+        elif kind == "App::PropertyVectorList":
+            own.append((name, tuple((round(v.x, 6), round(v.y, 6), round(v.z, 6)) for v in value)))
+        elif kind in ("App::PropertyVector", "App::PropertyPosition"):
+            own.append((name, (round(value.x, 6), round(value.y, 6), round(value.z, 6))))
+        elif kind in ("App::PropertyFloatList", "App::PropertyStringList"):
+            own.append((name, tuple(value)))
+        else:
+            own.append((name, value))
+    return tuple(own)
 
 
 def base_edge(obj, closed_required=False, corners=False):
@@ -94,6 +134,14 @@ class Organic:
 
     def onDocumentRestored(self, obj):
         self.setup(obj)
+        dress_later(obj.Document)
+
+    def fresh(self, obj):
+        """Whether the solid is still what its numbers and its base curve say: then only its
+        place changed (the building was moved or turned), and it is not built again. A move
+        would otherwise cost as long as building everything (half a minute for a small house)."""
+        self._pending = shape_key(obj)
+        return getattr(self, "_key", None) == self._pending and not obj.Shape.isNull()
 
     def dumps(self):
         return None
@@ -108,13 +156,16 @@ class Organic:
 
 
 # ---------------------------------------------------------------- plan curves
-CURVE_KINDS = ["Lobed", "Circle", "Arc", "S-curve", "Oval", "Leaf", "Shell", "Golden spiral", "Log spiral", "Vesica"]
+CURVE_KINDS = ["Lobed", "Circle", "Arc", "S-curve", "Oval", "Leaf", "Shell", "Golden spiral", "Log spiral", "Vesica", "Points"]
 CLOSED_KINDS = {"Lobed", "Circle", "Oval", "Leaf", "Shell", "Vesica"}
+DEFAULT_POINTS = [(0.0, 0.0), (4.0, 0.0), (7.0, 2.5), (7.0, 6.0)]  # metres: what a Points curve shows before it is given its own
 
 
 class PlanCurve(Organic):
     """A parametric plan curve: plugin-eco's organic perimeters (lobed, oval, leaf, shell),
-    arcs and waves for walls, and the sacred-geometry kit's spirals and vesica."""
+    arcs and waves for walls, the sacred-geometry kit's spirals and vesica, and a curve
+    through given points (smooth, or straight runs that keep the points as corners): what a
+    wall drawn in the map or listed in a house spec stands on."""
 
     ifc_type = "Building Element Proxy"
     icon = "OrganicCurve.svg"
@@ -133,9 +184,17 @@ class PlanCurve(Organic):
         prop(obj, "App::PropertyFloat", "Waves", g, "S-curve waves", 1.0)
         prop(obj, "App::PropertyFloat", "Turns", g, "spiral turns", 1.5)
         prop(obj, "App::PropertyFloat", "Pitch", g, "log spiral growth per quarter turn", 1.2)
+        g = "Points"
+        prop(obj, "App::PropertyVectorList", "Points", g, "Points: the points the curve goes through, in the curve's own frame (x east, y north), in millimetres")
+        prop(obj, "App::PropertyBool", "Smooth", g, "Points: one smooth curve through the points, as the map draws it (off: straight runs, the points are corners)", True)
+        prop(obj, "App::PropertyBool", "Closed", g, "Points: join the last point back to the first", False)
 
     def execute(self, obj):
         kind, r = obj.Kind, m(obj.Radius)
+        if kind == "Points":  # the points say where it lies: Turn and Inset are not applied (the map's build mode does the same)
+            pts = [(p.x / MM, p.y / MM) for p in obj.Points] or DEFAULT_POINTS
+            set_local(obj, og.points_curve(pts, obj.Smooth, obj.Closed))
+            return
         if kind == "Circle":
             pts = og.perimeter_points("Fit", r)
         elif kind in ("Lobed", "Oval", "Leaf", "Shell"):
@@ -207,6 +266,8 @@ class Wall(Organic):
         return out
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         edge, closed = base_edge(obj, corners=True)
         if edge is None:
             edge, closed = og.arc_curve(5.0, 120.0), False
@@ -226,12 +287,13 @@ def add_opening(wall, position_m, width_m=1.2, height_m=1.3, sill_m=0.9, shape="
 
 # ---------------------------------------------------------------- vaults and arches
 class Vault(Organic):
-    """A barrel vault (or, short, an arch) along the object's +Y, springing from its base.
+    """A barrel vault (or, short, an arch) along the object's +Y, springing from its base; or,
+    with a Base, along that open plan curve (the map's vault on a drawn spine).
 
     Profiles: Ellipse (plugin-eco's barrel), Semicircle, Segmental and Pointed (exact
     circles), Catenary (the hanging-chain arch, plugin-hagia-sophia's fit) and Parabola.
-    Ribs are arches of RibWidth that stand RibDepth under the intrados. ThrustInMiddleThird
-    is plugin-hagia-sophia's Poleni check on the ring."""
+    Ribs are arches of RibWidth that stand RibDepth under the intrados (a straight vault's
+    only). ThrustInMiddleThird is plugin-hagia-sophia's Poleni check on the ring."""
 
     ifc_type = "Roof"
     icon = "OrganicVault.svg"
@@ -239,6 +301,7 @@ class Vault(Organic):
     def setup(self, obj):
         super().setup(obj)
         g = "Vault"
+        prop(obj, "App::PropertyLink", "Base", g, "an open plan curve the barrel follows (none: straight, VaultLength along its own Y)")
         prop(obj, "App::PropertyEnumeration", "Profile", g, "the arch curve",
              enum=["Ellipse", "Semicircle", "Segmental", "Pointed", "Catenary", "Parabola"])
         length(obj, "Span", g, "clear span between the springings", 8.0)
@@ -255,8 +318,16 @@ class Vault(Organic):
             obj.setEditorMode(p, 1)
 
     def execute(self, obj):
-        shape = og.vault_shape(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), m(obj.VaultLength),
-                               obj.Ribs, m(obj.RibWidth), m(obj.RibDepth), m(obj.Plinth))
+        if self.fresh(obj):
+            return
+        spine, closed = base_edge(obj)
+        if spine is not None:
+            if closed:
+                raise ValueError("%s runs along an open curve; this one is closed" % obj.Label)
+            shape = og.vault_on_curve(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), spine, m(obj.Plinth))
+        else:
+            shape = og.vault_shape(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), m(obj.VaultLength),
+                                   obj.Ribs, m(obj.RibWidth), m(obj.RibDepth), m(obj.Plinth))
         ok, worst = og.thrust_line_ok(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness))
         obj.ThrustInMiddleThird, obj.ThrustDeviation = bool(ok), float(worst)
         set_local(obj, shape)
@@ -278,9 +349,13 @@ class Dome(Organic):
         length(obj, "Rise", g, "height of the crown above the base", 5.5)
         length(obj, "Thickness", g, "shell thickness", 0.30)
         length(obj, "Oculus", g, "radius of the opening at the crown (0: none)", 0.0)
+        prop(obj, "App::PropertyFloat", "StretchX", g, "an oval plan: the round dome stretched this much along its own X (the map's oval: 1.2)", 1.0)
+        prop(obj, "App::PropertyFloat", "StretchY", g, "and this much along its own Y (the map's oval: 0.75)", 1.0)
 
     def execute(self, obj):
-        set_local(obj, og.dome_shape(obj.Profile, m(obj.Radius), m(obj.Rise), m(obj.Thickness), m(obj.Oculus)))
+        if self.fresh(obj):
+            return
+        set_local(obj, og.dome_shape(obj.Profile, m(obj.Radius), m(obj.Rise), m(obj.Thickness), m(obj.Oculus), obj.StretchX, obj.StretchY))
 
 
 # ---------------------------------------------------------------- leaf shells
@@ -311,13 +386,16 @@ class LeafShell(Organic):
         prop(obj, "App::PropertyEnumeration", "RibPattern", g, "straight ribs across the spine, or ribs grown as a leaf's veins", enum=["Straight", "Veins"])
         prop(obj, "App::PropertyInteger", "VeinSources", g, "veins: how many points the veins grow towards (more: a finer pattern)", 180)
         prop(obj, "App::PropertyInteger", "VeinSeed", g, "veins: another number, another pattern", 1)
+        prop(obj, "App::PropertyFloat", "Asymmetry", g, "how far the midrib swings off the spine: 1 the leaf as it grows, 0 a straight midrib and two equal halves", 1.0)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         heights = list(obj.RidgeHeights) if len(obj.RidgeHeights) == 4 else [3.0, 7.2, 9.8, 3.0]
         set_local(obj, og.leaf_shell_shape(m(obj.Spine), m(obj.LeafSpan), heights, m(obj.Eave), obj.RiseFactor,
                                            obj.Curvature, m(obj.Thickness), m(obj.RibSpacing), m(obj.RibDepth),
                                            m(obj.RibWidth), obj.Outline, m(obj.Plinth), m(obj.Foot),
-                                           obj.RibPattern == "Veins", max(20, obj.VeinSources), obj.VeinSeed))
+                                           obj.RibPattern == "Veins", max(20, obj.VeinSources), obj.VeinSeed, obj.Asymmetry))
 
 
 # ---------------------------------------------------------------- roofs, slabs, films on a closed base
@@ -338,7 +416,9 @@ class ShellRoof(Organic):
         length(obj, "Thickness", g, "roof thickness", 0.20)
 
     def execute(self, obj):
-        edge, _closed = base_edge(obj, closed_required=True)
+        if self.fresh(obj):
+            return
+        edge, _closed = base_edge(obj, closed_required=True, corners=True)
         if edge is None:
             return
         set_local(obj, og.organic_roof_shape(edge, m(obj.Eaves), m(obj.Rise), m(obj.Overhang), m(obj.Thickness)))
@@ -354,14 +434,50 @@ class Slab(Organic):
         super().setup(obj)
         g = "Slab"
         prop(obj, "App::PropertyLink", "Base", g, "the closed curve")
-        length(obj, "Thickness", g, "slab thickness below the curve", 0.20)
+        length(obj, "Thickness", g, "slab thickness below its top", 0.20)
         length(obj, "Inset", g, "distance in from the curve", 0.0)
+        distance(obj, "BaseOffset", g, "the slab's top above its curve (a raised floor, a step)", 0.0)
 
     def execute(self, obj):
-        edge, _closed = base_edge(obj, closed_required=True)
+        if self.fresh(obj):
+            return
+        edge, _closed = base_edge(obj, closed_required=True, corners=True)
         if edge is None:
             return
-        set_local(obj, og.slab_shape(edge, m(obj.Thickness), m(obj.Inset)))
+        shape = og.slab_shape(edge, m(obj.Thickness), m(obj.Inset))
+        if m(obj.BaseOffset):
+            shape.translate(App.Vector(0, 0, m(obj.BaseOffset) * MM))
+        set_local(obj, shape)
+
+
+class Steps(Organic):
+    """A flight of steps between two points of its building's own frame, as the map's build
+    mode draws one: Count treads from the lower point to the higher, the last at the higher
+    point's height, every tread a block that stands on the ground Foundation below the lower."""
+
+    ifc_type = "Stair"
+    icon = "OrganicSlab.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Steps"
+        prop(obj, "App::PropertyPosition", "From", g, "one end, in the steps' own frame (their building's)", App.Vector(0, 0, 0))
+        prop(obj, "App::PropertyPosition", "To", g, "the other end; the lower of the two is the foot", App.Vector(3000, 0, 1000))
+        length(obj, "Width", g, "width of the flight (0.3 m at least)", 1.2)
+        prop(obj, "App::PropertyInteger", "Count", g, "number of steps (0: as many as the climb needs at 0.17 m each)", 0)
+        length(obj, "Foundation", g, "how far the flight reaches below its lower end, into the ground (0.05 m at least)", 0.3)
+        prop(obj, "App::PropertyInteger", "StepCount", "Measures", "the steps it has")
+        prop(obj, "App::PropertyFloat", "Rise", "Measures", "each step's rise (m)")
+        prop(obj, "App::PropertyFloat", "Run", "Measures", "each tread's run (m)")
+        for p in ("StepCount", "Rise", "Run"):
+            obj.setEditorMode(p, 1)
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        shape, count, rise, run = og.steps_shape(tuple(c / MM for c in obj.From), tuple(c / MM for c in obj.To), m(obj.Width), obj.Count, m(obj.Foundation))
+        obj.StepCount, obj.Rise, obj.Run = count, rise, run
+        set_local(obj, shape)
 
 
 class SoapFilm(Organic):
@@ -381,6 +497,8 @@ class SoapFilm(Organic):
         distance(obj, "BaseOffset", g, "the boundary's height above its curve", 0.0)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         edge, _closed = base_edge(obj, closed_required=True)
         if edge is None:
             edge = og.arc_curve(6.0, 360.0)
@@ -395,7 +513,7 @@ class MinimalShell(Organic):
     saddle)."""
 
     ifc_type = "Roof"
-    icon = "OrganicFilm.svg"
+    icon = "OrganicSaddle.svg"
 
     def setup(self, obj):
         super().setup(obj)
@@ -407,6 +525,8 @@ class MinimalShell(Organic):
         length(obj, "Thickness", g, "shell thickness", 0.15)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         if obj.Kind == "Catenoid":
             shape = og.catenoid_shape(m(obj.SizeX), m(obj.SizeY), m(obj.Thickness))
         else:
@@ -474,6 +594,8 @@ class SacredSolid(Organic):
         obj.setEditorMode("Circumradius", 1)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         e = m(obj.Edge)
         obj.Circumradius = max(math.sqrt(x * x + y * y + z * z) for x, y, z in sacred.platonic_vertices(obj.Kind, e))
         set_local(obj, sacred.platonic_solid(obj.Kind, e, obj.Standing))
@@ -497,6 +619,8 @@ class GeodesicDome(Organic):
         obj.setEditorMode("Panels", 1)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         nu = max(1, min(8, obj.Frequency))
         obj.Panels = 20 * nu * nu
         set_local(obj, sacred.geodesic_dome(m(obj.Radius), nu, m(obj.Thickness), obj.Portion))
@@ -589,6 +713,8 @@ class Gridshell(Organic):
             obj.setEditorMode(p, 1)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         edge, _closed = base_edge(obj, closed_required=True)
         if edge is None:
             edge = og.arc_curve(6.0, 360.0)
@@ -622,6 +748,8 @@ class CellularWall(Organic):
         obj.setEditorMode("OpenFraction", 1)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         edge, closed = base_edge(obj, corners=True)
         if edge is None:
             edge, closed = og.arc_curve(5.0, 120.0), False
@@ -654,6 +782,8 @@ class BranchingColumn(Organic):
         obj.setEditorMode("Tips", 1)
 
     def execute(self, obj):
+        if self.fresh(obj):
+            return
         shape, tips = ob.branching_column(m(obj.Height), m(obj.Trunk), max(1, min(4, obj.Levels)), max(2, min(5, obj.Branches)),
                                           m(obj.Spread), m(obj.TrunkRadius), max(1.5, obj.Exponent), m(obj.TipRadius), float(obj.Fan))
         obj.Tips = [og.V(*t) for t in tips]
@@ -669,8 +799,22 @@ class ViewProviderOrganic:
         self.Object = vobj.Object
 
     def getIcon(self):
-        proxy = getattr(getattr(self, "Object", None), "Proxy", None)
-        return os.path.join(ICONS, getattr(proxy, "icon", "Organic.svg"))
+        """The picture of the button that made the object: an arch is a short vault, a veined
+        leaf a leaf shell, a hanging net a gridshell, each with its own button."""
+        obj = getattr(self, "Object", None)
+        proxy = getattr(obj, "Proxy", None)
+        name = getattr(proxy, "icon", "Organic.svg")
+        kind = type(proxy).__name__
+        try:
+            if kind == "Vault" and str(obj.IfcType) == "Member":
+                name = "OrganicArch.svg"
+            elif kind == "LeafShell" and str(obj.RibPattern) == "Veins":
+                name = "BioVeins.svg"
+            elif kind == "Gridshell" and obj.Hanging:
+                name = "BioNet.svg"
+        except Exception:
+            pass
+        return os.path.join(ICONS, name)
 
     def claimChildren(self):
         base = getattr(self.Object, "Base", None)
@@ -692,10 +836,87 @@ COLOURS = {
     "Wall": (0.87, 0.80, 0.66),
     "Roof": (0.55, 0.66, 0.50),
     "Slab": (0.70, 0.70, 0.70),
+    "Stair": (0.70, 0.70, 0.70),
     "Member": (0.80, 0.62, 0.45),
     "Column": (0.72, 0.56, 0.40),
 }
 LINE_COLOURS = {"PlanCurve": (0.2, 0.3, 0.8), "SacredFigure": (0.70, 0.45, 0.05), "SunRose": (0.85, 0.45, 0.0)}
+
+
+def paint(obj):
+    """Give an Organic object the colour of its IFC class (walls sand, roofs green, slabs
+    grey, members and columns wood) and a curve its line colour. In the window only."""
+    if not App.GuiUp or obj.ViewObject is None:
+        return
+    view = obj.ViewObject
+    colour = COLOURS.get(str(getattr(obj, "IfcType", "")), None)
+    if colour and "ShapeAppearance" in view.PropertiesList:
+        mat = App.Material()
+        mat.DiffuseColor = colour
+        view.ShapeAppearance = [mat]
+    kind = type(getattr(obj, "Proxy", None)).__name__
+    if kind in LINE_COLOURS:
+        view.LineColor = LINE_COLOURS[kind]
+        view.LineWidth = 2.0
+
+
+def dress(doc):
+    """Make a design that was built without the window look as one built in it does: every
+    Organic object gets its icon and its class colour, the BIM site and building their own
+    view providers (so the tree nests the building's parts under it). What already has a
+    view provider is left as it is. Returns how many objects were dressed."""
+    if not App.GuiUp or doc is None:
+        return 0
+    done = 0
+    for obj in doc.Objects:
+        view = getattr(obj, "ViewObject", None)
+        if view is None or getattr(view, "Proxy", None) not in (None, 0):
+            continue
+        try:
+            if hasattr(getattr(obj, "Proxy", None), "ifc_type"):  # an Organic object (by what it carries: a reloaded module's classes are new ones)
+                ViewProviderOrganic(view)
+                paint(obj)
+                if type(obj.Proxy).__name__ == "PlanCurve" and any(type(getattr(p, "Proxy", None)).__name__ in ("Wall", "CellularWall", "Slab") for p in obj.InList):
+                    view.Visibility = False  # a curve a wall or a slab stands on is hidden, as the buttons leave it
+                done += 1
+            elif getattr(obj, "IfcType", "") == "Site":
+                import ArchSite
+
+                ArchSite._ViewProviderSite(view)
+                done += 1
+            elif getattr(obj, "IfcType", "") in ("Building", "Building Storey", "Building Part"):
+                import ArchBuildingPart
+
+                ArchBuildingPart.ViewProviderBuildingPart(view)
+                view.Visibility = True
+                done += 1
+        except Exception as exc:  # a view is a courtesy: never stop a design from opening
+            App.Console.PrintWarning("Organic: %s could not be dressed for the window (%s)\n" % (obj.Label, exc))
+    return done
+
+
+_DRESSING = set()
+
+
+def dress_later(doc):
+    """Dress a restored document once it is fully open (its view objects exist by then)."""
+    if not App.GuiUp or doc is None or doc.Name in _DRESSING:
+        return
+    _DRESSING.add(doc.Name)
+    try:
+        from PySide import QtCore
+    except ImportError:
+        return
+    name = doc.Name
+
+    def run():
+        _DRESSING.discard(name)
+        try:
+            dress(App.getDocument(name))
+        except Exception:
+            pass
+
+    QtCore.QTimer.singleShot(0, run)
 
 
 def make(cls, name, label=None, doc=None):
@@ -706,12 +927,5 @@ def make(cls, name, label=None, doc=None):
     obj.Label = label or name
     if App.GuiUp and obj.ViewObject is not None:
         ViewProviderOrganic(obj.ViewObject)
-        colour = COLOURS.get(getattr(obj, "IfcType", ""), None)
-        if colour and "ShapeAppearance" in obj.ViewObject.PropertiesList:
-            mat = App.Material()
-            mat.DiffuseColor = colour
-            obj.ViewObject.ShapeAppearance = [mat]
-        if cls.__name__ in LINE_COLOURS:
-            obj.ViewObject.LineColor = LINE_COLOURS[cls.__name__]
-            obj.ViewObject.LineWidth = 2.0
+        paint(obj)
     return obj

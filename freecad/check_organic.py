@@ -12,8 +12,11 @@ Every expectation is derived here, not taken from the workbench's own constants:
   A. kernels against closed forms: a wall on an arc (t H R θ) and on a circle (2π R t H), a
      straight wall less a rectangular opening, a semicircular vault (π/2 (Ro² - Ri²) L), the
      same on a plinth (two stems t L p more, its lowest point p below the springings), a
-     hemispherical dome (2/3 π (R³ - (R-t)³)); and every kernel, the leaf shell and the
-     organic roof included, a valid solid whose triangles enclose OCCT's volume within 0.5 %.
+     hemispherical dome (2/3 π (R³ - (R-t)³)); walls with a shaped top on an arc and on
+     smooth curves through points, open and closed (t L times the top line's mean height,
+     L the curve's cubic spans integrated here); a top cut that does nothing refused by the
+     kernel, not drawn; and every kernel, the leaf shell and the organic roof included, a
+     valid solid whose triangles enclose OCCT's volume within 0.5 %.
   B. the GLB, read back: one node per element of the design's building, named and classed
      as in FreeCAD; each mesh's enclosed volume (the divergence theorem over its own
      triangles) within 1 % of the element's solid.
@@ -33,8 +36,11 @@ Every expectation is derived here, not taken from the workbench's own constants:
      the ground at the anchor, whatever zero the land file was exported on; until 1 Oct this
      let 0.3 m through, and a vault's springing stood 0.15 m in the air); the footprint not on a road
      and not on the access easement, by the map's own meshes and by the pack's centrelines
-     and surveyed easement, the two agreeing; and not inside an existing building, by the
-     map's file and by the county's footprints.
+     and surveyed easement, the two agreeing; not inside an existing building, by the
+     map's file and by the county's footprints; and inside the map's own build envelope
+     (lane C's build-envelope.geojson: the county's setbacks, the oak protection zones, the
+     steep ground), read here by ray casting at every vertex and held against what the export
+     itself read of it and wrote into the sidecar.
   E. the IFC, read back by IfcOpenShell: the site's latitude, longitude and elevation equal
      to BRAIN.md's to 1e-6° and 1 mm; the IfcBuilding placed on that site by the same offset
      and turn, its elements placed under it, its reference height and its Organic_Placement
@@ -50,13 +56,17 @@ in a mesh, the building 2 m in the air, back on the driveway, inside the existin
 offset baked into the geometry around the anchor, the turn written the wrong way round, the
 IFC's latitude in whole seconds, the IFC building left on the anchor, the IFC classes lost, a
 wall half as thick, the land file's roads off the pack's, an element's base 0.15 m above the
-ground, the plinth left out of the vault.
+ground, the plinth left out of the vault, a wave top and an arch top left uncut on smooth
+walls through points (what OCCT returned until 1 Oct), the kernel taking a cut that did nothing,
+the export's reading of the build envelope another building's, the building under the protected
+oaks (where the pavilion stood until the night of 1 Oct).
 """
 
 import copy
 import json
 import math
 import os
+import pathlib
 import re
 import struct
 import sys
@@ -75,15 +85,46 @@ EXPORT = os.environ.get("ORGANIC_EXPORT") or os.path.join(EXCHANGE, "organic-tes
 LAND = os.environ.get("ORGANIC_LAND_DIR") or EXCHANGE  # the map's land files; apart from EXCHANGE only for a trial export
 SITE_GLB = os.path.join(LAND, "sulphur-mountain-site.glb")
 EXISTING_GLB = os.path.join(LAND, "sulphur-mountain-buildings-existing.glb")
-PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
+ENVELOPE = os.path.join(LAND, "build-envelope.geojson")  # lane C's: where one may build (setbacks, oaks, steep ground, easement, roads)
+# The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
+# first (the dataset of record), its published copy only where that folder is not there.
+LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
 GROUND_ABOVE = 0.02  # metres an element's base may read above the land file's triangles and still count as standing in the ground
 BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
 MM = 1000.0
 # where the first pavilion stood (29 Sep), in metres from the anchor: on the driveway
 DRIVEWAY_SPOT = (-77.52, -33.00)
+# where the second stood (1 Oct): clear of the road, the easement and the buildings, and under protected oaks
+OAK_SPOT = (-112.0, 31.0)
+# two smooth plan curves through points (metres), as drawn by clicking: an open one and a ring
+GARDEN_POINTS = [(-2.0, 7.5), (0.25, 8.3), (2.5, 7.5), (4.75, 6.7), (7.0, 7.5)]
+RING_POINTS = [(5.0, 0.0), (2.5, 4.0), (-2.5, 4.0), (-5.0, 0.0), (-2.5, -4.0), (2.5, -4.0)]
 
 
 # ------------------------------------------------------------------ independent pieces
+def smooth_length(points, closed, steps=400):
+    """The length (metres) of the smooth curve through points: a uniform Catmull-Rom spline
+    (an open curve takes its end points twice), each span's speed integrated by Simpson's rule."""
+    n = len(points)
+    total = 0.0
+    for i in range(n if closed else n - 1):
+        if closed:
+            p0, p1, p2, p3 = (points[(i + k) % n] for k in (-1, 0, 1, 2))
+        else:
+            p0, p1, p2, p3 = (points[min(n - 1, max(0, i + k))] for k in (-1, 0, 1, 2))
+
+        def speed(t):
+            d = [0.5 * ((-a + c) + 2 * (2 * a - 5 * b + 4 * c - e) * t + 3 * (-a + 3 * b - 3 * c + e) * t * t)
+                 for a, b, c, e in zip(p0, p1, p2, p3)]
+            return math.hypot(d[0], d[1])
+
+        h = 1.0 / steps
+        total += h / 3 * (speed(0.0) + speed(1.0) + sum((4 if k % 2 else 2) * speed(k * h) for k in range(1, steps)))
+    return total
+
+
+
 def wgs84_metres_per_degree(lat):
     """East and north metres per degree at a latitude, from WGS84's radii of curvature."""
     a, e2 = 6378137.0, 6.69437999014e-3
@@ -414,6 +455,50 @@ def lines_of(geometry):
     return [c] if kind == "LineString" else list(c) if kind == "MultiLineString" else []
 
 
+def polygons_of(geometry):
+    """A geometry's polygons, each as its rings (the outline first, then its holes)."""
+    kind, c = geometry["type"], geometry["coordinates"]
+    return [c] if kind == "Polygon" else list(c) if kind == "MultiPolygon" else []
+
+
+def in_rings(points, rings):
+    """Which of the points (n, 2) lie in a polygon given by its rings: an odd number of its
+    edges crossed by a ray to the east (the outline and the holes counted alike)."""
+    import numpy as np
+
+    x, y = points[:, 0], points[:, 1]
+    odd = np.zeros(len(points), dtype=bool)
+    for ring in rings:
+        for (x0, y0), (x1, y1) in zip(ring, ring[1:]):
+            if y0 != y1:
+                odd ^= ((y0 > y) != (y1 > y)) & (x < x0 + (y - y0) * (x1 - x0) / (y1 - y0))
+    return odd
+
+
+def envelope_shares(envelope, lnglat):
+    """What the map's build envelope holds at a set of points (n, 2 as lng, lat), worked out
+    here by ray casting: (the share of them in its buildable area, {kind: (share, reason)} for
+    every other kind that holds any of them, leaving out the house zone, which is a reference)."""
+    import numpy as np
+
+    lo, hi = lnglat.min(axis=0), lnglat.max(axis=0)
+    hits, reasons = {}, {}
+    for kind, reason, polygons in envelope:
+        if kind == "house_zone":
+            continue
+        for rings in polygons:
+            outline = np.asarray([p[:2] for p in rings[0]], dtype=float)
+            if (outline.max(axis=0) < lo).any() or (outline.min(axis=0) > hi).any():
+                continue
+            got = in_rings(lnglat, [[tuple(p[:2]) for p in ring] for ring in rings])
+            if got.any():
+                hits[kind] = got if kind not in hits else (hits[kind] | got)
+                reasons.setdefault(kind, reason)
+    n = float(len(lnglat))
+    buildable = float(hits["buildable_envelope"].sum()) / n if "buildable_envelope" in hits else 0.0
+    return buildable, {k: (float(v.sum()) / n, reasons[k]) for k, v in sorted(hits.items()) if k != "buildable_envelope"}
+
+
 # ------------------------------------------------------------------ read everything
 def read_facts():
     import numpy as np
@@ -430,6 +515,8 @@ def read_facts():
 
     line = Part.LineSegment(og.V(0, 0), og.V(10, 0)).toShape()
     lob = og.lobed_curve(6.8, 5, 0.35)
+    garden, _open = og.plan_path(og.points_curve(GARDEN_POINTS, smooth=True))
+    ring, _closed = og.plan_path(og.points_curve(RING_POINTS, smooth=True, closed=True))
     kernels = {
         "arc wall": (og.wall_shape(og.arc_curve(5.0, 90.0), False, 0.3, 3.0), 0.3 * 3.0 * 5.0 * math.pi / 2),
         "circle wall": (og.wall_shape(og.arc_curve(4.0, 360.0), True, 0.3, 3.0), 2 * math.pi * 4.0 * 0.3 * 3.0),
@@ -441,13 +528,39 @@ def read_facts():
         "arc wall, wave top": (og.wall_shape(og.arc_curve(4.2, 250.0), False, 0.35, 2.5, top="Wave", top_rise_m=0.35, top_waves=3, foundation_m=0.6),
                                0.35 * 4.2 * math.radians(250.0) * (2.5 + 0.35 / 2 + 0.6)),
         "lobed wall, wave top": (og.wall_shape(lob, True, 0.45, 3.2, top="Wave", top_rise_m=0.6, top_waves=5), None),
+        "smooth wall through points, wave top": (og.wall_shape(garden, False, 0.3, 1.8, top="Wave", top_rise_m=0.3, top_waves=2),
+                                                 0.3 * smooth_length(GARDEN_POINTS, False) * (1.8 + 0.3 / 2)),
+        "smooth ring through points, arch top": (og.wall_shape(ring, True, 0.3, 1.8, top="Arch", top_rise_m=0.9),
+                                                 0.3 * smooth_length(RING_POINTS, True) * (1.8 + 0.9 * 2 / math.pi)),
         "catenary vault, ribs": (og.vault_shape("Catenary", 6.0, 4.0, 0.25, 8.0, ribs=3), None),
         "leaf shell": (og.leaf_shell_shape(16.0, 10.0, (0.4, 5.4, 6.0, 0.4), 0.4, 1.0, 0.2, 0.15, 2.0, outline="Pointed"), None),
         "leaf shell on footings": (og.leaf_shell_shape(16.0, 10.0, (0.4, 5.4, 6.0, 0.4), 0.4, 1.0, 0.2, 0.15, 2.0, outline="Pointed", plinth_m=0.6), None),
         "organic roof": (og.organic_roof_shape(lob, 3.2, 2.4, 0.8, 0.2), None),
     }
     facts["kernels"] = {k: {"valid": s.isValid(), "solids": len(s.Solids), "volume": s.Volume / 1e9, "mesh": mesh_vol(s), "closed_form": cf,
-                            "zmin": s.optimalBoundingBox().ZMin / MM} for k, (s, cf) in kernels.items()}
+                            "zmin": s.optimalBoundingBox(False, False).ZMin / MM} for k, (s, cf) in kernels.items()}
+    # a top cut that does nothing (the cutting solid moved a kilometre aside): what the kernel does with it,
+    # as it is and with its own comparison switched off
+    real_tool, real_tolerance = og.top_tool, og.TOP_TOLERANCE
+
+    def idle_tool(*args):
+        tool = real_tool(*args)
+        tool.translate(App.Vector(og.BIG, 0, 0))
+        return tool
+
+    facts["idle_cut"] = {}
+    og.top_tool = idle_tool
+    try:
+        for key, tolerance in (("guarded", real_tolerance), ("unguarded", 1.0e9)):
+            og.TOP_TOLERANCE = tolerance
+            try:
+                s = og.wall_shape(garden, False, 0.3, 1.8, top="Wave", top_rise_m=0.3, top_waves=2)
+                facts["idle_cut"][key] = {"refused": False, "volume": s.Volume / 1e9, "said": ""}
+            except ValueError as exc:
+                facts["idle_cut"][key] = {"refused": True, "volume": None, "said": str(exc)}
+    finally:
+        og.top_tool, og.TOP_TOLERANCE = real_tool, real_tolerance
+    facts["idle_cut"]["closed_form"] = 0.3 * smooth_length(GARDEN_POINTS, False) * (1.8 + 0.3 / 2)
     # the design
     target = os.path.normcase(os.path.abspath(DESIGN))
     doc = next((d for d in App.listDocuments().values() if d.FileName and os.path.normcase(os.path.abspath(d.FileName)) == target), None)
@@ -459,7 +572,9 @@ def read_facts():
         site = next(o for o in doc.Objects if getattr(o, "IfcType", "") == "Site")
         facts["design"] = {}
         for o in elements:
-            bb = o.Shape.optimalBoundingBox()  # BoundBox takes B-spline faces untrimmed
+            # from the geometry: a plain BoundBox takes B-spline faces untrimmed, and asked without saying so
+            # OCCT reads the triangles the window drew the solid with (in the window the leaf roof's box was 66 mm off)
+            bb = o.Shape.optimalBoundingBox(False, False)
             facts["design"][o.Label] = {"class": str(o.IfcType), "volume": o.Shape.Volume / 1e9,
                                         "min": (bb.XMin / MM, bb.YMin / MM, bb.ZMin / MM), "max": (bb.XMax / MM, bb.YMax / MM, bb.ZMax / MM)}
         facts["design_origin"] = (float(site.Longitude), float(site.Latitude), site.Elevation.Value / MM)
@@ -485,6 +600,11 @@ def read_facts():
     facts["map_easement"] = np.concatenate([plan(p, t) for k, (p, t, _e) in site_nodes.items() if k.startswith("easement")])
     eg, eb = glb(EXISTING_GLB)
     facts["map_existing"] = {k: plan(p, t) for k, (p, t, _e) in node_meshes(eg, eb).items()}
+    facts["envelope"] = None  # lane C's build envelope, as the map shades it: (kind, reason, polygons) per feature
+    if os.path.isfile(ENVELOPE):
+        with open(ENVELOPE, encoding="utf-8") as fh:
+            facts["envelope"] = [((f.get("properties") or {}).get("kind"), (f.get("properties") or {}).get("reason", ""), polygons_of(f["geometry"]))
+                                 for f in json.load(fh)["features"]]
     facts["anchor"] = canonical_frame()
     facts["format_md"] = format_md_anchor()
     survey = fetch("survey.geojson")
@@ -528,6 +648,11 @@ def judge(facts):
     ok(abs(stem["zmin"] + 0.6) <= 0.005 and abs(arch["zmin"]) <= 0.005 and abs((stem["volume"] - arch["volume"]) - 2 * 0.3 * 8.0 * 0.6) <= 0.001,
        "A vault on a plinth: its lowest point at %.3f m (the bare vault's at %.3f m), %.4f m³ more than the bare vault (two stems t L p = %.4f m³)"
        % (stem["zmin"], arch["zmin"], stem["volume"] - arch["volume"], 2 * 0.3 * 8.0 * 0.6))
+    idle = facts["idle_cut"]["guarded"]
+    ok(idle["refused"],
+       "A a top cut that does nothing is refused, not drawn: %s"
+       % (("the kernel said: " + idle["said"]) if idle["refused"]
+          else "the kernel returned a wall of %.4f m³ where t L (H + rise / 2) = %.4f m³" % (idle["volume"], facts["idle_cut"]["closed_form"])))
 
     design, meshes = facts["design"], facts["glb"]
     # B
@@ -628,6 +753,25 @@ def judge(facts):
     ok(bool(there) and bool(foot) and min(there.values()) > 0 and min(foot) > 0,
        "D not inside the existing buildings: %s by the map's file; %.1f m from the nearest county footprint"
        % (", ".join("%.1f m from %s" % (d, n) for n, d in sorted(there.items())) or "none read", min(foot) if foot else float("nan")))
+    # the map's build envelope (lane C's file: the county's setbacks, the oaks, the steep ground): read here by ray
+    # casting at every vertex of the GLB set on the land by the sidecar, and held against what the export read of it
+    envelope, told = facts.get("envelope"), (facts["sidecar"] or {}).get("envelope")
+    if envelope is None:
+        ok(False, "D inside the map's buildable envelope: its file (build-envelope.geojson) is not in the land folder")
+    else:
+        spots = np.vstack([w[:, :2] for w in world.values()])
+        buildable, barred = envelope_shares(envelope, np.column_stack([alng + spots[:, 0] / kx, alat + spots[:, 1] / ky]))
+        barred = {key: v for key, v in barred.items() if v[0] > 0.0005}
+        said = {key: row["share"] for key, row in ((told or {}).get("no_building") or {}).items() if row["share"] > 0.0005}
+        ok(told is not None and told.get("buildable") is not None and abs(told["buildable"] - buildable) <= 0.005
+           and sorted(said) == sorted(barred) and all(abs(said[key] - barred[key][0]) <= 0.005 for key in barred),
+           "D the export reads the map's build envelope as it is read here: %.1f %% of the building's points in the buildable area (the export: %s), no building at %s (the export: %s)"
+           % (100 * buildable, "%.1f %%" % (100 * told["buildable"]) if told and told.get("buildable") is not None else "nothing",
+              ", ".join("%s %.1f %%" % (key, 100 * v[0]) for key, v in barred.items()) or "none of them",
+              ", ".join("%s %.1f %%" % (key, 100 * v) for key, v in sorted(said.items())) or "none of them"))
+        ok(buildable >= 0.9995 and not barred,
+           "D inside the map's buildable envelope and in none of its no-building zones: %.1f %% of its points in the buildable area%s"
+           % (100 * buildable, "".join("; %.0f %% in %s (%s)" % (100 * v[0], key, v[1]) for key, v in barred.items())))
 
     # E
     ifc = facts["ifc"]
@@ -667,7 +811,7 @@ def judge(facts):
 def forgeries(facts):
     import numpy as np
 
-    shared = ("terrain", "map_roads", "map_easement", "map_existing")
+    shared = ("terrain", "map_roads", "map_easement", "map_existing", "envelope")
     anchor = facts["anchor"]
     k = wgs84_metres_per_degree(anchor[1])
 
@@ -781,6 +925,17 @@ def forgeries(facts):
         g["kernels"]["semicircular vault on a plinth"] = dict(g["kernels"]["semicircular vault"],
                                                                closed_form=g["kernels"]["semicircular vault on a plinth"]["closed_form"])
 
+    def uncut(g, name, height, rise, mean):
+        """A shaped top left uncut, as OCCT left it until 1 Oct: the wall a valid solid at its
+        highest point all along (t L (H + rise) where the top's mean height is `mean`)."""
+        kernel = g["kernels"][name]
+        kernel["volume"] *= (height + rise) / mean
+        kernel["mesh"] *= (height + rise) / mean
+
+    def unguarded(g):
+        """The kernel's own comparison switched off: what it then returned for the idle cut."""
+        g["idle_cut"]["guarded"] = g["idle_cut"]["unguarded"]
+
     return [
         ("the GLB Z-up", "C every element", f(lambda g: each_mesh(g, lambda p: p[:, [0, 2, 1]] * np.array([1, -1, 1])))),
         ("the GLB in millimetres", "B ", f(lambda g: each_mesh(g, lambda p: p * 1000.0))),
@@ -801,6 +956,14 @@ def forgeries(facts):
         ("the land file's roads 8 m off the pack's", "D the map's roads lie along", f(roads_off)),
         ("an element's base 0.15 m above the ground", "D every element that reaches the ground", f(floating)),
         ("the plinth left out of the vault", "A vault on a plinth", f(no_stem)),
+        ("a wave top left uncut on a smooth wall through points", "A smooth wall through points, wave top",
+         f(lambda g: uncut(g, "smooth wall through points, wave top", 1.8, 0.3, 1.8 + 0.3 / 2))),
+        ("an arch top left uncut on a smooth ring through points", "A smooth ring through points, arch top",
+         f(lambda g: uncut(g, "smooth ring through points, arch top", 1.8, 0.9, 1.8 + 0.9 * 2 / math.pi))),
+        ("the kernel taking a cut that did nothing", "A a top cut that does nothing", f(unguarded)),
+        ("the export's reading of the build envelope another building's", "D the export reads the map's build envelope",
+         f(lambda g: g["sidecar"]["envelope"].__setitem__("buildable", 0.5))),
+        ("the building under the protected oaks (where the pavilion stood until the night of 1 Oct)", "D inside the map's buildable envelope", f(lambda g: stand_at(g, *OAK_SPOT))),
     ]
 
 

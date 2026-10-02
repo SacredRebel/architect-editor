@@ -209,13 +209,50 @@ def placement_of(frame, origin, anchor=ANCHOR):
 
 
 # ---------------------------------------------------------------- GLB
-def tessellate(obj, tolerance_mm):
+MESH_ANGLE = 0.5  # radians: the most two neighbouring triangles on a curved face may turn against each other
+
+
+def own_shape(obj):
+    """(an element's solid in its own frame: a copy, without the triangles FreeCAD's window
+    drew it with; where that frame stands in the document)."""
+    whole = global_shape(obj)
+    own = whole.copy()
+    own.Placement = App.Placement()
+    return own, whole.Placement
+
+
+def mesh_tolerance(shape):
+    """How far an element's triangles may lie from its solid (mm): a thousandth of its size,
+    from 4 to 12. The size is the solid's own, measured on its geometry: a box round the solid
+    where it stands turned, or one taken from the window's triangles, gave another number for
+    the same element, and so another mesh."""
+    return max(4.0, min(12.0, 0.001 * shape.optimalBoundingBox(False, False).DiagonalLength))
+
+
+def tessellate(obj, tolerance_mm=None):
     """A solid's triangles in document coordinates (mm): points, per-point normals, triangles.
+
+    The solid is meshed whole and in its own frame, on a copy (so the triangles FreeCAD's
+    window drew it with are not taken: in the window they were, and a building weighed twice
+    what it did from the console), no further from the solid than the tolerance and turning no
+    more than MESH_ANGLE from one triangle to the next; the triangles are then set where the
+    solid stands. An element so has the same triangles wherever its building stands, however
+    it is turned, sent from the window or from the console. Face by face, OCCT meshed a spline
+    wall in squares a span wide: 92,000 triangles for a 32 m wall, where 25,000 show the same.
 
     Vertex normals average the triangle normals within one face, so curved faces shade
     smoothly and edges between faces stay sharp."""
+    shape, at = own_shape(obj)
+    if tolerance_mm is None:
+        tolerance_mm = mesh_tolerance(shape)
+    try:
+        import MeshPart
+
+        MeshPart.meshFromShape(Shape=shape, LinearDeflection=tolerance_mm, AngularDeflection=MESH_ANGLE, Relative=False)  # leaves its triangles on the faces
+    except Exception:
+        pass  # without the mesher module the faces are meshed one by one below, heavier but the same solid
     points, normals, indices = [], [], []
-    for face in global_shape(obj).Faces:
+    for face in shape.Faces:
         pts, tris = face.tessellate(tolerance_mm)
         if not tris:
             continue
@@ -226,8 +263,8 @@ def tessellate(obj, tolerance_mm):
             acc[b] += n
             acc[c] += n
         base = len(points)
-        points.extend(pts)
-        normals.extend(acc)
+        points.extend(at.multVec(p) for p in pts)
+        normals.extend(at.Rotation.multVec(n) for n in acc)
         indices.extend((base + a, base + b, base + c) for a, b, c in tris)
     return points, normals, indices
 
@@ -428,6 +465,57 @@ def site_clearance(out_dir, footprint):
     return out
 
 
+ENVELOPE_FILE = "build-envelope.geojson"
+# the envelope's kinds that are a place to build in, or only a reference; every other kind says "no building"
+ENVELOPE_OPEN = ("buildable_envelope", "house_zone")
+
+
+def envelope_at(out_dir, footprint, anchor=ANCHOR):
+    """What the map's build envelope (lane C's build-envelope.geojson: the county's setbacks,
+    the oak protection zones, the steep ground, the easement, the roads, the existing
+    buildings) holds at a building's footprint. footprint: (east, north) points in metres from
+    the anchor, one per vertex of the building.
+
+    Returns None when the file is not there, else {"file", "points", "buildable": the share of
+    the footprint's points inside the buildable envelope (None when the file has none),
+    "no_building": {kind: {"share", "reason"}} for every kind that says no building and holds
+    a point of it}. The land's own analysis is lane C's: this reads it, and works out nothing
+    of its own about the land."""
+    path = os.path.join(out_dir, ENVELOPE_FILE)
+    if not os.path.isfile(path):
+        return None
+    try:
+        import shapely
+        from shapely.geometry import shape as as_shape
+    except ImportError:
+        return None
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    kx, ky = METRES_PER_DEG
+    points = shapely.points([(anchor["lng"] + e / kx, anchor["lat"] + n / ky) for e, n in footprint])
+    reach = shapely.box(*shapely.total_bounds(points))
+    inside, reasons = {}, {}
+    for feature in data.get("features", []):
+        kind = (feature.get("properties") or {}).get("kind")
+        if not kind or kind == "house_zone":
+            continue
+        shape = as_shape(feature["geometry"])
+        if not shape.intersects(reach):
+            continue
+        shapely.prepare(shape)
+        hit = shapely.contains(shape, points)
+        if hit.any():
+            inside[kind] = hit if kind not in inside else (inside[kind] | hit)
+            reasons.setdefault(kind, (feature.get("properties") or {}).get("reason", ""))
+    kinds = {(f.get("properties") or {}).get("kind") for f in data.get("features", [])}
+    total = float(len(footprint))
+    return {
+        "file": ENVELOPE_FILE, "points": len(footprint),
+        "buildable": (round(float(inside["buildable_envelope"].sum()) / total, 4) if "buildable_envelope" in inside else 0.0) if "buildable_envelope" in kinds else None,
+        "no_building": {k: {"share": round(float(v.sum()) / total, 4), "reason": reasons[k]} for k, v in sorted(inside.items()) if k not in ENVELOPE_OPEN},
+    }
+
+
 # ---------------------------------------------------------------- IFC
 def dms(value):
     """Decimal degrees as IFC's compound angle: degrees, minutes, seconds, millionths."""
@@ -576,9 +664,12 @@ FRAME_NOTE = {
 }
 
 
-def export_building(target, out_dir=None, name=None, anchor=None):
+def export_building(target, out_dir=None, name=None, anchor=None, stem=None, land=None):
     """Write <name>.glb, <name>.ifc and <name>.json for a building into the exchange folder.
-    Returns the report written as the .json, with the three paths added under "paths"."""
+    Returns the report written as the .json, with the three paths added under "paths".
+
+    The files are named after the building (its label, in small letters) unless `stem` names
+    them; the map's land files are read from the folder written to unless `land` names theirs."""
     targets = target if isinstance(target, (list, tuple)) else [target]
     doc = targets[0].Document
     elements = elements_of(targets)
@@ -587,15 +678,15 @@ def export_building(target, out_dir=None, name=None, anchor=None):
     anchor = anchor or ANCHOR
     origin = document_origin(doc)
     label = name or (targets[0].Label if len(targets) == 1 else doc.Label)
-    stem = file_stem(label)
+    stem = stem or file_stem(label)
     out_dir = out_dir or exchange_dir()
+    land = land or land_dir(out_dir)
     os.makedirs(out_dir, exist_ok=True)
     glb, ifc, side = (os.path.join(out_dir, stem + ext) for ext in (".glb", ".ifc", ".json"))
 
     meshes = []
     for el in elements:
-        bb = el.Shape.BoundBox
-        meshes.append(tessellate(el, max(2.0, min(10.0, 0.001 * bb.DiagonalLength))))  # mm; a thin shell needs it fine
+        meshes.append(tessellate(el))
     frame, note = building_frame(targets, [p for m in meshes for p in m[0]])
     placement = placement_of(frame, origin, anchor)
     notes = [note] if note else []
@@ -607,30 +698,51 @@ def export_building(target, out_dir=None, name=None, anchor=None):
         tri = to_gltf(mesh, frame)
         vol = el.Shape.Volume / 1e9
         extras = {"ifcType": str(getattr(el, "IfcType", "")), "freecadName": el.Name, "volume_m3": round(vol, 4)}
+        row = {"name": el.Label, "freecadName": el.Name, "ifcType": extras["ifcType"], "volume_m3": vol,
+               "mesh_volume_m3": mesh_volume(tri[0], tri[2]), "triangles": len(tri[2])}
+        piece = str(getattr(el, "MapPiece", "") or "")
+        if piece:  # a piece that was drawn in the map: its id there, so the map can hold this solid against it
+            extras["piece"] = row["piece"] = piece
+        if getattr(el, "MapLand", ""):  # what the map read of the land at this piece, kept as it was written
+            row["land"] = json.loads(el.MapLand)
         parts.append((el.Label, tri, colour_of(el), extras))
-        rows.append({"name": el.Label, "freecadName": el.Name, "ifcType": extras["ifcType"], "volume_m3": vol,
-                     "mesh_volume_m3": mesh_volume(tri[0], tri[2]), "triangles": len(tri[2])})
+        rows.append(row)
 
     # where its footprint stands among what the map already shows
     off, yaw = placement["offset_m"], math.radians(placement["rotation_deg"]["y"])
     cos, sin = math.cos(yaw), math.sin(yaw)
     footprint = [(off["east"] + cos * x - sin * (-z), off["north"] + sin * x + cos * (-z)) for _n, tri, _c, _e in parts for x, _y, z in tri[0]]
-    clearance = site_clearance(land_dir(out_dir), footprint)
+    clearance = site_clearance(land, footprint)
     on = [k for k, v in clearance.items() if v <= 0.0]
     if on:
         notes.append("it stands on: %s" % ", ".join({"road": "a road", "easement": "the access easement", "existing_building": "an existing building"}[k] for k in on))
-    ground = ground_at(land_dir(out_dir), off["east"], off["north"])
+    ground = ground_at(land, off["east"], off["north"])
     above = None if ground is None else round(off["up"] - ground, 2)
     if above is not None and abs(above) > 1.0:
         notes.append("its level (z = 0) is %.1f m %s the map's ground there" % (abs(above), "above" if above > 0 else "below"))
+    # what the map's own build envelope says of that footprint (lane C's file: setbacks, oaks, steep ground)
+    envelope = envelope_at(land, footprint, anchor)
+    if envelope is not None:
+        if envelope["buildable"] is not None and envelope["buildable"] < 0.9995:
+            notes.append("by the map's build envelope, %.0f %% of it (its points in plan) lies outside the area that may be built on" % (100.0 * (1.0 - envelope["buildable"])))
+        for row in envelope["no_building"].values():
+            notes.append("by the map's build envelope, %.0f %% of it (its points in plan) lies where there is to be no building: %s"
+                         % (100.0 * row["share"], row["reason"]))
 
     stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     source = os.path.basename(doc.FileName) if doc.FileName else doc.Label
     write_glb(glb, parts, label, {"placement": placement, "frame": FRAME_NOTE, "source": source, "exported": stamp})
     write_ifc(ifc, elements, frame, placement, anchor, label)
-    report = {"name": label, "placement": placement, "clearance_m": clearance, "level_above_ground_m": above, "notes": notes, "frame": FRAME_NOTE,
+    report = {"name": label, "placement": placement, "clearance_m": clearance, "envelope": envelope, "level_above_ground_m": above, "notes": notes, "frame": FRAME_NOTE,
               "files": {"glb": stem + ".glb", "ifc": stem + ".ifc"}, "source": source, "exported": stamp,
               "generator": "FreeCAD %s, Organic workbench" % ".".join(App.Version()[:3]), "elements": rows}
+    if doc.FileName:  # the design itself: what the map opens for "edit in its source app" (FORMAT.md)
+        report["source_path"] = os.path.abspath(doc.FileName)
+    built = getattr(building_of(targets), "MapFile", "")
+    if built:  # a building that was drawn in the map and rebuilt here: the file it came from
+        report["built_from"] = os.path.basename(built)
+    if getattr(building_of(targets), "MapLand", ""):
+        report["land"] = json.loads(building_of(targets).MapLand)
     with open(side, "w", encoding="utf-8") as fh:
         json.dump(report, fh, indent=2)
     return dict(report, paths={"glb": glb, "ifc": ifc, "json": side})

@@ -1,0 +1,492 @@
+{
+ "format": "built/1",
+ "id": "h-sample",
+ "name": "Built sample",
+ "saved": "2026-10-02T00:00:00Z",
+ "generator": "lane A's sample of the format (not drawn in the map)",
+ "placement": {
+  "coordinates": [
+   -119.156578501,
+   34.433379455
+  ],
+  "altitude_m": -6.0673,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 40.0,
+   "z": 0.0
+  },
+  "scale": 1.0
+ },
+ "land": {
+  "envelope_reason": "",
+  "setback_m": 22.7
+ },
+ "pieces": [
+  {
+   "id": "c-room",
+   "type": "PlanCurve",
+   "name": "Room line",
+   "params": {
+    "Kind": "Points",
+    "Points": [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      8.0,
+      0.0
+     ],
+     [
+      8.0,
+      5.0
+     ],
+     [
+      0.0,
+      5.0
+     ]
+    ],
+    "Closed": true,
+    "Smooth": false
+   }
+  },
+  {
+   "id": "w-room",
+   "type": "Wall",
+   "name": "Room wall",
+   "params": {
+    "Base": "c-room",
+    "Thickness": 0.3,
+    "Height": 2.8,
+    "Align": "Center",
+    "Top": "Flat",
+    "TopRise": 0.0,
+    "TopWaves": 3,
+    "Foundation": 0.5,
+    "BaseOffset": 0.0,
+    "OpeningPositions": [
+     4.0,
+     10.5
+    ],
+    "OpeningWidths": [
+     1.0,
+     1.2
+    ],
+    "OpeningHeights": [
+     2.1,
+     1.2
+    ],
+    "OpeningSills": [
+     0.0,
+     0.9
+    ],
+    "OpeningShapes": [
+     "Rect",
+     "Rect"
+    ]
+   }
+  },
+  {
+   "id": "s-floor",
+   "type": "Slab",
+   "name": "Floor",
+   "params": {
+    "Base": "c-room",
+    "Thickness": 0.25,
+    "Inset": 0.15
+   }
+  },
+  {
+   "id": "c-wing",
+   "type": "PlanCurve",
+   "name": "Wing line",
+   "params": {
+    "Kind": "Points",
+    "Points": [
+     [
+      8.0,
+      5.0
+     ],
+     [
+      12.0,
+      5.0
+     ],
+     [
+      12.0,
+      9.0
+     ]
+    ],
+    "Closed": false,
+    "Smooth": false
+   }
+  },
+  {
+   "id": "w-wing",
+   "type": "Wall",
+   "name": "Wing wall",
+   "params": {
+    "Base": "c-wing",
+    "Thickness": 0.25,
+    "Height": 2.2,
+    "Align": "Left",
+    "Foundation": 0.0
+   }
+  },
+  {
+   "id": "c-garden",
+   "type": "PlanCurve",
+   "name": "Garden line",
+   "params": {
+    "Kind": "Points",
+    "Points": [
+     [
+      -2.0,
+      7.5
+     ],
+     [
+      0.25,
+      8.3
+     ],
+     [
+      2.5,
+      7.5
+     ],
+     [
+      4.75,
+      6.7
+     ],
+     [
+      7.0,
+      7.5
+     ]
+    ],
+    "Closed": false
+   }
+  },
+  {
+   "id": "w-garden",
+   "type": "Wall",
+   "name": "Garden wall",
+   "params": {
+    "Base": "c-garden",
+    "Thickness": 0.3,
+    "Height": 1.6,
+    "Top": "Wave",
+    "TopRise": 0.3,
+    "TopWaves": 2,
+    "Foundation": 0.0,
+    "OpeningPositions": [
+     6.0
+    ],
+    "OpeningWidths": [
+     1.0
+    ],
+    "OpeningHeights": [
+     1.2
+    ],
+    "OpeningSills": [
+     0.0
+    ],
+    "OpeningShapes": [
+     "Rect"
+    ]
+   },
+   "land": {
+    "slope_pct": 6.5,
+    "sun_dec_h": 5.2,
+    "fire_ring": "5-30 ft"
+   }
+  },
+  {
+   "id": "c-petal",
+   "type": "PlanCurve",
+   "name": "Petal line",
+   "params": {
+    "Kind": "Lobed",
+    "Radius": 3.0,
+    "Lobes": 5,
+    "Depth": 0.2,
+    "Turn": 20.0
+   },
+   "placement": {
+    "x": -12.0,
+    "y": -6.0
+   }
+  },
+  {
+   "id": "w-petal",
+   "type": "Wall",
+   "name": "Petal wall",
+   "params": {
+    "Base": "c-petal",
+    "Thickness": 0.3,
+    "Height": 2.4,
+    "Foundation": 0.0
+   }
+  },
+  {
+   "id": "r-room",
+   "type": "ShellRoof",
+   "name": "Room roof",
+   "params": {
+    "Base": "c-room",
+    "Eaves": 2.8,
+    "Rise": 1.4,
+    "Overhang": 0.5,
+    "Thickness": 0.18
+   }
+  },
+  {
+   "id": "c-step",
+   "type": "PlanCurve",
+   "name": "Step line",
+   "params": {
+    "Kind": "Circle",
+    "Radius": 0.9
+   },
+   "placement": {
+    "x": 4.0,
+    "y": -0.9
+   }
+  },
+  {
+   "id": "s-step",
+   "type": "Step",
+   "name": "Door step",
+   "params": {
+    "Base": "c-step",
+    "Thickness": 0.3,
+    "BaseOffset": -0.15
+   }
+  },
+  {
+   "id": "c-bench",
+   "type": "PlanCurve",
+   "name": "Bench line",
+   "params": {
+    "Kind": "Circle",
+    "Radius": 0.6,
+    "Colour": "oak"
+   },
+   "placement": {
+    "x": -5.0,
+    "y": -3.0
+   }
+  },
+  {
+   "id": "s-bench",
+   "type": "Slab",
+   "name": "Bench",
+   "params": {
+    "Base": "c-bench",
+    "Thickness": 0.45,
+    "BaseOffset": 0.45
+   }
+  },
+  {
+   "id": "d-dome",
+   "type": "Dome",
+   "name": "Garden dome",
+   "params": {
+    "Base": "",
+    "Profile": "Sphere",
+    "Radius": 2.5,
+    "Rise": 2.5,
+    "Thickness": 0.2,
+    "Oculus": 0.0
+   },
+   "placement": {
+    "x": -5.0,
+    "y": 2.5
+   }
+  },
+  {
+   "id": "c-oval",
+   "type": "PlanCurve",
+   "name": "Oval line",
+   "params": {
+    "Kind": "Oval",
+    "Radius": 2.0,
+    "Turn": 25.0
+   },
+   "placement": {
+    "x": -14.0,
+    "y": 6.0
+   }
+  },
+  {
+   "id": "d-oval",
+   "type": "Dome",
+   "name": "Oval dome",
+   "params": {
+    "Base": "c-oval",
+    "Profile": "Sphere",
+    "Radius": 2.0,
+    "Rise": 1.5,
+    "Thickness": 0.2,
+    "Oculus": 0.0,
+    "StretchX": 1.2,
+    "StretchY": 0.75
+   },
+   "placement": {
+    "x": -14.0,
+    "y": 6.0,
+    "z": 0.0,
+    "turn": 25.0
+   }
+  },
+  {
+   "id": "l-even",
+   "type": "LeafShell",
+   "name": "Even leaf",
+   "params": {
+    "Base": "c-petal",
+    "Outline": "Ellipse",
+    "Spine": 9.0,
+    "LeafSpan": 5.0,
+    "RidgeHeights": [
+     2.8,
+     3.6,
+     4.2,
+     2.8
+    ],
+    "Eave": 2.8,
+    "RiseFactor": 1.0,
+    "Curvature": 0.15,
+    "Thickness": 0.12,
+    "RibSpacing": 0.0,
+    "Plinth": 0.0,
+    "Rise": 1.4,
+    "Overhang": 0.6,
+    "Asymmetry": 0.0
+   },
+   "placement": {
+    "x": 22.0,
+    "y": 9.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "c-spine",
+   "type": "PlanCurve",
+   "name": "Vault spine",
+   "params": {
+    "Kind": "Points",
+    "Points": [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      4.0,
+      1.5
+     ],
+     [
+      8.0,
+      0.0
+     ]
+    ],
+    "Closed": false
+   },
+   "placement": {
+    "x": 18.0,
+    "y": -9.0
+   }
+  },
+  {
+   "id": "v-bent",
+   "type": "Vault",
+   "name": "Bent vault",
+   "params": {
+    "Base": "c-spine",
+    "Profile": "Semicircle",
+    "Span": 2.4,
+    "Rise": 1.2,
+    "Thickness": 0.2,
+    "VaultLength": 8.6,
+    "Ribs": 0,
+    "Plinth": 0.3
+   }
+  },
+  {
+   "id": "st-1",
+   "type": "Steps",
+   "name": "Garden steps",
+   "params": {
+    "From": [
+     10.0,
+     -4.0,
+     0.0
+    ],
+    "To": [
+     13.0,
+     -4.0,
+     1.02
+    ],
+    "Width": 1.2,
+    "Count": 0,
+    "Foundation": 0.3,
+    "Rise": 0.17,
+    "Run": 0.5
+   }
+  },
+  {
+   "id": "v-vault",
+   "type": "Vault",
+   "name": "Store vault",
+   "params": {
+    "Profile": "Semicircle",
+    "Span": 3.0,
+    "Rise": 1.5,
+    "Thickness": 0.2,
+    "VaultLength": 6.0,
+    "Ribs": 0,
+    "Plinth": 0.4
+   },
+   "placement": {
+    "x": 15.0,
+    "y": 0.0,
+    "rot": 90.0
+   }
+  },
+  {
+   "id": "l-leaf",
+   "type": "LeafShell",
+   "name": "Porch leaf",
+   "params": {
+    "Outline": "Pointed",
+    "Spine": 10.0,
+    "LeafSpan": 6.0,
+    "RidgeHeights": [
+     0.5,
+     3.0,
+     3.6,
+     0.5
+    ],
+    "Eave": 0.5,
+    "Thickness": 0.12,
+    "RibSpacing": 1.5,
+    "Plinth": 0.5,
+    "RibPattern": "Straight"
+   },
+   "placement": {
+    "x": 0.0,
+    "y": -9.0,
+    "rot": 15.0
+   }
+  },
+  {
+   "id": "x-pool",
+   "type": "Pool",
+   "name": "Pool",
+   "params": {
+    "Depth": 1.5
+   },
+   "placement": {
+    "x": 25.0,
+    "y": 2.0
+   }
+  }
+ ]
+}

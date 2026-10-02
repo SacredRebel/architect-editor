@@ -169,6 +169,17 @@ def surface_from_grid(grid):
 # Part.OffsetCurve edges make faces that OCCT's booleans treat as self-intersecting: a cut or
 # a common on them silently does nothing. Offsets here are exact lines and circles, or
 # B-splines interpolated through offset points at the base curve's own parameters.
+# An offset curve is a spline through exact offset points this far apart along the edge (and
+# never fewer than OFFSET_MIN_POINTS). Each point makes a span, and OCCT meshes a wall's face
+# span by span: with a point every 0.1 m a lobed wall of 32 m went to the map as 51,000
+# triangles, at 0.3 m as 25,000. Between its points the spline leaves the true offset by, as
+# measured at 1,500 places: 1.3 mm on that wall's tightest bend (0.5 m radius), 0.3 to 0.7 mm
+# on smooth curves through clicked points, nothing on an S-curve (0.07 mm, 0.09 mm and nothing
+# at 0.1 m). Lines and circles are offset exactly whatever this says.
+OFFSET_STEP_MM = 300.0
+OFFSET_MIN_POINTS = 64
+
+
 def offset_edge(edge, d_mm, normal, closed=False, samples=None):
     """The edge offset by d towards tangent x normal (the convention of Part.OffsetCurve)."""
     if abs(d_mm) < 1e-9:
@@ -187,7 +198,7 @@ def offset_edge(edge, d_mm, normal, closed=False, samples=None):
         if c2.Radius <= 0:
             raise ValueError("the offset passes the circle's centre")
         return Part.Edge(c2, u0, u1)
-    n = samples or max(64, int(math.ceil(edge.Length / 100.0)))  # a point every 0.1 m
+    n = samples or max(OFFSET_MIN_POINTS, int(math.ceil(edge.Length / OFFSET_STEP_MM)))
     params = [u0 + (u1 - u0) * i / n for i in range(n + 1)]
     pts = []
     for u in params[:-1] if closed else params:
@@ -219,11 +230,11 @@ def plan_edge(shape, step_m=0.2):
 
 
 class WirePath:
-    """A closed plan outline that has corners (a polygon, a star, a vesica, a seed of life),
-    walked by arc length. It answers what the wall kernels ask of an edge (Length, valueAt,
-    tangentAt, curvatureAt, with the parameter the distance along it in mm), so a wall keeps
-    the outline's true lines, arcs and corners; fitting one spline through a corner rounds it
-    and folds the wall's offsets there."""
+    """A plan outline that has corners (a polygon, a star, a vesica, a seed of life, a run of
+    straight walls), closed or open, walked by arc length. It answers what the wall kernels
+    ask of an edge (Length, valueAt, tangentAt, curvatureAt, with the parameter the distance
+    along it in mm), so a wall keeps the outline's true lines, arcs and corners; fitting one
+    spline through a corner rounds it and folds the wall's offsets there."""
 
     def __init__(self, wire):
         self.wire = wire
@@ -278,13 +289,13 @@ def has_corners(wire, degrees=2.0):
 
 
 def plan_path(shape, step_m=0.2):
-    """A base curve for a wall: plan_edge's one smooth edge, or, for a closed outline with
-    corners, the outline itself as a WirePath. Returns (edge or WirePath, closed)."""
+    """A base curve for a wall: plan_edge's one smooth edge, or, for an outline with corners
+    (closed or open), the outline itself as a WirePath. Returns (edge or WirePath, closed)."""
     edges = shape.Edges
     if len(edges) > 1:
         wire = Part.Wire(Part.__sortEdges__(edges))
-        if wire.isClosed() and has_corners(wire):
-            return WirePath(wire), True
+        if has_corners(wire):
+            return WirePath(wire), wire.isClosed()
     return plan_edge(shape, step_m)
 
 
@@ -296,6 +307,129 @@ def face_offset(face, d_mm):
     if not faces:
         raise ValueError("the offset of %.3f m left nothing" % (d_mm / MM))
     return max(faces, key=lambda f: f.Area)
+
+
+def _nearest_on(edge, point):
+    """(how far `point` is from an edge, mm along the edge from its first parameter to the
+    place on it nearest the point)."""
+    c = edge.Curve
+    u0, u1 = edge.FirstParameter, edge.LastParameter
+    u = c.parameter(point)
+    if c.isPeriodic():  # a circle answers in 0..2π, an arc's own range may lie beyond it
+        period = c.LastParameter - c.FirstParameter
+        while u < u0:
+            u += period
+        while u > u1:
+            u -= period
+    u = min(max(u, u0), u1)
+    return (edge.valueAt(u) - point).Length, (Part.Edge(c, u0, u).Length if u > u0 + 1e-12 else 0.0)
+
+
+def arc_length_at(edge, point):
+    """Metres along a plan edge (or a WirePath) to the point on it nearest `point`."""
+    if isinstance(edge, WirePath):  # an outline with corners: the nearest place on any of its runs
+        flat = App.Vector(point.x, point.y, edge.valueAt(0.0).z)
+        best = None
+        for e, forward, start in edge.parts:
+            gap, along = _nearest_on(e, flat)
+            if best is None or gap < best[0] - 1e-9:
+                best = (gap, start + (along if forward else e.Length - along))
+        return best[1] / MM
+    return _nearest_on(edge, App.Vector(point.x, point.y, edge.valueAt(edge.FirstParameter).z))[1] / MM
+
+
+def wire_ends(wire):
+    """An open wire's first point, its direction there, its last point and its direction there."""
+    edges = wire.OrderedEdges
+    out = []
+    for e, first in ((edges[0], True), (edges[-1], False)):
+        forward = e.Orientation != "Reversed"
+        u = e.FirstParameter if first == forward else e.LastParameter
+        t = e.tangentAt(u)
+        out += [e.valueAt(u), t if forward else t * -1.0]
+    return out
+
+
+def open_side(wire, d_left_mm):
+    """An open plan wire moved d to the left of its direction (to its right if negative), its
+    corners kept as corners. Its ends stand square to the wire's own ends."""
+    if abs(d_left_mm) < 1e-9:
+        return wire
+    start, tan, _end, _tan = wire_ends(wire)
+    left = Z.cross(App.Vector(tan.x, tan.y, 0))
+    left.normalize()
+    want = start + left * d_left_mm
+    best = None
+    for sign in (1.0, -1.0):  # which sign is "left" depends on the wire's own sense: try both, keep the one that starts there
+        try:
+            side = wire.makeOffset2D(sign * abs(d_left_mm), 2, False, True, False)
+        except Exception:
+            continue
+        gap = min((v.Point - want).Length for v in side.Vertexes) if side.Vertexes else float("inf")
+        if best is None or gap < best[0]:
+            best = (gap, side)
+    if best is None or best[0] > 0.01:
+        raise ValueError("a side %.3f m from the wall's line could not be drawn (a run shorter than the wall is thick?)" % (abs(d_left_mm) / MM))
+    return best[1]
+
+
+def open_band(path, d1_mm, d2_mm):
+    """The plan face between two sides of an open outline that has corners: a wall's plan,
+    mitred at each corner, cut square at both ends."""
+    a, b = open_side(path.wire, d1_mm), open_side(path.wire, d2_mm)
+    a0, _t, a1, _t = wire_ends(a)
+    b0, _t, b1, _t = wire_ends(b)
+    if (a0 - b0).Length + (a1 - b1).Length > (a0 - b1).Length + (a1 - b0).Length:  # the sides may run opposite ways
+        b0, b1 = b1, b0
+    caps = [Part.LineSegment(a0, b0).toShape(), Part.LineSegment(a1, b1).toShape()]
+    return Part.Face(Part.Wire(Part.__sortEdges__(list(a.Edges) + list(b.Edges) + caps)))
+
+
+def catmull_rom_spans(points, closed=False):
+    """The cubic spans of the smooth curve through points that plugin-eco's smooth wall and
+    the map's build mode both draw (a uniform Catmull-Rom spline: at each point the curve
+    runs parallel to the line between its two neighbours; an open curve's ends take the end
+    point twice). Each span from one point to the next as four Bézier poles."""
+    n = len(points)
+    spans = []
+    for i in range(n if closed else n - 1):
+        p0 = points[(i - 1) % n] if closed else points[max(i - 1, 0)]
+        p1, p2 = points[i], points[(i + 1) % n]
+        p3 = points[(i + 2) % n] if closed else points[min(i + 2, n - 1)]
+        spans.append((p1, p1 + (p2 - p0) * (1 / 6.0), p2 - (p3 - p1) * (1 / 6.0), p2))
+    return spans
+
+
+def catmull_rom(points, closed=False):
+    """That curve as one edge: an exact B-spline of its cubic spans (not a fit)."""
+    spans = catmull_rom_spans(points, closed)
+    poles = [spans[0][0]]
+    for _b0, b1, b2, b3 in spans:
+        poles += [b1, b2, b3]
+    c = Part.BSplineCurve()
+    c.buildFromPolesMultsKnots(poles, [4] + [3] * (len(spans) - 1) + [4], [float(k) for k in range(len(spans) + 1)], False, 3)
+    return c.toShape()
+
+
+def points_curve(points_m, smooth=True, closed=False):
+    """A plan curve through points [(x, y), ...] in metres: one smooth curve through them all
+    (the Catmull-Rom spline the map's build mode draws, exactly), or straight runs that keep
+    the points as corners. Points given twice in a row count once."""
+    pts = []
+    for x, y in points_m:
+        p = V(x, y)
+        if not pts or (p - pts[-1]).Length > 1e-6:
+            pts.append(p)
+    if len(pts) > 2 and (pts[0] - pts[-1]).Length <= 1e-6:  # the first point repeated at the end: closed
+        pts.pop()
+        closed = True
+    if len(pts) < 2:
+        raise ValueError("a curve needs at least two different points")
+    if len(pts) == 2:
+        return Part.Wire(Part.LineSegment(pts[0], pts[1]).toShape())
+    if not smooth:
+        return Part.makePolygon(pts + ([pts[0]] if closed else []))
+    return Part.Wire(catmull_rom(pts, closed))
 
 
 def arc_curve(radius_m, angle_deg, start_deg=0.0):
@@ -514,6 +648,20 @@ def wall_sides(align, thickness_mm):
     return -thickness_mm / 2, thickness_mm / 2
 
 
+# A shaped top is cut from the wall's prism by the solid above the top line (top_tool, cut_top).
+# The prism stands TOP_CLEAR_MM above the top line's highest point: where the two touched, the
+# cut failed. The solid reaches TOP_MARGIN_MM beyond the wall's two faces (it was the wall's
+# thickness and half a metre more, which folds over itself on a bend tighter than that) and
+# TOP_END_MM beyond an open wall's two ends.
+TOP_MARGIN_MM = 30.0
+TOP_END_MM = 50.0
+TOP_CLEAR_MM = 500.0
+# Stations added to the top line, and stations to a face, tried in turn until the cut holds
+# what the wall must hold; and how closely it must.
+TOP_TRIES = ((0, TOP_PIECE_STATIONS), (1, TOP_PIECE_STATIONS), (0, 6), (5, TOP_PIECE_STATIONS), (0, 12), (3, 6))
+TOP_TOLERANCE = 5.0e-4
+
+
 def top_height(kind, height_m, rise_m, waves, f):
     """Wall top above its base at a fraction f of the centreline's length (metres)."""
     if kind == "Arch":
@@ -523,6 +671,91 @@ def top_height(kind, height_m, rise_m, waves, f):
     if kind == "Slope":
         return height_m + rise_m * f
     return height_m
+
+
+def _across(edge, u):
+    """The point of the centreline at u and the horizontal unit vector to its left."""
+    tan = edge.tangentAt(u)
+    left = Z.cross(App.Vector(tan.x, tan.y, 0))
+    left.normalize()
+    return edge.valueAt(u), left
+
+
+def shaped_wall_volume(edge, d1, d2, band_area, below_mm, top, height_m, rise_m, waves, step_mm=25.0):
+    """What a wall with a shaped top must hold (mm3), counted without OCCT's booleans: thin
+    strips across the band between the centreline's normals, each as tall as the top line at
+    its middle, together scaled to the band's own area (which also covers a band whose offset
+    had its loops removed)."""
+    length = edge.Length
+    count = max(200, int(math.ceil(length / step_mm)))
+    area = volume = 0.0
+    before = None
+    for i in range(count + 1):
+        f = i / float(count)
+        p, left = _across(edge, edge.getParameterByLength(min(length, f * length)))
+        here = (p + left * d1, p + left * d2)
+        if before is not None:
+            # a quadrilateral's area: half the cross product of its diagonals
+            strip = abs(0.5 * (here[1] - before[0]).cross(before[1] - here[0]).z)
+            area += strip
+            volume += strip * (below_mm + top_height(top, height_m, rise_m, waves, f - 0.5 / count) * MM)
+        before = here
+    return volume * band_area / area
+
+
+def top_tool(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, count, piece):
+    """The solid above a shaped wall top: ruled faces through the top line at `count` stations
+    of arc length, `piece` stations to a face, pushed upwards.
+
+    Both top lines are split at the same parameters, so the ruled faces pair up and each stays
+    short enough for OCCT to measure (see pieces_of and TOP_PIECE_STATIONS)."""
+    length = edge.Length
+    places = [(_across(edge, u), f) for u, f in _stations(edge, closed, count)]
+    if not closed and TOP_END_MM > 0:
+        # past both ends, straight on: the solid's end faces must not lie in the wall's own
+        e = TOP_END_MM / length
+        (p0, l0), (p1, l1) = places[0][0], places[-1][0]
+        places.insert(0, ((p0 - l0.cross(Z) * TOP_END_MM, l0), -e))  # left x Z points along the wall
+        places.append(((p1 + l1.cross(Z) * TOP_END_MM, l1), 1.0 + e))
+    rows = [[], []]
+    for (p, left), f in places:
+        z = z0 + top_height(top, height_m, rise_m, waves, f) * MM
+        for row, d in zip(rows, (d1 - TOP_MARGIN_MM, d2 + TOP_MARGIN_MM)):
+            q = p + left * d
+            row.append(App.Vector(q.x, q.y, z))
+    params = [f for _place, f in places] + ([1.0] if closed else [])
+    n = max(1, int(math.ceil(len(places) / float(piece))))
+    cuts = [k / float(n) for k in range(1, n)]
+    e0, e1 = spline(rows[0], closed, params), spline(rows[1], closed, params)
+    w0 = Part.Wire(e0.split(cuts).Edges) if cuts else Part.Wire(e0)
+    w1 = Part.Wire(e1.split(cuts).Edges) if cuts else Part.Wire(e1)
+    return Part.makeRuledSurface(w0, w1).extrude(App.Vector(0, 0, BIG))
+
+
+def cut_top(prism, edge, closed, d1, d2, z0, band_area, below_mm, top, height_m, rise_m, waves):
+    """The wall's prism with everything above its shaped top removed.
+
+    OCCT's cut can fail without a word: it hands the prism back whole, or cut under some of
+    the faces only, and still calls it valid (a smooth wall through five points stood 8 % too
+    full). It did so where the top line touched the prism's flat top at its crests: 24 of 120
+    trial walls, none since the prism stands TOP_CLEAR_MM above the top line. The cutting
+    solid also runs past the wall's ends, so that its end faces do not lie in the wall's own
+    (a precaution: on its own it changed none of the 120). And whatever comes back is held
+    against what the wall must hold: other stations are tried where it does not agree, and a
+    wall that never agrees is refused rather than drawn."""
+    want = shaped_wall_volume(edge, d1, d2, band_area, below_mm, top, height_m, rise_m, waves)
+    count = max(48, int(math.ceil(edge.Length / (0.25 * MM))))
+    seen = []
+    for extra, piece in TOP_TRIES:
+        try:
+            cut = solid_of(prism.cut(top_tool(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, count + extra, piece)))
+        except (Part.OCCError, ValueError) as exc:
+            seen.append(str(exc))
+            continue
+        if cut.isValid() and len(cut.Solids) == 1 and abs(cut.Volume / want - 1.0) < TOP_TOLERANCE:
+            return cut
+        seen.append("%+.2f %%%s" % (100.0 * (cut.Volume / want - 1.0), "" if cut.isValid() else ", not valid"))
+    raise ValueError("the wall's %s top could not be cut (against what it must hold: %s)" % (top.lower(), "; ".join(seen)))
 
 
 def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", top_rise_m=0.0,
@@ -539,11 +772,14 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     d1, d2 = wall_sides(align, t)
     if isinstance(edge, WirePath):
         # an outline with corners: the band between its two true offsets, corners kept
-        face = Part.Face(edge.wire)
-        sgn = 1.0 if is_ccw(edge) else -1.0
-        fa, fb = face_offset(face, -sgn * d1), face_offset(face, -sgn * d2)
-        big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
-        band = face_of(big.cut(small))
+        if edge.isClosed():
+            face = Part.Face(edge.wire)
+            sgn = 1.0 if is_ccw(edge) else -1.0
+            fa, fb = face_offset(face, -sgn * d1), face_offset(face, -sgn * d2)
+            big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
+            band = face_of(big.cut(small))
+        else:
+            band = open_band(edge, d1, d2)
         if top != "Flat" and abs(top_rise_m) > 1e-9:
             App.Console.PrintWarning("Organic: a shaped wall top needs a smooth base curve; this one has corners, so its top is flat\n")
             top = "Flat"
@@ -563,31 +799,12 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
         pb0, pb1 = b.valueAt(b.FirstParameter), b.valueAt(b.LastParameter)
         band = Part.Face(wire_of([a, Part.LineSegment(pa1, pb1).toShape(), b, Part.LineSegment(pb0, pa0).toShape()]))
     band.translate(App.Vector(0, 0, -foundation_m * MM))
-    peak = max(height_m, height_m + top_rise_m) if top != "Flat" else height_m
-    wall = band.extrude(App.Vector(0, 0, (peak + foundation_m) * MM))
     if top != "Flat" and abs(top_rise_m) > 1e-9:
-        margin = t + 0.5 * MM
-        count = max(48, int(math.ceil(edge.Length / (0.25 * MM))))
-        st = _stations(edge, closed, count)
-        rows = [[], []]
-        for u, f in st:
-            p, tan = edge.valueAt(u), edge.tangentAt(u)
-            left = Z.cross(App.Vector(tan.x, tan.y, 0))
-            left.normalize()
-            z = z0 + top_height(top, height_m, top_rise_m, top_waves, f) * MM
-            for row, d in zip(rows, (d1 - margin, d2 + margin)):
-                q = p + left * d
-                row.append(App.Vector(q.x, q.y, z))
-        params = [f for _u, f in st] + ([1.0] if closed else [])
-        # both top lines split at the same parameters, so the ruled faces pair up and each
-        # stays short enough for OCCT to measure (see pieces_of and TOP_PIECE_STATIONS)
-        n = max(1, int(math.ceil(len(st) / float(TOP_PIECE_STATIONS))))
-        cuts = [k / n for k in range(1, n)]
-        e0, e1 = spline(rows[0], closed, params), spline(rows[1], closed, params)
-        w0 = Part.Wire(e0.split(cuts).Edges) if cuts else Part.Wire(e0)
-        w1 = Part.Wire(e1.split(cuts).Edges) if cuts else Part.Wire(e1)
-        top_face = Part.makeRuledSurface(w0, w1)
-        wall = solid_of(wall.cut(top_face.extrude(App.Vector(0, 0, BIG))))
+        peak = max(height_m, height_m + top_rise_m)
+        prism = band.extrude(App.Vector(0, 0, (peak + foundation_m) * MM + TOP_CLEAR_MM))
+        wall = cut_top(prism, edge, closed, d1, d2, z0, band.Area, foundation_m * MM, top, height_m, top_rise_m, top_waves)
+    else:
+        wall = band.extrude(App.Vector(0, 0, (height_m + foundation_m) * MM))
     for o in openings:
         wall = solid_of(wall.cut(opening_void(edge, closed, t, d1, d2, **o)))
     wall.translate(App.Vector(0, 0, base_z_m * MM))
@@ -764,6 +981,94 @@ def vault_shape(profile, span_m, rise_m, thickness_m, length_m, ribs=0, rib_widt
     return refined(solid)
 
 
+VAULT_STATION_MM = 250.0  # a vault on a curve is lofted through its arch at stations no further apart than this
+
+
+def vault_section(profile, span_m, rise_m, thickness_m, plinth_m=0.0):
+    """A vault's cross-section as one face in the XZ plane: the arch's band and, with a plinth,
+    a stem under each springing."""
+    band = arch_profile_face(profile, span_m, rise_m, thickness_m)
+    if plinth_m <= 0:
+        return band
+    # the band's outline with each foot (an edge on Z = 0) replaced by three: down, across, up
+    down = Z * (-plinth_m * MM)
+    edges = []
+    for e in band.OuterWire.Edges:
+        ends = [v.Point for v in e.Vertexes]
+        middle = e.valueAt((e.FirstParameter + e.LastParameter) / 2)
+        if len(ends) == 2 and all(abs(p.z) < 1e-6 for p in ends + [middle]):  # a foot lies on Z = 0 (an arch only ends there)
+            a, b = ends
+            edges += [Part.LineSegment(a, a + down).toShape(), Part.LineSegment(a + down, b + down).toShape(), Part.LineSegment(b + down, b).toShape()]
+        else:
+            edges.append(e)
+    return Part.Face(Part.Wire(Part.__sortEdges__(edges)))
+
+
+def vault_on_curve(profile, span_m, rise_m, thickness_m, spine, plinth_m=0.0):
+    """A vault whose barrel follows an open plan curve (the map's vault on a drawn spine): its
+    arch, square to the curve at every place, carried along it; springing from the curve's own
+    height, with a plinth under its springings. No ribs.
+
+    The solid is lofted through the arch at stations along the curve. A section square to a
+    plan curve sweeps its own area times the length its centroid travels, and the arch's
+    centroid lies on the curve: the solid must hold area x length, and is refused when it does
+    not (a curve that bends tighter than half the vault's width folds it)."""
+    section = vault_section(profile, span_m, rise_m, thickness_m, plinth_m)
+    wire = section.OuterWire
+    length = spine.Length
+    count = max(8, int(math.ceil(length / VAULT_STATION_MM)))
+    sections = []
+    for i in range(count + 1):
+        u = spine.getParameterByLength(min(length, length * i / count))
+        p, tan = spine.valueAt(u), spine.tangentAt(u)
+        tan = App.Vector(tan.x, tan.y, 0)
+        tan.normalize()
+        right = tan.cross(Z)  # the section's x: to the right of the way the curve runs (a straight vault along +Y: +X)
+        m = App.Matrix(right.x, tan.x, 0, p.x, right.y, tan.y, 0, p.y, 0, 0, 1, p.z, 0, 0, 0, 1)
+        at = wire.copy()
+        at.transformShape(m, True)  # into the geometry
+        sections.append(at)
+    solid = solid_of(Part.makeLoft(sections, True, False))
+    want = section.Area * length
+    if not solid.isValid() or abs(solid.Volume / want - 1.0) > 0.005:
+        raise ValueError("the vault could not be carried along this curve (it holds %.2f %% off its section's area times the curve's length%s): "
+                         "the curve bends tighter than the vault is wide" % (100.0 * (solid.Volume / want - 1.0), "" if solid.isValid() else ", and is not valid"))
+    return refined(solid)
+
+
+def steps_shape(low_m, high_m, width_m=1.2, count=0, foundation_m=0.3):
+    """A flight of steps between two points (x, y, z in metres), as the map's build mode makes
+    one: `count` treads from the lower point to the higher (0: as many as the climb needs at
+    0.17 m each), the last tread at the higher point's height, every tread a block width_m
+    across that stands on the ground foundation_m below the lower point. One solid.
+    Returns (solid, count, each step's rise, each tread's run)."""
+    low, high = tuple(float(c) for c in low_m), tuple(float(c) for c in high_m)
+    if high[2] < low[2]:
+        low, high = high, low
+    climb = high[2] - low[2]
+    run_all = math.hypot(high[0] - low[0], high[1] - low[1])
+    if run_all < 0.05:
+        raise ValueError("the two ends of the steps stand over each other: they need a run")
+    n = int(count) if int(count) >= 1 else max(1, int(math.ceil(abs(climb) / 0.17 - 0.0001)))
+    rise, run = climb / n, run_all / n
+    width = max(0.3, width_m)
+    bottom = low[2] - max(0.05, foundation_m)
+    along = App.Vector(high[0] - low[0], high[1] - low[1], 0) * (1.0 / run_all)
+    left = Z.cross(along)
+    side = [(0.0, bottom), (run_all, bottom)]
+    for i in reversed(range(n)):  # down the flight: each riser, then its tread
+        top = low[2] + rise * (i + 1)
+        side += [(run * (i + 1), top), (run * i, top)]
+    outline = []
+    for q in side:  # a flight with no climb has risers of no height: the same point twice
+        if not outline or math.hypot(q[0] - outline[-1][0], q[1] - outline[-1][1]) > 1e-9:
+            outline.append(q)
+    corner = App.Vector(low[0], low[1], 0) * MM - left * (width / 2 * MM)
+    pts = [corner + along * (s * MM) + Z * (z * MM) for s, z in outline]
+    solid = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(left * (width * MM))
+    return solid_of(solid), n, rise, run
+
+
 def thrust_line_ok(profile, span_m, rise_m, thickness_m):
     """plugin-hagia-sophia's Poleni check: a catenary through the ring's centreline springings
     and crown stays within its middle third (max normal offset <= thickness / 6)."""
@@ -817,43 +1122,83 @@ def dome_outer_profile(profile, radius_m, rise_m, samples=96):
     raise ValueError(profile)
 
 
-def dome_shape(profile, radius_m, rise_m, thickness_m, oculus_m=0.0):
+DOME_WEDGES = 8  # a stretched dome is made of this many wedges about its axis (see dome_shape)
+
+
+def dome_band(profile, radius_m, rise_m, thickness_m, oculus_m=0.0):
+    """A dome's section in the XZ plane, on the side x >= 0 (and outside the opening at its
+    crown): what is turned about Z. A sphere's is the ring between two circles about one
+    centre; the other meridians' the band between the meridian and its inward offset."""
+    t = thickness_m
+    if profile == "Sphere":
+        rho = (radius_m ** 2 + rise_m ** 2) / (2 * rise_m)
+        cz = rise_m - rho
+        ring = Part.Face(Part.Wire(Part.makeCircle(rho * MM, V(0, 0, cz), Y))).cut(Part.Face(Part.Wire(Part.makeCircle((rho - t) * MM, V(0, 0, cz), Y))))
+        return face_of(ring.common(half_plane_xz(0.0, oculus_m * MM)))
+    pts = dome_outer_profile(profile, radius_m, rise_m)
+    (r0, z0), (r1, z1) = pts[0], pts[1]
+    l0 = math.hypot(r1 - r0, z1 - z0)
+    ext = 2 * t + 0.1
+    pts = [(r0 - (r1 - r0) / l0 * ext, z0 - (z1 - z0) / l0 * ext)] + pts
+    outer = spline([V(r, 0, z) for r, z in pts])
+    inner = offset_edge(outer, t * MM, Y)
+    i0, i1 = inner.valueAt(inner.FirstParameter), inner.valueAt(inner.LastParameter)
+    o0, o1 = outer.valueAt(outer.FirstParameter), outer.valueAt(outer.LastParameter)
+    edges = [outer, Part.LineSegment(o1, App.Vector(0, 0, i1.z)).toShape()]
+    if abs(i1.x) > 1e-6:
+        edges.append(Part.LineSegment(App.Vector(0, 0, i1.z), i1).toShape())
+    edges += [inner, Part.LineSegment(i0, o0).toShape()]
+    return face_of(Part.Face(wire_of(edges)).common(half_plane_xz(0.0, oculus_m * MM)))
+
+
+def dome_shape(profile, radius_m, rise_m, thickness_m, oculus_m=0.0, stretch_x=1.0, stretch_y=1.0):
     """A dome shell standing on Z = 0, base circle radius R, crown at H.
 
     Sphere: a spherical cap less its concentric inner cap (exact). Other meridians: the band
-    between the outer meridian and its inward offset, revolved about Z.
+    between the outer meridian and its inward offset, revolved about Z. stretch_x and stretch_y
+    (the map's oval dome: 1.2 and 0.75 on an oval plan) stretch the round shell in plan, its
+    opening with it; its thickness, measured across, stretches too.
     """
     t = thickness_m
+    if abs(stretch_x - 1.0) > 1e-9 or abs(stretch_y - 1.0) > 1e-9:
+        if stretch_x <= 0 or stretch_y <= 0:
+            raise ValueError("a dome is stretched by a number above 0")
+        # Stretched whole, a dome is the right shape with the wrong number: OCCT read a cap
+        # shell's volume 1.08 % too large (its triangles enclosed the right one), because it
+        # measures a face by a fixed number of points. Wedges cut from the whole dome and then
+        # stretched came out not valid. So its section is turned into wedges, each is
+        # stretched, and they are joined: one valid solid that reads the closed form to five
+        # decimals.
+        m = App.Matrix()
+        m.scale(stretch_x, stretch_y, 1.0)
+        band = dome_band(profile, radius_m, rise_m, t, oculus_m)
+        wedges = []
+        for k in range(DOME_WEDGES):
+            wedge = band.revolve(App.Vector(0, 0, 0), Z, 360.0 / DOME_WEDGES)
+            wedge.rotate(App.Vector(0, 0, 0), Z, 360.0 * k / DOME_WEDGES)
+            wedges.append(wedge.transformGeometry(m))
+        shell = solid_of(wedges[0].fuse(wedges[1:]))
+        if not shell.isValid() or len(shell.Solids) != 1:
+            raise ValueError("the stretched dome is not one valid solid")
+        return shell
     if profile == "Sphere":
         rho = (radius_m ** 2 + rise_m ** 2) / (2 * rise_m)
         centre = V(0, 0, rise_m - rho)
         keep = Part.makeBox(4 * rho * MM, 4 * rho * MM, (rise_m + 1) * MM, V(-2 * rho, -2 * rho, 0))
         shell = Part.makeSphere(rho * MM, centre).common(keep).cut(Part.makeSphere((rho - t) * MM, centre))
     else:
-        pts = dome_outer_profile(profile, radius_m, rise_m)
-        (r0, z0), (r1, z1) = pts[0], pts[1]
-        l0 = math.hypot(r1 - r0, z1 - z0)
-        ext = 2 * t + 0.1
-        pts = [(r0 - (r1 - r0) / l0 * ext, z0 - (z1 - z0) / l0 * ext)] + pts
-        outer = spline([V(r, 0, z) for r, z in pts])
-        inner = offset_edge(outer, t * MM, Y)
-        i0, i1 = inner.valueAt(inner.FirstParameter), inner.valueAt(inner.LastParameter)
-        o0, o1 = outer.valueAt(outer.FirstParameter), outer.valueAt(outer.LastParameter)
-        edges = [outer, Part.LineSegment(o1, App.Vector(0, 0, i1.z)).toShape()]
-        if abs(i1.x) > 1e-6:
-            edges.append(Part.LineSegment(App.Vector(0, 0, i1.z), i1).toShape())
-        edges += [inner, Part.LineSegment(i0, o0).toShape()]
-        band = face_of(Part.Face(wire_of(edges)).common(half_plane_xz(0.0, 0.0)))
-        shell = band.revolve(App.Vector(0, 0, 0), Z, 360)
+        shell = dome_band(profile, radius_m, rise_m, t).revolve(App.Vector(0, 0, 0), Z, 360)
     if oculus_m > 0:
         shell = shell.cut(Part.makeCylinder(oculus_m * MM, (rise_m + t + 2) * MM, V(0, 0, -1)))
     return refined(shell)
 
 
 # ---------------------------------------------------------------- leaf shells (plugin-eco eco-shell)
-def leaf_plan(spine_m, span_m, outline="Ellipse"):
+def leaf_plan(spine_m, span_m, outline="Ellipse", asymmetry=1.0):
     """plugin-eco's leafShellPlan: an ellipse outline L/2 x W/2 (or a pointed leaf) and the
-    ridge (-L/2, 0), (-L/6, 0.2 W/13), (L/6, -0.15 W/13), (L/2, 0)."""
+    ridge (-L/2, 0), (-L/6, 0.2 W/13), (L/6, -0.15 W/13), (L/2, 0). asymmetry (the map's own
+    number) scales how far the ridge's two inner points sit off the spine: 1 is plugin-eco's
+    leaf, 0 a straight midrib and two equal halves."""
     hl, hw = max(2.0, spine_m) / 2, max(1.0, span_m) / 2
     if outline == "Pointed":
         pts = []
@@ -864,7 +1209,7 @@ def leaf_plan(spine_m, span_m, outline="Ellipse"):
             pts.append((x, hw * math.copysign(abs(math.sin(math.pi * u ** 0.8)) ** 0.8, math.sin(a))))
     else:
         pts = [(hl * math.cos(2 * math.pi * i / 64), hw * math.sin(2 * math.pi * i / 64)) for i in range(64)]
-    ridge = [(-hl, 0.0), (-hl / 3, 0.2 * (2 * hw / 13)), (hl / 3, -0.15 * (2 * hw / 13)), (hl, 0.0)]
+    ridge = [(-hl, 0.0), (-hl / 3, 0.2 * (2 * hw / 13) * asymmetry), (hl / 3, -0.15 * (2 * hw / 13) * asymmetry), (hl, 0.0)]
     return pts, ridge
 
 
@@ -927,7 +1272,7 @@ def smooth_ridge(ridge, heights, per_segment=12):
 def leaf_shell_shape(spine_m=26.0, span_m=13.0, ridge_heights=(3.0, 7.2, 9.8, 3.0), eave_m=3.0,
                      rise=1.0, curvature=0.15, thickness_m=0.12, rib_spacing_m=2.5, rib_depth_m=0.1,
                      rib_width_m=0.12, outline="Ellipse", plinth_m=0.0, foot_m=0.0,
-                     veins=False, vein_sources=180, vein_seed=1):
+                     veins=False, vein_sources=180, vein_seed=1, asymmetry=1.0):
     """plugin-eco's leaf shell roof as a solid: its height field (eco_shell_height) fitted with a
     B-spline surface, thickened by a true normal offset and cut to the outline. Heights are
     above the object's base. Ribs, every rib_spacing along the spine, are deeper strips that
@@ -936,7 +1281,7 @@ def leaf_shell_shape(spine_m=26.0, span_m=13.0, ridge_heights=(3.0, 7.2, 9.8, 3.
     With a plinth, each tip of the leaf stands on a footing: the leaf's own plan within foot_m
     of the tip, solid from inside the shell down to plinth_m below the base, so a shell whose
     tips come down to the ground reaches it."""
-    pts, ridge = leaf_plan(spine_m, span_m, outline)
+    pts, ridge = leaf_plan(spine_m, span_m, outline, asymmetry)
     heights = [eave_m + (h - eave_m) * (rise if rise > 0 else 1.0) for h in ridge_heights]
     ridge, heights = smooth_ridge(ridge, heights)
     hl, hw = max(2.0, spine_m) / 2, max(1.0, span_m) / 2
@@ -1034,8 +1379,13 @@ def organic_roof_shape(ring_edge, eaves_m, rise_m, overhang_m, thickness_m):
     z0 = ring_edge.valueAt(ring_edge.FirstParameter).z / MM
     ring_pts = [(p.x / MM, p.y / MM) for p in ring_edge.discretize(Number=241)[:-1]]
     pole = pole_of_inaccessibility(ring_pts)
-    eave = eave_ring(ring_pts[::2], pole, overhang_m)
-    eave_face = Part.Face(wire_of(spline([V(x, y, z0) for x, y in eave], closed=True)))
+    if isinstance(ring_edge, WirePath):
+        # an outline with corners: the eave runs parallel to it, the corners kept (a spline
+        # round them makes the cut below ten times slower, and rounds what is square)
+        eave_face = face_offset(Part.Face(ring_edge.wire), overhang_m * MM)
+    else:
+        eave = eave_ring(ring_pts[::2], pole, overhang_m)
+        eave_face = Part.Face(wire_of(spline([V(x, y, z0) for x, y in eave], closed=True)))
     bb = eave_face.BoundBox
     nx = ny = 40
     grid = []
@@ -1052,8 +1402,13 @@ def organic_roof_shape(ring_edge, eaves_m, rise_m, overhang_m, thickness_m):
 
 
 def slab_shape(ring_edge, thickness_m, inset_m=0.0):
-    """A floor slab filling a closed centreline (less inset), thickness_m down from its height."""
-    return solid_of(region_offset(ring_edge, -inset_m * MM).extrude(App.Vector(0, 0, -thickness_m * MM)))
+    """A floor slab filling a closed centreline (less inset), thickness_m down from its height.
+    An outline with corners (a WirePath) keeps them."""
+    if isinstance(ring_edge, WirePath):
+        face = face_offset(Part.Face(ring_edge.wire), -inset_m * MM)
+    else:
+        face = region_offset(ring_edge, -inset_m * MM)
+    return solid_of(face.extrude(App.Vector(0, 0, -thickness_m * MM)))
 
 
 # ---------------------------------------------------------------- minimal surfaces

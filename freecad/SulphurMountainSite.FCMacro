@@ -40,6 +40,7 @@ import datetime
 import json
 import math
 import os
+import pathlib
 import struct
 import time
 import urllib.request
@@ -56,7 +57,10 @@ except ImportError:
 if not App.GuiUp:  # freecadcmd has the module, without a window behind it
     Gui = None
 
-PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
+# The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
+# first (the dataset of record), its published copy only where that folder is not there.
+LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
 OUT = os.environ.get("SITE_FCSTD") or os.path.join(
     os.path.expanduser("~"), "Documents", "SulphurMountain", "SulphurMountain-site.FCStd"
 )
@@ -86,8 +90,9 @@ def fetch(path, binary=False, attempts=3):
             with urllib.request.urlopen(req, timeout=60) as r:
                 data = r.read()
             break
-        except OSError as exc:  # timeouts and dropped connections are retried; a 4xx answer is final
-            if attempt == attempts - 1 or getattr(exc, "code", 500) < 500:
+        except OSError as exc:  # timeouts and dropped connections are retried; a 4xx answer is final,
+            # and so is anything read from a folder on this PC: a file that is not there will not come
+            if url.startswith("file:") or attempt == attempts - 1 or getattr(exc, "code", 500) < 500:
                 raise
             App.Console.PrintWarning("site: %s failed (%s), retrying\n" % (url, exc))
             time.sleep(2 + 3 * attempt)

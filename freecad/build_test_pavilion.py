@@ -14,10 +14,19 @@ Runs inside FreeCAD 1.1 (the window through the FreeCAD MCP connector, or freeca
     build()
 
 Where it stands: SPOT metres east and north of the anchor (C:\\Playground\\BRAIN.md §3), its
-level (z = 0) on the map's own ground there, turned TURN degrees clockwise. The spot is the flattest
-one on the parcel where a footprint of 11 m radius stays 3 m clear of the roads and of the
-access easement, 6 m clear of the existing buildings and 6.1 m inside the surveyed boundary;
-check_organic measures the building's real footprint against the map's files and the land pack.
+level (z = 0) on the map's own ground there, turned TURN degrees clockwise.
+
+The spot is taken from the map's own build envelope (lane C's exchange\\godot\\
+build-envelope.geojson: the county's setbacks, the oak protection zones, the steep ground,
+the easement, the roads, the existing buildings): one of the places where a disc of the
+pavilion's reach (11.5 m) lies inside the buildable area, clear of every no-building polygon
+and of the house zone, and among those one of the flattest in the map's terrain (the ground
+rises and falls 0.60 m under a disc of 9 m, and 0.19 m either side of the level under the
+room, so the floor clears it and each door has a step). Until the night of 1 Oct it stood
+112 m west and 31 m north: clear of the road, the easement and the buildings by A's own
+reading of the terrain, and, as the envelope showed once it was read, with two thirds of
+its footprint under protected oaks. check_organic holds the building against the envelope,
+the map's files and the land pack.
 """
 
 import os
@@ -33,7 +42,7 @@ import organic_export as ox  # noqa: E402
 import organic_objects as oo  # noqa: E402
 
 MM = 1000.0
-SPOT = (-112.0, 31.0)  # metres east, north of the anchor
+SPOT = (-89.0, 24.0)   # metres east, north of the anchor
 TURN = 30.0            # degrees clockwise seen from above: the spine points to bearing 120°
 RISER = 0.18           # metres: the step is one riser above the ground, the floor two
 BELOW = 0.44           # metres the floor and the steps reach below the building's level, into the ground
@@ -107,7 +116,7 @@ def build(spot=SPOT, turn=TURN, design=DESIGN, send=True, out_dir=None):
     v = place(oo.make(oo.Vault, "Vault", "Entrance vault", doc), App.Placement(App.Vector(0, -2.1 * MM, 0), App.Rotation()))
     v.Profile, v.Span, v.Rise, v.Thickness, v.VaultLength = "Catenary", 2.8 * MM, 3.0 * MM, 0.2 * MM, 5.0 * MM
     v.Ribs, v.RibWidth, v.RibDepth = 3, 0.25 * MM, 0.12 * MM
-    v.Plinth = 0.6 * MM  # the ground falls 0.15 m under its outer end: its springings are carried down into it
+    v.Plinth = 0.6 * MM  # the ground lies up to 0.10 m below its springings: they are carried down into it
     # 6. the floor, two risers up inside the room, and a round step at each door
     rings = []
     for label, radius, x, y, top in (("Floor", 4.0, 0.0, 0.0, 2 * RISER), ("Entrance step", 1.2, 0.0, -5.0, RISER), ("Garden step", 0.9, 0.0, 5.35, RISER)):

@@ -9,12 +9,16 @@ Sources. The constants, the two-circle figure, root rectangles, the pentagon, th
 the regular solids' vertices come from this repository's plugin-geometry (MIT); its turned
 squares, Fibonacci squares and circle lattice are wrong there and are built correctly here.
 The sun's position is plugin-eco's NOAA port (MIT). The rising and setting azimuths on the
-site are the land pack's own (sky-events.json), with an astronomical fallback.
+site are the land pack's own (sky-events.json, read from the pack's folder on this PC). The
+sun worked out here is the second derivation the checks hold the pack's numbers against; the
+sun rose falls back on it only when the pack cannot be read at all, and says so.
 """
 
 import datetime
 import json
 import math
+import os
+import pathlib
 import urllib.request
 
 import FreeCAD as App
@@ -28,7 +32,24 @@ Z = og.Z
 PHI = (1 + 5 ** 0.5) / 2
 SQRT2, SQRT3, SQRT5 = 2 ** 0.5, 3 ** 0.5, 5 ** 0.5
 FOOT = 0.3048  # the default module: the pack's construction grid is 30 of these (9.144 m)
-PACK = "https://sulphur-mountain-world.vercel.app/"
+# The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is the
+# dataset of record and is read first; its published copy only where that folder is not there.
+LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+WEB_PACK = "https://sulphur-mountain-world.vercel.app/"
+
+
+def pack_address():
+    """Where the land pack is read from: SITE_PACK_URL when it is set, else its folder on this
+    PC, else its published copy."""
+    asked = os.environ.get("SITE_PACK_URL")
+    if asked:
+        return asked if asked.endswith("/") else asked + "/"
+    if os.path.isdir(LOCAL_PACK):
+        return pathlib.Path(LOCAL_PACK).as_uri() + "/"
+    return WEB_PACK
+
+
+PACK = pack_address()
 
 # ---------------------------------------------------------------- proportion systems
 # Each ratio is short : long, as a number <= 1.
@@ -484,9 +505,9 @@ def computed_azimuths(lat, lng, year, days=None):
     return {key: azimuths_on(lat, lng, days[key]) for key, _label in EVENTS}
 
 
-def pack_sky(url=PACK):
-    """The land pack's sky-events.json."""
-    req = urllib.request.Request(url + "sky-events.json", headers={"User-Agent": "Organic-workbench"})
+def pack_sky(url=None):
+    """The land pack's sky-events.json (from where pack_address says)."""
+    req = urllib.request.Request((url or pack_address()) + "sky-events.json", headers={"User-Agent": "Organic-workbench"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read().decode("utf-8"))
 

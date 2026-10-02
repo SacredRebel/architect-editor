@@ -3,8 +3,12 @@
 
 Copies freecad/Organic into FreeCAD 1.1's user Mod folder (%APPDATA%\\FreeCAD\\v1-1\\Mod\\Organic;
 FreeCAD 1.1 reads add-ons from the versioned folder) and loads it into the running FreeCAD, so the
-Organic toolbar is there at once and on every start after. Run it from Macro ▸ Macros…, or
-through the FreeCAD MCP connector. The repository stays the source; the Mod copy is replaced.
+toolbars are there at once and on every start after. Run it from Macro ▸ Macros…, or through the
+FreeCAD MCP connector. The repository stays the source; the Mod copy is replaced.
+
+In a FreeCAD that already has the workbench, this is an update in place: the modules are loaded
+again, every button runs the new code and shows its new icon and words, and the toolbars are
+laid out again when a button was added or taken away. No restart is needed.
 """
 
 import importlib
@@ -20,6 +24,66 @@ except NameError:  # run without a file name
     HERE = os.environ.get("ORGANIC_REPO_FREECAD", r"C:\Playground\Architect-editor\freecad")
 SRC = os.path.join(HERE, "Organic")
 DST = os.path.join(App.getUserAppDataDir(), "Mod", "Organic")
+MODULES = ("organic_geom", "organic_sacred", "organic_biomimetic", "organic_objects", "organic_export", "organic_import", "organic_commands")
+
+
+def refresh_window():
+    """Bring a running FreeCAD's toolbars up to the files: the buttons' icons and words, and
+    the toolbars themselves when their buttons changed."""
+    import FreeCADGui as Gui
+    from PySide import QtGui
+
+    commands = sys.modules.get("organic_commands")
+    if commands is None:  # the workbench was never opened in this FreeCAD: it loads the new files when it is
+        if "OrganicWorkbench" not in Gui.listWorkbenches():
+            with open(os.path.join(DST, "InitGui.py"), encoding="utf-8") as fh:
+                exec(compile(fh.read(), os.path.join(DST, "InitGui.py"), "exec"), {"__name__": "OrganicInitGui"})
+        Gui.activateWorkbench("OrganicWorkbench")
+        return
+    # the designs that are open: their objects are given the new code too (and any new property)
+    objects = sys.modules.get("organic_objects")
+    for doc in App.listDocuments().values():
+        for obj in doc.Objects:
+            proxy = getattr(obj, "Proxy", None)
+            cls = getattr(objects, type(proxy).__name__, None) if hasattr(proxy, "ifc_type") else None
+            if cls is not None:
+                waiting = "Touched" in obj.State
+                proxy.__class__ = cls
+                proxy.setup(obj)
+                # FreeCAD keeps a proxy's methods as it found them when the proxy was set: set
+                # again, it finds the new ones (else the old execute would go on running)
+                obj.Proxy = proxy
+                if not waiting:
+                    obj.purgeTouched()  # a new property with its default changes nothing: no need to build the solid again
+            view = getattr(getattr(obj, "ViewObject", None), "Proxy", None)
+            if type(view).__name__ == "ViewProviderOrganic":
+                view.__class__ = objects.ViewProviderOrganic
+                obj.ViewObject.Proxy = view
+    for name, command in commands.ALL.items():
+        res = command.GetResources()
+        registered = Gui.Command.get(name)
+        for action in (registered.getAction() if registered is not None else []):
+            action.setIcon(QtGui.QIcon(res["Pixmap"]))
+            action.setText(res["MenuText"])
+            action.setToolTip(res["ToolTip"])
+            action.setStatusTip(res["ToolTip"])
+    wanted = {"Organic": commands.NAMES, "Sacred": commands.SACRED_NAMES, "Biomimetic": commands.BIO_NAMES}
+    shown = {}
+    if "OrganicWorkbench" in Gui.listWorkbenches():
+        try:
+            shown = Gui.getWorkbench("OrganicWorkbench").getToolbarItems()
+        except Exception:
+            shown = {}
+    if any(list(shown.get(title, [])) != list(names) for title, names in wanted.items()):
+        # a button was added or taken away: the workbench is set up again from the new files
+        if "OrganicWorkbench" in Gui.listWorkbenches():
+            if Gui.activeWorkbench().name() == "OrganicWorkbench":
+                other = next(w for w in ("NoneWorkbench", "PartWorkbench", "StartWorkbench") if w in Gui.listWorkbenches())
+                Gui.activateWorkbench(other)
+            Gui.removeWorkbench("OrganicWorkbench")
+        with open(os.path.join(DST, "InitGui.py"), encoding="utf-8") as fh:
+            exec(compile(fh.read(), os.path.join(DST, "InitGui.py"), "exec"), {"__name__": "OrganicInitGui"})
+    Gui.activateWorkbench("OrganicWorkbench")
 
 
 def install():
@@ -30,16 +94,11 @@ def install():
     shutil.copytree(SRC, DST, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     if DST not in sys.path:
         sys.path.append(DST)
-    for name in ("organic_geom", "organic_sacred", "organic_biomimetic", "organic_objects", "organic_export", "organic_commands"):
-        if name in sys.modules:  # in the order they build on each other
+    for name in MODULES:  # in the order they build on each other
+        if name in sys.modules:
             importlib.reload(sys.modules[name])
     if App.GuiUp:
-        import FreeCADGui as Gui
-
-        if "OrganicWorkbench" not in Gui.listWorkbenches():
-            with open(os.path.join(DST, "InitGui.py"), encoding="utf-8") as fh:
-                exec(compile(fh.read(), os.path.join(DST, "InitGui.py"), "exec"), {"__name__": "OrganicInitGui"})
-        Gui.activateWorkbench("OrganicWorkbench")
+        refresh_window()
     App.Console.PrintMessage("Organic workbench installed in %s\n" % DST)
     return DST
 
