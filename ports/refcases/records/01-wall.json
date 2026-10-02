@@ -1,0 +1,31 @@
+{
+ "format": "built/1",
+ "id": "port-01-wall",
+ "name": "Port note 1, wall",
+ "placement": {"coordinates": [-119.156328273, 34.433316352], "altitude_m": 0.0,
+               "rotation_deg": {"x": 0.0, "y": 0.0, "z": 0.0}, "scale": 1.0},
+ "pieces": [
+  {"id": "c-straight", "type": "PlanCurve", "name": "W1 line",
+   "params": {"Kind": "Points", "Points": [[0, 0], [4, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-straight", "type": "Wall", "name": "W1 wall",
+   "params": {"Base": "c-straight", "Thickness": 0.2, "Height": 2.5}},
+
+  {"id": "c-arc", "type": "PlanCurve", "name": "W3 arc",
+   "params": {"Kind": "Arc", "Radius": 2.5, "Angle": 106.26020470831196, "Turn": 36.86989764584402},
+   "placement": {"x": 2.0, "y": -1.5}},
+  {"id": "w-arc", "type": "Wall", "name": "W3 wall",
+   "params": {"Base": "c-arc", "Thickness": 0.2, "Height": 2.5}},
+
+  {"id": "c-corner", "type": "PlanCurve", "name": "L line",
+   "params": {"Kind": "Points", "Points": [[10, 0], [14, 0], [14, -3]], "Smooth": false, "Closed": false}},
+  {"id": "w-corner", "type": "Wall", "name": "L wall",
+   "params": {"Base": "c-corner", "Thickness": 0.2, "Height": 2.5}},
+
+  {"id": "c-door", "type": "PlanCurve", "name": "B2 line",
+   "params": {"Kind": "Points", "Points": [[20, 0], [24, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-door", "type": "Wall", "name": "B2 wall with its door",
+   "params": {"Base": "c-door", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [1.0], "OpeningWidths": [0.9], "OpeningHeights": [2.1],
+              "OpeningSills": [0.0], "OpeningShapes": ["Rect"]}}
+ ]
+}
