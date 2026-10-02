@@ -24,6 +24,7 @@ Every expectation is derived here, not taken from the workbench:
      standing on its face or vertex (twice the inradius; a √(2/3)), the five-eighths dome on
      its cut, the catenoid on the ground, a slab on a ring 5 m off lying there, a wall with
      its base lifted, a turned S-curve. (An object's placement replaces its shape's own.)
+     And a vault's plinth: its springings carried 0.6 m straight down, no wider.
   O. the Organic toolbar against closed forms: the curved wall t H R θ; the opening's volume
      as the integral of the chord through the wall's ring over the opening's outline; the
      arch's height (rise + ring) and its thrust line; the dome's and the saddle's boxes; the
@@ -43,7 +44,7 @@ Every expectation is derived here, not taken from the workbench:
 
 --self-test forges faults into what was read (a solid not valid, a hole in a mesh, a part
 left at the document's origin, a shape that changes when the building turns, a solid's own
-move dropped, a slab left at the origin, the wall half
+move dropped, a slab left at the origin, a vault's plinth left out, the wall half
 as thick, the opening twice as wide, the sun 1° off, the building turned the wrong way, a
 part left behind by the turn, a snap off its module, a report row missing, the net out of
 balance, the net off its paraboloid, the cells closed, a rib above the shell, a column tip
@@ -390,6 +391,7 @@ def moves():
             return obj
 
         made("vault", oo.Vault, lambda o: None)
+        made("vault on a plinth", oo.Vault, lambda o: setattr(o, "Plinth", 600.0))
         made("icosahedron on a face", oo.SacredSolid, lambda o: setattr(o, "Kind", "Icosahedron"))
 
         def vertex(o):
@@ -519,6 +521,10 @@ def judge(facts):
     pick = lambda label, idx: tuple(mv[label][i] for i in idx) if label in mv else None
     ok(near(pick("vault", (1, 4, 2, 5)), (-8.0, 8.0, 0.0, 3.65)),
        "M the vault lies centred on its own origin: y %s, z %s (16 m long, rise 3.5 + shell 0.15)" % (pick("vault", (1, 4)), pick("vault", (2, 5))))
+    bare_x = pick("vault", (0, 3))
+    ok(bare_x is not None and near(pick("vault on a plinth", (0, 3, 1, 4, 2, 5)), bare_x + (-8.0, 8.0, -0.6, 3.65)),
+       "M a vault's plinth carries its springings 0.6 m straight down: z %s, x %s (the bare vault's x %s)"
+       % (pick("vault on a plinth", (2, 5)), pick("vault on a plinth", (0, 3)), bare_x))
     tall = 2 * 3.0 * math.sqrt(3) / 12 * (3 + math.sqrt(5))  # twice the inradius of an icosahedron of edge 3
     ok(near(pick("icosahedron on a face", (2, 5)), (0.0, tall)),
        "M the icosahedron stands on a face: z %s (twice its inradius: %.4f)" % (pick("icosahedron on a face", (2, 5)), tall))
@@ -714,6 +720,7 @@ def forgeries(facts):
         ("an option that fails", "P every option", f(lambda g: g["options"].__setitem__("vault Pointed", False))),
         ("a solid's own move dropped", "M the icosahedron stands on a face", f(lambda g: g["moves"].__setitem__("icosahedron on a face", (-2.78, -2.58, -2.267, 2.78, 2.58, 2.267)))),
         ("a slab left at the origin", "M a slab on a ring", f(lambda g: g["moves"].__setitem__("slab on a ring 5 m off", (-1.2, -1.2, -0.62, 1.2, 1.2, 0.0)))),
+        ("a vault's plinth left out", "M a vault's plinth", f(lambda g: g["moves"].__setitem__("vault on a plinth", g["moves"]["vault"]))),
         ("the wall half as thick", "O Curved wall", f(lambda g: g["origin"]["Curved wall"].__setitem__("volume", g["origin"]["Curved wall"]["volume"] / 2))),
         ("the opening twice as wide", "O Opening", f(lambda g: g["origin"]["Opening"].__setitem__("removed", g["origin"]["Opening"]["removed"] * 2))),
         ("the building not at the anchor", "O New organic building", f(lambda g: g["origin"]["New organic building"].__setitem__("lng", -119.155333))),

@@ -10,7 +10,8 @@ Runs inside FreeCAD 1.1 (the GUI through the FreeCAD MCP connector, or freecadcm
 Every expectation is derived here, not taken from the workbench's own constants:
 
   A. kernels against closed forms: a wall on an arc (t H R θ) and on a circle (2π R t H), a
-     straight wall less a rectangular opening, a semicircular vault (π/2 (Ro² - Ri²) L), a
+     straight wall less a rectangular opening, a semicircular vault (π/2 (Ro² - Ri²) L), the
+     same on a plinth (two stems t L p more, its lowest point p below the springings), a
      hemispherical dome (2/3 π (R³ - (R-t)³)); and every kernel, the leaf shell and the
      organic roof included, a valid solid whose triangles enclose OCCT's volume within 0.5 %.
   B. the GLB, read back: one node per element of the design's building, named and classed
@@ -27,9 +28,10 @@ Every expectation is derived here, not taken from the workbench's own constants:
      sidecar's placement, have bounds within 3 cm of the element's FreeCAD bounds.
   D. on the site, in the map's own files and in the land pack: every element inside the
      surveyed boundary; every element that reaches the ground (its lowest point within 1 m
-     of the building's lowest) meeting the terrain of the map's site GLB there (its lowest
-     points between 1.5 m below that ground and 0.3 m above it; heights from the ground at
-     the anchor, whatever zero the land file was exported on); the footprint not on a road
+     of the building's lowest) standing in the terrain of the map's site GLB there (its base
+     between 1.5 m below that ground and 0.02 m above it, nowhere in the air; heights from
+     the ground at the anchor, whatever zero the land file was exported on; until 1 Oct this
+     let 0.3 m through, and a vault's springing stood 0.15 m in the air); the footprint not on a road
      and not on the access easement, by the map's own meshes and by the pack's centrelines
      and surveyed easement, the two agreeing; and not inside an existing building, by the
      map's file and by the county's footprints.
@@ -47,7 +49,8 @@ models.json frame, on the retired 425.90 m datum, north mirrored, an element mis
 in a mesh, the building 2 m in the air, back on the driveway, inside the existing house, the
 offset baked into the geometry around the anchor, the turn written the wrong way round, the
 IFC's latitude in whole seconds, the IFC building left on the anchor, the IFC classes lost, a
-wall half as thick, the land file's roads off the pack's.
+wall half as thick, the land file's roads off the pack's, an element's base 0.15 m above the
+ground, the plinth left out of the vault.
 """
 
 import copy
@@ -73,6 +76,7 @@ LAND = os.environ.get("ORGANIC_LAND_DIR") or EXCHANGE  # the map's land files; a
 SITE_GLB = os.path.join(LAND, "sulphur-mountain-site.glb")
 EXISTING_GLB = os.path.join(LAND, "sulphur-mountain-buildings-existing.glb")
 PACK = os.environ.get("SITE_PACK_URL", "https://sulphur-mountain-world.vercel.app/")
+GROUND_ABOVE = 0.02  # metres an element's base may read above the land file's triangles and still count as standing in the ground
 BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
 MM = 1000.0
 # where the first pavilion stood (29 Sep), in metres from the anchor: on the driveway
@@ -238,6 +242,20 @@ def placed(pos, place, anchor, k):
     return np.column_stack([(place["coordinates"][0] - alng) * k[0] + lx * math.cos(t) - ly * math.sin(t),
                             (place["coordinates"][1] - alat) * k[1] + lx * math.sin(t) + ly * math.cos(t),
                             place["altitude_m"] + lz])
+
+
+def base_gaps(world, tpos, ttri, zero, samples=60):
+    """How an element's base stands against the map's ground: the least and the greatest of
+    (base point - the ground under it) over its points within 5 cm of its lowest, as metres.
+    `world` is (n, 3) east, north, up from the anchor and its ground. None when the land
+    file has no ground under it."""
+    low = world[world[:, 2] <= world[:, 2].min() + 0.05]
+    gaps = []
+    for e, n, u in low[:: max(1, len(low) // samples)]:
+        g = terrain_height(tpos, ttri, e, -n)
+        if g is not None and zero is not None:
+            gaps.append(float(u - (g - zero)))
+    return (min(gaps), max(gaps)) if gaps else None
 
 
 def convex_hull(points):
@@ -417,6 +435,8 @@ def read_facts():
         "circle wall": (og.wall_shape(og.arc_curve(4.0, 360.0), True, 0.3, 3.0), 2 * math.pi * 4.0 * 0.3 * 3.0),
         "wall less a window": (og.wall_shape(line, False, 0.3, 3.0, openings=[dict(position_m=5.0, width_m=1.2, height_m=1.5, sill_m=0.9, shape="Rect")]), 0.3 * 3.0 * 10.0 - 1.2 * 1.5 * 0.3),
         "semicircular vault": (og.vault_shape("Semicircle", 6.0, 3.0, 0.3, 8.0), math.pi / 2 * (3.3 ** 2 - 3.0 ** 2) * 8.0),
+        "semicircular vault on a plinth": (og.vault_shape("Semicircle", 6.0, 3.0, 0.3, 8.0, plinth_m=0.6),
+                                           math.pi / 2 * (3.3 ** 2 - 3.0 ** 2) * 8.0 + 2 * 0.3 * 8.0 * 0.6),
         "hemispherical dome": (og.dome_shape("Sphere", 5.0, 5.0, 0.3), 2 / 3 * math.pi * (5.0 ** 3 - 4.7 ** 3)),
         "arc wall, wave top": (og.wall_shape(og.arc_curve(4.2, 250.0), False, 0.35, 2.5, top="Wave", top_rise_m=0.35, top_waves=3, foundation_m=0.6),
                                0.35 * 4.2 * math.radians(250.0) * (2.5 + 0.35 / 2 + 0.6)),
@@ -504,6 +524,10 @@ def judge(facts):
     ok(abs(feet["zmin"] + 0.6) <= 0.005 and feet["volume"] > bare["volume"],
        "A leaf shell on footings: its lowest point at %.3f m (the footings reach 0.6 m below the base), %.3f m³ more than the bare shell"
        % (feet["zmin"], feet["volume"] - bare["volume"]))
+    stem, arch = facts["kernels"]["semicircular vault on a plinth"], facts["kernels"]["semicircular vault"]
+    ok(abs(stem["zmin"] + 0.6) <= 0.005 and abs(arch["zmin"]) <= 0.005 and abs((stem["volume"] - arch["volume"]) - 2 * 0.3 * 8.0 * 0.6) <= 0.001,
+       "A vault on a plinth: its lowest point at %.3f m (the bare vault's at %.3f m), %.4f m³ more than the bare vault (two stems t L p = %.4f m³)"
+       % (stem["zmin"], arch["zmin"], stem["volume"] - arch["volume"], 2 * 0.3 * 8.0 * 0.6))
 
     design, meshes = facts["design"], facts["glb"]
     # B
@@ -575,16 +599,10 @@ def judge(facts):
     for name, w in world.items():
         if w[:, 2].min() > floor + 1.0:
             continue  # it rests on other elements, not on the ground
-        low = w[w[:, 2] <= w[:, 2].min() + 0.05]
-        gaps = []
-        for e, n, u in low[:: max(1, len(low) // 12)]:
-            g = terrain_height(tpos, ttri, e, -n)
-            if g is not None and zero is not None:
-                gaps.append(u - (g - zero))
-        rows.append((name, min(gaps) if gaps else float("inf"), max(gaps) if gaps else float("inf")))
-    good = bool(rows) and all(-1.5 <= lo_ and hi_ <= 0.3 for _n, lo_, hi_ in rows)
-    ok(good, "D every element that reaches the ground meets the map's own terrain (lowest points from 1.5 m below to 0.3 m above it): %s"
-       % "; ".join("%s %+.2f..%+.2f m" % r for r in rows))
+        rows.append((name,) + (base_gaps(w, tpos, ttri, zero) or (float("inf"), float("inf"))))
+    good = bool(rows) and all(-1.5 <= lo_ and hi_ <= GROUND_ABOVE for _n, lo_, hi_ in rows)
+    ok(good, "D every element that reaches the ground stands in the map's own terrain (its base from 1.5 m below the ground to %.2f m above it, nowhere in the air): %s"
+       % (GROUND_ABOVE, "; ".join("%s %+.2f..%+.2f m" % r for r in rows)))
     if not world:
         return oks, fails
     hull = convex_hull(np.vstack([w[:, :2] for w in world.values()]))
@@ -746,6 +764,23 @@ def forgeries(facts):
     def roads_off(g):
         g["map_roads"] = facts["map_roads"] + np.array([8.0, 0.0])
 
+    def floating(g):
+        """One element lifted until its base stands 0.15 m above the ground under it (the
+        entrance vault before it had a plinth, where the ground falls away), the design and
+        the IFC agreeing. Less than the 0.3 m this check let through until 1 Oct."""
+        tpos, ttri = g["terrain"]
+        rows = {n: base_gaps(placed(m["pos"], g["sidecar"]["placement"], anchor, k), tpos, ttri, g["terrain_zero"]) for n, m in g["glb"].items()}
+        name = max((n for n in sorted(rows) if rows[n] and rows[n][1] <= GROUND_ABOVE), key=lambda n: rows[n][1])
+        lift = 0.15 - rows[name][1]
+        g["glb"][name]["pos"] = g["glb"][name]["pos"] + np.array([0.0, lift, 0.0])
+        for e in (g["design"][name], g["ifc"]["elements"][name]):
+            e["min"], e["max"] = (e["min"][0], e["min"][1], e["min"][2] + lift), (e["max"][0], e["max"][1], e["max"][2] + lift)
+
+    def no_stem(g):
+        """The plinth left out of the vault kernel: the bare vault under the plinth's name."""
+        g["kernels"]["semicircular vault on a plinth"] = dict(g["kernels"]["semicircular vault"],
+                                                               closed_form=g["kernels"]["semicircular vault on a plinth"]["closed_form"])
+
     return [
         ("the GLB Z-up", "C every element", f(lambda g: each_mesh(g, lambda p: p[:, [0, 2, 1]] * np.array([1, -1, 1])))),
         ("the GLB in millimetres", "B ", f(lambda g: each_mesh(g, lambda p: p * 1000.0))),
@@ -764,6 +799,8 @@ def forgeries(facts):
         ("the IFC classes lost", "E IFC elements and classes", f(lose_classes)),
         ("a wall half as thick", "A arc wall", f(thinner)),
         ("the land file's roads 8 m off the pack's", "D the map's roads lie along", f(roads_off)),
+        ("an element's base 0.15 m above the ground", "D every element that reaches the ground", f(floating)),
+        ("the plinth left out of the vault", "A vault on a plinth", f(no_stem)),
     ]
 
 

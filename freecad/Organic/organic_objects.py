@@ -248,6 +248,7 @@ class Vault(Organic):
         prop(obj, "App::PropertyInteger", "Ribs", g, "ribs spread along the barrel (0: none)", 5)
         length(obj, "RibWidth", g, "rib width along the barrel", 0.25)
         length(obj, "RibDepth", g, "rib depth under the intrados", 0.15)
+        length(obj, "Plinth", g, "depth of a plinth under the springings, below the base: for ground that falls away (0: none)", 0.0)
         prop(obj, "App::PropertyBool", "ThrustInMiddleThird", "Measures", "Poleni: the catenary of the ring's centreline stays within its middle third")
         prop(obj, "App::PropertyFloat", "ThrustDeviation", "Measures", "the largest distance of that catenary from the centreline (m)")
         for p in ("ThrustInMiddleThird", "ThrustDeviation"):
@@ -255,7 +256,7 @@ class Vault(Organic):
 
     def execute(self, obj):
         shape = og.vault_shape(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness), m(obj.VaultLength),
-                               obj.Ribs, m(obj.RibWidth), m(obj.RibDepth))
+                               obj.Ribs, m(obj.RibWidth), m(obj.RibDepth), m(obj.Plinth))
         ok, worst = og.thrust_line_ok(obj.Profile, m(obj.Span), m(obj.Rise), m(obj.Thickness))
         obj.ThrustInMiddleThird, obj.ThrustDeviation = bool(ok), float(worst)
         set_local(obj, shape)

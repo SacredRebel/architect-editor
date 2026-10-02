@@ -13,7 +13,7 @@ Lane A (FreeCAD). Branch `eco/organic`. Written 1 Oct 2026. Local only; no pull 
 | | |
 |---|---|
 | The workbench | `freecad/Organic/`: 26 buttons in three toolbars (Organic 14, Sacred 7, Biomimetic 5). Installed copy in `%APPDATA%\FreeCAD\v1-1\Mod\Organic` equals the repository (installer re-run 1 Oct). |
-| The test building | `exchange\godot\organic-test-pavilion.glb / .ifc / .json`, seven elements: a curved room wall with five openings and a wave top, an S-curved garden wall with an arched gate, a leaf-shell roof on footings, a ribbed catenary vault, a floor 0.36 m above the building's level, and a round step (0.18 m) at each door: the floor and the steps are there for the map's walker (the architect's line of 18:40). Built by `freecad/build_test_pavilion.py` in about 30 s; design in `Documents\SulphurMountain\Organic-test-pavilion.FCStd`. |
+| The test building | `exchange\godot\organic-test-pavilion.glb / .ifc / .json`, seven elements: a curved room wall with five openings and a wave top, an S-curved garden wall with an arched gate, a leaf-shell roof on footings, a ribbed catenary vault on a plinth, a floor 0.36 m above the building's level, and a round step (0.18 m) at each door: the floor and the steps are there for the map's walker (the architect's line of 18:40). Built by `freecad/build_test_pavilion.py` in about 30 s; design in `Documents\SulphurMountain\Organic-test-pavilion.FCStd`. |
 | Where it stands | 112.0 m west, 31.0 m north of the anchor, its level (z = 0) on the map's ground there (419.56 m) and its floor 0.36 m above that, turned 30° clockwise. 49.4 m from the nearest road, 22.7 m from the access easement, 101 m from the nearest existing building (footprint to edge); its centre 20 m inside the surveyed boundary. |
 | How its place is carried | geometry in the building's own frame; `placement` in the `.json` and in the GLB root's `extras`; `IfcSite` at the anchor, the `IfcBuilding` placed on it. `FORMAT.md` §3a, in the words of C and E's `edits/2`. E reads it: "both say the same place to 0.000 m … the map's own terrain there is 419.56 m". |
 | The site template | `freecad/SulphurMountainSite.FCMacro` on the canonical frame, now with the county's road centrelines. |
@@ -27,8 +27,8 @@ All run in `freecadcmd` (FreeCAD's console program), because FreeCAD's window wa
 
 | Check | Result |
 |---|---|
-| `check_organic.py` (the building sent to the map) | **37 checks OK; 17 of 17 forged faults rejected** |
-| `check_toolbar.py` (every button's own code, at the origin and at the spot turned 30°) | **140 checks OK; 26 commands; 23 of 23 forged faults rejected** |
+| `check_organic.py` (the building sent to the map) | **39 checks OK; 19 of 19 forged faults rejected** |
+| `check_toolbar.py` (every button's own code, at the origin and at the spot turned 30°) | **141 checks OK; 26 commands; 24 of 24 forged faults rejected** |
 | `check_site.py` on a trial build of the re-based site template | **26 checks OK; 11 of 11 forged faults rejected**; J (the dimension text as drawn) says SKIP without the window |
 
 Some of what they hold:
@@ -36,7 +36,7 @@ Some of what they hold:
 - Kernels against closed forms: arc wall, circle wall, wall less a window, wave-topped wall, semicircular vault, hemispherical dome, all to 0.000 %.
 - The sidecar's place = the design building's own place (3 cm, 0.01°); the GLB and the IFC say the same; the building's origin lies inside its footprint; every element's points, turned and moved by the placement, within 3 cm of FreeCAD (worst 1.5 cm).
 - Not on a road or the easement, by the map's own meshes and by the pack's centrelines and survey, the two agreeing; not inside an existing building, by the map's file and the county's footprints. Forged: "back on the driveway" (0.0 m from the road), "inside the existing house".
-- Every ground-reaching element meets the map's terrain (lowest points 0.84 m below to 0.15 m above). The ground under the room lies 0.17 m below to 0.15 m above the building's level, so the floor (0.36 m) is clear of it everywhere.
+- Every element that reaches the ground stands in the map's terrain: each base lies 0.28 m to 0.88 m below it, none in the air (the rule allows 0.02 m; 60 points per element). Forged: "an element's base 0.15 m above the ground". The ground under the room lies 0.17 m below to 0.15 m above the building's level, so the floor (0.36 m) is clear of it everywhere.
 - The opening's volume against an integral worked out in the check; the hexagon wall perimeter × t × H; the vesica wall from two lens areas; the icosahedron 5(3 + √5)/12 a³.
 - This workbench's sun (NOAA) against the pack's (astronomy-engine): worst 0.028° over 16 azimuths. "Turn to the sun": the building's front at the pack's June-solstice sunrise bearing, its parts carried along.
 - The net's nodes in balance to 1e-14 and on the membrane's paraboloid; the branching column's 9 tips level; the cellular wall's open share by volume and by sampled points.
@@ -44,6 +44,7 @@ Some of what they hold:
 ## What was found and fixed on the way
 
 - **A shape's own move was dropped when it was given to its object.** Found when the pavilion's floor and steps all landed at its origin. Since 29 Sep a vault was never centred on its origin, a solid never stood on its face, a wall's base offset did nothing. Fixed at the root (`organic_geom.baked`); eight such moves are now held by their boxes (`check_toolbar.py` M). The pavilion's vault is set 2.5 m further in so that it stands where it has stood since the first send.
+- **The entrance vault's springings stood up to 0.15 m in the air** on the downhill side at the new spot, and the check let it through: it allowed 0.3 m "above the ground". Found by reading the check's own numbers. Vaults (and the catenary arch) now have a `Plinth` that carries the springings straight down; the pavilion's is 0.6 m; the check allows 0.02 m. The same fault as the leaf tips of 29 Sep.
 - The room wall could not be built with the building turned 30° at its real place: solids are now built in their object's own frame.
 - A wave-topped wall's volume read up to 0.18 % off, differently in each direction: its top is cut in smaller pieces; it reads the closed form.
 - A wall on a vesica failed (a spline through its corners): outlines with corners keep them.
@@ -61,7 +62,8 @@ Some of what they hold:
 - **Johny's house:** `exchange\house\concept\` holds only the README and the prompts.
 - The veined leaf, the gridshell and the branching column report a volume that counts overlaps at joints twice.
 - The pavilion's leaf rests on two footings 1 m long; its eave elsewhere stands 0.4 m above the building's level, as designed on 29 Sep.
-- From the ground to the entrance step is about 0.28 m (the ground falls 0.1 m there); from the step to the floor 0.18 m.
+- From the ground to the entrance step is 0.23 to 0.34 m (the ground falls there); from the step to the floor 0.18 m. At the garden door the ground rises to the step's own height.
+- A dome, a net and a branching column have no plinth: on falling ground they need a wall or a slab under them.
 
 ## Licences
 

@@ -32,8 +32,8 @@ with its three toolbars, is there on every start. Run the macro again after pull
 | Opening | a rectangular, arched, pointed or round opening where you clicked the wall | plugin-eco openings |
 | Leaf shell roof | a shell from a ridge with four heights, an eave and a curl, with ribs; footings under its tips | plugin-eco leaf shell |
 | Shell roof on a closed wall | eaves + rise (1 − ρ^2.2) from the pole to the wall, drooping to the overhang | plugin-eco organic roof |
-| Ribbed vault | a barrel vault on an ellipse, semicircle, segmental, pointed, catenary or parabola, with ribs | plugin-eco vault, plugin-hagia-sophia arch |
-| Catenary arch | a free-standing arch; `ThrustInMiddleThird` is the Poleni check | plugin-hagia-sophia arch |
+| Ribbed vault | a barrel vault on an ellipse, semicircle, segmental, pointed, catenary or parabola, with ribs; a plinth under its springings | plugin-eco vault, plugin-hagia-sophia arch |
+| Catenary arch | a free-standing arch; `ThrustInMiddleThird` is the Poleni check; the same plinth | plugin-hagia-sophia arch |
 | Dome | ellipse, sphere, catenary, parabola or onion meridian, with an oculus | plugin-hagia-sophia dome |
 | Minimal surface | a membrane on a closed curve, lifted by a mast ring | plugin-eco minimal surface |
 | Saddle shell | a hypar, or a catenoid | — |
@@ -75,6 +75,10 @@ set new documents to metres.
 - **One solid or several:** a gridshell, a hanging net, a branching column and a veined leaf
   are compounds of solids (laths, branches, ribs). Their volume counts the overlaps at the
   joints twice.
+- **Reaching the ground where it falls away:** a wall has `Foundation`, a leaf shell and a
+  vault have `Plinth` (how far their feet are carried below the base), a slab its
+  `Thickness`. A dome, a net and a column stand on their base and need a wall or a slab
+  under them on a slope. `check_organic.py` holds every base against the map's terrain.
 
 ## A building in minutes
 

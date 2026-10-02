@@ -3,7 +3,7 @@
 
 A test building, not a house design: a curved room wall with a wave top and five openings, a
 garden wall on an S-curve with an arched gate, a leaf-shell roof on footings, a ribbed catenary
-vault as the way in, a floor two risers above the ground, and a round step at each door (so
+vault on a plinth as the way in, a floor two risers above the ground, and a round step at each door (so
 the map's walker has a floor and steps to climb). It makes the same objects as the Organic
 toolbar's buttons, with the same properties, so the result is the one a user gets by pressing
 them.
@@ -107,6 +107,7 @@ def build(spot=SPOT, turn=TURN, design=DESIGN, send=True, out_dir=None):
     v = place(oo.make(oo.Vault, "Vault", "Entrance vault", doc), App.Placement(App.Vector(0, -2.1 * MM, 0), App.Rotation()))
     v.Profile, v.Span, v.Rise, v.Thickness, v.VaultLength = "Catenary", 2.8 * MM, 3.0 * MM, 0.2 * MM, 5.0 * MM
     v.Ribs, v.RibWidth, v.RibDepth = 3, 0.25 * MM, 0.12 * MM
+    v.Plinth = 0.6 * MM  # the ground falls 0.15 m under its outer end: its springings are carried down into it
     # 6. the floor, two risers up inside the room, and a round step at each door
     rings = []
     for label, radius, x, y, top in (("Floor", 4.0, 0.0, 0.0, 2 * RISER), ("Entrance step", 1.2, 0.0, -5.0, RISER), ("Garden step", 0.9, 0.0, 5.35, RISER)):

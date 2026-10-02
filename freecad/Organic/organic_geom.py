@@ -731,8 +731,19 @@ def arch_profile_face(profile, span_m, rise_m, thickness_m, inner_extra_m=0.0):
     return face_of(band.common(half_plane_xz(0.0)))
 
 
-def vault_shape(profile, span_m, rise_m, thickness_m, length_m, ribs=0, rib_width_m=0.3, rib_depth_m=0.15):
-    """A barrel vault along +Y, centred on the origin, standing on Z = 0, with ribs under it.
+def on_plinth(solid, plinth_m):
+    """The solid with every flat face it stands on (on Z = 0) carried straight down by
+    plinth_m: stem walls under a vault's springings, which reach ground that falls away
+    under it. The springing line stays on Z = 0."""
+    feet = [f for f in solid.Faces if max(abs(f.BoundBox.ZMin), abs(f.BoundBox.ZMax)) < 1e-6]
+    if plinth_m <= 0 or not feet:
+        return solid
+    return fuse_all([solid] + [f.extrude(Z * (-plinth_m * MM)) for f in feet])
+
+
+def vault_shape(profile, span_m, rise_m, thickness_m, length_m, ribs=0, rib_width_m=0.3, rib_depth_m=0.15, plinth_m=0.0):
+    """A barrel vault along +Y, centred on the origin, springing from Z = 0, with ribs under
+    it, and under its springings a plinth of plinth_m (0: none).
 
     A rib is the arch from rib_depth below the intrados to half-way into the shell, so it
     fuses into the shell instead of sharing its curved faces (which defeats booleans)."""
@@ -747,6 +758,8 @@ def vault_shape(profile, span_m, rise_m, thickness_m, length_m, ribs=0, rib_widt
             rib.translate(Y * (y0 * MM))
             parts.append(rib)
     solid = fuse_all(parts)
+    if plinth_m > 0:
+        solid = on_plinth(refined(solid), plinth_m)  # merged first: one foot under each springing, ribs and all
     solid.translate(Y * (-length_m * MM / 2))
     return refined(solid)
 
