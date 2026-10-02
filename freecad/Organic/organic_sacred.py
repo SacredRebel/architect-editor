@@ -395,6 +395,51 @@ def geodesic_dome(radius, frequency=3, thickness=0.15, portion=0.5):
     return og.solid_of(shell)
 
 
+def geodesic_net(frequency, portion=0.5):
+    """A geodesic dome as a net, on the unit sphere: the triangles of geodesic_mesh whose
+    centres stand in the upper `portion` of the sphere's height (0.625 at frequency 3: five rows
+    of triangles from the crown, the "five-eighths" dome), their edges as struts, and the foot
+    nodes (on edges that have one triangle only) set to their mean height, so the dome stands
+    level (lane R's construction, pattern card P-001).
+    Returns (points with the foot levelled, struts [(i, j)], foot node indices, triangles,
+    how far the foot nodes stood apart in height before levelling)."""
+    pts, tris = geodesic_mesh(frequency)
+    cut = 1 - 2 * max(0.1, min(1.0, portion))
+    kept = [t for t in tris if sum(pts[i][2] for i in t) / 3 >= cut - 1e-9]
+    count = {}
+    for a, b, c in kept:
+        for i, j in ((a, b), (b, c), (c, a)):
+            count[(min(i, j), max(i, j))] = count.get((min(i, j), max(i, j)), 0) + 1
+    foot = sorted({i for edge, n in count.items() if n == 1 for i in edge})
+    points = [list(p) for p in pts]
+    spread = 0.0
+    if foot:
+        level = sum(points[i][2] for i in foot) / len(foot)
+        spread = max(points[i][2] for i in foot) - min(points[i][2] for i in foot)
+        for i in foot:
+            points[i][2] = level
+    used = sorted({i for edge in count for i in edge})
+    return points, sorted(count), foot, kept, spread, used
+
+
+def geodesic_frame(radius, frequency=3, portion=0.5, strut=0.09, hub=1.5):
+    """A geodesic dome as a frame: a round strut of diameter `strut` along every edge of the
+    net and a ball of `hub` times that diameter at every node, standing on Z = 0 on its
+    levelled foot. A compound of solids: struts and balls overlap in the nodes.
+    Returns (compound, number of struts, their lengths in metres, number of nodes)."""
+    points, struts, foot, _tris, _spread, used = geodesic_net(frequency, portion)
+    base = points[foot[0]][2] * radius if foot else -radius
+    at = lambda i: V(points[i][0] * radius, points[i][1] * radius, points[i][2] * radius - base)
+    solids, lengths = [], []
+    for i, j in struts:
+        p, q = at(i), at(j)
+        lengths.append((q - p).Length / MM)
+        solids.append(Part.makeCylinder(strut * MM / 2, (q - p).Length, p, q - p))
+    if hub and hub > 0:
+        solids += [Part.makeSphere(strut * hub * MM / 2, at(i)) for i in used]
+    return Part.makeCompound(solids), len(struts), lengths, len(used)
+
+
 # ---------------------------------------------------------------- the sun
 def sun_position(lat, lng, when):
     """The sun at a place and an instant (a UTC datetime): (altitude, azimuth clockwise from

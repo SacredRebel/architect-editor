@@ -181,6 +181,107 @@ def net_shape(ring_edge, spacing_m=1.0, rise_m=3.0, lath_width_m=0.08, lath_dept
     return Part.makeCompound(solids), len(lines), length, equilibrium_residual(xyz, fixed, edges, load)
 
 
+def top_of(shape, x_mm, y_mm):
+    """The height (mm) of a solid's top on the upright line through (x, y), or None where the
+    line misses it."""
+    b = shape.BoundBox
+    line = Part.makeLine(App.Vector(x_mm, y_mm, b.ZMin - 1000.0), App.Vector(x_mm, y_mm, b.ZMax + 1000.0))
+    zs = [v.Point.z for v in shape.common(line).Vertexes]
+    return max(zs) if zs else None
+
+
+def net_on_shell(shell, spacing_m=1.0, lath_width_m=0.08, lath_depth_m=0.05, turn_deg=0.0):
+    """A net of laths lying on the back of any solid shell (a dome, a shell roof, a leaf, a
+    vault, a saddle, a conoid): grid lines every spacing_m both ways, turned turn_deg in plan
+    (45: a diagrid), each lath following the shell's own top from edge to edge, its underside
+    on the shell.
+
+    A node stands wherever two grid lines cross over the shell; each line's two ends are
+    found on the shell's edge to a thousandth of the spacing. One solid per lath, a compound
+    (they cross at the nodes).
+    Returns (the compound, number of laths, their total length in m, the nodes [(x, y, z) in m,
+    on the shell's top])."""
+    import numpy as np
+
+    b = shell.BoundBox
+    cx, cy = (b.XMin + b.XMax) / 2, (b.YMin + b.YMax) / 2
+    reach = math.hypot(b.XLength, b.YLength) / 2
+    s = spacing_m * MM
+    n = int(reach // s) + 1
+    ca, sa = math.cos(math.radians(turn_deg)), math.sin(math.radians(turn_deg))
+    place = lambda p, q: (cx + p * ca - q * sa, cy + p * sa + q * ca)  # grid coordinates (mm) to plan
+    tops, held = {}, {}
+    clear = max(lath_width_m * MM, 0.05 * s)  # a lath keeps this far from the shell's edge
+
+    def above(p, q):
+        key = (round(p, 3), round(q, 3))
+        if key not in tops:
+            x, y = place(p, q)
+            tops[key] = top_of(shell, x, y) if (b.XMin - 1 <= x <= b.XMax + 1 and b.YMin - 1 <= y <= b.YMax + 1) else None
+        return tops[key]
+
+    def top(p, q):
+        """The shell's top at a grid place, or None where the place is off the shell or within
+        `clear` of its edge (on the edge itself the upright line only grazes the shell's side)."""
+        key = (round(p, 3), round(q, 3))
+        if key not in held:
+            z = above(p, q)
+            if z is not None and any(above(p + dp, q + dq) is None for dp, dq in ((clear, 0), (-clear, 0), (0, clear), (0, -clear))):
+                z = None
+            held[key] = z
+        return held[key]
+
+    def edge_between(inside, outside, along):
+        """The last place on the shell between a node on it and the next place off it."""
+        lo, hi = inside, outside
+        for _ in range(10):
+            mid = (lo + hi) / 2
+            if top(*along(mid)) is None:
+                hi = mid
+            else:
+                lo = mid
+        return lo
+
+    half = lath_depth_m * MM / 2
+    chains, nodes = [], {}
+    for axis in (0, 1):
+        for i in range(-n, n + 1):
+            fixed = i * s
+            along = (lambda t, fixed=fixed: (fixed, t)) if axis == 0 else (lambda t, fixed=fixed: (t, fixed))
+            run = []
+            for j in range(-n - 1, n + 2):  # one step past the box each way: every run ends on a place off the shell
+                t = j * s
+                if top(*along(t)) is not None:
+                    if not run:  # the place before was off the shell: the lath starts on the edge between
+                        run.append(edge_between(t, t - s, along))
+                    run.append(t)
+                    nodes[(i, j) if axis == 0 else (j, i)] = along(t)
+                elif run:
+                    run.append(edge_between(run[-1], t, along))
+                    if run[-1] - run[0] > 0.2 * s:
+                        chains.append((along, list(run)))
+                    run = []
+    if not chains:
+        raise ValueError("the shell is too small for laths %.2f m apart" % spacing_m)
+    solids, length = [], 0.0
+    for along, run in chains:
+        pts = []
+        for t in run:
+            x, y = place(*along(t))
+            z = top(*along(t))
+            if z is not None and (not pts or (App.Vector(x, y, z + half) - pts[-1]).Length > 1.0):
+                pts.append(App.Vector(x, y, z + half))
+        if len(pts) < 2:
+            continue
+        solids.append(lath(pts, lath_width_m, lath_depth_m))
+        length += sum(float(np.linalg.norm(np.array(q) - np.array(p))) for p, q in zip(pts, pts[1:])) / MM
+    out = []
+    for p, q in nodes.values():
+        x, y = place(p, q)
+        out.append((x / MM, y / MM, top(p, q) / MM))
+    return Part.makeCompound(solids), len(solids), length, out
+
+
 # ---------------------------------------------------------------- cellular walls
 def scatter(length_m, height_m, cell_m, seed=1):
     """Seed points on the unrolled wall face, no two nearer than 0.7 of the cell size

@@ -1483,3 +1483,156 @@ def hypar_shape(size_x_m, size_y_m, rise_m, thickness_m):
     solid = thicken_surface(face, thickness_m * MM)
     solid.translate(V(0, 0, rise_m + thickness_m))
     return solid_of(solid)
+
+
+# ---------------------------------------------------------------- shells given by a formula
+# Lane R's pattern cards P-003 to P-006 (Research Architect\patterns, study S-005; the formulas
+# are in Spatial Map\spatial-map\ports\FROM-RESEARCH.md): a conoid, a translation shell, a wave
+# vault, groined saddles. Each is given by a formula for its underside in its own frame: x
+# across, y along, z up, the origin in the middle of its footprint on the ground. Where the
+# formula is a polynomial of degree two each way the surface is that polynomial exactly (one
+# Bezier patch); the thickness is a true offset, upward along the surface's normal.
+def quadratic_patch(xs, ys, heights):
+    """The surface whose height is a polynomial of degree two or less each way, exactly, as
+    one patch: xs and ys are the three poles' places each way (m; the middle one half-way),
+    heights[i][j] the poles' heights (m). A quadratic f on [u0, u1] has the poles f(u0),
+    f(u0) + f'(u0) (u1 - u0) / 2, f(u1); u squared has u0 squared, u0 u1, u1 squared."""
+    poles = [[V(xs[i], ys[j], heights[i][j]) for j in range(3)] for i in range(3)]
+    surface = Part.BSplineSurface()
+    surface.buildFromPolesMultsKnots(poles, [3, 3], [3, 3], [0.0, 1.0], [0.0, 1.0], False, False, 2, 2)
+    return surface.toShape()
+
+
+def thicken_up(face, thickness_mm):
+    """The solid on a surface: the surface is its underside, its top the surface moved by
+    thickness_mm along its upward normal, its sides ruled by the normals along the edge."""
+    u0, u1, v0, v1 = face.ParameterRange
+    sign = 1.0 if face.normalAt((u0 + u1) / 2, (v0 + v1) / 2).z > 0 else -1.0
+    slab = face.makeOffsetShape(sign * thickness_mm, 0.01, fill=True)
+    if not slab.Solids:
+        raise ValueError("the surface could not be given its thickness")
+    solid = slab.Solids[0].toNurbs().Solids[0]
+    if not solid.isValid() or solid.Volume <= 0:
+        raise ValueError("the surface could not be given its thickness")
+    return solid
+
+
+def conoid_height(x, y, span_m, length_m, rise_m, eave_m):
+    """The conoid's underside (m): a straight line sliding from a parabolic arch of rise_m at
+    y = -length/2 to a level line at y = +length/2, both ends at eave_m."""
+    v = (y + length_m / 2) / length_m
+    return eave_m + (1 - v) * rise_m * (1 - (2 * x / span_m) ** 2)
+
+
+def conoid_shape(span_m, length_m, rise_m, eave_m, thickness_m):
+    """A conoid shell: every line across it from the arch to the level end is straight."""
+    hs, hl = span_m / 2, length_m / 2
+    arch, slide = (0.0, 2.0, 0.0), (1.0, 0.5, 0.0)  # the poles of 1 - (2x/S)^2 and of 1 - v
+    face = quadratic_patch((-hs, 0.0, hs), (-hl, 0.0, hl), [[eave_m + rise_m * arch[i] * slide[j] for j in range(3)] for i in range(3)])
+    return solid_of(thicken_up(face, thickness_m * MM))
+
+
+def translation_height(x, y, span_m, length_m, rise_x_m, rise_y_m, eave_m):
+    """The translation shell's underside (m): a parabola of rise_x_m across slid along a
+    parabola of rise_y_m; the four corners at eave_m."""
+    return eave_m + rise_x_m * (1 - (2 * x / span_m) ** 2) + rise_y_m * (1 - (2 * y / length_m) ** 2)
+
+
+def translation_shell_shape(span_m, length_m, rise_x_m, rise_y_m, eave_m, thickness_m):
+    """A translation shell over a rectangle: one arch slid along another, both curving down."""
+    hs, hl = span_m / 2, length_m / 2
+    arch = (0.0, 2.0, 0.0)
+    face = quadratic_patch((-hs, 0.0, hs), (-hl, 0.0, hl), [[eave_m + rise_x_m * arch[i] + rise_y_m * arch[j] for j in range(3)] for i in range(3)])
+    return solid_of(thicken_up(face, thickness_m * MM))
+
+
+def wave_rise(y, rise_m, amplitude_m, waves, length_m):
+    """A wave vault's rise at y (m): rise_m at its mean, amplitude_m more at a crest (the
+    first at y = -length/2), `waves` whole waves along the length."""
+    return rise_m + amplitude_m * math.cos(2 * math.pi * waves * (y + length_m / 2) / length_m)
+
+
+WAVE_STATIONS = 16  # sections in one wave, at least
+
+
+def wave_vault_shape(profile, span_m, rise_m, thickness_m, length_m, amplitude_m, waves, plinth_m=0.0):
+    """A vault along +Y, centred on the origin, whose rise goes up and down as a wave along its
+    length (Eladio Dieste's Gaussian vaults: the wave gives a thin vault depth against
+    buckling). Every cross-section is the straight vault's own for the rise there, plinth and
+    all; the thickness is measured in the cross-section. Returns (solid, the volume it must
+    hold: its sections' areas summed along the length)."""
+    if profile == "Semicircle":
+        raise ValueError("a semicircle has one rise for its span: choose another profile for a wave vault")
+    low = rise_m - abs(amplitude_m)
+    if low <= 0.02 * span_m:
+        raise ValueError("the wave is deeper than the vault is high: its troughs would lie flat (rise %.2f m, amplitude %.2f m)" % (rise_m, amplitude_m))
+    count = max(8, int(math.ceil(length_m * MM / VAULT_STATION_MM)), int(math.ceil(WAVE_STATIONS * abs(waves))))
+    count += count % 2  # even: the areas are summed by Simpson's rule
+    wires, areas = [], []
+    for i in range(count + 1):
+        y = -length_m / 2 + length_m * i / count
+        section = vault_section(profile, span_m, wave_rise(y, rise_m, amplitude_m, waves, length_m), thickness_m, plinth_m)
+        wire = section.OuterWire.copy()
+        wire.translate(Y * (y * MM))
+        wires.append(wire)
+        areas.append(section.Area)
+    step = length_m * MM / count
+    want = step / 3 * (areas[0] + areas[-1] + 4 * sum(areas[1:-1:2]) + 2 * sum(areas[2:-1:2]))
+    solid = solid_of(Part.makeLoft(wires, True, False))
+    if not solid.isValid() or abs(solid.Volume / want - 1.0) > 0.005:
+        raise ValueError("the wave vault could not be built (it holds %.2f %% off its sections' areas summed along its length%s)"
+                         % (100.0 * (solid.Volume / want - 1.0), "" if solid.isValid() else ", and is not valid"))
+    return refined(solid), want
+
+
+GROIN_HALF = math.pi / 8  # half a lobe: four saddles 45° apart make eight lobes
+
+
+def groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m):
+    """(a, b) of one saddle z = centre + a u^2 - b v^2 (u along its axis, v across): its tip, at
+    tip_r_m along the axis, stands tip_h_m high, and the groin where it meets the next saddle
+    (22.5° off its axis) reaches the ground at support_r_m."""
+    a = (tip_h_m - centre_h_m) / tip_r_m ** 2
+    b = (centre_h_m / support_r_m ** 2 + a * math.cos(GROIN_HALF) ** 2) / math.sin(GROIN_HALF) ** 2
+    return a, b
+
+
+def groined_height(x, y, support_r_m, tip_r_m, centre_h_m, tip_h_m):
+    """The underside of the groined saddles at (x, y) (m): the highest of the four saddles."""
+    a, b = groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m)
+    r, th = math.hypot(x, y), math.atan2(y, x)
+    return max(centre_h_m + r * r * (a * math.cos(th - i * math.pi / 4) ** 2 - b * math.sin(th - i * math.pi / 4) ** 2) for i in range(4))
+
+
+def groined_edge(theta, support_r_m, tip_r_m):
+    """How far the roof reaches from its centre in the direction theta (m): to a support at a
+    groin, to a tip on a lobe's axis."""
+    return support_r_m + (tip_r_m - support_r_m) * abs(math.cos(4 * theta))
+
+
+def groined_saddles_shape(support_r_m, tip_r_m, centre_h_m, tip_h_m, thickness_m, edge_points=24):
+    """Four saddles (hyperbolic paraboloids) about one centre, each turned 45° from the last,
+    the roof being the highest of them everywhere: eight lobes that rise to their tips, eight
+    groins between them that run down to eight supports on the ground (the type of Candela's
+    Los Manantiales). Each lobe is its saddle exactly, made thick along its normal and cut to
+    its own eighth by upright planes through the groins and an upright cut along the free edge;
+    the eight are one solid."""
+    if tip_r_m <= support_r_m or tip_h_m <= centre_h_m or centre_h_m <= 0:
+        raise ValueError("groined saddles need their tips further out than their supports and higher than their centre, and the centre above the ground")
+    a, b = groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m)
+    margin = 4 * thickness_m + 0.1
+    u0, u1 = -margin, tip_r_m + margin
+    w = max(groined_edge(p, support_r_m, tip_r_m) * math.sin(p) for p in [GROIN_HALF * k / 16 for k in range(17)]) + margin
+    face = quadratic_patch((u0, (u0 + u1) / 2, u1), (-w, 0.0, w),
+                           [[centre_h_m + a * du - b * dv for dv in (w * w, -w * w, w * w)] for du in (u0 * u0, u0 * u1, u1 * u1)])
+    thick = thicken_up(face, thickness_m * MM)
+    edge = [V(groined_edge(p, support_r_m, tip_r_m) * math.cos(p), groined_edge(p, support_r_m, tip_r_m) * math.sin(p))
+            for p in [-GROIN_HALF + 2 * GROIN_HALF * k / edge_points for k in range(edge_points + 1)]]
+    outline = Part.Face(wire_of([Part.LineSegment(V(0, 0), edge[0]).toShape(), spline(edge), Part.LineSegment(edge[-1], V(0, 0)).toShape()]))
+    lobe = solid_of(thick.common(prism_of(outline)))
+    lobes = []
+    for k in range(8):
+        one = lobe.copy()
+        one.rotate(App.Vector(), Z, 45.0 * k)
+        lobes.append(one)
+    return refined(solid_of(fuse_all(lobes)))
