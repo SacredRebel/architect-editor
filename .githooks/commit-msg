@@ -1,0 +1,33 @@
+#!/bin/sh
+# Playground git hook: commit-msg  (knowledge\tools\git-hooks.md)
+# Refuses a commit whose message carries an attribution trailer, or whose author or committer is not
+# Sacred Rebel <paulmuresan77@gmail.com>. Plain sh, nothing to install. Copy to <repo>/.git/hooks/commit-msg.
+
+WANT_NAME="Sacred Rebel"
+WANT_MAIL="paulmuresan77@gmail.com"
+msg="$1"
+bad=0
+
+# 1. no attribution trailer, no agent's signature (comment lines, which git strips, do not count)
+found="$(grep -n -i -E '^[[:space:]]*(Co-Authored-By|Claude-Session|Generated-By)[[:space:]]*:|Generated with \[?Claude' "$msg" | grep -v -E '^[0-9]+:#')"
+if [ -n "$found" ]; then
+	echo "commit refused: the message carries an attribution line. Take it out and commit again:" >&2
+	echo "$found" | sed 's/^/    line /' >&2
+	bad=1
+fi
+
+# 2. author and committer: who git would write into this commit (--author, -c user.name, the environment and the
+#    repository's own configuration are all in this answer)
+for who in AUTHOR COMMITTER; do
+	ident="$(git var GIT_${who}_IDENT 2>/dev/null)"
+	# "Name <mail> 1234567890 +0000": the part before the time
+	person="$(printf '%s' "$ident" | sed -E 's/ [0-9]+ [+-][0-9]{4}$//')"
+	if [ "$person" != "$WANT_NAME <$WANT_MAIL>" ]; then
+		low="$(printf '%s' "$who" | tr 'A-Z' 'a-z')"
+		echo "commit refused: the $low is \"$person\"; it must be \"$WANT_NAME <$WANT_MAIL>\"." >&2
+		echo "    git -c user.name=\"$WANT_NAME\" -c user.email=\"$WANT_MAIL\" commit ..." >&2
+		bad=1
+	fi
+done
+
+exit $bad

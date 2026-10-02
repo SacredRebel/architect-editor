@@ -1,0 +1,50 @@
+#!/bin/sh
+# Playground git hook: pre-commit  (knowledge\tools\git-hooks.md)
+# Refuses a commit that stages (1) a file over 10 MB, (2) a file whose name says it holds a key, a token or a PIN,
+# (3) an added line that carries one. Only what is staged is looked at; only added lines. Plain sh, nothing to install.
+# Copy to <repo>/.git/hooks/pre-commit.
+#
+# A file that is known and meant (a test's made-up PIN, a theme's "tokens.json") is named, one path a line, in
+# <repo>/.git/hooks/pre-commit.allow — rules 2 and 3 pass it by; rule 1 (the size) has no exception.
+
+LIMIT=10485760                       # 10 MB
+bad=0
+hooks="$(git rev-parse --git-path hooks)"
+allow="$hooks/pre-commit.allow"
+list="$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/pg-pre-commit.$$")"
+git diff --cached --name-only --diff-filter=ACMR > "$list"
+
+# file names: an env file, a key or certificate store, an ssh key — and a text or data file named for what it must not hold
+NAMES='(^|/)\.env(\.[^/]*)?$|\.(pem|key|p12|pfx|jks|keystore|kdbx|ppk)$|(^|/)id_(rsa|dsa|ecdsa|ed25519)$|(^|/)\.?(npmrc|netrc|pgpass)$|(^|[/_.-])(api[_-]?keys?|tokens?|secrets?|credentials?|passwords?|pin)(\.(txt|json|ya?ml|toml|ini|cfg|conf|env|md|csv|xml|properties))?$'
+NAMES_FINE='\.env\.(example|sample|template)$'
+# added lines: a private key, a service's token by its shape, a key / token / password / PIN written out as a value
+SHAPES='-----BEGIN [A-Z ]*PRIVATE KEY-----|sk-ant-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|hf_[A-Za-z0-9]{30,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.'
+VALUES='(api[_-]?key|secret|token|passwd|password|bearer)["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"'][A-Za-z0-9_/+=.-]{20,}["'"'"']|(^|[^A-Za-z])pin["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[0-9]{4,8}["'"'"']?([^0-9.]|$)'
+
+while IFS= read -r path; do
+	[ -n "$path" ] || continue
+	size="$(git cat-file -s ":$path" 2>/dev/null || echo 0)"
+	if [ "$size" -gt "$LIMIT" ]; then
+		echo "commit refused: $path is $((size / 1048576)) MB — nothing over 10 MB goes into a repository." >&2
+		bad=1
+	fi
+	if [ -f "$allow" ] && grep -q -x -F "$path" "$allow"; then
+		continue
+	fi
+	if printf '%s\n' "$path" | grep -q -i -E "$NAMES" && ! printf '%s\n' "$path" | grep -q -i -E "$NAMES_FINE"; then
+		echo "commit refused: $path is named like a file that holds a key, a token or a PIN." >&2
+		bad=1
+	fi
+	# (the lines themselves are not shown: a refusal must not print what it refuses)
+	count="$(git diff --cached -U0 --no-color -- "$path" | grep -E '^\+' | grep -v -E '^\+\+\+ ' | grep -c -i -E -e "$SHAPES" -e "$VALUES")"
+	if [ "${count:-0}" -gt 0 ]; then
+		echo "commit refused: $path has $count added line(s) that look like a key, a token or a PIN." >&2
+		bad=1
+	fi
+done < "$list"
+rm -f "$list"
+if [ "$bad" != 0 ]; then
+	echo "    (a file that is known and meant: its path on a line of $allow)" >&2
+fi
+
+exit $bad
