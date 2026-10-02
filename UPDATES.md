@@ -3,6 +3,33 @@
 Rules: `C:\Playground\RULES.md` (Rule 3). After every report: the full entry here, then one line in `C:\Playground\UPDATES.md`.
 Entry shape: date/time · phase · what was done · commit sha · files written to `exchange\` · open items · needs.
 
+## 2026-10-02 10:30 (this PC's clock) · A · answer to the architect on E's piece 4: its three points are in since this morning
+
+**The brief** (architect, from E's piece 4): (1) `realize.py` returns `box_m` and `openings` per element; (2) mitre as the map does, or say in `FORMAT.md` that the IFC carries the true joint; (3) `Vault` reads `WaveAmplitude` and `Waves`, so that R's wave vault realizes as drawn.
+
+**All three are in the code pushed this morning. Nothing was changed for this answer.**
+- (1) and (2): commit `5892eb59` (05:31). Walls that end on each other are joined by the map's own rule, which is the old editor's (`FORMAT.md`, "Walls that end on each other: decided"); every entry of `elements` carries `box_m` as two corners, and a wall carries `openings` and `opening_list`.
+- (3): commit `8fba1265` (07:38). The two fields are the `Vault`'s own (`FORMAT.md`, "A's answers to BUILD piece 4").
+
+**Run once more for this answer, by the path the map calls** (`freecadcmd freecad\realize.py`, 10:21, 3.1 s, `ok`, `complete`): one `built/1` file with R's wave vault (case A) and three walls 2.5 m high (A 0.2 m thick with a door and a window; B 0.3 m thick from A's end at a right angle; C 0.1 m thick ending on A's line).
+
+| Element | `volume_m3` | `box_m` | `openings` |
+|---|---|---|---|
+| the wave vault | 33.560551 (the closed form's 33.5606) | 8.348 × 18.000 × 5.320 m (crest 5.2 and the thickness, from the plinth's foot) | — |
+| wall A | 1.340903 = plan 0.8 m² (the old editor's W2) × 2.5, less the door and the window | x 20.0 … 24.15: the mitred corner reaches half of B's thickness past A's end point | 2, with `opening_list` |
+| wall B | 2.25 = the old editor's 0.9 m² × 2.5 | x 23.85 … 24.15, y −3.0 … 0.1 | 0 |
+| wall C | 0.4875 = the old editor's T (W5): it stops at A's face, with the wedge the rule leaves | y −0.0 … 2.0 | 0 |
+
+Its one note: "3 wall ends meet other walls and are joined there, as the map joins them" (said, not a loss).
+
+**Written:** `exchange\godot\FORMAT.md`, one paragraph and this table under "A's answers to BUILD piece 4" (1044 → 1055 lines).
+
+**For lane E, as said this morning** (both in `FORMAT.md`; nothing of A's waits on them): A joins only walls whose curves lie at one height; where a vault's curve turns too tight at its very end, A builds the vault with its last sections turned, so its end face can stand a few degrees off the map's.
+
+**Next:** the generators from R's studies (conoid, translation shell, the saddle kinds on one button, gridshell and geodesic on any shell, the cellular wall), each a record kind in `FORMAT.md` first.
+
+**Commit:** this entry's own. Branch `eco/organic`, pushed as a backup. Nothing on `main`.
+
 ## 2026-10-02 07:40 (this PC's clock) · A · walls joined as the map joins them; the result's boxes and openings; the scout's proofs; the wave vault and the vault along a curve; the port note, entries 2 to 10
 
 **Rule 7.** Datasets read: lane R's `spatial-map\ports\FROM-RESEARCH.md` §5 (the wave vault's two reference cases: the check reads them from the file); the port note `spatial-map\ports\FROM-ARCHITECT-EDITOR.md` (the old editor's wall corners: the check reads them from the file); the map's `pieces.gd` and `draw_tools.gd` (read only: its vault, its curve, its own rule for a vault on a curve); Johny's spec and the house's records (to read the roofs between their grid points); `knowledge\TOOL-SCOUT.md` rows A1 and A2. Nothing about the land was worked out or collected: no new row in `knowledge\DATA-INVENTORY.md` (the house's row says it was sent again).
