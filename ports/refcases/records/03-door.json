@@ -1,0 +1,43 @@
+{
+ "format": "built/1",
+ "id": "port-03-door",
+ "name": "Port note 3, door",
+ "placement": {"coordinates": [-119.156328273, 34.433316352], "altitude_m": 0.0,
+               "rotation_deg": {"x": 0.0, "y": 0.0, "z": 0.0}, "scale": 1.0},
+ "pieces": [
+  {"id": "c-rect", "type": "PlanCurve", "name": "DB1 line",
+   "params": {"Kind": "Points", "Points": [[0, 0], [4, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-rect", "type": "Wall", "name": "DB1 wall, rectangular door 0.9 x 2.1, 1.0 m along",
+   "params": {"Base": "c-rect", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [1.0], "OpeningWidths": [0.9], "OpeningHeights": [2.1],
+              "OpeningSills": [0.0], "OpeningShapes": ["Rect"]}},
+
+  {"id": "c-arch", "type": "PlanCurve", "name": "DB2 line",
+   "params": {"Kind": "Points", "Points": [[10, 0], [14, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-arch", "type": "Wall", "name": "DB2 wall, arched door 0.9 x 2.1 (rise 0.45, half its width), 2.0 m along",
+   "params": {"Base": "c-arch", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [2.0], "OpeningWidths": [0.9], "OpeningHeights": [2.1],
+              "OpeningSills": [0.0], "OpeningShapes": ["Arch"]}},
+
+  {"id": "c-arch-wide", "type": "PlanCurve", "name": "DB2 line, wide door",
+   "params": {"Kind": "Points", "Points": [[20, 0], [24, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-arch-wide", "type": "Wall", "name": "DB2 wall, arched door 1.2 x 2.1: the record's arch always rises half the width",
+   "params": {"Base": "c-arch-wide", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [2.0], "OpeningWidths": [1.2], "OpeningHeights": [2.1],
+              "OpeningSills": [0.0], "OpeningShapes": ["Arch"]}},
+
+  {"id": "c-rounded", "type": "PlanCurve", "name": "DB3 line",
+   "params": {"Kind": "Points", "Points": [[30, 0], [34, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-rounded", "type": "Wall", "name": "DB3 wall, round-cornered door 0.9 x 2.1: nearest record shape is Rect",
+   "params": {"Base": "c-rounded", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [2.0], "OpeningWidths": [0.9], "OpeningHeights": [2.1],
+              "OpeningSills": [0.0], "OpeningShapes": ["Rect"]}},
+
+  {"id": "c-low", "type": "PlanCurve", "name": "DB4 line",
+   "params": {"Kind": "Points", "Points": [[40, 0], [44, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-low", "type": "Wall", "name": "DB4 wall whose body runs 0.15 below its base, rectangular door 0.9 x 2.1, 2.0 m along",
+   "params": {"Base": "c-low", "Thickness": 0.2, "Height": 2.5, "Foundation": 0.15,
+              "OpeningPositions": [2.0], "OpeningWidths": [0.9], "OpeningHeights": [2.1],
+              "OpeningSills": [0.0], "OpeningShapes": ["Rect"]}}
+ ]
+}

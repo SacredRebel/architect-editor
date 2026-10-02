@@ -1,0 +1,12 @@
+{
+ "format": "built/1",
+ "id": "port-08-column",
+ "name": "Port note 8, column",
+ "placement": {"coordinates": [-119.156328273, 34.433316352], "altitude_m": 0.0,
+               "rotation_deg": {"x": 0.0, "y": 0.0, "z": 0.0}, "scale": 1.0},
+ "pieces": [
+  {"id": "k-basic-round", "type": "Revolved", "name": "R1: the round parts of the basicPillar preset, shaft and capital",
+   "ifc_type": "Column",
+   "params": {"Profile": [[0.1584, 0.22], [0.1584, 2.3], [0.2684, 2.3], [0.2684, 2.5]]}}
+ ]
+}

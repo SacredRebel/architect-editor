@@ -1,0 +1,26 @@
+{
+ "format": "built/1",
+ "id": "port-07-stair",
+ "name": "Port note 7, stair",
+ "placement": {"coordinates": [-119.156328273, 34.433316352], "altitude_m": 0.0,
+               "rotation_deg": {"x": 0.0, "y": 0.0, "z": 0.0}, "scale": 1.0},
+ "pieces": [
+  {"id": "st-flight", "type": "Steps", "name": "B1 flight, the old editor's 10 steps",
+   "params": {"From": [0, 0, 0], "To": [0, -3, 2.7], "Width": 1.0, "Count": 10, "Foundation": 0.05,
+              "Rise": 0.27, "Run": 0.3}},
+
+  {"id": "st-flight-count-0", "type": "Steps", "name": "B1 flight, as many steps as A gives it",
+   "params": {"From": [10, 0, 0], "To": [10, -3, 2.7], "Width": 1.0, "Count": 0, "Foundation": 0.05,
+              "Rise": 0.16875, "Run": 0.1875}},
+
+  {"id": "st-l-1-flight", "type": "Steps", "name": "B4 L stair, first flight",
+   "params": {"From": [20, 0, 0], "To": [20, -1.5, 1.35], "Width": 1.0, "Count": 5, "Foundation": 0.05,
+              "Rise": 0.27, "Run": 0.3}},
+  {"id": "st-l-2-landing", "type": "Steps", "name": "B4 L stair, landing",
+   "params": {"From": [20, -1.5, 1.35], "To": [20, -2.5, 1.35], "Width": 1.0, "Count": 1, "Foundation": 1.35,
+              "Rise": 0.0, "Run": 1.0}},
+  {"id": "st-l-3-flight", "type": "Steps", "name": "B4 L stair, second flight",
+   "params": {"From": [20.5, -2.0, 1.35], "To": [22.0, -2.0, 2.7], "Width": 1.0, "Count": 5, "Foundation": 1.35,
+              "Rise": 0.27, "Run": 0.3}}
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "format": "built/1",
+ "id": "port-02-window",
+ "name": "Port note 2, window",
+ "placement": {"coordinates": [-119.156328273, 34.433316352], "altitude_m": 0.0,
+               "rotation_deg": {"x": 0.0, "y": 0.0, "z": 0.0}, "scale": 1.0},
+ "pieces": [
+  {"id": "c-rect", "type": "PlanCurve", "name": "M1 line",
+   "params": {"Kind": "Points", "Points": [[0, 0], [4, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-rect", "type": "Wall", "name": "M1 wall with its window",
+   "params": {"Base": "c-rect", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [2.0], "OpeningWidths": [1.5], "OpeningHeights": [1.5],
+              "OpeningSills": [0.5], "OpeningShapes": ["Rect"]}},
+
+  {"id": "c-arch", "type": "PlanCurve", "name": "M2 line",
+   "params": {"Kind": "Points", "Points": [[10, 0], [14, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-arch", "type": "Wall", "name": "M2 wall with its arched window",
+   "params": {"Base": "c-arch", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [2.0], "OpeningWidths": [1.2], "OpeningHeights": [1.5],
+              "OpeningSills": [0.5], "OpeningShapes": ["Arch"]}},
+
+  {"id": "c-round", "type": "PlanCurve", "name": "M3 line",
+   "params": {"Kind": "Points", "Points": [[20, 0], [24, 0]], "Smooth": false, "Closed": false}},
+  {"id": "w-round", "type": "Wall", "name": "M3 wall with its round window",
+   "params": {"Base": "c-round", "Thickness": 0.2, "Height": 2.5,
+              "OpeningPositions": [2.0], "OpeningWidths": [1.0], "OpeningHeights": [1.0],
+              "OpeningSills": [1.0], "OpeningShapes": ["Round"]}}
+ ]
+}
