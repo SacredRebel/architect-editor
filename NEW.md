@@ -72,13 +72,18 @@ a check that was stopped before it cleared up after itself (the checks remove th
 button's export), 22 `organic-import-out-*` (139 MB) and 79 `organic-import-*` (0.2 MB, the records written for an
 import). Any check makes all of them again.
 
-**What they teach** (kept in `knowledge\LESSONS.md`): a check stopped before its own clearing up leaves its trial
-folder behind, 1.1 GB in two days; saving over a design drops its oldest backup; the oldest site backup shows the
-retired datum, which the anchor rule already covers.
+**What they teach** (written at the top of `knowledge\LESSONS.md`, read in the order they were made, against the
+commits of those two days): the test building's wall was sent with a volume that changed with where it stood (FreeCAD's
+quick measure; the exact one since 2 Oct); it stood on the old house and under protected oaks before its place was
+chosen from the land's build envelope; the vault along a curve and the oval dome failed at their first runs and the dome
+read 1 % too much before it was built from its sections; the joints and wave-vault cases are the checks of 2 Oct being
+written. Nothing in them is needed for the design as it is. Also: saving over a design drops its oldest backup; the
+oldest site backup shows the retired datum, which the anchor rule already covers.
 
-**Proposal:** all 154 trial folders may go (1.14 GB); the four backups of the pavilion and the site may go (they hold
-nothing the designs do not); the two backups of your house may go once you have looked at today's house. Your yes or
-no, file by file or all at once; I delete nothing before it.
+**Proposal (the architect's, 3 Oct): move, not delete.** The 154 trial folders (1.14 GB) to
+`C:\Playground\_archive\freecad-trials\`, as they are. The backups stay where they are until you say; from now on a
+backup is copied aside to `C:\Playground\_archive\freecad-backups\` before its design is saved over. Your yes or no on
+the move; nothing is deleted.
 
 ## 2 Oct, 23:45 — new buttons: the shells and lattices from lane R's studies
 
