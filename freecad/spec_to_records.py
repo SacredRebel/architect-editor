@@ -42,6 +42,18 @@ hold is written, line by line, into <records>.notes.txt beside the records.
              top's heights worked out here from the spec's own expression and its clearance
              rule on a square grid (--step), the envelope thickness straight down, and its
              round holes (the courtyards; the chimney cut with its movement clearance)
+
+--answers <file.json> adds what Johny decided after the spec, in his words (the house's
+<records>.answers.json beside its records; FORMAT.md, "Johny's answers on his house S01"):
+
+  decided    written as it is beside the records' placement (where the building stands)
+  floors     a level's slab thickness the spec does not state, as --floor does
+  floor_cuts a round opening in a level's floor of another piece's own radius where it passes
+             the floor (round_of: the chimney): the largest radius of its profile between the
+             floor's underside and its top, about its centre
+  bands      one WallBand on each wall named, of the kind named, its pane as thick as the
+             wall named in glass_from; its Roofs: the roof shells over any point of the wall's
+             path. Where the wall's top already stands in the roof over it, that is said
 """
 
 import argparse
@@ -211,9 +223,25 @@ def circle_piece(piece_id, name, centre, radius, z):
             "placement": {"x": round(centre[0], 6), "y": round(centre[1], 6), "z": round(z, 6)}}
 
 
-def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[0], lat=ANCHOR[1], altitude=0.0, turn=0.0, source=""):
-    """(the records, the notes: what was read how, and what of the spec the records do not hold)."""
+def profile_radius(profile, z_low, z_high):
+    """The largest radius of a [(z, r)] profile (straight between its points) between two heights."""
+    pts = sorted(profile)
+    at = lambda z: next((r0 + (r1 - r0) * (z - z0) / (z1 - z0) for (z0, r0), (z1, r1) in zip(pts, pts[1:]) if z0 <= z <= z1 and z1 > z0), None)  # noqa: E731
+    found = [r for r in (at(z_low), at(z_high)) if r is not None] + [r for z, r in pts if z_low <= z <= z_high]
+    if not found:
+        raise ValueError("the profile does not reach from %.2f to %.2f" % (z_low, z_high))
+    return max(found)
+
+
+def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[0], lat=ANCHOR[1], altitude=0.0, turn=0.0, source="", answers=None):
+    """(the records, the notes: what was read how, and what of the spec the records do not hold).
+    answers: what Johny decided after the spec (the --answers file), or None."""
     floors = dict(floors or {})
+    answers = answers or {}
+    said = {}  # Johny's words for what the answers set, by what they set
+    for level, row in (answers.get("floors") or {}).items():
+        floors[level] = float(row["thickness_m"])
+        said["floor " + level] = row.get("words", "")
     notes, pieces, paths = [], [], {}
     levels = {k: num(v) for k, v in spec["frame"]["levels_m"].items()}
 
@@ -312,7 +340,10 @@ def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[
             thickness = zones[level]
         elif level in floors:
             thickness = floors[level]
-            notes.append("%s floor: the spec states no floor zone for this level; its slab is %.2f m thick because --floor %s=%.2f said so" % (LEVEL_WORDS.get(level, level), thickness, level, thickness))
+            if said.get("floor " + level) is not None:
+                notes.append("%s floor: the spec states no floor zone for this level; its slab is %.2f m thick by Johny's answer (\"%s\")" % (LEVEL_WORDS.get(level, level), thickness, said["floor " + level]))
+            else:
+                notes.append("%s floor: the spec states no floor zone for this level; its slab is %.2f m thick because --floor %s=%.2f said so" % (LEVEL_WORDS.get(level, level), thickness, level, thickness))
         else:
             notes.append("%s floor: the spec states no floor zone for this level: no slab (state one with --floor %s=<metres>)" % (LEVEL_WORDS.get(level, level), level))
             continue
@@ -323,6 +354,18 @@ def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[
             pieces.append(curve_piece(cid, "%s floor outline" % LEVEL_WORDS.get(level, level), pts, True, z))
         params = {"Base": cid, "Thickness": thickness}
         holes = [h for h in (hole(h, "%s floor" % LEVEL_WORDS.get(level, level)) for h in floor.get("holes", [])) if h]
+        for cut in (answers.get("floor_cuts") or {}).get(level, []):  # a round opening Johny asked for (the chimney's)
+            of = cut.get("round_of")
+            chimney = spec.get("structural_and_coordination", {}).get("chimney") if of == "chimney" else None
+            if not chimney or not chimney.get("radius_profile_z_r_m"):
+                notes.append("%s floor: the opening %s round %r is asked for, and the spec has no such piece with a profile: not cut" % (LEVEL_WORDS.get(level, level), cut["id"], of))
+                continue
+            centre = [num(c) for c in chimney.get("centre_xyz_m", [0, 0, 0])]
+            radius = profile_radius([(num(zz) + centre[2], num(r)) for zz, r in chimney["radius_profile_z_r_m"]], z - thickness, z)
+            pieces.append(circle_piece(cut["id"], "%s (the %s's opening in the %s floor)" % (cut["id"], of, level), centre[:2], radius, z))
+            holes.append(cut["id"])
+            notes.append("%s floor: %s, a round opening of the %s's own radius where it passes the floor (%.3f m, its largest between %.2f and %.2f), by Johny's answer (\"%s\")"
+                         % (LEVEL_WORDS.get(level, level), cut["id"], of, radius, z - thickness, z, cut.get("words", "")))
         if holes:
             params["Holes"] = holes
         pieces.append({"id": "floor-%s" % level, "type": "Slab", "name": "%s floor" % LEVEL_WORDS.get(level, level), "ifc_type": "Slab", "params": params})
@@ -336,6 +379,7 @@ def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[
                        "placement": {"x": centre[0], "y": centre[1], "z": centre[2]}})
 
     # ---- roofs
+    leaves = {}  # each roof shell: (its outline as the map draws it, its round holes, its top, its thickness)
     for shell in spec.get("4_roof_shells", []):
         sid = shell["id"]
         outline, _repeated = ring_of(rows(shell["plan_outline_xy_m"]))
@@ -364,10 +408,51 @@ def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[
         if holes:
             params["Holes"] = holes
         pieces.append({"id": sid, "type": "HeightFieldShell", "name": "%s %s" % (sid, shell.get("name", "roof shell")), "ifc_type": "Roof", "params": params})
+        leaves[sid] = (drawn, [rounds[h][:2] for h in holes if h in rounds], top, num(shell["envelope_thickness_m"]))
         if shell.get("rib_count"):
             notes.append("%s: its %g ribs (%.2f m wide, %.2f m under the envelope) and its edge beam (%s m) are not in the records"
                          % (sid, num(shell["rib_count"]), num(shell["rib_width_m"]), num(shell["rib_depth_below_envelope_m"]),
                             " by ".join("%.2f" % num(v) for v in shell.get("edge_beam_width_depth_m", []))))
+
+    # ---- the band between a wall's top and the roofs over it, closed with glass or with the wall (Johny's answer)
+    band = answers.get("bands") or {}
+    by_wall = {w["id"]: w for w in spec.get("2_curved_walls", [])}
+    glass = num(by_wall[band["glass_from"]]["thickness_m"]) if band.get("glass_from") in by_wall else None
+    for wid in band.get("walls", []):
+        w = by_wall.get(wid)
+        if w is None or wid + ".path" not in paths:
+            notes.append("the band of %s is asked for, and the spec lists no such wall: left out" % wid)
+            continue
+        pts, closed, base = paths[wid + ".path"]
+        drawn = map_points(pts, closed)
+        over = [sid for sid, (ring, _holes, _top, _t) in leaves.items() if any(inside(p, ring) for p in drawn)]
+        if not over:
+            notes.append("%s: no roof shell is over it: no band" % wid)
+            continue
+        params = {"Wall": wid, "Roofs": over, "Kind": str(band.get("kind", "Glass"))}
+        if glass is not None:
+            params["Thickness"] = glass
+        pieces.append({"id": wid + ".band", "type": "WallBand", "name": "%s band to the roof" % wid, "params": params})
+        # where the wall's own top already stands in a roof over it (the spec's numbers against each other): no band there
+        tops = [base + h for h in by_id_params(pieces, wid).get("TopHeights", [])] or [base + by_id_params(pieces, wid)["Height"]] * len(pts)
+        thick, align = by_id_params(pieces, wid)["Thickness"], by_id_params(pieces, wid)["Align"]
+        worst = None
+        for i, (x, y) in enumerate(pts):
+            a, b = pts[i - 1] if closed or i else pts[i], pts[(i + 1) % len(pts)] if closed or i < len(pts) - 1 else pts[i]
+            tx, ty = b[0] - a[0], b[1] - a[1]
+            k = math.hypot(tx, ty) or 1.0
+            side = {"Left": 0.5, "Right": -0.5}.get(align, 0.0) * thick  # the wall's middle line, left of its path by this
+            mx, my = x - ty / k * side, y + tx / k * side
+            under = [(top(mx, my) - t, sid) for sid, (ring, holes_, top, t) in leaves.items() if sid in over and inside((mx, my), ring)
+                     and not any(math.hypot(mx - c[0], my - c[1]) < r for c, r in holes_)]
+            if under:
+                low, sid = min(under)
+                if worst is None or tops[i] - low > worst[0]:
+                    worst = (tops[i] - low, sid, mx, my)
+        if worst is not None and worst[0] > 0.005:
+            notes.append("%s: its top stands up to %.2f m into %s's underside, at (%.2f, %.2f) (the spec's own numbers): its band leaves that place out"
+                         % (wid, worst[0], worst[1], worst[2], worst[3]))
+        notes.append("%s: a band to the roof (%s, %s), by Johny's answer (\"%s\")" % (wid, params["Kind"], ", ".join(over), band.get("words", "")))
 
     # ---- what the records do not hold
     structure = spec.get("structural_and_coordination", {})
@@ -392,7 +477,16 @@ def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[
         "placement": {"coordinates": [lng, lat], "altitude_m": altitude, "rotation_deg": {"x": 0.0, "y": turn, "z": 0.0}, "scale": 1.0},
         "pieces": pieces,
     }
+    if answers.get("decided"):  # Johny's decisions about where it stands (FORMAT.md, "decided")
+        records["decided"] = answers["decided"]
+        for key, row in answers["decided"].items():
+            notes.append("decided by %s on %s, %s: \"%s\"" % (row.get("by", "?"), row.get("on", "?"), key, row.get("words", "")))
     return records, notes
+
+
+def by_id_params(pieces, piece_id):
+    """The params of the piece with this id among pieces."""
+    return next(p["params"] for p in pieces if p["id"] == piece_id)
 
 
 def main(argv=None):
@@ -407,6 +501,7 @@ def main(argv=None):
     ap.add_argument("--lat", type=float, default=ANCHOR[1])
     ap.add_argument("--altitude", type=float, default=0.0, help="the building's z = 0 above the ground datum at the anchor (m)")
     ap.add_argument("--turn", type=float, default=0.0, help="degrees anticlockwise")
+    ap.add_argument("--answers", default=None, help="what Johny decided after the spec (a <records>.answers.json; see the top of this file)")
     args = ap.parse_args(argv)
     floors = {}
     for item in args.floor:
@@ -414,7 +509,11 @@ def main(argv=None):
         floors[level.strip()] = float(metres)
     with open(args.spec, encoding="utf-8") as fh:
         spec = json.load(fh)
-    records, notes = convert(spec, floors, args.step, args.name, args.pavilion, args.lng, args.lat, args.altitude, args.turn, os.path.basename(args.spec))
+    answers = None
+    if args.answers:
+        with open(args.answers, encoding="utf-8") as fh:
+            answers = json.load(fh)
+    records, notes = convert(spec, floors, args.step, args.name, args.pavilion, args.lng, args.lat, args.altitude, args.turn, os.path.basename(args.spec), answers)
     out = os.path.abspath(args.records)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:

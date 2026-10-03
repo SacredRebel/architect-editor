@@ -205,18 +205,37 @@ def worst(values):
 
 
 # ------------------------------------------------------------------ what the spec says, piece by piece
-def spec_pieces(spec):
-    """{id: (kind, what the spec says of it)} for everything the house check looks at."""
+def spec_pieces(spec, answers=None):
+    """{id: (kind, what the spec says of it)} for everything the house check looks at; with
+    Johny's answers (the records' .answers.json), the round openings he asked for in a floor
+    (each with its radius worked out here from the piece it is round) and the bands."""
+    answers = answers or {}
     out = {}
     for w in spec.get("2_curved_walls", []):
         out[w["id"]] = ("wall", w)
-    for level, floor in spec.get("floor_outlines", {}).items():
-        out["floor-" + level] = ("floor", dict(floor, level=level))
     chimney = spec.get("structural_and_coordination", {}).get("chimney")
+    zones = {level: num(spec["structural_and_coordination"][key]) for level, key in (("main", "main_floor_zone_m"), ("mezzanine", "mezzanine_floor_zone_m"))
+             if key in spec.get("structural_and_coordination", {})}
+    zones.update({level: float(row["thickness_m"]) for level, row in (answers.get("floors") or {}).items()})
+    for level, floor in spec.get("floor_outlines", {}).items():
+        cuts = []
+        z = num(floor.get("z_m", spec["frame"]["levels_m"].get(level, 0.0)))
+        for cut in (answers.get("floor_cuts") or {}).get(level, []):
+            if cut.get("round_of") == "chimney" and chimney and level in zones:
+                centre = [num(c) for c in chimney.get("centre_xyz_m", [0, 0, 0])]
+                radius = s2r.profile_radius([(num(zz) + centre[2], num(r)) for zz, r in chimney["radius_profile_z_r_m"]], z - zones[level], z)
+                cuts.append((cut["id"], (centre[0], centre[1]), radius))
+        out["floor-" + level] = ("floor", dict(floor, level=level, cuts=cuts))
     if chimney:
         out["chimney"] = ("chimney", chimney)
     for shell in spec.get("4_roof_shells", []):
         out[shell["id"]] = ("roof", shell)
+    band = answers.get("bands") or {}
+    walls = {w["id"]: w for w in spec.get("2_curved_walls", [])}
+    glass = num(walls[band["glass_from"]]["thickness_m"]) if band.get("glass_from") in walls else None
+    for wid in band.get("walls", []):
+        if wid in walls:
+            out[wid + ".band"] = ("band", {"wall": walls[wid], "kind": str(band.get("kind", "Glass")), "glass": glass})
     return out
 
 
@@ -458,17 +477,15 @@ def measure_floor(spec, floor, shape):
     box = box_of(shape)
     holes = round_holes(spec)
     out = {"valid": bool(shape.isValid()), "solids": len(shape.Solids), "box": box, "volume": og.volume_of(shape) / 1e9, "top": box[5], "bottom": box[4], "holes": {}}
-    for hid in floor.get("holes", []):
-        if hid not in holes:
-            continue
-        (cx, cy), r = holes[hid]
+    asked = [(hid, centre, r, True) for hid, centre, r in floor.get("cuts", [])]  # the openings Johny asked for (the chimney's)
+    for hid, (cx, cy), r, cut in [(hid, holes[hid][0], holes[hid][1], False) for hid in floor.get("holes", []) if hid in holes] + asked:
         mid = (box[4] + box[5]) / 2.0
         rim = []
-        for k in range(8):
-            a = 2 * math.pi * k / 8
+        for k in range(8 if not cut else 16):
+            a = 2 * math.pi * (k + 0.25) / (8 if not cut else 16)
             at = edge_between(shape, (cx, cy, mid), (math.cos(a), math.sin(a), 0.0), r, REACH, inside_first=False)
             rim.append(None if at is None else at - r)
-        out["holes"][hid] = {"open": not is_in(shape, cx, cy, mid), "rim": rim}
+        out["holes"][hid] = {"open": not is_in(shape, cx, cy, mid), "rim": rim, "cut": cut, "radius": r}
     return out
 
 
@@ -550,7 +567,170 @@ def measure_roof(spec, shell, shape):
     return out
 
 
-MEASURES = {"wall": measure_wall, "floor": measure_floor, "chimney": measure_chimney, "roof": measure_roof}
+BAND_EDGE = 0.10  # metres along the wall: a place this near where its band starts or ends (by the rule below) is not looked at
+BAND_LOW = 0.005  # metres: no band where the underside of the lowest roof over it stands less than this over the wall's top, at its middle
+BAND_UNSURE = 0.03  # metres: nor is a place looked at whose underside stands within this of BAND_LOW over the wall's top (the roofs' own tolerance)
+BAND_FOLD = 0.8  # no band where its side on the inside of a turn lies further into the turn than this share of its radius
+BAND_ACROSS = 9  # places across a band asked whether a roof's plan holds them
+BAND_BEND_REACH = 0.5  # metres along the wall: a band's faces are not looked at this near a turn of the spec's path tighter than the band is wide
+
+
+def measure_band(spec, said, shape):
+    """A band between a wall's top and the roofs over it (Johny's answer 5), by the format's
+    rule, worked out here from the spec alone: at a line across the wall, a roof is over the
+    band when its plan (the spec's outline less its round holes) holds any of BAND_ACROSS
+    places from one of the band's faces to the other (a courtyard wall stands under the rim of
+    the roof's hole over the courtyard); there is a band where a roof is over it and the
+    underside of the lowest such roof (the spec's own expression less the roof's thickness) at
+    the band's middle stands at least BAND_LOW over the wall's top, and where the wall does not
+    turn tighter than the band can follow (its side on the inside of the turn no further into
+    it than BAND_FOLD of the radius, the turn read off the spec's own curve); it runs up to that
+    lowest roof, and steps where the roof over it changes (the spec's "stepped glazing at shell
+    seams"). At the wall's own
+    points and half-way between them (where the spec's top line is exact), on the upright line
+    through the band's middle: where there is a band, where it starts (the wall's top) and where
+    it ends (that underside); where there is none, that nothing is there. A place within
+    BAND_EDGE along the wall of where the band starts, ends or steps, or whose underside stands within
+    BAND_UNSURE of BAND_LOW over the wall's top, is not looked at. And the band's two faces at
+    mid height: a glass pane on the wall's middle, or the wall's own two faces; not within
+    BAND_BEND_REACH of a turn of the spec's path tighter than the band is wide, where the wall's
+    base curve (fitted through points 0.2 m apart) and the band with it leave the spec's line."""
+    w, kind, glass = said["wall"], said["kind"], said["glass"]
+    base = num(w["z_base_m"])
+    pts, repeated = ring_of(rows(w["points_xy_m"]))
+    closed = bool(w.get("closed")) or repeated
+    path = Path(pts, closed)
+    t = num(w["thickness_m"])
+    outer = w.get("reference") == "outer_face" and closed
+    faces = sorted((0.0, path.inward * t)) if outer else (-t / 2.0, t / 2.0)
+    middle = (faces[0] + faces[1]) / 2.0
+    if kind == "Glass":
+        faces = (middle - glass / 2.0, middle + glass / 2.0)
+    tops = [r[2] - base for r in rows(w["top_edge_xyz_m"])][:len(pts)] if w.get("top_edge_xyz_m") else None
+    height = None if tops else (min(num(h) for h in w["height_m"]) if isinstance(w["height_m"], (list, tuple)) else num(w["height_m"]))
+    holes = round_holes(spec)
+    leaves = []
+    for shell in spec.get("4_roof_shells", []):
+        ring = Path(ring_of(rows(shell["plan_outline_xy_m"]))[0], True, per=120).dense()
+        leaves.append((shell["id"], ring, [holes[h] for h in shell.get("holes", []) if h in holes], s2r.shell_top(spec, shell["id"]), num(shell["envelope_thickness_m"])))
+    n, per, walk = len(pts), path.per, path.rows
+    count = len(walk) - 1 if closed else len(walk)  # a closed path's last row is its first again
+
+    def row(r):
+        return walk[r % count] if closed else walk[max(0, min(count - 1, r))]
+
+    def top_at(r):
+        """The wall's top above its base at row r of the path: the smooth line through the heights at its points."""
+        if tops is None:
+            return height
+        r = r % count if closed else max(0, min(count - 1, r))
+        i, j = divmod(r, per)
+        if not closed and i >= n - 1:
+            i, j = n - 2, per
+        u = j / float(per)
+        p0, p1, p2, p3 = (tops[(i + k) % n] if closed else tops[max(0, min(n - 1, i + k))] for k in (-1, 0, 1, 2))
+        return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (3 * p1 - p0 - 3 * p2 + p3) * u ** 3)
+
+    def turn(r):
+        """How the path turns at row r, per metre (to its left: more than nought)."""
+        a, b = row(r - 1), row(r + 1)
+        ds = b[4] - a[4]
+        if closed and ds <= 0:
+            ds += path.total
+        return math.asin(max(-1.0, min(1.0, a[2] * b[3] - a[3] * b[2]))) / ds if ds > 0 else 0.0
+
+    def state(r):
+        """("band", (head, foot, roof)) where the rule puts a band at row r; else ("none" | "turn" | "unsure", None)."""
+        x, y, tx, ty, _s = row(r)
+        left = (-ty, tx)
+        k = turn(r)
+        if max(faces[0] * k, faces[1] * k) > BAND_FOLD:
+            return "turn", None
+        across = [(x + left[0] * d, y + left[1] * d) for d in (faces[0] + (faces[1] - faces[0]) * j / (BAND_ACROSS - 1.0) for j in range(BAND_ACROSS))]
+        over = [(top, thick, sid) for sid, ring, hs, top, thick in leaves
+                if any(s2r.inside(q, ring) and not any(math.hypot(q[0] - c[0], q[1] - c[1]) < rad for c, rad in hs) for q in across)]
+        if not over:
+            return "none", None
+        mx, my = x + left[0] * middle, y + left[1] * middle
+        head, roof = min((top(mx, my) - thick, sid) for top, thick, sid in over)
+        foot = base + top_at(r)
+        if abs(head - foot - BAND_LOW) < BAND_UNSURE:
+            return "unsure", None
+        return ("band", (head, foot, roof)) if head - foot >= BAND_LOW else ("none", None)
+
+    def tightest_near(r, reach):
+        """The radius of the tightest turn of the path within `reach` metres either side of row r."""
+        k = abs(turn(r))
+        for step in (1, -1):
+            s0, j = row(r)[4], r
+            for _ in range(len(walk)):
+                j += step
+                d = row(j)[4] - s0
+                if closed:
+                    d = (d + path.total / 2.0) % path.total - path.total / 2.0
+                if abs(d) > reach or (not closed and (j <= 0 or j >= count - 1)):
+                    break
+                k = max(k, abs(turn(j)))
+        return 1.0 / k if k > 1e-9 else float("inf")
+
+    def along(r, ds):
+        """The row about ds metres along the path from row r."""
+        s0, step, j = row(r)[4], (1 if ds > 0 else -1), r
+        for _ in range(len(walk)):
+            j += step
+            d = row(j)[4] - s0
+            if closed:
+                d = (d + path.total / 2.0) % path.total - path.total / 2.0
+            if abs(d) >= abs(ds) or (not closed and (j <= 0 or j >= count - 1)):
+                return j
+        return j
+
+    out = {"valid": bool(shape.isValid()) if not shape.isNull() else False, "solids": len(shape.Solids), "box": box_of(shape) if shape.Solids else (0,) * 6,
+           "volume": sum(og.volume_of(s) for s in shape.Solids) / 1e9, "kind": kind, "glass": glass,
+           "feet": [], "heads": [], "missing": [], "stray": [], "none": 0, "turns": 0, "near_edge": 0, "faces": [], "tight": 0}
+    for i in range(n):
+        for half in (False, True):
+            if half and not closed and i == n - 1:
+                continue
+            r = min(i * per + (per // 2 if half else 0), len(walk) - 1)
+            x, y, tx, ty, _s = row(r)
+            left = (-ty, tx)
+            mx, my = x + left[0] * middle, y + left[1] * middle
+            here, got = state(r)
+            key = lambda st: (st[0], st[1][2] if st[1] else None)  # noqa: E731  (a band up to another roof is another stretch: it steps there)
+            if here == "unsure" or any(key(state(along(r, d))) != key((here, got)) for d in (-BAND_EDGE, -BAND_EDGE / 2.0, BAND_EDGE / 2.0, BAND_EDGE)):
+                out["near_edge"] += 1
+                continue
+            col = column_of(shape, mx, my) if shape.Solids else None
+            if here in ("none", "turn"):
+                out["none" if here == "none" else "turns"] += 1
+                if col is not None and col[0] - col[1] > 0.005:
+                    out["stray"].append("(%.2f, %.2f)" % (mx, my))
+                continue
+            head, foot, roof = got
+            if col is None:
+                out["missing"].append("(%.2f, %.2f) under %s" % (mx, my, roof))
+                continue
+            out["feet"].append(col[1] - foot)
+            out["heads"].append(col[0] - head)
+            # its two faces half-way up, on the line square to the wall through its path; not within BAND_BEND_REACH of a
+            # turn tighter than the band is wide (there the wall's base curve, fitted through points 0.2 m apart, leaves the
+            # spec's own, and the band with it)
+            if tightest_near(r, BAND_BEND_REACH) < max(abs(faces[0]), abs(faces[1])) + 0.05:
+                out["tight"] += 1
+                continue
+            z = (foot + head) / 2.0
+            reach = min(REACH, (faces[1] - faces[0]) / 2.0 - 0.005)
+            lo = edge_between(shape, (x, y, z), (left[0], left[1], 0.0), faces[0], reach, inside_first=False)
+            hi = edge_between(shape, (x, y, z), (left[0], left[1], 0.0), faces[1], reach, inside_first=True)
+            if lo is not None and hi is not None:
+                out["faces"].append((lo - faces[0], hi - faces[1]))
+            else:
+                out["missing"].append("(%.2f, %.2f): a face is not within %.3f m of where it should be" % (mx, my, reach))
+    return out
+
+
+MEASURES = {"wall": measure_wall, "floor": measure_floor, "chimney": measure_chimney, "roof": measure_roof, "band": measure_band}
 
 
 # ------------------------------------------------------------------ the design
@@ -574,25 +754,30 @@ def built(records, only=None, join=True):
     data = records if isinstance(records, dict) else json.load(open(records, encoding="utf-8"))
     if only:
         by_id = {p["id"]: p for p in data["pieces"]}
-        want = set()
-        for key in only:
+        want, todo = set(), list(only)
+        while todo:  # the pieces asked for and every piece they stand on or name (a band: its wall and its roofs, and theirs)
+            key = todo.pop()
+            if key in want or key not in by_id:
+                continue
             want.add(key)
             params = by_id[key].get("params", {})
-            if params.get("Base"):
-                want.add(params["Base"])
-            want.update(params.get("Holes", []))
+            todo.extend(params[link] for link in ("Base", "Wall") if params.get(link))
+            todo.extend(list(params.get("Holes", [])) + list(params.get("Roofs", [])))
         data = dict(data, pieces=[p for p in data["pieces"] if p["id"] in want])
     doc = App.newDocument("SpecCheck")
     oi.import_built(doc, data, join)
     return doc, shapes_of(doc)
 
 
-def gather(spec, shapes, only=None, without=()):
+def gather(spec, shapes, only=None, without=(), answers=None):
     facts = {"pieces": {}, "missing": [], "without": [], "areas": {k: num(v) for k, v in spec.get("level_gross_areas_m2", {}).items()},
              "zones": {level: num(spec["structural_and_coordination"][key]) for level, key in (("main", "main_floor_zone_m"), ("mezzanine", "mezzanine_floor_zone_m"))
                        if key in spec.get("structural_and_coordination", {})},
              "levels": {k: num(v) for k, v in spec["frame"]["levels_m"].items()}, "kinds": {}, "meetings": {}}
-    for key, (kind, said) in spec_pieces(spec).items():
+    for level, row in ((answers or {}).get("floors") or {}).items():  # a level's slab thickness by Johny's answer
+        facts["zones"].setdefault(level, float(row["thickness_m"]))
+        facts.setdefault("zone_words", {})[level] = row.get("words", "")
+    for key, (kind, said) in spec_pieces(spec, answers).items():
         if only and key not in only:
             continue
         if key in without:
@@ -602,10 +787,13 @@ def gather(spec, shapes, only=None, without=()):
         shape = shapes.get(key)
         if shape is None or shape.isNull() or not shape.Solids:
             facts["missing"].append(key)
-            continue
+            if kind != "band":
+                continue
+            shape = Part.Shape()  # a band that came out empty is still walked: where it should stand, it is missing
         t0 = time.time()
         facts["pieces"][key] = MEASURES[kind](spec, said, shape)
-        facts["pieces"][key]["plain"] = shape.Volume / 1e9  # FreeCAD's own measure, beside the adaptive one in "volume"
+        if shape.Solids:
+            facts["pieces"][key]["plain"] = shape.Volume / 1e9  # FreeCAD's own measure, beside the adaptive one in "volume"
         facts["pieces"][key]["seconds"] = time.time() - t0
         if kind == "wall":
             facts["pieces"][key]["thickness"] = num(said["thickness_m"])
@@ -629,10 +817,12 @@ def judge(facts):
     of = lambda kind: [k for k in kinds if kinds[k] == kind and k in pieces]  # noqa: E731
 
     # H. whole
-    broken = [k for k, p in pieces.items() if not p["valid"] or p["solids"] != 1]
+    broken = [k for k, p in pieces.items() if not p["valid"] or (p["solids"] != 1 and kinds[k] != "band")]
     ok(not facts["missing"] and not broken,
-       "H the house is whole: %d walls, %d floors, %d roof shells and the chimney of the spec are each one valid solid (missing: %s; not one valid solid: %s; left out on purpose and not looked at: %s)"
-       % (len(of("wall")), len(of("floor")), len(of("roof")), ", ".join(facts["missing"]) or "none", ", ".join(broken) or "none", ", ".join(facts.get("without", [])) or "none"))
+       "H the house is whole: %d walls, %d floors, %d roof shells and the chimney of the spec are each one valid solid%s (missing: %s; not valid: %s; left out on purpose and not looked at: %s)"
+       % (len(of("wall")), len(of("floor")), len(of("roof")),
+          "; %d bands to the roof, each one or more valid solids (one for each stretch under a roof)" % len(of("band")) if of("band") else "",
+          ", ".join(facts["missing"]) or "none", ", ".join(broken) or "none", ", ".join(facts.get("without", [])) or "none"))
 
     # V. each solid's volume two ways. FreeCAD's own Volume gives a face a fixed number of points: a face that spans one long
     # spline (a joined wall's side left in one piece read 4 % short) or one that folds shows as a gap between the two
@@ -699,13 +889,17 @@ def judge(facts):
         zone = facts["zones"].get(level)
         thick = p["top"] - p["bottom"]
         area = p["volume"] / thick if thick > 0 else 0.0
-        want = facts["areas"].get(level)
+        gross = facts["areas"].get(level)
+        asked = {hid: h for hid, h in p["holes"].items() if h.get("cut")}  # the openings Johny asked for, not in the spec's gross area
+        want = None if gross is None else gross - sum(math.pi * h["radius"] ** 2 for h in asked.values())
         holes_ok = all(h["open"] and all(v is not None and abs(v) <= CLOSE for v in h["rim"]) for h in p["holes"].values())
         ok(want is not None and abs(area - want) <= FLOOR_CLOSE and abs(p["top"] - facts["levels"][level]) < 1e-4 and (zone is None or abs(thick - zone) < 1e-4) and holes_ok,
-           "F the %s floor: %.2f m² (the spec's gross area of that level: %s), its top at %.2f (the level: %.2f), %.2f m thick (%s); %d courtyards open through it, their rims within %.4f m of the spec's radius"
-           % (level, area, "%.1f" % want if want is not None else "not stated", p["top"], facts["levels"][level], thick,
-              "the spec's floor zone: %.2f" % zone if zone is not None else "the spec states no floor zone for this level",
-              len(p["holes"]), worst([v for h in p["holes"].values() for v in h["rim"] if v is not None])))
+           "F the %s floor: %.2f m² (the spec's gross area of that level: %s%s), its top at %.2f (the level: %.2f), %.2f m thick (%s); %d openings through it, their rims within %.4f m of their radius%s"
+           % (level, area, "%.1f" % gross if gross is not None else "not stated",
+              "".join(", less %s's %.2f m²" % (hid, math.pi * h["radius"] ** 2) for hid, h in asked.items()), p["top"], facts["levels"][level], thick,
+              ("Johny's answer: %.2f" % zone if level in facts.get("zone_words", {}) else "the spec's floor zone: %.2f" % zone) if zone is not None else "the spec states no floor zone for this level",
+              len(p["holes"]), worst([v for h in p["holes"].values() for v in h["rim"] if v is not None]),
+              "".join("; %s, the chimney's own radius at the floor (%.3f m), by Johny's answer" % (hid, h["radius"]) for hid, h in asked.items())))
 
     # C. the chimney
     for k in of("chimney"):
@@ -737,11 +931,26 @@ def judge(facts):
         ok(holes_ok and p["outside"] == 0 and abs(p["volume"] / want - 1.0) <= 5e-4,
            "R %s plan: nothing of it over %s, nor 0.10 m outside its outline at %d places (%d found); it holds %.3f m³ (its plan %.3f m², worked out here from the outline and the round holes, times %.2f = %.3f)"
            % (k, " or ".join(sorted(p["holes"])) or "any hole (it has none)", p["outside_tried"], p["outside"], p["volume"], p["plan_area"], p["thickness"], want))
+
+    # B. the bands between the walls' tops and the roofs (Johny's answer 5): as built, and as the other kind
+    for k in of("band"):
+        p = pieces[k]
+        name = "%s as %s" % (k.split(" ")[0], "glass" if p["kind"] == "Glass" else "the wall carried up")
+        ok(p["feet"] and not p["missing"] and not p["stray"] and worst(p["feet"]) <= CLOSE and worst(p["heads"]) <= ROOF_CLOSE,
+           "B %s: at %d places it stands on its wall's top (within %.4f m) and reaches the underside of the lowest roof over it (within %.3f m; allowed %.2f and %.2f); "
+           "at %d places no roof is over it or the underside comes down to the wall, and at %d the wall turns tighter than it can follow, and there is no band "
+           "(a band where there is none: %s); %d places within %.2f m of where it starts or ends not looked at (missing: %s)"
+           % (name, len(p["feet"]), worst(p["feet"]), worst(p["heads"]), CLOSE, ROOF_CLOSE, p["none"], p["turns"], ", ".join(p["stray"][:3]) or "none", p["near_edge"], BAND_EDGE,
+              "; ".join(p["missing"][:3]) or "none"))
+        ok(p["faces"] and not p["missing"] and worst([v for pair in p["faces"] for v in pair]) <= CLOSE,
+           "B %s, its two faces: at %d places half-way up they stand where %s puts them, within %.4f m (allowed %.2f); %d places within 0.5 m of a bend tighter than it is wide not looked at"
+           % (name, len(p["faces"]), "a pane of %.2f m on the wall's middle" % p["glass"] if p["kind"] == "Glass" else "the wall's own two faces",
+              worst([v for pair in p["faces"] for v in pair]), CLOSE, p["tight"]))
     return oks, fails
 
 
 # ------------------------------------------------------------------ forgeries: forged pieces, built and measured
-def forged_builds(spec, records):
+def forged_builds(spec, records, answers=None):
     """(name, the check meant for it, the id of the piece (or the ids, with "butt" for walls built
     without their joints), the forged records) for each fault."""
     by_id = lambda data: {p["id"]: p for p in data["pieces"]}  # noqa: E731
@@ -794,6 +1003,18 @@ def forged_builds(spec, records):
         forge("%s without its holes" % roof, "R %s plan" % roof, roof, lambda p: p[roof]["params"].pop("Holes"))
         forge("%s with its grid one step to the east" % roof, "R %s field" % roof, roof,
               lambda p: p[roof]["params"].update(GridOrigin=[p[roof]["params"]["GridOrigin"][0] + p[roof]["params"]["GridStep"], p[roof]["params"]["GridOrigin"][1]]))
+    # Johny's answers: the chimney's opening in a floor, the bands to the roof
+    for level, cuts in ((answers or {}).get("floor_cuts") or {}).items():
+        fid = "floor-" + level
+        for cut in cuts:
+            forge("the %s floor without %s, the chimney's opening" % (level, cut["id"]), "F the %s floor" % level, fid,
+                  lambda p, fid=fid, cid=cut["id"]: p[fid]["params"].update(Holes=[h for h in p[fid]["params"]["Holes"] if h != cid]))
+    band = next((p["id"] for p in records["pieces"] if p["type"] == "WallBand" and p["params"].get("Kind", "Glass") == "Glass"), None)
+    if band:
+        forge("%s under no roof" % band, "B %s as glass:" % band, band, lambda p: p[band]["params"].update(Roofs=[]))
+        forge("%s under the first of its roofs only" % band, "B %s as glass:" % band, band, lambda p: p[band]["params"].update(Roofs=p[band]["params"]["Roofs"][:1]))
+        forge("%s carried up as the wall, where glass is asked" % band, "B %s as glass, its two faces" % band, band, lambda p: p[band]["params"].update(Kind="Wall"))
+        forge("%s with a pane of 0.20 m" % band, "B %s as glass, its two faces" % band, band, lambda p: p[band]["params"].update(Thickness=0.20))
     del walls
     meeting = next((m for m in spec_meetings(spec)[1] if len(m["ends"]) >= 2), None)
     if meeting:
@@ -811,9 +1032,34 @@ def forged_builds(spec, records):
     return out
 
 
-def self_test(spec, facts, design_floors):
-    records, _notes = s2r.convert(spec, floors=design_floors)
-    caught, forged = 0, forged_builds(spec, records)
+def other_kind(spec, answers, facts):
+    """The bands built again as the other kind (the wall carried up where the design has glass,
+    or the other way), apart from the design, through the same import, and measured the same
+    way into facts: Johny's answer 5 asks for both, to switch between and compare."""
+    band = (answers or {}).get("bands") or {}
+    if not band.get("walls"):
+        return
+    flipped = copy.deepcopy(answers)
+    flipped["bands"]["kind"] = "Wall" if str(band.get("kind", "Glass")) == "Glass" else "Glass"
+    records, _notes = s2r.convert(spec, answers=flipped)
+    ids = [wid + ".band" for wid in flipped["bands"]["walls"]]
+    doc, shapes = built(records, only=ids)
+    try:
+        alt = gather(spec, shapes, only=ids, answers=flipped)
+    finally:
+        App.closeDocument(doc.Name)
+    for k in ids:
+        name = "%s as %s" % (k, flipped["bands"]["kind"])
+        if k in alt["pieces"]:
+            facts["pieces"][name] = alt["pieces"][k]
+            facts["kinds"][name] = "band"
+        if k in alt["missing"]:
+            facts["missing"].append(name)
+
+
+def self_test(spec, facts, design_floors, answers=None):
+    records, _notes = s2r.convert(spec, floors=design_floors, answers=answers)
+    caught, forged = 0, forged_builds(spec, records, answers)
     for name, expect, key, data in forged:
         doc = None
         try:
@@ -826,7 +1072,7 @@ def self_test(spec, facts, design_floors):
             finally:
                 og.pieces_of = split
             g = copy.deepcopy(facts)
-            one = gather(spec, shapes, only=keys)
+            one = gather(spec, shapes, only=keys, answers=answers)
             for k in keys:
                 g["pieces"].pop(k, None)
             g["pieces"].update(one["pieces"])
@@ -858,11 +1104,16 @@ def run(spec_path=None, design=None, test=None):
         test = "--self-test" in sys.argv or os.environ.get("SPEC_CHECK_SELF_TEST") == "1"
     without = next((a.split("=", 1)[1] for a in rest if a.startswith("--without=")), os.environ.get("SPEC_CHECK_WITHOUT", ""))
     without = [k.strip() for k in without.split(",") if k.strip()]
+    answers_path = next((a.split("=", 1)[1] for a in rest if a.startswith("--answers=")), os.environ.get("SPEC_CHECK_ANSWERS", ""))
     if not spec_path or not design:
-        say("check_spec: give the spec and the design (freecadcmd check_spec.py --pass <spec.json> <design.FCStd | records.json> [--self-test])")
+        say("check_spec: give the spec and the design (freecadcmd check_spec.py --pass <spec.json> <design.FCStd | records.json> [--answers=<.answers.json>] [--self-test])")
         return False
     with open(spec_path, encoding="utf-8") as fh:
         spec = json.load(fh)
+    answers = None
+    if answers_path:  # what Johny decided after the spec, as spec_to_records.py read it
+        with open(answers_path, encoding="utf-8") as fh:
+            answers = json.load(fh)
     t0 = time.time()
     doc, opened = None, False
     if design.lower().endswith(".json"):
@@ -873,11 +1124,13 @@ def run(spec_path=None, design=None, test=None):
             doc, opened = App.openDocument(os.path.abspath(design)), True
         shapes = shapes_of(doc)
     try:
-        facts = gather(spec, shapes, without=without)
+        facts = gather(spec, shapes, without=without, answers=answers)
     finally:
         if doc is not None and (opened or design.lower().endswith(".json")):
             App.closeDocument(doc.Name)
-    say("check_spec: %s against %s: %d pieces measured in %.0f s" % (os.path.basename(design), os.path.basename(spec_path), len(facts["pieces"]), time.time() - t0))
+    other_kind(spec, answers, facts)
+    say("check_spec: %s against %s%s: %d pieces measured in %.0f s" % (os.path.basename(design), os.path.basename(spec_path),
+                                                                       " and %s" % os.path.basename(answers_path) if answers else "", len(facts["pieces"]), time.time() - t0))
     for key, p in facts["pieces"].items():
         b = p["box"]
         say("   %-16s %-8s %9.3f m³  x %7.2f..%7.2f  y %7.2f..%7.2f  z %6.2f..%6.2f  (%.0f s)%s"
@@ -894,7 +1147,7 @@ def run(spec_path=None, design=None, test=None):
     if not test:
         return True
     floors = {p["level"]: round(p["top"] - p["bottom"], 6) for k, p in facts["pieces"].items() if facts["kinds"][k] == "floor" and p["level"] not in facts["zones"]}
-    return self_test(spec, facts, floors)
+    return self_test(spec, facts, floors, answers)
 
 
 if __name__ in ("__main__", "check_spec") and not getattr(sys, "_organic_check_spec_ran", False):

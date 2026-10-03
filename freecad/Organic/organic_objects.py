@@ -410,6 +410,86 @@ def add_opening(wall, position_m, width_m=1.2, height_m=1.3, sill_m=0.9, shape="
     wall.OpeningShapes = list(wall.OpeningShapes) + [str(shape)]
 
 
+class WallBand(Organic):
+    """The band between a wall's top and the underside of the roofs over it, closed either way:
+    with glass (a pane Thickness thick on the wall's middle line, a curtain wall) or with the
+    wall itself carried up to the roofs (the wall's own section). Johny's answer on his house
+    (3 Oct 2026): both, to switch and compare; glass to start with. The band follows the wall's
+    path and its top line and stops at the underside of the lowest roof over each place of it;
+    where no roof is over the wall there is no band."""
+
+    ifc_type = "Curtain Wall"
+    icon = "OrganicWall.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Band"
+        prop(obj, "App::PropertyLink", "Wall", g, "the wall the band stands on")
+        prop(obj, "App::PropertyLinkList", "Roofs", g, "the roofs whose underside closes the band")
+        prop(obj, "App::PropertyEnumeration", "Kind", g, "Glass: a pane on the wall's middle line; Wall: the wall's own section carried up to the roofs",
+             enum=["Glass", "Wall"])
+        length(obj, "Thickness", g, "the glass pane's thickness (a Wall band has the wall's own)", 0.12)
+
+    def onChanged(self, obj, name):
+        # the class follows the kind: a glass band is a curtain wall, the wall carried up is a wall
+        if name == "Kind" and "IfcType" in obj.PropertiesList:
+            want = "Curtain Wall" if str(obj.Kind) == "Glass" else "Wall"
+            if obj.IfcType != want:
+                obj.IfcType = want
+                paint(obj)
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        wall = obj.Wall
+        if wall is None or type(getattr(wall, "Proxy", None)).__name__ != "Wall":
+            obj.Shape = Part.Shape()
+            return
+        edge, closed = base_edge(wall, corners=True)  # in the wall's own frame
+        if edge is None:
+            obj.Shape = Part.Shape()
+            return
+        d1, d2 = og.wall_sides(str(wall.Align), m(wall.Thickness) * MM)
+        if str(obj.Kind) == "Glass":
+            middle, pane = (d1 + d2) / 2.0, m(obj.Thickness) * MM
+            d1, d2 = middle - pane / 2.0, middle + pane / 2.0
+        roofs = [r for r in (self.underside(wall, roof) for roof in obj.Roofs or []) if r is not None]
+        z0 = edge.valueAt(edge.FirstParameter).z + m(wall.BaseOffset) * MM
+        top = wall.Proxy.top_line(wall, edge, closed) or str(wall.Top)
+        shape = og.wall_band_shape(edge, closed, d1, d2, z0, top, m(wall.Height), m(wall.TopRise), wall.TopWaves, roofs)
+        if shape is None:
+            obj.Shape = Part.Shape()
+            return
+        shape.Placement = obj.Placement.inverse().multiply(wall.Placement)  # from the wall's frame into the band's own
+        set_local(obj, shape)
+
+    @staticmethod
+    def underside(wall, roof):
+        """(the height of a roof's underside over a plan point, its plan as a shapely polygon),
+        both in the wall's own frame, from the roof's own numbers: a height field shell's surface
+        through its grid (it reaches past the roof's outline) less its thickness, and its outline
+        less its holes (og.plan_zone). None for a roof of any other kind: no band is built under
+        it (yet)."""
+        if roof is None or type(getattr(roof, "Proxy", None)).__name__ != "HeightFieldShell" or roof.Base is None:
+            return None
+        base = roof.Base
+        edge, closed = path_in(base, base.Placement)  # in the curve's own frame: the grid's
+        if not closed:
+            return None
+        surface = og.field_surface((roof.GridOrigin.x / MM, roof.GridOrigin.y / MM), m(roof.GridStep), roof.GridColumns, list(roof.Heights))
+        to_wall = wall.Placement.inverse().multiply(base.Placement)
+        to_roof = to_wall.inverse()
+        zone = og.plan_zone(edge, hole_edges(roof, base.Placement), to_wall)
+        thickness, last = m(roof.Thickness) * MM, [None]
+
+        def under(x, y):
+            q = to_roof.multVec(App.Vector(x, y, 0.0))
+            z, last[0] = og.field_z(surface, q.x, q.y, last[0])
+            return to_wall.multVec(App.Vector(q.x, q.y, z - thickness)).z
+
+        return under, zone
+
+
 # ---------------------------------------------------------------- vaults and arches
 class Vault(Organic):
     """A barrel vault (or, short, an arch) along the object's +Y, springing from its base; or,

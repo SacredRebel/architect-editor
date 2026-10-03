@@ -355,12 +355,12 @@ def read_glb(path):
 
 
 # ---------------------------------------------------------------- what stands there already
-def plan_triangles(path, prefix):
-    """The triangles of a land file's nodes whose name starts with prefix, in plan: an array
-    (n, 3, 2) of (east, north) metres from the anchor. None when the file is not there."""
+def plan_triangles(path, prefix, exact=False):
+    """The triangles of a land file's nodes whose name starts with prefix (exact: is prefix), in
+    plan: an array (n, 3, 2) of (east, north) metres from the anchor. None when the file is not there."""
     import numpy as np
 
-    t = node_triangles(path, prefix)
+    t = node_triangles(path, prefix, exact)
     return None if t is None else np.stack([t[:, :, 0], -t[:, :, 2]], axis=2)  # glTF (x, y, z) = (east, up, south)
 
 
@@ -389,9 +389,9 @@ def ground_at(out_dir, east, north):
     return None if here is None or zero is None else here - zero
 
 
-def node_triangles(path, prefix):
-    """The triangles of a land file's nodes whose name starts with prefix: an array (n, 3, 3)
-    in the file's own frame (glTF: x east, y up, z south). None when the file is not there."""
+def node_triangles(path, prefix, exact=False):
+    """The triangles of a land file's nodes whose name starts with prefix (exact: is prefix): an
+    array (n, 3, 3) in the file's own frame (glTF: x east, y up, z south). None when the file is not there."""
     import numpy as np
 
     if not os.path.isfile(path):
@@ -428,7 +428,8 @@ def node_triangles(path, prefix):
     def walk(index, parent):
         node = gltf["nodes"][index]
         world = parent @ local(node)
-        if "mesh" in node and node.get("name", "").startswith(prefix):
+        name = node.get("name", "")
+        if "mesh" in node and (name == prefix if exact else name.startswith(prefix)):
             for prim in gltf["meshes"][node["mesh"]]["primitives"]:
                 pos = accessor(prim["attributes"]["POSITION"])
                 pos = pos @ world[:3, :3].T + world[:3, 3]
@@ -443,36 +444,72 @@ def node_triangles(path, prefix):
     return np.concatenate(out) if out else np.zeros((0, 3, 3))
 
 
-def site_clearance(out_dir, footprint):
+def site_clearance(out_dir, footprint, replaces=()):
     """Metres from the building's footprint to what the map already shows there: the roads,
-    the access easement and the existing buildings (0: it stands on one). Read from the land
+    the access easement and the existing buildings (0: it stands on one), as a dict; and, as a
+    second dict, the existing buildings it replaces (its `decided` names them), each by its
+    own name: those are not among the existing buildings of the first. Read from the land
     files in the exchange folder; a kind is left out when its file is not there.
     footprint: (east, north) points in metres from the anchor."""
     try:
         import numpy as np
         import shapely
     except ImportError:
-        return {}
+        return {}, {}
     hull = shapely.MultiPoint([tuple(p) for p in footprint]).convex_hull
-    out = {}
-    for key, name, prefix in (("road", SITE_FILE, "road"), ("easement", SITE_FILE, "easement"), ("existing_building", EXISTING_FILE, "")):
-        tris = plan_triangles(os.path.join(out_dir, name), prefix)
+
+    def gap(tris):
         if tris is None or not len(tris):
-            continue
+            return None
         a, b, c = tris[:, 0], tris[:, 1], tris[:, 2]
         area = np.abs((b[:, 0] - a[:, 0]) * (c[:, 1] - a[:, 1]) - (b[:, 1] - a[:, 1]) * (c[:, 0] - a[:, 0])) / 2
         tris = tris[area > 1e-6]  # a wall seen from above is a line
-        if len(tris):
-            out[key] = round(float(shapely.distance(hull, shapely.polygons(tris)).min()), 2)
-    return out
+        return round(float(shapely.distance(hull, shapely.polygons(tris)).min()), 2) if len(tris) else None
+
+    out, replaced = {}, {}
+    for key, prefix in (("road", "road"), ("easement", "easement")):
+        d = gap(plan_triangles(os.path.join(out_dir, SITE_FILE), prefix))
+        if d is not None:
+            out[key] = d
+    path = os.path.join(out_dir, EXISTING_FILE)
+    if os.path.isfile(path):
+        gltf, _blob = read_glb(path)
+        for name in sorted({n.get("name", "") for n in gltf.get("nodes", []) if "mesh" in n}):
+            d = gap(plan_triangles(path, name, exact=True))
+            if d is None:
+                continue
+            if name in replaces:
+                replaced[name] = d
+            else:
+                out["existing_building"] = d if "existing_building" not in out else min(out["existing_building"], d)
+    return out, replaced
 
 
 ENVELOPE_FILE = "build-envelope.geojson"
 # the envelope's kinds that are a place to build in, or only a reference; every other kind says "no building"
 ENVELOPE_OPEN = ("buildable_envelope", "house_zone")
+# lane C's overlay from Johny's word (3 Oct 2026, no survey): the oaks inside it were cut, the data there is out of date
+OAKS_REMOVED_FILE = os.path.join("land", "oaks-removed.geojson")
 
 
-def envelope_at(out_dir, footprint, anchor=ANCHOR):
+def oaks_removed(out_dir):
+    """The polygons of lane C's land\\oaks-removed.geojson, each with its own reason: [(shapely
+    polygon, reason)], or [] when the file is not there. An oak_protection polygon whose middle
+    lies in one is out of date (FORMAT.md, "Johny's answers on his house S01")."""
+    path = os.path.join(out_dir, OAKS_REMOVED_FILE)
+    if not os.path.isfile(path):
+        return []
+    try:
+        from shapely.geometry import shape as as_shape
+    except ImportError:
+        return []
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    return [(as_shape(f["geometry"]), (f.get("properties") or {}).get("reason", "")) for f in data.get("features", [])
+            if (f.get("properties") or {}).get("kind") == "oaks_removed" and f.get("geometry")]
+
+
+def envelope_at(out_dir, footprint, anchor=ANCHOR, replaces=()):
     """What the map's build envelope (lane C's build-envelope.geojson: the county's setbacks,
     the oak protection zones, the steep ground, the easement, the roads, the existing
     buildings) holds at a building's footprint. footprint: (east, north) points in metres from
@@ -481,8 +518,11 @@ def envelope_at(out_dir, footprint, anchor=ANCHOR):
     Returns None when the file is not there, else {"file", "points", "buildable": the share of
     the footprint's points inside the buildable envelope (None when the file has none),
     "no_building": {kind: {"share", "reason"}} for every kind that says no building and holds
-    a point of it}. The land's own analysis is lane C's: this reads it, and works out nothing
-    of its own about the land."""
+    a point of it, "stale": {kind: {"share", "reason"}} for the oak_protection polygons that
+    lane C's land\\oaks-removed.geojson marks as out of date (their middle inside it; its own
+    reason), "replaced": {name: share} for the existing buildings it replaces (replaces: their
+    names)}; neither of the last two is in no_building. The land's own analysis is lane C's:
+    this reads it, and works out nothing of its own about the land."""
     path = os.path.join(out_dir, ENVELOPE_FILE)
     if not os.path.isfile(path):
         return None
@@ -496,9 +536,11 @@ def envelope_at(out_dir, footprint, anchor=ANCHOR):
     kx, ky = METRES_PER_DEG
     points = shapely.points([(anchor["lng"] + e / kx, anchor["lat"] + n / ky) for e, n in footprint])
     reach = shapely.box(*shapely.total_bounds(points))
-    inside, reasons = {}, {}
+    removed = oaks_removed(out_dir)
+    inside, reasons, stale, stale_reasons, replaced = {}, {}, {}, {}, {}
     for feature in data.get("features", []):
-        kind = (feature.get("properties") or {}).get("kind")
+        props = feature.get("properties") or {}
+        kind = props.get("kind")
         if not kind or kind == "house_zone":
             continue
         shape = as_shape(feature["geometry"])
@@ -506,16 +548,125 @@ def envelope_at(out_dir, footprint, anchor=ANCHOR):
             continue
         shapely.prepare(shape)
         hit = shapely.contains(shape, points)
-        if hit.any():
-            inside[kind] = hit if kind not in inside else (inside[kind] | hit)
-            reasons.setdefault(kind, (feature.get("properties") or {}).get("reason", ""))
+        if not hit.any():
+            continue
+        if kind == "existing_building" and props.get("name") in replaces:
+            replaced[props["name"]] = hit if props["name"] not in replaced else (replaced[props["name"]] | hit)
+            continue
+        if kind == "oak_protection":
+            gone = next((why for zone, why in removed if zone.contains(shape.centroid)), None)
+            if gone is not None:
+                stale[kind] = hit if kind not in stale else (stale[kind] | hit)
+                stale_reasons.setdefault(kind, gone)
+                continue
+        inside[kind] = hit if kind not in inside else (inside[kind] | hit)
+        reasons.setdefault(kind, props.get("reason", ""))
     kinds = {(f.get("properties") or {}).get("kind") for f in data.get("features", [])}
     total = float(len(footprint))
     return {
         "file": ENVELOPE_FILE, "points": len(footprint),
         "buildable": (round(float(inside["buildable_envelope"].sum()) / total, 4) if "buildable_envelope" in inside else 0.0) if "buildable_envelope" in kinds else None,
         "no_building": {k: {"share": round(float(v.sum()) / total, 4), "reason": reasons[k]} for k, v in sorted(inside.items()) if k not in ENVELOPE_OPEN},
+        "stale": {k: {"share": round(float(v.sum()) / total, 4), "reason": stale_reasons[k]} for k, v in sorted(stale.items())},
+        "replaced": {k: round(float(v.sum()) / total, 4) for k, v in sorted(replaced.items())},
     }
+
+
+def ground_heights(out_dir, points):
+    """The map's ground at many (east, north) spots (metres from the anchor), as ground_at reads
+    one: the terrain of the land file the map shows, its triangles read once. None where it does
+    not reach."""
+    import numpy as np
+
+    t = node_triangles(os.path.join(out_dir, SITE_FILE), "terrain")
+    if t is None or not len(t):
+        return [None] * len(points)
+    a, b, c = t[:, 0], t[:, 1], t[:, 2]
+    det = (b[:, 2] - c[:, 2]) * (a[:, 0] - c[:, 0]) + (c[:, 0] - b[:, 0]) * (a[:, 2] - c[:, 2])
+    det = np.where(np.abs(det) < 1e-12, np.nan, det)
+
+    def height(x, z):
+        l1 = ((b[:, 2] - c[:, 2]) * (x - c[:, 0]) + (c[:, 0] - b[:, 0]) * (z - c[:, 2])) / det
+        l2 = ((c[:, 2] - a[:, 2]) * (x - c[:, 0]) + (a[:, 0] - c[:, 0]) * (z - c[:, 2])) / det
+        hit = np.nonzero((l1 >= -1e-9) & (l2 >= -1e-9) & (1 - l1 - l2 >= -1e-9))[0]
+        if not len(hit):
+            return None
+        k = hit[0]
+        return float(l1[k] * a[k, 1] + l2[k] * b[k, 1] + (1 - l1[k] - l2[k]) * c[k, 1])
+
+    zero = height(0.0, 0.0)
+    out = []
+    for e, n in points:
+        here = height(e, -n)
+        out.append(None if here is None or zero is None else here - zero)
+    return out
+
+
+LAND_LAYER = "Land data (not the house)"  # the group the land's own outlines are drawn in: not part of any building, never sent
+LAND_COLOURS = {"oak_protection": (0.20, 0.55, 0.25), "stale": (0.62, 0.66, 0.60), "oaks_removed": (0.85, 0.55, 0.10)}
+
+
+def land_layer(doc, kinds=("oak_protection",), centre_m=(0.0, 0.0), radius_m=40.0, out_dir=None, anchor=ANCHOR):
+    """What lane C's build envelope says near a place, drawn on the map's ground as outlines the
+    designer can show or hide (Johny, 3 Oct 2026, of the oak canopy at his house: "lay the canopy
+    outline as a toggle anyway so he sees what the data says"). Every polygon of the kinds asked
+    for whose middle lies within radius_m of centre_m (east, north metres from the anchor), each
+    labelled with the envelope's own reason; an oak that lane C's land\\\\oaks-removed.geojson marks
+    as out of date is labelled so and drawn grey, and the overlay itself is drawn too. In the
+    document's own frame (its Site), in a group of its own that is not part of any building and
+    is never sent to the map. Drawn again: the old group is emptied first. Returns the group."""
+    import Part
+    from shapely.geometry import Polygon, shape as as_shape
+
+    land = land_dir(out_dir)
+    with open(os.path.join(land, ENVELOPE_FILE), encoding="utf-8") as fh:
+        data = json.load(fh)
+    removed = oaks_removed(land)
+    kx, ky = METRES_PER_DEG
+    east0, north0, up0 = frame_offset(document_origin(doc), anchor)
+    rows = []  # (label, colour, rings in east/north metres)
+    for feature in data.get("features", []):
+        props = feature.get("properties") or {}
+        if props.get("kind") not in kinds:
+            continue
+        geometry = as_shape(feature["geometry"])
+        mid = geometry.centroid
+        e, n = (mid.x - anchor["lng"]) * kx, (mid.y - anchor["lat"]) * ky
+        if math.hypot(e - centre_m[0], n - centre_m[1]) > radius_m:
+            continue
+        gone = next((why for zone, why in removed if zone.contains(mid)), None)
+        polygons = list(geometry.geoms) if geometry.geom_type == "MultiPolygon" else [geometry]
+        rings = [[((x - anchor["lng"]) * kx, (y - anchor["lat"]) * ky) for x, y in ring.coords] for p in polygons for ring in [p.exterior] + list(p.interiors)]
+        what = props.get("reason", props.get("kind"))
+        if "tree_id" in props:
+            what = "tree %s: %s" % (props["tree_id"], what)
+        rows.append(("%s%s" % (what, " (out of date here: %s)" % gone if gone else ""), LAND_COLOURS["stale" if gone else props["kind"]] if props["kind"] in LAND_COLOURS else (0.3, 0.3, 0.3), rings))
+    for zone, why in removed:
+        if zone.distance(Polygon([(anchor["lng"] + (centre_m[0] + dx) / kx, anchor["lat"] + (centre_m[1] + dy) / ky) for dx, dy in ((-radius_m, -radius_m), (radius_m, -radius_m), (radius_m, radius_m), (-radius_m, radius_m))])) == 0:
+            rings = [[((x - anchor["lng"]) * kx, (y - anchor["lat"]) * ky) for x, y in zone.exterior.coords]]
+            rows.append(("lane C's overlay: %s" % why, LAND_COLOURS["oaks_removed"], rings))
+    group = doc.getObject(doc.getObjectsByLabel(LAND_LAYER)[0].Name) if doc.getObjectsByLabel(LAND_LAYER) else None
+    if group is None:
+        group = doc.addObject("App::DocumentObjectGroup", "LandData")
+        group.Label = LAND_LAYER
+    for old in list(group.Group):
+        group.removeObject(old)
+        doc.removeObject(old.Name)
+    points = [p for _l, _c, rings in rows for ring in rings for p in ring]
+    heights = iter(ground_heights(land, points))
+    for label, colour, rings in rows:
+        wires = []
+        for ring in rings:
+            pts = [App.Vector((e - east0) * MM, (n - north0) * MM, ((next(heights) or 0.0) - up0) * MM + 20.0) for e, n in ring]  # 2 cm over the ground
+            wires.append(Part.makePolygon(pts))
+        obj = doc.addObject("Part::Feature", "LandOutline")
+        obj.Shape = Part.Compound(wires)
+        obj.Label = label[:180]
+        group.addObject(obj)
+        if App.GuiUp and obj.ViewObject is not None:
+            obj.ViewObject.LineColor = colour
+            obj.ViewObject.LineWidth = 2.0
+    return group
 
 
 # ---------------------------------------------------------------- IFC
@@ -729,26 +880,35 @@ def export_building(target, out_dir=None, name=None, anchor=None, stem=None, lan
         parts.append((el.Label, tri, colour_of(el), extras))
         rows.append(row)
 
-    # where its footprint stands among what the map already shows
+    # where its footprint stands among what the map already shows; what Johny decided about that (FORMAT.md, "decided")
+    building = building_of(targets)
+    decided = json.loads(building.MapDecided) if getattr(building, "MapDecided", "") else None
+    replaces = [str(n) for n in ((decided or {}).get("replaces") or {}).get("existing", [])]
     off, yaw = placement["offset_m"], math.radians(placement["rotation_deg"]["y"])
     cos, sin = math.cos(yaw), math.sin(yaw)
     footprint = [(off["east"] + cos * x - sin * (-z), off["north"] + sin * x + cos * (-z)) for _n, tri, _c, _e in parts for x, _y, z in tri[0]]
-    clearance = site_clearance(land, footprint)
+    clearance, replaced = site_clearance(land, footprint, replaces)
     on = [k for k, v in clearance.items() if v <= 0.0]
     if on:
         notes.append("it stands on: %s" % ", ".join({"road": "a road", "easement": "the access easement", "existing_building": "an existing building"}[k] for k in on))
+    for name, d in sorted(replaced.items()):
+        notes.append("it replaces the existing %s (%s: %s), and %s" % (name, decided["replaces"].get("by", "decided"), decided["replaces"].get("on", ""),
+                                                                    "stands on it" if d <= 0.0 else "stands %.1f m from it" % d))
     ground = ground_at(land, off["east"], off["north"])
     above = None if ground is None else round(off["up"] - ground, 2)
     if above is not None and abs(above) > 1.0:
         notes.append("its level (z = 0) is %.1f m %s the map's ground there" % (abs(above), "above" if above > 0 else "below"))
     # what the map's own build envelope says of that footprint (lane C's file: setbacks, oaks, steep ground)
-    envelope = envelope_at(land, footprint, anchor)
+    envelope = envelope_at(land, footprint, anchor, replaces)
     if envelope is not None:
         if envelope["buildable"] is not None and envelope["buildable"] < 0.9995:
             notes.append("by the map's build envelope, %.0f %% of it (its points in plan) lies outside the area that may be built on" % (100.0 * (1.0 - envelope["buildable"])))
         for row in envelope["no_building"].values():
             notes.append("by the map's build envelope, %.0f %% of it (its points in plan) lies where there is to be no building: %s"
                          % (100.0 * row["share"], row["reason"]))
+        for kind, row in envelope["stale"].items():
+            notes.append("by the map's build envelope, %.0f %% of it (its points in plan) lies in %s that is out of date there: %s"
+                         % (100.0 * row["share"], kind, row["reason"]))
 
     stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     source = os.path.basename(doc.FileName) if doc.FileName else doc.Label
@@ -764,6 +924,10 @@ def export_building(target, out_dir=None, name=None, anchor=None, stem=None, lan
         report["built_from"] = os.path.basename(built)
     if getattr(building_of(targets), "MapLand", ""):
         report["land"] = json.loads(building_of(targets).MapLand)
+    if decided is not None:  # Johny's decisions about where it stands, as they came with its records
+        report["decided"] = decided
+    if replaced:
+        report["replaced_m"] = replaced
     with open(side, "w", encoding="utf-8") as fh:
         json.dump(report, fh, indent=2)
     return dict(report, paths={"glb": glb, "ifc": ifc, "json": side})

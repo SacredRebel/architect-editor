@@ -53,7 +53,13 @@ Every expectation is derived here, not taken from the workbench's own constants:
      of the building's lowest) standing in the terrain of the map's site GLB there (its base
      between 1.5 m below that ground and 0.02 m above it, nowhere in the air; heights from
      the ground at the anchor, whatever zero the land file was exported on; until 1 Oct this
-     let 0.3 m through, and a vault's springing stood 0.15 m in the air); the footprint not on a road
+     let 0.3 m through, and a vault's springing stood 0.15 m in the air; deeper only where
+     the design's building says Johny decided it, FORMAT.md "decided": below_land, and never
+     in the air all the same); an existing building stood on only where the design says it
+     replaces that one (by its name; its county footprint is the one on its mesh); oaks of
+     the build envelope that lane C's land\\oaks-removed.geojson marks out of date (their
+     middle inside it) said, not counted as no-building, the export reading them the same
+     way; the footprint not on a road
      and not on the access easement, by the map's own meshes and by the pack's centrelines
      and surveyed easement, the two agreeing; not inside an existing building, by the
      map's file and by the county's footprints; and inside the map's own build envelope
@@ -83,7 +89,9 @@ the export's reading of the build envelope another building's, the building unde
 oaks (where the pavilion stood until the night of 1 Oct), the groined saddles made by a boolean,
 a conoid made thick straight up, a top the face-by-face finder misses, a lath node 5 mm off the
 hemisphere, a lath half as deep, laths stopping short of the foot, a lath in two at a dome's
-crown, the ring beam left out, a lath on the conoid's leaning end face.
+crown, the ring beam left out, a lath on the conoid's leaning end face, a building decided
+to replace the house standing on the shed, one decided to stand below the land with an
+element in the air, a building under the house zone's oaks with lane C's overlay not read.
 """
 
 import copy
@@ -110,6 +118,7 @@ LAND = os.environ.get("ORGANIC_LAND_DIR") or EXCHANGE  # the map's land files; a
 SITE_GLB = os.path.join(LAND, "sulphur-mountain-site.glb")
 EXISTING_GLB = os.path.join(LAND, "sulphur-mountain-buildings-existing.glb")
 ENVELOPE = os.path.join(LAND, "build-envelope.geojson")  # lane C's: where one may build (setbacks, oaks, steep ground, easement, roads)
+OAKS_REMOVED = os.path.join(LAND, "land", "oaks-removed.geojson")  # lane C's overlay from Johny's word (no survey): the oaks there were cut
 # The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
 # first (the dataset of record), its published copy only where that folder is not there.
 LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
@@ -121,6 +130,8 @@ MM = 1000.0
 DRIVEWAY_SPOT = (-77.52, -33.00)
 # where the second stood (1 Oct): clear of the road, the easement and the buildings, and under protected oaks
 OAK_SPOT = (-112.0, 31.0)
+SHED_SPOT = (-23.5, -39.8)  # the middle of the shed, an existing building (its outline in lane C's build envelope, read 3 Oct)
+HOUSE_OAK_SPOT = (-3.8, 9.3)  # the middle of a protected canopy inside the house zone (tree 2344 in lane C's build envelope, read 3 Oct)
 # two smooth plan curves through points (metres), as drawn by clicking: an open one and a ring
 GARDEN_POINTS = [(-2.0, 7.5), (0.25, 8.3), (2.5, 7.5), (4.75, 6.7), (7.0, 7.5)]
 RING_POINTS = [(5.0, 0.0), (2.5, 4.0), (-2.5, 4.0), (-5.0, 0.0), (-2.5, -4.0), (2.5, -4.0)]
@@ -699,15 +710,35 @@ def in_rings(points, rings):
     return odd
 
 
-def envelope_shares(envelope, lnglat):
+def ring_middle(ring):
+    """The middle (the centroid, by the shoelace sums) of a closed ring of (x, y) points, summed
+    from its own first point: summed in raw degrees (−119.155, 34.433) round a canopy 1e-4 of a
+    degree across, the products lost every digit, and the middle of 21 of the 22 out-of-date
+    oak zones at Johny's house fell up to 1.4 km away."""
+    ox, oy = ring[0]
+    a = cx = cy = 0.0
+    for (x0, y0), (x1, y1) in zip(ring, ring[1:]):
+        x0, y0, x1, y1 = x0 - ox, y0 - oy, x1 - ox, y1 - oy
+        c = x0 * y1 - x1 * y0
+        a, cx, cy = a + c, cx + (x0 + x1) * c, cy + (y0 + y1) * c
+    if abs(a) < 1e-30:
+        return sum(p[0] for p in ring) / len(ring), sum(p[1] for p in ring) / len(ring)
+    return ox + cx / (3.0 * a), oy + cy / (3.0 * a)
+
+
+def envelope_shares(envelope, lnglat, replaces=(), removed=()):
     """What the map's build envelope holds at a set of points (n, 2 as lng, lat), worked out
     here by ray casting: (the share of them in its buildable area, {kind: (share, reason)} for
-    every other kind that holds any of them, leaving out the house zone, which is a reference)."""
+    every other kind that holds any of them, {kind: (share, reason)} that holds any of them and
+    is out of date there, {name: share} of the existing buildings it replaces), leaving out the
+    house zone, which is a reference. Out of date: an oak_protection polygon whose middle lies in
+    a polygon of lane C's oaks-removed overlay (removed: [(reason, polygons)]); replaced: an
+    existing_building whose name is in replaces. Neither of the two is among the first."""
     import numpy as np
 
     lo, hi = lnglat.min(axis=0), lnglat.max(axis=0)
-    hits, reasons = {}, {}
-    for kind, reason, polygons in envelope:
+    hits, reasons, stale, stale_reasons, replaced = {}, {}, {}, {}, {}
+    for kind, reason, polygons, name in envelope:
         if kind == "house_zone":
             continue
         for rings in polygons:
@@ -715,12 +746,24 @@ def envelope_shares(envelope, lnglat):
             if (outline.max(axis=0) < lo).any() or (outline.min(axis=0) > hi).any():
                 continue
             got = in_rings(lnglat, [[tuple(p[:2]) for p in ring] for ring in rings])
-            if got.any():
-                hits[kind] = got if kind not in hits else (hits[kind] | got)
-                reasons.setdefault(kind, reason)
+            if not got.any():
+                continue
+            if kind == "existing_building" and name in replaces:
+                replaced[name] = got if name not in replaced else (replaced[name] | got)
+                continue
+            if kind == "oak_protection" and removed:
+                middle = np.array([ring_middle([tuple(p[:2]) for p in rings[0]])])
+                gone = next((why for why, polys in removed for poly in polys if in_rings(middle, [[tuple(p[:2]) for p in r] for r in poly])[0]), None)
+                if gone is not None:
+                    stale[kind] = got if kind not in stale else (stale[kind] | got)
+                    stale_reasons.setdefault(kind, gone)
+                    continue
+            hits[kind] = got if kind not in hits else (hits[kind] | got)
+            reasons.setdefault(kind, reason)
     n = float(len(lnglat))
     buildable = float(hits["buildable_envelope"].sum()) / n if "buildable_envelope" in hits else 0.0
-    return buildable, {k: (float(v.sum()) / n, reasons[k]) for k, v in sorted(hits.items()) if k != "buildable_envelope"}
+    return (buildable, {k: (float(v.sum()) / n, reasons[k]) for k, v in sorted(hits.items()) if k != "buildable_envelope"},
+            {k: (float(v.sum()) / n, stale_reasons[k]) for k, v in sorted(stale.items())}, {k: float(v.sum()) / n for k, v in sorted(replaced.items())})
 
 
 # ------------------------------------------------------------------ read everything
@@ -829,6 +872,8 @@ def read_facts():
             facts["design"][o.Label] = {"class": str(o.IfcType), "volume": o.Shape.Volume / 1e9,
                                         "min": (bb.XMin / MM, bb.YMin / MM, bb.ZMin / MM), "max": (bb.XMax / MM, bb.YMax / MM, bb.ZMax / MM)}
         facts["design_origin"] = (float(site.Longitude), float(site.Latitude), site.Elevation.Value / MM)
+        # Johny's decisions about where it stands, as the design holds them from its records (not as they were sent)
+        facts["decided"] = json.loads(building.MapDecided) if getattr(building, "MapDecided", "") else {}
         ax = building.Placement.Rotation.multVec(App.Vector(1, 0, 0))
         base = building.Placement.Base
         facts["design_building"] = {"base": (base.x / MM, base.y / MM, base.z / MM), "yaw": math.degrees(math.atan2(ax.y, ax.x))}
@@ -851,11 +896,17 @@ def read_facts():
     facts["map_easement"] = np.concatenate([plan(p, t) for k, (p, t, _e) in site_nodes.items() if k.startswith("easement")])
     eg, eb = glb(EXISTING_GLB)
     facts["map_existing"] = {k: plan(p, t) for k, (p, t, _e) in node_meshes(eg, eb).items()}
-    facts["envelope"] = None  # lane C's build envelope, as the map shades it: (kind, reason, polygons) per feature
+    facts["envelope"] = None  # lane C's build envelope, as the map shades it: (kind, reason, polygons, name) per feature
     if os.path.isfile(ENVELOPE):
         with open(ENVELOPE, encoding="utf-8") as fh:
-            facts["envelope"] = [((f.get("properties") or {}).get("kind"), (f.get("properties") or {}).get("reason", ""), polygons_of(f["geometry"]))
-                                 for f in json.load(fh)["features"]]
+            facts["envelope"] = [((f.get("properties") or {}).get("kind"), (f.get("properties") or {}).get("reason", ""), polygons_of(f["geometry"]),
+                                  (f.get("properties") or {}).get("name")) for f in json.load(fh)["features"]]
+    # lane C's overlay from Johny's word (no survey): the oaks whose middle lies in it are out of date in the data
+    facts["oaks_removed"] = []
+    if os.path.isfile(OAKS_REMOVED):
+        with open(OAKS_REMOVED, encoding="utf-8") as fh:
+            facts["oaks_removed"] = [((f.get("properties") or {}).get("reason", ""), polygons_of(f["geometry"])) for f in json.load(fh)["features"]
+                                     if (f.get("properties") or {}).get("kind") == "oaks_removed"]
     facts["anchor"] = canonical_frame()
     facts["format_md"] = format_md_anchor()
     survey = fetch("survey.geojson")
@@ -1028,9 +1079,13 @@ def judge(facts):
         if w[:, 2].min() > floor + 1.0:
             continue  # it rests on other elements, not on the ground
         rows.append((name,) + (base_gaps(w, tpos, ttri, zero) or (float("inf"), float("inf"))))
-    good = bool(rows) and all(-1.5 <= lo_ and hi_ <= GROUND_ABOVE for _n, lo_, hi_ in rows)
-    ok(good, "D every element that reaches the ground stands in the map's own terrain (its base from 1.5 m below the ground to %.2f m above it, nowhere in the air): %s"
-       % (GROUND_ABOVE, "; ".join("%s %+.2f..%+.2f m" % r for r in rows)))
+    decided = facts.get("decided") or {}
+    below = decided.get("below_land")  # Johny's decision (FORMAT.md, "decided"): what lies below the ground is as he wants it for now
+    deep = [r for r in rows if r[1] < -1.5]
+    good = bool(rows) and all(hi_ <= GROUND_ABOVE for _n, _lo, hi_ in rows) and (below is not None or not deep)
+    ok(good, "D every element that reaches the ground stands in the map's own terrain (its base from 1.5 m below the ground%s to %.2f m above it, nowhere in the air): %s%s"
+       % (" or deeper, as decided" if below is not None else "", GROUND_ABOVE, "; ".join("%s %+.2f..%+.2f m" % r for r in rows),
+          "; deeper than 1.5 m: %s, below the land as %s decided on %s" % (", ".join(r[0] for r in deep), below.get("by", "?"), below.get("on", "?")) if below is not None and deep else ""))
     if not world:
         return oks, fails
     hull = convex_hull(np.vstack([w[:, :2] for w in world.values()]))
@@ -1050,12 +1105,20 @@ def judge(facts):
     ok(half <= 5.0 and abs(road_map - (road_pack - half)) <= 1.0 and abs(ease_map - ease_pack) <= 0.5,
        "D the map's roads lie along the pack's centrelines (%.2f m to either side), and both files give the same distances (roads %.1f against %.1f m, easement %.1f against %.1f m)"
        % (half, road_map, road_pack - half, ease_map, ease_pack))
-    # the existing buildings: the map's layer, and the county's footprints
+    # the existing buildings: the map's layer, and the county's footprints. One that this building replaces (Johny's
+    # decision, by its name in the map's layer) may be stood on; its county footprint is the one that lies on its mesh
+    replaces = [str(n) for n in ((decided.get("replaces") or {}).get("existing") or [])]
     there = {name: clearance(hull, tris) for name, tris in facts["map_existing"].items()}
-    foot = [ring_clearance(hull, [((lng - alng) * kx, (lat - alat) * ky) for lng, lat in r]) for r in facts["pack_footprints"]]
-    ok(bool(there) and bool(foot) and min(there.values()) > 0 and min(foot) > 0,
-       "D not inside the existing buildings: %s by the map's file; %.1f m from the nearest county footprint"
-       % (", ".join("%.1f m from %s" % (d, n) for n, d in sorted(there.items())) or "none read", min(foot) if foot else float("nan")))
+    rings = [[((lng - alng) * kx, (lat - alat) * ky) for lng, lat in r] for r in facts["pack_footprints"]]
+    theirs = [i for i, r in enumerate(rings) for name in replaces if name in facts["map_existing"]
+              and clearance(convex_hull(np.array(r[:-1] if r[0] == r[-1] else r)), facts["map_existing"][name]) <= 0.0]
+    foot = [ring_clearance(hull, r) for i, r in enumerate(rings) if i not in theirs]
+    others = {n: d for n, d in there.items() if n not in replaces}
+    ok(bool(there) and bool(foot) and min(others.values() or [float("inf")]) > 0 and min(foot) > 0 and all(n in there for n in replaces),
+       "D not inside the existing buildings: %s by the map's file; %.1f m from the nearest county footprint%s"
+       % (", ".join("%.1f m from %s" % (d, n) for n, d in sorted(others.items())) or "none read", min(foot) if foot else float("nan"),
+          "".join("; it replaces the %s (%s, %s: %d county footprint on it), %.1f m from it" % (n, decided["replaces"].get("by", "?"), decided["replaces"].get("on", "?"),
+                                                                                              len(theirs), there.get(n, float("nan"))) for n in replaces)))
     # the map's build envelope (lane C's file: the county's setbacks, the oaks, the steep ground): read here by ray
     # casting at every vertex of the GLB set on the land by the sidecar, and held against what the export read of it
     envelope, told = facts.get("envelope"), (facts["sidecar"] or {}).get("envelope")
@@ -1063,18 +1126,29 @@ def judge(facts):
         ok(False, "D inside the map's buildable envelope: its file (build-envelope.geojson) is not in the land folder")
     else:
         spots = np.vstack([w[:, :2] for w in world.values()])
-        buildable, barred = envelope_shares(envelope, np.column_stack([alng + spots[:, 0] / kx, alat + spots[:, 1] / ky]))
+        buildable, barred, stale, replaced = envelope_shares(envelope, np.column_stack([alng + spots[:, 0] / kx, alat + spots[:, 1] / ky]),
+                                                             replaces, facts.get("oaks_removed") or [])
         barred = {key: v for key, v in barred.items() if v[0] > 0.0005}
+        stale = {key: v for key, v in stale.items() if v[0] > 0.0005}
+        replaced = {key: v for key, v in replaced.items() if v > 0.0005}
         said = {key: row["share"] for key, row in ((told or {}).get("no_building") or {}).items() if row["share"] > 0.0005}
+        said_stale = {key: row["share"] for key, row in ((told or {}).get("stale") or {}).items() if row["share"] > 0.0005}
+        said_replaced = {key: v for key, v in ((told or {}).get("replaced") or {}).items() if v > 0.0005}
+        same = lambda a, b: sorted(a) == sorted(b) and all(abs(a[key] - (b[key][0] if isinstance(b[key], tuple) else b[key])) <= 0.005 for key in b)  # noqa: E731
         ok(told is not None and told.get("buildable") is not None and abs(told["buildable"] - buildable) <= 0.005
-           and sorted(said) == sorted(barred) and all(abs(said[key] - barred[key][0]) <= 0.005 for key in barred),
-           "D the export reads the map's build envelope as it is read here: %.1f %% of the building's points in the buildable area (the export: %s), no building at %s (the export: %s)"
+           and same(said, barred) and same(said_stale, stale) and same(said_replaced, replaced),
+           "D the export reads the map's build envelope as it is read here: %.1f %% of the building's points in the buildable area (the export: %s), no building at %s (the export: %s); "
+           "out of date at %s (the export: %s); replaced: %s (the export: %s)"
            % (100 * buildable, "%.1f %%" % (100 * told["buildable"]) if told and told.get("buildable") is not None else "nothing",
               ", ".join("%s %.1f %%" % (key, 100 * v[0]) for key, v in barred.items()) or "none of them",
-              ", ".join("%s %.1f %%" % (key, 100 * v) for key, v in sorted(said.items())) or "none of them"))
+              ", ".join("%s %.1f %%" % (key, 100 * v) for key, v in sorted(said.items())) or "none of them",
+              ", ".join("%s %.1f %%" % (key, 100 * v[0]) for key, v in stale.items()) or "none", ", ".join("%s %.1f %%" % (key, 100 * v) for key, v in sorted(said_stale.items())) or "none",
+              ", ".join("%s %.1f %%" % (key, 100 * v) for key, v in replaced.items()) or "none", ", ".join("%s %.1f %%" % (key, 100 * v) for key, v in sorted(said_replaced.items())) or "none"))
         ok(buildable >= 0.9995 and not barred,
-           "D inside the map's buildable envelope and in none of its no-building zones: %.1f %% of its points in the buildable area%s"
-           % (100 * buildable, "".join("; %.0f %% in %s (%s)" % (100 * v[0], key, v[1]) for key, v in barred.items())))
+           "D inside the map's buildable envelope and in none of its no-building zones: %.1f %% of its points in the buildable area%s%s%s"
+           % (100 * buildable, "".join("; %.0f %% in %s (%s)" % (100 * v[0], key, v[1]) for key, v in barred.items()),
+              "".join("; %.0f %% in %s that is out of date there, not a fault (%s)" % (100 * v[0], key, v[1]) for key, v in stale.items()),
+              "".join("; %.0f %% on the %s it replaces" % (100 * v, key) for key, v in replaced.items())))
 
     # E
     ifc = facts["ifc"]
@@ -1328,6 +1402,12 @@ def forgeries(facts):
         ("the export's reading of the build envelope another building's", "D the export reads the map's build envelope",
          f(lambda g: g["sidecar"]["envelope"].__setitem__("buildable", 0.5))),
         ("the building under the protected oaks (where the pavilion stood until the night of 1 Oct)", "D inside the map's buildable envelope", f(lambda g: stand_at(g, *OAK_SPOT))),
+        ("a building decided to replace the house, standing on the shed", "D not inside the existing buildings",
+         f(lambda g: (g.__setitem__("decided", {"replaces": {"existing": ["house"], "by": "a forged decision", "on": "-"}}), stand_at(g, *SHED_SPOT)))),
+        ("a building decided to stand below the land, with an element 0.15 m in the air", "D every element that reaches the ground",
+         f(lambda g: (g.__setitem__("decided", {"below_land": {"by": "a forged decision", "on": "-"}}), floating(g)))),
+        ("the building under the house zone's oaks with lane C's overlay not read", "D inside the map's buildable envelope",
+         f(lambda g: (g.__setitem__("oaks_removed", []), stand_at(g, *HOUSE_OAK_SPOT)))),
     ]
 
 

@@ -1167,6 +1167,37 @@ def cut_top(prism, edge, closed, d1, d2, z0, band_area, below_mm, top, height_m,
     raise ValueError("the wall's %s top could not be cut (against what it must hold: %s)" % ("sampled" if callable(top) else top.lower(), "; ".join(seen)))
 
 
+def plan_band(edge, closed, d1, d2, joined=None):
+    """A wall's plan: the band between its two faces, d1 and d2 to the left of its base curve
+    (mm), as a face at the curve's own level. joined: an open wall's band with its ends already
+    shaped where it meets other walls (open_band_joined), taken as it is."""
+    if isinstance(edge, WirePath):
+        # an outline with corners: the band between its two true offsets, corners kept
+        if edge.isClosed():
+            face = Part.Face(edge.wire)
+            sgn = 1.0 if is_ccw(edge) else -1.0
+            fa, fb = face_offset(face, -sgn * d1), face_offset(face, -sgn * d2)
+            big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
+            return face_of(big.cut(small))
+        return joined if joined is not None else open_band(edge, d1, d2)
+    if closed:
+        fa = Part.Face(wire_of(_side(edge, d1, closed)))
+        fb = Part.Face(wire_of(_side(edge, d2, closed)))
+        if not (fa.isValid() and fb.isValid()):
+            # an offset folded where the curve bends tighter than half the wall:
+            # OCCT's region offset removes the loops (left of a counter-clockwise ring is inside)
+            sgn = 1.0 if is_ccw(edge) else -1.0
+            fa, fb = region_offset(edge, -sgn * d1), region_offset(edge, -sgn * d2)
+        big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
+        return face_of(big.cut(small))
+    if joined is not None:
+        return joined
+    a, b = _side(edge, d1, closed), _side(edge, d2, closed)
+    pa0, pa1 = a.valueAt(a.FirstParameter), a.valueAt(a.LastParameter)
+    pb0, pb1 = b.valueAt(b.FirstParameter), b.valueAt(b.LastParameter)
+    return Part.Face(wire_of([a, Part.LineSegment(pa1, pb1).toShape(), b, Part.LineSegment(pb0, pa0).toShape()]))
+
+
 def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", top_rise_m=0.0,
                top_waves=1, openings=(), base_z_m=0.0, foundation_m=0.0, joints=None, said=None):
     """A wall of constant thickness on a horizontal centreline, with a shaped top and openings.
@@ -1197,33 +1228,7 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
                 App.Console.PrintWarning("Organic: where this wall meets another its corners reach further than it is long; its ends are left square\n")
     if said is not None:
         said["joined"] = joined is not None
-    if isinstance(edge, WirePath):
-        # an outline with corners: the band between its two true offsets, corners kept
-        if edge.isClosed():
-            face = Part.Face(edge.wire)
-            sgn = 1.0 if is_ccw(edge) else -1.0
-            fa, fb = face_offset(face, -sgn * d1), face_offset(face, -sgn * d2)
-            big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
-            band = face_of(big.cut(small))
-        else:
-            band = joined if joined is not None else open_band(edge, d1, d2)
-    elif closed:
-        fa = Part.Face(wire_of(_side(edge, d1, closed)))
-        fb = Part.Face(wire_of(_side(edge, d2, closed)))
-        if not (fa.isValid() and fb.isValid()):
-            # an offset folded where the curve bends tighter than half the wall:
-            # OCCT's region offset removes the loops (left of a counter-clockwise ring is inside)
-            sgn = 1.0 if is_ccw(edge) else -1.0
-            fa, fb = region_offset(edge, -sgn * d1), region_offset(edge, -sgn * d2)
-        big, small = (fa, fb) if fa.Area > fb.Area else (fb, fa)
-        band = face_of(big.cut(small))
-    elif joined is not None:
-        band = joined
-    else:
-        a, b = _side(edge, d1, closed), _side(edge, d2, closed)
-        pa0, pa1 = a.valueAt(a.FirstParameter), a.valueAt(a.LastParameter)
-        pb0, pb1 = b.valueAt(b.FirstParameter), b.valueAt(b.LastParameter)
-        band = Part.Face(wire_of([a, Part.LineSegment(pa1, pb1).toShape(), b, Part.LineSegment(pb0, pa0).toShape()]))
+    band = plan_band(edge, closed, d1, d2, joined)
     band.translate(App.Vector(0, 0, -foundation_m * MM))
     if shaped:
         peak = max(top(k / 400.0) for k in range(401)) if callable(top) else max(height_m, height_m + top_rise_m)
@@ -1241,6 +1246,206 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     wall = less_openings(wall, voids, [opening_middle(edge, closed, d1, d2, o["position_m"], o.get("height_m", 1.3), o.get("sill_m", 0.9)) for o in openings])
     wall.translate(App.Vector(0, 0, base_z_m * MM))
     return refined(wall)
+
+
+BAND_FOLD = 0.8  # no band where its side on the inside of a turn lies further into it than this share of the turn's radius: it would fold over itself
+BAND_STEP_MM = 100.0  # a band's lines across it stand no further apart than this along its wall
+BAND_LOW_MM = 5.0  # no band where the roof's underside stands less than this over the wall's top (at the band's middle)
+BAND_EDGE_MM = 1.0  # where a band ends (a roof's outline or a hole's rim crossing its middle, the underside coming down to the wall), found to this
+BAND_STRIP_MM = 25.0  # what a band must hold is counted in strips no wider than this across it
+BAND_TOLERANCE = 0.005  # how far (a share of it) a band's solid may lie from what its strips say it holds
+
+
+def wall_band_shape(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, roofs, said=None):
+    """The band between a wall's top and the underside of the roofs over it (Johny's answer
+    5 on his house, 3 Oct 2026: closed with glass or with the wall carried up, both, to
+    compare): the plan between d1 and d2 (mm to the left of the wall's base curve), from the
+    wall's top line (z0 in mm, plus the top as wall_shape reads it: a function of the fraction
+    along the wall, or a name with height_m, rise_m and waves) up to the underside of the
+    lowest roof over it. roofs: [(under, zone)] in this frame: under(x, y) the height of a
+    roof's underside over a plan point in mm (it answers past the roof's plan too), zone the
+    roof's plan as a shapely polygon, its outline less its holes (plan_zone).
+
+    Made from its own faces, with no boolean (four ways of cutting it out of a prism by tools
+    failed in silence on Johny's mezzanine wall: empty, in pieces, 2 to 3 % short piece by
+    piece, or kept whole where most of it lies under no roof). Along the wall, the roof the
+    band runs up to: of the roofs over its line across (those whose plan meets it anywhere
+    between the band's two sides: a courtyard wall stands right under the rim of the roof's
+    hole over the courtyard, half its band under the roof), the lowest at the band's middle.
+    There is a band where there is such a roof and its underside stands at least BAND_LOW_MM
+    over the wall's top at the middle, and where the wall does not turn tighter than the band
+    can follow (its side on the inside of the turn further into it than BAND_FOLD of the
+    radius would fold over itself; the mezzanine's outline turns on 35 mm where it closes).
+    The band is made in stretches, one for each roof it runs up to, each ending square where
+    there is no band any more or where the roof over it changes (a step: the spec's own
+    "stepped glazing at shell seams"; a smooth line through the step overshot), found to
+    BAND_EDGE_MM. A stretch is lines across it at least every BAND_STEP_MM: the band's two
+    sides, the wall's top there (level across), and over each side its roof's underside (read
+    on past the roof's edge where a side lies beyond it); four ruled faces through those lines
+    (bottom, top and the two sides; across the band the top runs straight from side to side)
+    and a flat face at each end. A band that runs all round a closed wall up to one roof is one
+    ring. What the solids hold is held against strips counted along the same lines.
+    said: a dict to be told the stretches (from, to, as fractions of the wall, and the roof's
+    index), the lines, what the strips say and what the solids hold. Returns a solid, a
+    compound of solids, or None (no band anywhere along the wall)."""
+    if not roofs:
+        return None
+    if isinstance(edge, WirePath):
+        raise ValueError("a band to the roof on a wall with corners is not built yet")
+    from shapely.geometry import LineString
+
+    zones = [zone for _under, zone in roofs]
+    length = edge.Length
+
+    def place(f):
+        """(f as a fraction of the wall, the curve's parameter, its point, the unit vector to its left) at f."""
+        g = f % 1.0 if closed else min(1.0, max(0.0, f))
+        u = edge.getParameterByLength(g * length)
+        p, left = _across(edge, u)
+        return g, u, p, left
+
+    def folds(u, p, left):
+        """Whether the band's side on the inside of the turn here lies further into it than BAND_FOLD of its radius."""
+        try:
+            k = edge.curvatureAt(u)
+            if k <= 1e-9:
+                return False
+            into = left.dot(edge.centerOfCurvatureAt(u) - p) > 0  # the turn's centre lies to the left
+        except (Part.OCCError, AttributeError):  # (no centre where the curve runs straight)
+            return False
+        return d2 * k > BAND_FOLD if into else -d1 * k > BAND_FOLD
+
+    def roof_at(f):
+        """The index of the roof the band runs up to at f, or None where there is no band."""
+        g, u, p, left = place(f)
+        if folds(u, p, left):
+            return None
+        qa, qb = p + left * d1, p + left * d2
+        across = LineString([(qa.x, qa.y), (qb.x, qb.y)])
+        middle = p + left * (0.5 * (d1 + d2))
+        lows = []
+        for r, zone in enumerate(zones):
+            if zone.intersects(across):  # a roof is over the band where its plan meets the line across it
+                try:
+                    lows.append((roofs[r][0](middle.x, middle.y), r))
+                except ValueError:
+                    continue
+        if not lows:
+            return None
+        head, r = min(lows)
+        return r if head - (z0 + top_height(top, height_m, rise_m, waves, g) * MM) >= BAND_LOW_MM else None
+
+    def line(f, r):
+        """The band's line across at f, up to roof r: (f, its two sides' feet, their heads)."""
+        g, _u, p, left = place(f)
+        bottom = z0 + top_height(top, height_m, rise_m, waves, g) * MM
+        feet, zs = [], []
+        for d in (d1, d2):
+            q = p + left * d
+            feet.append(App.Vector(q.x, q.y, bottom))
+            try:
+                zs.append(roofs[r][0](q.x, q.y))
+            except ValueError:
+                zs.append(None)
+        if zs[0] is None and zs[1] is None:
+            raise ValueError("the underside of the roof over the band could not be read at %.3f of the wall" % g)
+        zs = [z if z is not None else next(o for o in zs if o is not None) for z in zs]
+        return f, feet, [App.Vector(q.x, q.y, max(z, bottom + 1.0)) for q, z in zip(feet, zs)]
+
+    # where the band is and what it runs up to: places at even steps, and each change found by halving
+    count = max(96, int(math.ceil(length / BAND_STEP_MM)))
+    steps = [i / float(count) for i in range(count + (0 if closed else 1))]
+    states = [roof_at(f) for f in steps]
+    if all(s is None for s in states):
+        return None
+
+    def change(fa, fb, was):
+        """Between fa (the band up to roof `was`, or none) and fb (otherwise): (the last fraction as at fa, the first as at fb)."""
+        while (fb - fa) * length > BAND_EDGE_MM:
+            fm = 0.5 * (fa + fb)
+            if roof_at(fm) == was:
+                fa = fm
+            else:
+                fb = fm
+        return fa, fb
+
+    n = len(steps)
+    runs = []  # (from, to, the roof, whether it closes on itself)
+    if all(s == states[0] for s in states):
+        runs.append((0.0, 1.0, states[0], closed))
+    else:
+        if closed:  # the walk round begins just after a change, so that no stretch runs over the seam unseen
+            k0 = next(i for i in range(n) if states[i] != states[i - 1])
+            order = [(k0 + i) % n for i in range(n)]
+            fs = [steps[i] + (1.0 if i < k0 else 0.0) for i in order]
+        else:
+            order, fs = list(range(n)), list(steps)
+        ss = [states[i] for i in order]
+        changes = []  # (the walk's index where the new state begins, the last fraction of the old, the first of the new)
+        for j in range(1, n + 1 if closed else n):
+            prev, cur = j - 1, j % n
+            if ss[prev] != ss[cur]:
+                changes.append((j,) + change(fs[prev], fs[cur] + (1.0 if j == n else 0.0), ss[prev]))
+        if closed:  # the walk began just after the change at its end: that change opens the first stretch
+            starts = [(0, changes[-1][2] - 1.0)] + [(j, fb) for j, _fa, fb in changes[:-1]]
+            ends = [fa for _j, fa, _fb in changes]
+        else:
+            starts = [(0, 0.0)] + [(j, fb) for j, _fa, fb in changes]
+            ends = [fa for _j, fa, _fb in changes] + [1.0]
+        for (j, fa), fb in zip(starts, ends):
+            if ss[j % n] is not None and (fb - fa) * length > 10.0 * BAND_EDGE_MM:
+                runs.append((fa, fb, ss[j % n], False))
+
+    solids, want, lines_made = [], 0.0, 0
+    for fa, fb, roof, ring in runs:
+        if ring:
+            made = [line(f, roof) for f in steps]
+        else:
+            k = max(2, int(math.ceil((fb - fa) * length / BAND_STEP_MM)))
+            made = [line(fa + (fb - fa) * j / k, roof) for j in range(k + 1)]
+        lines_made += len(made)
+        params = [m[0] for m in made] + ([made[0][0] + 1.0] if ring else [])
+        rows = [[m[1][0] for m in made], [m[1][1] for m in made], [m[2][1] for m in made], [m[2][0] for m in made]]  # feet a, b; heads b, a
+        pieces = max(1, int(math.ceil(len(params) / float(TOP_PIECE_STATIONS))))
+        cuts = [params[0] + (params[-1] - params[0]) * i / pieces for i in range(1, pieces)]
+        edges = []
+        for row in rows:
+            e = spline(row, ring, params)
+            edges.append(list(e.split(cuts).Edges) if cuts else [e])
+        faces = []
+        for r0, r1 in zip(edges, edges[1:] + edges[:1]):  # bottom (feet a to b), side b (foot to head), top (heads b to a), side a (head to foot)
+            for e0, e1 in zip(r0, r1):  # piece by piece: ruled between two wires, the mezzanine's band's flat bottom came out not valid
+                faces.append(Part.makeRuledSurface(e0, e1))
+        for m in ((made[0], made[-1]) if not ring else ()):
+            faces.append(Part.Face(Part.makePolygon([m[1][0], m[1][1], m[2][1], m[2][0], m[1][0]])))
+        shell = Part.Shell(faces)
+        shell.sewShape()
+        solid = Part.Solid(shell)
+        if solid.Volume < 0:
+            solid.reverse()
+        solids.append(solid)
+        # what it must hold: strips between the lines, each as tall as its middle (the top straight across)
+        for m0, m1 in zip(made, made[1:] + (made[:1] if ring else [])):
+            j = max(1, int(math.ceil(((m1[0] - m0[0]) % 1.0 if ring else m1[0] - m0[0]) * length / BAND_STRIP_MM)))
+            for i in range(j):
+                t0, t1 = i / float(j), (i + 1) / float(j)
+                q = [m0[1][0] + (m1[1][0] - m0[1][0]) * t for t in (t0, t1)], [m0[1][1] + (m1[1][1] - m0[1][1]) * t for t in (t0, t1)]
+                quad = [q[0][0], q[1][0], q[1][1], q[0][1]]
+                strip = abs(sum(quad[c].x * quad[(c + 1) % 4].y - quad[(c + 1) % 4].x * quad[c].y for c in range(4))) / 2.0
+                tm = 0.5 * (t0 + t1)
+                foot = m0[1][0].z + (m1[1][0].z - m0[1][0].z) * tm
+                head = 0.5 * ((m0[2][0].z + (m1[2][0].z - m0[2][0].z) * tm) + (m0[2][1].z + (m1[2][1].z - m0[2][1].z) * tm))
+                want += strip * (head - foot)
+    holds = sum(volume_of(s) for s in solids)
+    if said is not None:
+        said.update({"stretches": [(round(a, 4), round(b, 4), r) for a, b, r, _ring in runs], "lines": lines_made, "want_m3": round(want / 1e9, 4),
+                     "holds_m3": round(holds / 1e9, 4), "solids": len(solids)})
+    if not solids:
+        return None
+    if not all(s.isValid() for s in solids) or abs(holds - want) > BAND_TOLERANCE * want:
+        raise ValueError("the band could not be made: %d solid(s), valid %s, %.4f m³ where its strips say %.4f"
+                         % (len(solids), all(s.isValid() for s in solids), holds / 1e9, want / 1e9))
+    return solids[0] if len(solids) == 1 else Part.makeCompound(solids)
 
 
 def path_at(edge, closed, s_mm):
@@ -2322,6 +2527,80 @@ def revolved_shape(profile_rz):
     return solid_of(face.revolve(App.Vector(), Z, 360))
 
 
+def field_plan(outline_edge, hole_edges=()):
+    """A height field shell's plan: the face its closed outline encloses, less an upright hole
+    for each of hole_edges, at the outline's own level (a hole drawn at another level is the
+    same hole)."""
+    plan = plan_face(outline_edge)
+    level = plan.BoundBox.ZMin
+    for edge in hole_edges:
+        hole = plan_face(edge)
+        hole.translate(App.Vector(0, 0, level - hole.BoundBox.ZMin))
+        plan = face_of(plan.cut(hole))
+    return plan
+
+
+def plan_zone(outline_edge, hole_edges=(), frame=None):
+    """A height field shell's plan as a shapely polygon, its outline less its holes, their
+    points 20 mm apart, moved by `frame` (a Placement) when one is given: for asking whether a
+    plan point lies under the roof. Shapely's and not OCCT's: OCCT's flat booleans with these
+    plans gave the wrong answer in silence (the main wall's band against the roofs' plans: 0.07
+    m² under them where shapely finds all its 9.13 m²; a courtyard wall's: nothing, 1.03)."""
+    from shapely.geometry import Polygon
+
+    def ring(edge):
+        points = edge.discretize(Distance=20.0)
+        if frame is not None:
+            points = [frame.multVec(q) for q in points]
+        return [(q.x, q.y) for q in points]
+
+    zone = Polygon(ring(outline_edge)).buffer(0)
+    for edge in hole_edges:
+        zone = zone.difference(Polygon(ring(edge)).buffer(0))
+    return zone
+
+
+def field_surface(origin_xy_m, step_m, columns, heights_m):
+    """The smooth surface through a height field: heights (m) on a square grid of step_m, row
+    after row from origin_xy_m (each row along +x, the rows following in +y), `columns` to a
+    row; a bicubic spline through them, its first parameter running with x, its second with y."""
+    heights = [float(h) for h in heights_m]
+    columns = int(columns)
+    rows = len(heights) // columns if columns > 0 else 0
+    if columns < 2 or rows < 2 or rows * columns != len(heights):
+        raise ValueError("a height field needs at least 2 by 2 heights in whole rows (%d heights in rows of %d)" % (len(heights), columns))
+    x0, y0 = origin_xy_m
+    surface = Part.BSplineSurface()
+    surface.interpolate([[V(x0 + i * step_m, y0 + j * step_m, heights[j * columns + i]) for j in range(rows)] for i in range(columns)])
+    return surface
+
+
+def field_z(surface, x, y, start=None):
+    """The height (mm) of a height field's surface (field_surface) over the plan point (x, y),
+    in mm: Newton's steps from start (u, v), else from where x and y lie in its parameters'
+    range, to the point of it over (x, y). Past the grid's own edge, the height of the nearest
+    point of its edge. Returns (z, (u, v))."""
+    u0, u1, v0, v1 = surface.bounds()
+    a, b = surface.value(u0, v0), surface.value(u1, v1)
+    if start is None:
+        u, v = u0 + (u1 - u0) * (x - a.x) / (b.x - a.x), v0 + (v1 - v0) * (y - a.y) / (b.y - a.y)
+        u, v = min(max(u, u0), u1), min(max(v, v0), v1)
+    else:
+        u, v = start
+    for _ in range(40):
+        q = surface.value(u, v)
+        ex, ey = x - q.x, y - q.y
+        if ex * ex + ey * ey < 1e-6:  # a thousandth of a millimetre
+            return q.z, (u, v)
+        du, dv = surface.getDN(u, v, 1, 0), surface.getDN(u, v, 0, 1)
+        det = du.x * dv.y - du.y * dv.x
+        u = min(max(u + (ex * dv.y - ey * dv.x) / det, u0), u1)
+        v = min(max(v + (du.x * ey - du.y * ex) / det, v0), v1)
+    if not (min(a.x, b.x) <= x <= max(a.x, b.x) and min(a.y, b.y) <= y <= max(a.y, b.y)):
+        return surface.value(u, v).z, (u, v)  # past the grid: its edge
+    raise ValueError("no point of the height field stands over (%.2f, %.2f) m" % (x / MM, y / MM))
+
+
 def field_shell_shape(outline_edge, origin_xy_m, step_m, columns, heights_m, thickness_m, hole_edges=()):
     """A shell whose top is a height field: heights (m) on a square grid of step_m, row after
     row from origin_xy_m (each row along +x, the rows following in +y), `columns` to a row.
@@ -2334,24 +2613,14 @@ def field_shell_shape(outline_edge, origin_xy_m, step_m, columns, heights_m, thi
     top and below the underside, the other way to the same solid, did not finish in ten
     minutes on a roof of 30 m by 11 m.)
     Returns (solid, the plan's area in mm2)."""
-    heights = [float(h) for h in heights_m]
-    columns = int(columns)
-    rows = len(heights) // columns if columns > 0 else 0
-    if columns < 2 or rows < 2 or rows * columns != len(heights):
-        raise ValueError("a height field needs at least 2 by 2 heights in whole rows (%d heights in rows of %d)" % (len(heights), columns))
+    surface = field_surface(origin_xy_m, step_m, columns, heights_m)
     x0, y0 = origin_xy_m
-    plan = plan_face(outline_edge)
-    level = plan.BoundBox.ZMin
-    for edge in hole_edges:
-        hole = plan_face(edge)
-        hole.translate(App.Vector(0, 0, level - hole.BoundBox.ZMin))  # a hole drawn at another level is the same hole
-        plan = face_of(plan.cut(hole))
+    rows = len(heights_m) // int(columns)
+    plan = field_plan(outline_edge, hole_edges)
     box = plan.BoundBox
-    if (box.XMin < x0 * MM - 1.0 or box.XMax > (x0 + (columns - 1) * step_m) * MM + 1.0
+    if (box.XMin < x0 * MM - 1.0 or box.XMax > (x0 + (int(columns) - 1) * step_m) * MM + 1.0
             or box.YMin < y0 * MM - 1.0 or box.YMax > (y0 + (rows - 1) * step_m) * MM + 1.0):
         raise ValueError("the height field does not reach as far as the shell's outline")
-    surface = Part.BSplineSurface()
-    surface.interpolate([[V(x0 + i * step_m, y0 + j * step_m, heights[j * columns + i]) for j in range(rows)] for i in range(columns)])
     top = surface.toShape().common(prism_of(plan))
     if not top.Faces:
         raise ValueError("the height field and the shell's outline do not meet")

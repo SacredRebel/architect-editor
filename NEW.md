@@ -1,5 +1,85 @@
 # NEW — for Johny, from lane A (FreeCAD) (newest on top; clear what you have read)
 
+## 3 Oct, 14:45 — your answers are in the house, and it is in the map again
+
+Your house S01 is built again from your spec with your answers, and sent to the map's folder
+(`exchange\godot\oak-canopy-s01.glb`, `.ifc`, `.json`). Open it in FreeCAD:
+`Documents\SulphurMountain\Oak-Canopy-S01.FCStd`. Pictures: `Architect-editor\docs\plans\organic\house\answers\`.
+
+1. **Levels: the house stays where it is.** Where a sill lies below the land in front of it, it is shown as it is.
+   Eight places (opening, floor, room: how deep its sill lies under the land):
+   - O01 door, lower floor, Suite 1 bedroom: 1.68 m
+   - O02 window, lower floor, Suite 1 bedroom: 0.99 m
+   - O03 door, lower floor, Suite 2 bedroom: 1.81 m
+   - O04 window, lower floor, Suite 2 bedroom: 1.16 m
+   - O05 door, lower floor, Suite 3 bedroom: 1.91 m
+   - O06 window, lower floor, Suite 3 bedroom: 1.28 m
+   - O12 slider, main floor, Kitchen: 0.13 m
+   - O46 slider, main floor, Courtyard 2: 0.01 m
+
+   The whole lower floor lies 1.7 to 2.9 m in the ground. The ground work (steps, cut pads, lower floors) comes when you
+   edit in the map and with its earthworks; your decision travels with the house, so the map's check does not call this
+   a fault.
+2. **Oaks:** at the house the oak check now says "out of date there" (lane C's file of the trees you had cut), not a
+   fault: 68 % of the house's plan lies in protection zones that are out of date. The canopy outlines the land data
+   still holds are in the design as their own group, **"Land data (not the house)"** (39 outlines, 22 marked out of
+   date): select it in FreeCAD's tree and press the space bar to show or hide it. It is not part of the house and is
+   not sent to the map.
+3. **The old house:** the new one replaces it and stands on it (9 % of its plan); the old footprint stays on the map
+   as today (the X key).
+4. **Lower floor slab:** 0.30 m.
+5. **The band between the wall tops and the roof:** built on the four walls your spec carries to the roof (the main
+   outer wall, the mezzanine's, the two courtyard walls), as glass to start with. To compare: click a band in the tree
+   ("… band to the roof"), set **Kind** to **Wall** in its properties (or back to **Glass**), then Recompute.
+   It runs up to the lowest roof over it and **steps where the roof over it changes** (your spec's "stepped glazing at
+   shell seams"): the main wall's band is in 3 pieces, the mezzanine's in 5. Courtyard 1's runs all round; courtyard
+   2's runs round most of it and stops where its wall reaches into the roof (0.42 m at its highest, your spec's own
+   numbers). The mezzanine's outline turns very tightly in two places (once where its line closes, on a 35 mm radius):
+   there the band leaves a gap of 15 to 19 cm. Glass in all: 3.85 m³ (main), 2.97 (mezzanine), 0.58 and 0.70
+   (courtyards).
+6. **The chimney:** the main floor has a clean round opening round it, the chimney's own size (radius 1.90 m).
+7. Next, in your order: the roof ribs and edge beams, the nine columns, the two stairs, the glass ribbon between the
+   leaves, the pool pavilion's roof, then the outdoors; one line here after each.
+
+Also new today: a wall drawn in the map with corners (a retaining wall, for example) keeps the heights you give its top;
+before, such a wall came back flat.
+
+## 3 Oct, 14:45 — the backups and the old trial files: what they are, and what may go (you decide)
+
+**First, a mistake of mine.** Saving your house today (14:24) made FreeCAD drop the oldest of its two backups of it,
+`Oak-Canopy-S01.20261002-024624.FCBak` (2 Oct 02:46, the first build, before its walls were joined), and write a new
+one of the 05:11 save in its place. FreeCAD keeps two backups per design and removes the oldest past the Recycle Bin; I
+did not copy it aside first, though the backups were yours to decide on. What it was built from is kept: the records of
+2 Oct, now beside today's as `exchange\house\models\oak-canopy-s01.2026-10-02.json` (the notes file written with them
+was replaced by today's). I am sorry; from now on a backup is copied aside before its design is saved over.
+
+Nothing else is deleted. Read only, on 3 Oct:
+
+**The `.FCBak` files beside your designs** (`Documents\SulphurMountain`; FreeCAD writes one each time a design is
+saved over):
+- `Oak-Canopy-S01.20261002-045348.FCBak` (17.8 MB, 2 Oct 04:53) and `…-051124.FCBak` (18.0 MB, 2 Oct 05:11, written
+  today from the save before): earlier saves of your house, the same 77 pieces; today's design (14:24) has your
+  answers in it.
+- `Organic-test-pavilion.20261001-193255.FCBak` and `…-215910.FCBak` (22.2 and 22.1 MB, 1 Oct): earlier saves of the
+  test pavilion, the same 14 pieces as now.
+- `SulphurMountain-site.20260929-202409.FCBak` (2.2 MB, 29 Sep): the site template before the anchor was settled; it
+  still holds the old datum (425.90 m, retired on 1 Oct) and an early "Organic building" object; the design now has the
+  anchor (425.63 m) and the county's road. `…-20261001-201935.FCBak` (2.1 MB, 1 Oct): the same 37 pieces as now.
+
+**The old trial folders:** 154 folders `organic-*` in `%TEMP%`, 1.14 GB, from 1 Oct 18:12 to 2 Oct 23:13, each left by
+a check that was stopped before it cleared up after itself (the checks remove their own when they finish): 12
+`organic-realize-*` (712 MB: each a realized sample, its 60 MB design among it), 41 `organic-toolbar-*` (286 MB: each
+button's export), 22 `organic-import-out-*` (139 MB) and 79 `organic-import-*` (0.2 MB, the records written for an
+import). Any check makes all of them again.
+
+**What they teach** (kept in `knowledge\LESSONS.md`): a check stopped before its own clearing up leaves its trial
+folder behind, 1.1 GB in two days; saving over a design drops its oldest backup; the oldest site backup shows the
+retired datum, which the anchor rule already covers.
+
+**Proposal:** all 154 trial folders may go (1.14 GB); the four backups of the pavilion and the site may go (they hold
+nothing the designs do not); the two backups of your house may go once you have looked at today's house. Your yes or
+no, file by file or all at once; I delete nothing before it.
+
 ## 2 Oct, 23:45 — new buttons: the shells and lattices from lane R's studies
 
 - **Organic toolbar:** **Wave vault** (a vault whose rise goes up and down along its length), **Conoid roof** (an

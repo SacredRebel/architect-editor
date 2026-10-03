@@ -34,7 +34,7 @@ MM = og.MM
 FORMATS = ("built/1",)
 # the pieces a built file may hold: the workbench's own classes, by their own names
 TYPES = ("PlanCurve", "Wall", "Slab", "ShellRoof", "LeafShell", "Vault", "Dome", "Steps", "SoapFilm", "MinimalShell", "Conoid", "TranslationShell",
-         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell")
+         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell", "WallBand")
 # A kind under another name: a step is a slab that is named a step; lane R's groined saddles are
 # the saddle shell of that kind; the wave vault of the map's catalogue is a vault (FORMAT.md,
 # "Lane R's shells and lattices as record kinds").
@@ -45,7 +45,8 @@ LABELS = {"PlanCurve": "Plan curve", "Wall": "Curved wall", "Slab": "Floor slab"
           "Vault": "Ribbed vault", "Dome": "Dome", "Steps": "Steps", "SoapFilm": "Minimal surface", "MinimalShell": "Saddle shell", "SacredFigure": "Plan figure",
           "SacredSolid": "Regular solid", "GeodesicDome": "Geodesic dome", "Gridshell": "Gridshell", "CellularWall": "Cellular wall",
           "BranchingColumn": "Branching column", "Revolved": "Solid of revolution", "HeightFieldShell": "Height field shell",
-          "Conoid": "Conoid roof", "TranslationShell": "Translation shell", "GroinedSaddles": "Groined saddles", "WaveVault": "Wave vault"}
+          "Conoid": "Conoid roof", "TranslationShell": "Translation shell", "GroinedSaddles": "Groined saddles", "WaveVault": "Wave vault",
+          "WallBand": "Band to the roof"}
 # What the map writes on a piece for its own use, which says nothing the piece's other numbers do
 # not say (FORMAT.md, "What the map adds"): the outline a leaf or a dome was fitted over, and how.
 # The leaf's spine, span, ridge and place, the dome's radius, stretch and place are worked out
@@ -235,7 +236,7 @@ def import_built(doc, source, join=True):
     fmt = str(data.get("format", ""))
     if fmt not in FORMATS:
         notes.append("the file says format %r; this reads %s: taken as that" % (fmt, ", ".join(FORMATS)))
-    known = {"format", "id", "name", "saved", "generator", "community", "actor", "units", "placement", "pieces", "land"}
+    known = {"format", "id", "name", "saved", "generator", "community", "actor", "units", "placement", "pieces", "land", "decided"}
     left = sorted(k for k in data if k not in known)
     if left:
         notes.append("the file: not understood, left out: %s" % ", ".join(left))
@@ -247,7 +248,9 @@ def import_built(doc, source, join=True):
     if abs(scale - 1.0) > 1e-9:
         notes.info("the map shows this building at %g times its numbers: every length here is its number times %g" % (scale, scale))
     for prop, value in (("MapFile", path or ""), ("MapFormat", fmt), ("MapId", str(data.get("id", ""))), ("MapSaved", str(data.get("saved", ""))),
-                        ("MapLand", json.dumps(data["land"], sort_keys=True) if data.get("land") is not None else "")):
+                        ("MapLand", json.dumps(data["land"], sort_keys=True) if data.get("land") is not None else ""),
+                        # Johny's decisions about where it stands (FORMAT.md, "Johny's answers on his house S01"): kept as written
+                        ("MapDecided", json.dumps(data["decided"], sort_keys=True) if data.get("decided") is not None else "")):
         if prop not in b.PropertiesList:
             b.addProperty("App::PropertyString", prop, "From the map", "the built file this building was made from")
         setattr(b, prop, value)
@@ -255,8 +258,10 @@ def import_built(doc, source, join=True):
     made, drawn = {}, {}
     pieces = data.get("pieces", []) or []
     # what stands on nothing first (curves, figures, domes), whatever the order in the file: walls,
-    # floors and roofs name a piece as their Base; laths name the shell they lie on, which may stand on a curve itself
-    rank = lambda p: 2 if "Shell" in (p.get("params") or {}) else 1 if "Base" in (p.get("params") or {}) else 0  # noqa: E731
+    # floors and roofs name a piece as their Base; laths name the shell they lie on, which may stand on a curve itself;
+    # a band names the wall it stands on and the roofs over it
+    rank = lambda p: (3 if "Wall" in (p.get("params") or {}) or "Roofs" in (p.get("params") or {})  # noqa: E731
+                      else 2 if "Shell" in (p.get("params") or {}) else 1 if "Base" in (p.get("params") or {}) else 0)
     order = sorted(pieces, key=rank)
     for i, piece in enumerate(order):
         asked = str(piece.get("type", ""))
