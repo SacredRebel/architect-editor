@@ -34,7 +34,7 @@ MM = og.MM
 FORMATS = ("built/1",)
 # the pieces a built file may hold: the workbench's own classes, by their own names
 TYPES = ("PlanCurve", "Wall", "Slab", "ShellRoof", "LeafShell", "Vault", "Dome", "Steps", "SoapFilm", "MinimalShell", "Conoid", "TranslationShell",
-         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell", "WallBand")
+         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell", "WallBand", "RoofFrame")
 # A kind under another name: a step is a slab that is named a step; lane R's groined saddles are
 # the saddle shell of that kind; the wave vault of the map's catalogue is a vault (FORMAT.md,
 # "Lane R's shells and lattices as record kinds").
@@ -46,7 +46,7 @@ LABELS = {"PlanCurve": "Plan curve", "Wall": "Curved wall", "Slab": "Floor slab"
           "SacredSolid": "Regular solid", "GeodesicDome": "Geodesic dome", "Gridshell": "Gridshell", "CellularWall": "Cellular wall",
           "BranchingColumn": "Branching column", "Revolved": "Solid of revolution", "HeightFieldShell": "Height field shell",
           "Conoid": "Conoid roof", "TranslationShell": "Translation shell", "GroinedSaddles": "Groined saddles", "WaveVault": "Wave vault",
-          "WallBand": "Band to the roof"}
+          "WallBand": "Band to the roof", "RoofFrame": "Roof frame"}
 # What the map writes on a piece for its own use, which says nothing the piece's other numbers do
 # not say (FORMAT.md, "What the map adds"): the outline a leaf or a dome was fitted over, and how.
 # The leaf's spine, span, ridge and place, the dome's radius, stretch and place are worked out

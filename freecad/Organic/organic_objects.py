@@ -18,7 +18,7 @@ import organic_sacred as sacred
 
 MM = og.MM
 ICONS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
-IFC_TYPES = ["Wall", "Roof", "Slab", "Member", "Covering", "Column", "Stair", "Building Element Proxy", "Curtain Wall", "Railing", "Chimney"]
+IFC_TYPES = ["Wall", "Roof", "Slab", "Member", "Covering", "Column", "Stair", "Building Element Proxy", "Curtain Wall", "Railing", "Chimney", "Beam"]
 
 
 def m(q):
@@ -488,6 +488,57 @@ class WallBand(Organic):
             return to_wall.multVec(App.Vector(q.x, q.y, z - thickness)).z
 
         return under, zone
+
+
+class RoofFrame(Organic):
+    """A roof shell's frame (Johny's point 7, its first step, 3 Oct 2026): its ribs, its edge
+    beam and a ring round each of its holes, hung under its underside (og.roof_frame_shape).
+    The ribs stand at stations along the ridge axis, both ends and evenly between by its length
+    in plan, and run square to it, both ways, to the edge beam, stopping at a ring where they
+    meet a hole. The numbers are the spec's (each "est" there)."""
+
+    ifc_type = "Beam"
+    icon = "OrganicRoof.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Roof frame"
+        prop(obj, "App::PropertyLink", "Shell", g, "the roof shell (a height field shell) the frame hangs under")
+        prop(obj, "App::PropertyVectorList", "RidgePoints", g, "the ridge axis in plan, in the shell's own grid frame, in millimetres: straight runs between the points")
+        prop(obj, "App::PropertyInteger", "Ribs", g, "complete transverse ribs: at both ends of the ridge axis and evenly between, by its length in plan", 10)
+        length(obj, "RibWidth", g, "a rib's width, centred on its line", 0.16)
+        length(obj, "RibDepth", g, "a rib's depth under the shell's underside", 0.36)
+        length(obj, "EdgeBeamWidth", g, "the edge beam's width, inward from the shell's outline (a ring's too)", 0.22)
+        length(obj, "EdgeBeamDepth", g, "the edge beam's depth under the underside (a ring's too)", 0.45)
+        prop(obj, "App::PropertyBool", "Rings", g, "a ring round each hole of the shell, of the edge beam's section", True)
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        shell = obj.Shell
+        if shell is None or type(getattr(shell, "Proxy", None)).__name__ != "HeightFieldShell" or shell.Base is None:
+            obj.Shape = Part.Shape()
+            return
+        base = shell.Base
+        edge, closed = path_in(base, base.Placement)  # in the curve's own frame: the shell's grid's
+        if not closed:
+            raise ValueError("%s needs a closed base curve" % shell.Label)
+        surface = og.field_surface((shell.GridOrigin.x / MM, shell.GridOrigin.y / MM), m(shell.GridStep), shell.GridColumns, list(shell.Heights))
+        thickness, last = m(shell.Thickness) * MM, [None]
+
+        def under(x, y):
+            z, last[0] = og.field_z(surface, x, y, last[0])
+            return z - thickness
+
+        said = {}
+        shape = og.roof_frame_shape(edge, hole_edges(shell, base.Placement), under, list(obj.RidgePoints), int(obj.Ribs), m(obj.RibWidth) * MM,
+                                    m(obj.RibDepth) * MM, m(obj.EdgeBeamWidth) * MM, m(obj.EdgeBeamDepth) * MM, bool(obj.Rings), said)
+        self.said = said  # (what was made and left out, for the import's notes and the checks)
+        if shape is None:
+            obj.Shape = Part.Shape()
+            return
+        shape.Placement = obj.Placement.inverse().multiply(base.Placement)  # from the curve's frame into the frame's own
+        set_local(obj, shape)
 
 
 # ---------------------------------------------------------------- vaults and arches
@@ -1282,6 +1333,7 @@ COLOURS = {
     "Curtain Wall": (0.72, 0.84, 0.90),
     "Railing": (0.62, 0.52, 0.36),
     "Chimney": (0.62, 0.60, 0.56),
+    "Beam": (0.76, 0.58, 0.40),
 }
 LINE_COLOURS = {"PlanCurve": (0.2, 0.3, 0.8), "SacredFigure": (0.70, 0.45, 0.05), "SunRose": (0.85, 0.45, 0.0)}
 

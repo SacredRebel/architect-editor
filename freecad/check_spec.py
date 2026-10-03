@@ -37,14 +37,24 @@ measure from the solids, by walking each solid with points (is this point in it 
      places of its plan against the spec's expression; its thickness straight down; nothing
      of it over a courtyard or the chimney's cut, nor outside its plan outline; and it holds
      its plan's area (worked out here from the outline and the round holes) times its thickness.
+  B. with Johny's answers: every band between a wall's top and the roofs over it (measure_band).
+  M. every roof's frame (Johny's point 7, its first step): its ribs at the format's stations on
+     the spec's ridge axis, square to it, from the edge beam to the edge beam or a ring; its
+     edge beam inside the outline; a ring outside each hole; each member hanging under the
+     roof (its top on the spec's underside, and on the roof's own as built: no gap, no
+     overlap) with the spec's depth and width; nothing between the ribs, over the holes or
+     outside the outline (measure_frame).
 
 How close: 0.01 m for faces, jambs, sills, heads and tops of walls; 0.03 m for a roof's top
-(its heights stand on a grid of 0.25 m: the grid's own sag at a crease); 0.15 m² for a floor.
+(its heights stand on a grid of 0.25 m: the grid's own sag at a crease); 0.15 m² for a floor;
+a frame's members: their sides 0.01 m, their tops 0.03 m from the spec's underside and 0.003 m
+from the roof's own, their depth 0.002 m.
 
 --self-test builds forged pieces (a wall thickened outward, an opening 0.4 m along, a roof
 5 cm too high, a floor without its courtyard, walls with butt ends where they meet, a joined
-wall with each side in one face, ...) through the same import, measures them the same way,
-and must see every one rejected by the check meant for it.
+wall with each side in one face, a frame with one rib fewer, a frame hung from its roof as
+the spec gives it while the roof stands 5 cm higher, ...) through the same import, measures
+them the same way, and must see every one rejected by the check meant for it.
 """
 
 import copy
@@ -230,6 +240,8 @@ def spec_pieces(spec, answers=None):
         out["chimney"] = ("chimney", chimney)
     for shell in spec.get("4_roof_shells", []):
         out[shell["id"]] = ("roof", shell)
+        if shell.get("rib_count") and shell.get("ridge_axis_xyz_m") and len(shell.get("edge_beam_width_depth_m", [])) == 2:
+            out[shell["id"] + ".frame"] = ("frame", shell)  # its ribs, edge beam and rings (Johny's point 7, its first step)
     band = answers.get("bands") or {}
     walls = {w["id"]: w for w in spec.get("2_curved_walls", [])}
     glass = num(walls[band["glass_from"]]["thickness_m"]) if band.get("glass_from") in walls else None
@@ -730,7 +742,256 @@ def measure_band(spec, said, shape):
     return out
 
 
-MEASURES = {"wall": measure_wall, "floor": measure_floor, "chimney": measure_chimney, "roof": measure_roof, "band": measure_band}
+FRAME_MEET = 0.003  # metres: how far a member's top may stand from its roof's underside as built (above it: in the roof; below it: a gap)
+FRAME_DEPTH = 0.002  # metres: how far a member's depth (its top to its bottom, straight down) may lie from the spec's
+FRAME_END = 0.30  # metres: a place of a rib this near either end of it, and of the edge beam or a ring this near a hole or the outline, is not looked at
+FRAME_STEP = 1.0  # metres between the places looked at along a rib and along the outline
+FRAME_ROUND = 24  # places looked at round each ring
+FRAME_REACH = 1.0  # metres: a station further than this outside the plan less the edge beam has no rib (the format's rule)
+FRAME_STRAY = 60  # places of the plan between the ribs, away from every member, where nothing of the frame may be
+
+
+def frame_stations(points, count):
+    """The format's stations on a ridge axis (straight runs between its points, in plan): both its ends and evenly
+    between, by its length; each with the unit vector along the axis there (at a point of the axis: the mean of its two runs)."""
+    runs = [(a, b, math.dist(a, b)) for a, b in zip(points, points[1:]) if math.dist(a, b) > 1e-9]
+    total = sum(l for _a, _b, l in runs)
+    out = []
+    for k in range(count if runs else 0):
+        s = total * k / (count - 1.0) if count > 1 else total / 2.0
+        for i, (a, b, l) in enumerate(runs):
+            if s <= l + 1e-9 or i == len(runs) - 1:
+                t = max(0.0, min(1.0, s / l))
+                d = ((b[0] - a[0]) / l, (b[1] - a[1]) / l)
+                if t > 1.0 - 1e-9 and i < len(runs) - 1:
+                    c, e, m = runs[i + 1]
+                    d = (d[0] + (e[0] - c[0]) / m, d[1] + (e[1] - c[1]) / m)
+                    n = math.hypot(*d)
+                    d = (d[0] / n, d[1] / n)
+                out.append(((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t), d))
+                break
+            s -= l
+    return out
+
+
+def measure_frame(spec, shell, shape, roof=None):
+    """A roof's frame (Johny's point 7, its first step), by the format's rule, worked out here from the spec alone. Its
+    plan: the spec's outline (the smooth curve through its points) less its round holes. Its stations: both ends of the
+    ridge axis (straight runs between the spec's points) and evenly between, by its length in plan; from each, the line
+    square to the axis (at a point of the axis, square to the mean of its two runs): its piece through the station (or
+    the nearest within FRAME_REACH) of the plan less the edge beam (the outline grown inward by the beam's width), less
+    each hole grown by its ring (the beam's width), is the rib, in pieces where it crosses a ring. Every member hangs
+    under the underside (the spec's expression less the envelope's thickness): across it, its top straight from side to
+    side, each side on the underside; its bottom its depth under its top, straight down.
+    Looked at with upright lines (a member's top and bottom slope across it): along each rib every FRAME_STEP, not within
+    FRAME_END of its ends, its top (against the spec's underside, and against `roof`'s own underside as built: the frame
+    hangs from it, no gap and no overlap), its depth and its two sides; along the outline every FRAME_STEP, the edge
+    beam's (from the outline to its width inward); round each hole FRAME_ROUND places, its ring's (from the hole's rim
+    to the beam's width outward); and where nothing may be: FRAME_STRAY places of the plan between the ribs, the holes,
+    and 0.10 m outside the outline."""
+    from shapely.geometry import LineString, Point, Polygon
+    from shapely.ops import unary_union
+    from shapely.prepared import prep
+
+    sid = shell["id"]
+    path = Path(ring_of(rows(shell["plan_outline_xy_m"]))[0], True, per=120)
+    holes = {h: round_holes(spec)[h] for h in shell.get("holes", []) if h in round_holes(spec)}
+    expression = s2r.shell_top(spec, sid)
+    thickness = num(shell["envelope_thickness_m"])
+    rib_w, rib_d = num(shell["rib_width_m"]), num(shell["rib_depth_below_envelope_m"])
+    edge_w, edge_d = (num(v) for v in shell["edge_beam_width_depth_m"])
+    # each solid with its plan from above (its own triangles, 0.5 mm, grown by 3 mm): a place outside it is not asked of
+    # OCCT, which answers every place within it (the plan only spares the time: an upright line through a solid of the
+    # frame costs OCCT 0.04 s, and most places looked at hold nothing)
+    solids = []
+    for s in shape.Solids:
+        v, tris = s.tessellate(0.5)
+        seen = unary_union([g for g in (Polygon([(v[i].x, v[i].y) for i in t]) for t in tris) if g.area > 1e-3])
+        solids.append((s, prep(seen.buffer(3.0))))
+
+    def at(q, step, d):
+        return (q[0] + step[0] * d, q[1] + step[1] * d)
+
+    def under(q):
+        return expression(q[0], q[1]) - thickness
+
+    def column(q):
+        """(the top, the bottom) of the frame on the upright line through q, metres; None where it has nothing."""
+        x, y, zs = q[0] * MM, q[1] * MM, []
+        for s, plan in solids:
+            if plan.contains(Point(x, y)):
+                b = s.BoundBox
+                zs += [v.Point.z / MM for v in s.common(Part.makeLine(App.Vector(x, y, b.ZMin - 10.0), App.Vector(x, y, b.ZMax + 10.0))).Vertexes]
+        return (max(zs), min(zs)) if len(zs) >= 2 else None
+
+    def side(q, step, expect, reach, inside_first, depth):
+        """Where a member's side lies on the level line through q along step, from expect - reach to expect + reach, to a
+        millimetre: each place asked at half the spec's `depth` under the spec's underside there (inside any member that
+        hangs there, however its top slopes across it); None where the frame does not end there as it should."""
+        def probe(d):
+            r = at(q, step, d)
+            x, y, z = r[0] * MM, r[1] * MM, (under(r) - depth / 2.0) * MM
+            return any(plan.contains(Point(x, y)) and s.isInside(App.Vector(x, y, z), 1e-3, False) for s, plan in solids)
+
+        lo, hi = expect - reach, expect + reach
+        if probe(lo) != inside_first or probe(hi) == inside_first:
+            return None
+        for _ in range(8):
+            mid = (lo + hi) / 2.0
+            if probe(mid) == inside_first:
+                lo = mid
+            else:
+                hi = mid
+        return (lo + hi) / 2.0
+
+    out = {"valid": bool(shape.isValid()) if not shape.isNull() else False, "solids": len(shape.Solids), "box": box_of(shape) if shape.Solids else (0,) * 6,
+           "volume": sum(og.volume_of(s) for s in shape.Solids) / 1e9, "rib": (rib_w, rib_d), "edge": (edge_w, edge_d), "holes": {},
+           "stations": 0, "spacing": 0.0, "left_out": [], "pieces": 0, "short": 0, "places": {"rib": [], "edge": [], "ring": []},
+           "sides": {"rib": [], "edge": [], "ring": []}, "missing": [], "stray": [], "stray_tried": 0, "outside": 0, "outside_tried": 0,
+           "near": 0, "tight": 0, "rib_sides_skipped": 0, "faces_skipped": 0}
+
+    def hangs(kind, what, q, a, b, depth):
+        """The member on the upright line through q, on its middle line (a and b: the places of its two sides): its top
+        against the spec's underside and against its roof's own, each the mean of the two at its sides (its top runs
+        straight across: under a crest its middle stands below the underside, under a valley above it; by the rule), and
+        its depth. The roof is read a millimetre in from each side (a side may lie on the roof's own rim). False where
+        the frame has nothing."""
+        col = column(q)
+        if col is None:
+            out["missing"].append("%s at (%.2f, %.2f)" % (what, q[0], q[1]))
+            return False
+        w = math.dist(a, b)
+        reads = [column_of(roof, *at(s, ((t[0] - s[0]) / w, (t[1] - s[1]) / w), 0.001)) for s, t in ((a, b), (b, a))] if roof is not None and not roof.isNull() else [None]
+        meet = None if None in reads else col[0] - (reads[0][1] + reads[1][1]) / 2.0
+        out["places"][kind].append((col[0] - (under(a) + under(b)) / 2.0, meet, col[0] - col[1] - depth))
+        return True
+
+    whole = Polygon(path.dense()).buffer(0)
+    grown = unary_union([Point(c).buffer(r + edge_w, quad_segs=256) for c, r in holes.values()]) if holes else None
+    inner = whole.buffer(-edge_w)
+    zone = inner.difference(grown) if grown is not None else inner
+    # the ribs: the rule's pieces, from the spec's ridge axis and numbers
+    ridge = [(x, y) for x, y, _z in rows(shell["ridge_axis_xyz_m"])]
+    count = int(round(num(shell["rib_count"])))
+    stations = frame_stations(ridge, count)
+    out["stations"] = len(stations)
+    out["spacing"] = sum(math.dist(a, b) for a, b in zip(ridge, ridge[1:])) / (count - 1.0) if count > 1 else 0.0
+    lines = []  # every piece of rib the rule gives: (its rib's number, one end, the other end, the ridge's direction at its station)
+    for k, (p, d) in enumerate(stations):
+        across = (-d[1], d[0])
+        got = inner.intersection(LineString([at(p, across, -1.0e3), at(p, across, 1.0e3)]))
+        parts = [g for g in getattr(got, "geoms", [got]) if g.geom_type == "LineString" and not g.is_empty]
+        mine = min(parts, key=lambda g: g.distance(Point(p))) if parts else None
+        if mine is None or mine.distance(Point(p)) > FRAME_REACH:
+            out["left_out"].append(k + 1)
+            continue
+        rib = mine.difference(grown) if grown is not None else mine
+        lines += [(k + 1, g.coords[0], g.coords[-1], d) for g in getattr(rib, "geoms", [rib]) if g.geom_type == "LineString" and not g.is_empty]
+    drawn = [LineString([a, b]) for _k, a, b, _d in lines]
+    every = unary_union(drawn) if drawn else None
+    reach = min(REACH, rib_w / 2.0 - 0.005)
+    for n, (k, a, b, d) in enumerate(lines):
+        length = math.dist(a, b)
+        if length < 0.1:  # the kernel's shortest piece
+            out["short"] += 1
+            continue
+        out["pieces"] += 1
+        if length < 2 * FRAME_END:
+            continue
+        others = unary_union(drawn[:n] + drawn[n + 1:]) if len(drawn) > 1 else None
+        u = ((b[0] - a[0]) / length, (b[1] - a[1]) / length)
+        places = int((length - 2 * FRAME_END) / FRAME_STEP) + 1
+        for j in range(places):
+            q = at(a, u, FRAME_END + (length - 2 * FRAME_END) * (j + 0.5) / places)
+            if not hangs("rib", "rib %d" % k, q, at(q, d, -rib_w / 2.0), at(q, d, rib_w / 2.0), rib_d):
+                continue
+            probe = LineString([at(q, d, -rib_w / 2.0 - reach), at(q, d, rib_w / 2.0 + reach)])
+            if not zone.contains(probe) or (others is not None and others.distance(probe) < rib_w / 2.0 + 0.05):  # by the edge beam, a ring or another rib
+                out["rib_sides_skipped"] += 1
+                continue
+            lo, hi = side(q, d, -rib_w / 2.0, reach, False, rib_d), side(q, d, rib_w / 2.0, reach, True, rib_d)
+            if lo is None or hi is None:
+                out["missing"].append("rib %d at (%.2f, %.2f): a side is not within %.3f m of where it should be" % (k, q[0], q[1], reach))
+            else:
+                out["sides"]["rib"].append((lo + rib_w / 2.0, hi - rib_w / 2.0))
+    # nothing between the ribs
+    rnd = random.Random(11)
+    clear = zone.buffer(-0.05)
+    x0, y0, x1, y1 = clear.bounds if not clear.is_empty else (0.0, 0.0, 0.0, 0.0)
+    tried = 0
+    while out["stray_tried"] < FRAME_STRAY and tried < 5000 and not clear.is_empty:
+        tried += 1
+        q = (rnd.uniform(x0, x1), rnd.uniform(y0, y1))
+        if not clear.contains(Point(q)) or (every is not None and every.distance(Point(q)) < rib_w / 2.0 + 0.05):
+            continue
+        out["stray_tried"] += 1
+        if column(q) is not None:
+            out["stray"].append("(%.2f, %.2f)" % q)
+    # the edge beam, along the outline; nothing 0.10 m outside it
+
+    def radius_near(s, span=0.5):
+        """The radius of the tightest turn of the outline within span metres of s along it."""
+        k = 0.0
+        for j in range(-10, 11):
+            a, b = path.at(s + span * j / 10.0 - 0.02)[1], path.at(s + span * j / 10.0 + 0.02)[1]
+            k = max(k, abs(math.asin(max(-1.0, min(1.0, a[0] * b[1] - a[1] * b[0])))) / 0.04)
+        return 1.0 / k if k > 1e-9 else float("inf")
+
+    reach = min(REACH, edge_w / 2.0 - 0.005)
+    places = max(8, int(path.total / FRAME_STEP))
+    for j in range(places):
+        s = path.total * j / places
+        p, left = path.at(s)
+        inward = (left[0] * path.inward, left[1] * path.inward)
+        outside = at(p, inward, -0.10)
+        if not whole.contains(Point(outside)) and (grown is None or grown.distance(Point(outside)) > edge_w):  # (a ring may reach out over the outline where its hole cuts it)
+            out["outside_tried"] += 1
+            if column(outside) is not None:
+                out["outside"] += 1
+        m = at(p, inward, edge_w / 2.0)
+        if grown is not None and grown.distance(Point(m)) < FRAME_END:
+            out["near"] += 1
+            continue
+        if radius_near(s) < edge_w / og.BAND_FOLD + 0.05:  # where the beam turns tighter than it can follow it has a gap (the format's rule)
+            out["tight"] += 1
+            continue
+        if not hangs("edge", "the edge beam", m, p, at(p, inward, edge_w), edge_d):
+            continue
+        beyond = LineString([at(p, inward, edge_w - reach), at(p, inward, edge_w + reach)])
+        if whole.contains(Point(at(p, inward, -reach))) or not zone.contains(Point(at(p, inward, edge_w + reach))) or (every is not None and every.distance(beyond) < rib_w / 2.0 + 0.05):
+            out["faces_skipped"] += 1  # its inner face where a rib meets it, or by a ring or another part of the outline
+            continue
+        lo, hi = side(p, inward, 0.0, reach, False, edge_d), side(p, inward, edge_w, reach, True, edge_d)
+        if lo is None or hi is None:
+            out["missing"].append("the edge beam at (%.2f, %.2f): a face is not within %.3f m of where it should be" % (m[0], m[1], reach))
+        else:
+            out["sides"]["edge"].append((lo, hi - edge_w))
+    # the rings, round the holes; the holes open
+    near_outline = whole.buffer(-(edge_w + FRAME_END))
+    for hid, (c, r) in holes.items():
+        others = unary_union([Point(c2).buffer(r2 + edge_w, quad_segs=64) for h2, (c2, r2) in holes.items() if h2 != hid]) if len(holes) > 1 else None
+        for j in range(FRAME_ROUND):
+            u = (math.cos(2 * math.pi * (j + 0.5) / FRAME_ROUND), math.sin(2 * math.pi * (j + 0.5) / FRAME_ROUND))
+            m = at(c, u, r + edge_w / 2.0)
+            if not near_outline.contains(Point(m)) or (others is not None and others.distance(Point(m)) < FRAME_END):
+                out["near"] += 1
+                continue
+            if not hangs("ring", "the ring of %s" % hid, m, at(c, u, r), at(c, u, r + edge_w), edge_d):
+                continue
+            if every is not None and every.distance(LineString([at(c, u, r + edge_w - reach), at(c, u, r + edge_w + reach)])) < rib_w / 2.0 + 0.05:
+                out["faces_skipped"] += 1  # its outer face where a rib meets it
+                continue
+            lo, hi = side(c, u, r, reach, False, edge_d), side(c, u, r + edge_w, reach, True, edge_d)
+            if lo is None or hi is None:
+                out["missing"].append("the ring of %s at (%.2f, %.2f): a face is not within %.3f m of where it should be" % (hid, m[0], m[1], reach))
+            else:
+                out["sides"]["ring"].append((lo - r, hi - r - edge_w))
+        rim = [at(c, (math.cos(2 * math.pi * j / 12.0), math.sin(2 * math.pi * j / 12.0)), r - 0.05) for j in range(12)]
+        out["holes"][hid] = {"centre": column(c) is None, "rim": sum(1 for q in rim if column(q) is not None)}
+    return out
+
+
+MEASURES = {"wall": measure_wall, "floor": measure_floor, "chimney": measure_chimney, "roof": measure_roof, "band": measure_band, "frame": measure_frame}
 
 
 # ------------------------------------------------------------------ the design
@@ -761,7 +1022,7 @@ def built(records, only=None, join=True):
                 continue
             want.add(key)
             params = by_id[key].get("params", {})
-            todo.extend(params[link] for link in ("Base", "Wall") if params.get(link))
+            todo.extend(params[link] for link in ("Base", "Wall", "Shell") if params.get(link))
             todo.extend(list(params.get("Holes", [])) + list(params.get("Roofs", [])))
         data = dict(data, pieces=[p for p in data["pieces"] if p["id"] in want])
     doc = App.newDocument("SpecCheck")
@@ -780,7 +1041,7 @@ def gather(spec, shapes, only=None, without=(), answers=None):
     for key, (kind, said) in spec_pieces(spec, answers).items():
         if only and key not in only:
             continue
-        if key in without:
+        if key in without or (kind == "frame" and said["id"] in without):  # (a roof left out: its frame too)
             facts["without"].append(key)
             continue
         facts["kinds"][key] = kind
@@ -791,7 +1052,7 @@ def gather(spec, shapes, only=None, without=(), answers=None):
                 continue
             shape = Part.Shape()  # a band that came out empty is still walked: where it should stand, it is missing
         t0 = time.time()
-        facts["pieces"][key] = MEASURES[kind](spec, said, shape)
+        facts["pieces"][key] = MEASURES[kind](spec, said, shape, **({"roof": shapes.get(said["id"])} if kind == "frame" else {}))
         if shape.Solids:
             facts["pieces"][key]["plain"] = shape.Volume / 1e9  # FreeCAD's own measure, beside the adaptive one in "volume"
         facts["pieces"][key]["seconds"] = time.time() - t0
@@ -817,11 +1078,12 @@ def judge(facts):
     of = lambda kind: [k for k in kinds if kinds[k] == kind and k in pieces]  # noqa: E731
 
     # H. whole
-    broken = [k for k, p in pieces.items() if not p["valid"] or (p["solids"] != 1 and kinds[k] != "band")]
+    broken = [k for k, p in pieces.items() if not p["valid"] or (p["solids"] != 1 and kinds[k] not in ("band", "frame"))]
     ok(not facts["missing"] and not broken,
-       "H the house is whole: %d walls, %d floors, %d roof shells and the chimney of the spec are each one valid solid%s (missing: %s; not valid: %s; left out on purpose and not looked at: %s)"
+       "H the house is whole: %d walls, %d floors, %d roof shells and the chimney of the spec are each one valid solid%s%s (missing: %s; not valid: %s; left out on purpose and not looked at: %s)"
        % (len(of("wall")), len(of("floor")), len(of("roof")),
           "; %d bands to the roof, each one or more valid solids (one for each stretch under a roof)" % len(of("band")) if of("band") else "",
+          "; %d roof frames, each valid solids (its ribs, its edge beam, its rings)" % len(of("frame")) if of("frame") else "",
           ", ".join(facts["missing"]) or "none", ", ".join(broken) or "none", ", ".join(facts.get("without", [])) or "none"))
 
     # V. each solid's volume two ways. FreeCAD's own Volume gives a face a fixed number of points: a face that spans one long
@@ -946,6 +1208,41 @@ def judge(facts):
            "B %s, its two faces: at %d places half-way up they stand where %s puts them, within %.4f m (allowed %.2f); %d places within 0.5 m of a bend tighter than it is wide not looked at"
            % (name, len(p["faces"]), "a pane of %.2f m on the wall's middle" % p["glass"] if p["kind"] == "Glass" else "the wall's own two faces",
               worst([v for pair in p["faces"] for v in pair]), CLOSE, p["tight"]))
+
+    # M. the roofs' frames (Johny's point 7, its first step): the ribs, the edge beam, the rings
+    for k in of("frame"):
+        p = pieces[k]
+        (rib_w, rib_d), (edge_w, edge_d) = p["rib"], p["edge"]
+        ribs = p["places"]["rib"]
+        meets = [v[1] for v in ribs if v[1] is not None]
+        sides = [v for pair in p["sides"]["rib"] for v in pair]
+        lost = [m for m in p["missing"] if m.startswith("rib")]
+        ok(ribs and sides and not lost and not p["stray"] and len(meets) == len(ribs) and worst([v[0] for v in ribs]) <= ROOF_CLOSE and worst(meets) <= FRAME_MEET
+           and worst([v[2] for v in ribs]) <= FRAME_DEPTH and worst(sides) <= CLOSE,
+           "M %s, its ribs: %d stations %.2f m apart (both ends of the ridge axis and evenly between, by its length in plan)%s; the rule gives %d rib pieces square to the ridge, "
+           "from the edge beam to the edge beam or a ring (and %d shorter than 0.10 m, not built); at %d places along them, none within %.2f m of a piece's end, the frame hangs "
+           "under the roof: its top within %.3f m of the spec's underside (allowed %.2f) and within %.4f m of the roof's own underside as built at %d of them (allowed %.3f), "
+           "%.2f m deep within %.4f m (allowed %.3f); its two sides %.2f m apart within %.4f m at %d places (allowed %.2f; %d by the edge beam, a ring or another rib not looked at); "
+           "nothing at %d places of the plan between the ribs (found at: %s) (missing: %s)"
+           % (k, p["stations"], p["spacing"],
+              "; no rib from station %s: further than %.1f m outside the plan" % (", ".join(str(n) for n in p["left_out"]), FRAME_REACH) if p["left_out"] else "",
+              p["pieces"], p["short"], len(ribs), FRAME_END, worst([v[0] for v in ribs]), ROOF_CLOSE, worst(meets), len(meets), FRAME_MEET, rib_d, worst([v[2] for v in ribs]),
+              FRAME_DEPTH, rib_w, worst(sides), len(sides) // 2, CLOSE, p["rib_sides_skipped"], p["stray_tried"], ", ".join(p["stray"][:3]) or "none", "; ".join(lost[:3]) or "none"))
+        both = p["places"]["edge"] + p["places"]["ring"]
+        meets = [v[1] for v in both if v[1] is not None]
+        faces = [v for kind in ("edge", "ring") for pair in p["sides"][kind] for v in pair]
+        lost = [m for m in p["missing"] if not m.startswith("rib")]
+        shut = sorted(h for h, o in p["holes"].items() if not o["centre"] or o["rim"])
+        ok(p["places"]["edge"] and p["sides"]["edge"] and not lost and not shut and p["outside"] == 0 and len(meets) == len(both) and worst([v[0] for v in both]) <= ROOF_CLOSE
+           and worst(meets) <= FRAME_MEET and worst([v[2] for v in both]) <= FRAME_DEPTH and worst(faces) <= CLOSE,
+           "M %s, its edge beam and rings: at %d places along the outline the edge beam, and at %d places round %s a ring outside the hole, each %.2f m wide and %.2f m deep: "
+           "their tops within %.3f m of the spec's underside (allowed %.2f) and within %.4f m of the roof's own (allowed %.3f), their depth within %.4f m (allowed %.3f); "
+           "their faces (the edge beam's on the outline and its width inward, at %d places; a ring's on the hole's rim and its width outward, at %d) within %.4f m (allowed %.2f; "
+           "%d where a rib meets them not looked at); nothing over the holes (something at: %s), nor 0.10 m outside the outline at %d places (%d found); not looked at: "
+           "%d places within %.2f m of a hole or the outline, %d where the outline turns tighter than the beam can follow (missing: %s)"
+           % (k, len(p["places"]["edge"]), len(p["places"]["ring"]), " and ".join(sorted(p["holes"])) or "no hole (it has none)", edge_w, edge_d,
+              worst([v[0] for v in both]), ROOF_CLOSE, worst(meets), FRAME_MEET, worst([v[2] for v in both]), FRAME_DEPTH, len(p["sides"]["edge"]), len(p["sides"]["ring"]),
+              worst(faces), CLOSE, p["faces_skipped"], ", ".join(shut) or "none", p["outside_tried"], p["outside"], p["near"], FRAME_END, p["tight"], "; ".join(lost[:3]) or "none"))
     return oks, fails
 
 
@@ -1015,6 +1312,25 @@ def forged_builds(spec, records, answers=None):
         forge("%s under the first of its roofs only" % band, "B %s as glass:" % band, band, lambda p: p[band]["params"].update(Roofs=p[band]["params"]["Roofs"][:1]))
         forge("%s carried up as the wall, where glass is asked" % band, "B %s as glass, its two faces" % band, band, lambda p: p[band]["params"].update(Kind="Wall"))
         forge("%s with a pane of 0.20 m" % band, "B %s as glass, its two faces" % band, band, lambda p: p[band]["params"].update(Thickness=0.20))
+    # a roof's frame (Johny's point 7, its first step): the first whose roof has holes
+    frame = next((p["id"] for p in records["pieces"] if p["type"] == "RoofFrame" and by_id(records)[p["params"]["Shell"]]["params"].get("Holes")), None)
+    if frame:
+        ribs, shell = by_id(records)[frame]["params"]["Ribs"], by_id(records)[frame]["params"]["Shell"]
+        ribs_of, beam_of = "M %s, its ribs" % frame, "M %s, its edge beam and rings" % frame
+        forge("%s with %d ribs" % (frame, ribs - 1), ribs_of, frame, lambda p: p[frame]["params"].update(Ribs=ribs - 1))
+        forge("%s with %d ribs (one more between each two)" % (frame, 2 * ribs - 1), ribs_of, frame, lambda p: p[frame]["params"].update(Ribs=2 * ribs - 1))
+        forge("%s with its ribs 0.05 m deeper" % frame, ribs_of, frame, lambda p: p[frame]["params"].update(RibDepth=p[frame]["params"]["RibDepth"] + 0.05))
+        forge("%s with its ribs 0.04 m wider" % frame, ribs_of, frame, lambda p: p[frame]["params"].update(RibWidth=p[frame]["params"]["RibWidth"] + 0.04))
+        forge("%s with its edge beam 0.10 m wider" % frame, beam_of, frame, lambda p: p[frame]["params"].update(EdgeBeamWidth=p[frame]["params"]["EdgeBeamWidth"] + 0.10))
+        forge("%s with its edge beam 0.05 m deeper" % frame, beam_of, frame, lambda p: p[frame]["params"].update(EdgeBeamDepth=p[frame]["params"]["EdgeBeamDepth"] + 0.05))
+        forge("%s without its rings" % frame, beam_of, frame, lambda p: p[frame]["params"].update(Rings=False))
+        # the frame hung from its roof as the spec gives it, while the roof stands 0.05 m higher: a gap between them
+        data = copy.deepcopy(records)
+        twin = dict(copy.deepcopy(by_id(data)[shell]), id=shell + ".as-spec")
+        data["pieces"].append(twin)
+        by_id(data)[shell]["params"].update(Heights=[h + 0.05 for h in by_id(data)[shell]["params"]["Heights"]])
+        by_id(data)[frame]["params"].update(Shell=twin["id"])
+        out.append(("%s hung from %s as the spec gives it, while %s stands 0.05 m higher" % (frame, shell, shell), ribs_of, (frame, shell), data))
     del walls
     meeting = next((m for m in spec_meetings(spec)[1] if len(m["ends"]) >= 2), None)
     if meeting:

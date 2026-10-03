@@ -42,6 +42,8 @@ hold is written, line by line, into <records>.notes.txt beside the records.
              top's heights worked out here from the spec's own expression and its clearance
              rule on a square grid (--step), the envelope thickness straight down, and its
              round holes (the courtyards; the chimney cut with its movement clearance)
+  frames     one RoofFrame for each roof shell the spec gives ribs: its ridge axis, its rib
+             count and section, its edge beam; a ring of the edge beam's section round each hole
 
 --answers <file.json> adds what Johny decided after the spec, in his words (the house's
 <records>.answers.json beside its records; FORMAT.md, "Johny's answers on his house S01"):
@@ -409,10 +411,16 @@ def convert(spec, floors=None, step=0.25, name=None, pavilion=False, lng=ANCHOR[
             params["Holes"] = holes
         pieces.append({"id": sid, "type": "HeightFieldShell", "name": "%s %s" % (sid, shell.get("name", "roof shell")), "ifc_type": "Roof", "params": params})
         leaves[sid] = (drawn, [rounds[h][:2] for h in holes if h in rounds], top, num(shell["envelope_thickness_m"]))
-        if shell.get("rib_count"):
-            notes.append("%s: its %g ribs (%.2f m wide, %.2f m under the envelope) and its edge beam (%s m) are not in the records"
-                         % (sid, num(shell["rib_count"]), num(shell["rib_width_m"]), num(shell["rib_depth_below_envelope_m"]),
-                            " by ".join("%.2f" % num(v) for v in shell.get("edge_beam_width_depth_m", []))))
+        if shell.get("rib_count") and shell.get("ridge_axis_xyz_m") and len(shell.get("edge_beam_width_depth_m", [])) == 2:
+            beam = [num(v) for v in shell["edge_beam_width_depth_m"]]
+            ribs = int(round(num(shell["rib_count"])))
+            pieces.append({"id": sid + ".frame", "type": "RoofFrame", "name": "%s frame" % sid, "ifc_type": "Beam",
+                           "params": {"Shell": sid, "RidgePoints": [[round(x, 6), round(y, 6)] for x, y, _z in rows(shell["ridge_axis_xyz_m"])],
+                                      "Ribs": ribs, "RibWidth": num(shell["rib_width_m"]), "RibDepth": num(shell["rib_depth_below_envelope_m"]),
+                                      "EdgeBeamWidth": beam[0], "EdgeBeamDepth": beam[1], "Rings": True}})
+            notes.append("%s: its frame from the spec's numbers (each est there): %d ribs %.2f m wide and %.2f m under the envelope, at both ends of "
+                         "its ridge axis and evenly between; an edge beam %.2f by %.2f m; a ring of the edge beam's section round each hole "
+                         "(the spec gives a ring no section of its own)" % (sid, ribs, num(shell["rib_width_m"]), num(shell["rib_depth_below_envelope_m"]), beam[0], beam[1]))
 
     # ---- the band between a wall's top and the roofs over it, closed with glass or with the wall (Johny's answer)
     band = answers.get("bands") or {}

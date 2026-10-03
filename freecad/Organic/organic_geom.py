@@ -1248,12 +1248,145 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     return refined(wall)
 
 
-BAND_FOLD = 0.8  # no band where its side on the inside of a turn lies further into it than this share of the turn's radius: it would fold over itself
-BAND_STEP_MM = 100.0  # a band's lines across it stand no further apart than this along its wall
+BAND_FOLD = 0.8  # no band or hung member where its side on the inside of a turn lies further into it than this share of the turn's radius: it would fold over itself
+BAND_STEP_MM = 100.0  # the lines across a band or a hung member stand no further apart than this along it
 BAND_LOW_MM = 5.0  # no band where the roof's underside stands less than this over the wall's top (at the band's middle)
-BAND_EDGE_MM = 1.0  # where a band ends (a roof's outline or a hole's rim crossing its middle, the underside coming down to the wall), found to this
-BAND_STRIP_MM = 25.0  # what a band must hold is counted in strips no wider than this across it
-BAND_TOLERANCE = 0.005  # how far (a share of it) a band's solid may lie from what its strips say it holds
+BAND_EDGE_MM = 1.0  # where a band or a member ends or steps, found to this
+BAND_STRIP_MM = 25.0  # what a band or a member must hold is counted in strips no wider than this across it
+BAND_TOLERANCE = 0.005  # how far (a share of it) its solid may lie from what its strips say it holds
+
+
+def _place(edge, closed, length, f):
+    """(f as a fraction of the curve, the curve's parameter, its point, the unit vector to its left) at f (any number on a
+    closed curve)."""
+    g = f % 1.0 if closed else min(1.0, max(0.0, f))
+    u = edge.getParameterByLength(g * length)
+    p, left = _across(edge, u)
+    return g, u, p, left
+
+
+def _folds(edge, d1, d2):
+    """folds(u, p, left): whether a thing between d1 and d2 (mm to the left of `edge`) would fold at u: its side on the
+    inside of the turn there lies further into it than BAND_FOLD of the radius."""
+    def folds(u, p, left):
+        try:
+            k = edge.curvatureAt(u)
+            if k <= 1e-9:
+                return False
+            into = left.dot(edge.centerOfCurvatureAt(u) - p) > 0  # the turn's centre lies to the left
+        except (Part.OCCError, AttributeError):  # (no centre where the curve runs straight)
+            return False
+        return d2 * k > BAND_FOLD if into else -d1 * k > BAND_FOLD
+    return folds
+
+
+def _stretches(length, closed, state):
+    """Where a thing along a curve `length` mm long is, and in which state: [(from, to, state, ring)] as fractions of the
+    curve (on a closed one they may run past 1), from state(f), None where it is not there: places at even steps (no
+    further apart than BAND_STEP_MM, 96 at least), each change found to BAND_EDGE_MM by halving. A closed curve in one
+    state all round is one ring; a stretch shorter than ten times BAND_EDGE_MM is left out."""
+    count = max(96, int(math.ceil(length / BAND_STEP_MM)))
+    steps = [i / float(count) for i in range(count + (0 if closed else 1))]
+    states = [state(f) for f in steps]
+    if all(s is None for s in states):
+        return []
+
+    def change(fa, fb, was):
+        """Between fa (in the state `was`) and fb (another): (the last fraction as at fa, the first as at fb)."""
+        while (fb - fa) * length > BAND_EDGE_MM:
+            fm = 0.5 * (fa + fb)
+            if state(fm) == was:
+                fa = fm
+            else:
+                fb = fm
+        return fa, fb
+
+    n = len(steps)
+    if all(s == states[0] for s in states):
+        return [(0.0, 1.0, states[0], closed)]
+    if closed:  # the walk round begins just after a change, so that no stretch runs over the seam unseen
+        k0 = next(i for i in range(n) if states[i] != states[i - 1])
+        order = [(k0 + i) % n for i in range(n)]
+        fs = [steps[i] + (1.0 if i < k0 else 0.0) for i in order]
+    else:
+        order, fs = list(range(n)), list(steps)
+    ss = [states[i] for i in order]
+    changes = []  # (the walk's index where the new state begins, the last fraction of the old, the first of the new)
+    for j in range(1, n + 1 if closed else n):
+        prev, cur = j - 1, j % n
+        if ss[prev] != ss[cur]:
+            changes.append((j,) + change(fs[prev], fs[cur] + (1.0 if j == n else 0.0), ss[prev]))
+    if closed:  # the walk began just after the change at its end: that change opens the first stretch
+        starts = [(0, changes[-1][2] - 1.0)] + [(j, fb) for j, _fa, fb in changes[:-1]]
+        ends = [fa for _j, fa, _fb in changes]
+    else:
+        starts = [(0, 0.0)] + [(j, fb) for j, _fa, fb in changes]
+        ends = [fa for _j, fa, _fb in changes] + [1.0]
+    return [(fa, fb, ss[j % n], False) for (j, fa), fb in zip(starts, ends)
+            if ss[j % n] is not None and (fb - fa) * length > 10.0 * BAND_EDGE_MM]
+
+
+def _lined_solid(made, ring, length):
+    """A solid through lines across it: made = [(f, (foot a, foot b), (head a, head b))], f a fraction of a curve `length`
+    mm long; four ruled faces through the lines (bottom, the two sides, top; across, each face runs straight from line to
+    line), ruled edge by edge (between two wires of many edges, a flat bottom came out not valid), and a flat face at each
+    end (none on a ring). Returns (the solid, what its strips say it holds, mm³): strips no wider than BAND_STRIP_MM
+    between the lines, each as tall as its middle."""
+    params = [m[0] for m in made] + ([made[0][0] + 1.0] if ring else [])
+    rows = [[m[1][0] for m in made], [m[1][1] for m in made], [m[2][1] for m in made], [m[2][0] for m in made]]  # feet a, b; heads b, a
+    pieces = max(1, int(math.ceil(len(params) / float(TOP_PIECE_STATIONS))))
+    cuts = [params[0] + (params[-1] - params[0]) * i / pieces for i in range(1, pieces)]
+    edges = []
+    for row in rows:
+        e = spline(row, ring, params)
+        edges.append(list(e.split(cuts).Edges) if cuts else [e])
+    faces = []
+    for r0, r1 in zip(edges, edges[1:] + edges[:1]):  # bottom (feet a to b), side b (foot to head), top (heads b to a), side a (head to foot)
+        for e0, e1 in zip(r0, r1):
+            faces.append(Part.makeRuledSurface(e0, e1))
+    for m in ((made[0], made[-1]) if not ring else ()):
+        faces.append(Part.Face(Part.makePolygon([m[1][0], m[1][1], m[2][1], m[2][0], m[1][0]])))
+    shell = Part.Shell(faces)
+    shell.sewShape()
+    solid = Part.Solid(shell)
+    if solid.Volume < 0:
+        solid.reverse()
+    want = 0.0
+    for m0, m1 in zip(made, made[1:] + (made[:1] if ring else [])):
+        j = max(1, int(math.ceil(((m1[0] - m0[0]) % 1.0 if ring else m1[0] - m0[0]) * length / BAND_STRIP_MM)))
+        for i in range(j):
+            t0, t1 = i / float(j), (i + 1) / float(j)
+            q = [m0[1][0] + (m1[1][0] - m0[1][0]) * t for t in (t0, t1)], [m0[1][1] + (m1[1][1] - m0[1][1]) * t for t in (t0, t1)]
+            quad = [q[0][0], q[1][0], q[1][1], q[0][1]]
+            strip = abs(sum(quad[c].x * quad[(c + 1) % 4].y - quad[(c + 1) % 4].x * quad[c].y for c in range(4))) / 2.0
+            tm = 0.5 * (t0 + t1)
+            foot = 0.5 * ((m0[1][0].z + (m1[1][0].z - m0[1][0].z) * tm) + (m0[1][1].z + (m1[1][1].z - m0[1][1].z) * tm))
+            head = 0.5 * ((m0[2][0].z + (m1[2][0].z - m0[2][0].z) * tm) + (m0[2][1].z + (m1[2][1].z - m0[2][1].z) * tm))
+            want += strip * (head - foot)
+    return solid, want
+
+
+def _lined_runs(runs, line, steps_of, length, what):
+    """The solids of a band or a member from its stretches: runs = [(from, to, state, ring)], line(f, state) the line across
+    at f; each stretch's lines no further apart than BAND_STEP_MM (on a ring: steps_of, its even places). Returns (the
+    solids, what their strips say, the lines made), and raises when a solid is not valid or does not hold what its strips
+    say (`what` names it)."""
+    solids, want, lines_made = [], 0.0, 0
+    for fa, fb, st, ring in runs:
+        if ring:
+            made = [line(f, st) for f in steps_of]
+        else:
+            k = max(2, int(math.ceil((fb - fa) * length / BAND_STEP_MM)))
+            made = [line(fa + (fb - fa) * j / k, st) for j in range(k + 1)]
+        lines_made += len(made)
+        solid, holds = _lined_solid(made, ring, length)
+        solids.append(solid)
+        want += holds
+    holds = sum(volume_of(s) for s in solids)
+    if solids and (not all(s.isValid() for s in solids) or abs(holds - want) > BAND_TOLERANCE * want):
+        raise ValueError("%s could not be made: %d solid(s), valid %s, %.4f m³ where its strips say %.4f"
+                         % (what, len(solids), all(s.isValid() for s in solids), holds / 1e9, want / 1e9))
+    return solids, want, holds, lines_made
 
 
 def wall_band_shape(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, roofs, said=None):
@@ -1279,12 +1412,12 @@ def wall_band_shape(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, roof
     The band is made in stretches, one for each roof it runs up to, each ending square where
     there is no band any more or where the roof over it changes (a step: the spec's own
     "stepped glazing at shell seams"; a smooth line through the step overshot), found to
-    BAND_EDGE_MM. A stretch is lines across it at least every BAND_STEP_MM: the band's two
-    sides, the wall's top there (level across), and over each side its roof's underside (read
-    on past the roof's edge where a side lies beyond it); four ruled faces through those lines
-    (bottom, top and the two sides; across the band the top runs straight from side to side)
-    and a flat face at each end. A band that runs all round a closed wall up to one roof is one
-    ring. What the solids hold is held against strips counted along the same lines.
+    BAND_EDGE_MM (_stretches). A stretch is lines across it at least every BAND_STEP_MM: the
+    band's two sides, the wall's top there (level across), and over each side its roof's
+    underside (read on past the roof's edge where a side lies beyond it); four ruled faces
+    through those lines and a flat face at each end (_lined_solid). A band that runs all round
+    a closed wall up to one roof is one ring. What the solids hold is held against strips
+    counted along the same lines.
     said: a dict to be told the stretches (from, to, as fractions of the wall, and the roof's
     index), the lines, what the strips say and what the solids hold. Returns a solid, a
     compound of solids, or None (no band anywhere along the wall)."""
@@ -1296,28 +1429,11 @@ def wall_band_shape(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, roof
 
     zones = [zone for _under, zone in roofs]
     length = edge.Length
-
-    def place(f):
-        """(f as a fraction of the wall, the curve's parameter, its point, the unit vector to its left) at f."""
-        g = f % 1.0 if closed else min(1.0, max(0.0, f))
-        u = edge.getParameterByLength(g * length)
-        p, left = _across(edge, u)
-        return g, u, p, left
-
-    def folds(u, p, left):
-        """Whether the band's side on the inside of the turn here lies further into it than BAND_FOLD of its radius."""
-        try:
-            k = edge.curvatureAt(u)
-            if k <= 1e-9:
-                return False
-            into = left.dot(edge.centerOfCurvatureAt(u) - p) > 0  # the turn's centre lies to the left
-        except (Part.OCCError, AttributeError):  # (no centre where the curve runs straight)
-            return False
-        return d2 * k > BAND_FOLD if into else -d1 * k > BAND_FOLD
+    folds = _folds(edge, d1, d2)
 
     def roof_at(f):
         """The index of the roof the band runs up to at f, or None where there is no band."""
-        g, u, p, left = place(f)
+        g, u, p, left = _place(edge, closed, length, f)
         if folds(u, p, left):
             return None
         qa, qb = p + left * d1, p + left * d2
@@ -1337,7 +1453,7 @@ def wall_band_shape(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, roof
 
     def line(f, r):
         """The band's line across at f, up to roof r: (f, its two sides' feet, their heads)."""
-        g, _u, p, left = place(f)
+        g, _u, p, left = _place(edge, closed, length, f)
         bottom = z0 + top_height(top, height_m, rise_m, waves, g) * MM
         feet, zs = [], []
         for d in (d1, d2):
@@ -1352,100 +1468,159 @@ def wall_band_shape(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, roof
         zs = [z if z is not None else next(o for o in zs if o is not None) for z in zs]
         return f, feet, [App.Vector(q.x, q.y, max(z, bottom + 1.0)) for q, z in zip(feet, zs)]
 
-    # where the band is and what it runs up to: places at even steps, and each change found by halving
-    count = max(96, int(math.ceil(length / BAND_STEP_MM)))
-    steps = [i / float(count) for i in range(count + (0 if closed else 1))]
-    states = [roof_at(f) for f in steps]
-    if all(s is None for s in states):
+    runs = _stretches(length, closed, roof_at)
+    if not runs:
         return None
-
-    def change(fa, fb, was):
-        """Between fa (the band up to roof `was`, or none) and fb (otherwise): (the last fraction as at fa, the first as at fb)."""
-        while (fb - fa) * length > BAND_EDGE_MM:
-            fm = 0.5 * (fa + fb)
-            if roof_at(fm) == was:
-                fa = fm
-            else:
-                fb = fm
-        return fa, fb
-
-    n = len(steps)
-    runs = []  # (from, to, the roof, whether it closes on itself)
-    if all(s == states[0] for s in states):
-        runs.append((0.0, 1.0, states[0], closed))
-    else:
-        if closed:  # the walk round begins just after a change, so that no stretch runs over the seam unseen
-            k0 = next(i for i in range(n) if states[i] != states[i - 1])
-            order = [(k0 + i) % n for i in range(n)]
-            fs = [steps[i] + (1.0 if i < k0 else 0.0) for i in order]
-        else:
-            order, fs = list(range(n)), list(steps)
-        ss = [states[i] for i in order]
-        changes = []  # (the walk's index where the new state begins, the last fraction of the old, the first of the new)
-        for j in range(1, n + 1 if closed else n):
-            prev, cur = j - 1, j % n
-            if ss[prev] != ss[cur]:
-                changes.append((j,) + change(fs[prev], fs[cur] + (1.0 if j == n else 0.0), ss[prev]))
-        if closed:  # the walk began just after the change at its end: that change opens the first stretch
-            starts = [(0, changes[-1][2] - 1.0)] + [(j, fb) for j, _fa, fb in changes[:-1]]
-            ends = [fa for _j, fa, _fb in changes]
-        else:
-            starts = [(0, 0.0)] + [(j, fb) for j, _fa, fb in changes]
-            ends = [fa for _j, fa, _fb in changes] + [1.0]
-        for (j, fa), fb in zip(starts, ends):
-            if ss[j % n] is not None and (fb - fa) * length > 10.0 * BAND_EDGE_MM:
-                runs.append((fa, fb, ss[j % n], False))
-
-    solids, want, lines_made = [], 0.0, 0
-    for fa, fb, roof, ring in runs:
-        if ring:
-            made = [line(f, roof) for f in steps]
-        else:
-            k = max(2, int(math.ceil((fb - fa) * length / BAND_STEP_MM)))
-            made = [line(fa + (fb - fa) * j / k, roof) for j in range(k + 1)]
-        lines_made += len(made)
-        params = [m[0] for m in made] + ([made[0][0] + 1.0] if ring else [])
-        rows = [[m[1][0] for m in made], [m[1][1] for m in made], [m[2][1] for m in made], [m[2][0] for m in made]]  # feet a, b; heads b, a
-        pieces = max(1, int(math.ceil(len(params) / float(TOP_PIECE_STATIONS))))
-        cuts = [params[0] + (params[-1] - params[0]) * i / pieces for i in range(1, pieces)]
-        edges = []
-        for row in rows:
-            e = spline(row, ring, params)
-            edges.append(list(e.split(cuts).Edges) if cuts else [e])
-        faces = []
-        for r0, r1 in zip(edges, edges[1:] + edges[:1]):  # bottom (feet a to b), side b (foot to head), top (heads b to a), side a (head to foot)
-            for e0, e1 in zip(r0, r1):  # piece by piece: ruled between two wires, the mezzanine's band's flat bottom came out not valid
-                faces.append(Part.makeRuledSurface(e0, e1))
-        for m in ((made[0], made[-1]) if not ring else ()):
-            faces.append(Part.Face(Part.makePolygon([m[1][0], m[1][1], m[2][1], m[2][0], m[1][0]])))
-        shell = Part.Shell(faces)
-        shell.sewShape()
-        solid = Part.Solid(shell)
-        if solid.Volume < 0:
-            solid.reverse()
-        solids.append(solid)
-        # what it must hold: strips between the lines, each as tall as its middle (the top straight across)
-        for m0, m1 in zip(made, made[1:] + (made[:1] if ring else [])):
-            j = max(1, int(math.ceil(((m1[0] - m0[0]) % 1.0 if ring else m1[0] - m0[0]) * length / BAND_STRIP_MM)))
-            for i in range(j):
-                t0, t1 = i / float(j), (i + 1) / float(j)
-                q = [m0[1][0] + (m1[1][0] - m0[1][0]) * t for t in (t0, t1)], [m0[1][1] + (m1[1][1] - m0[1][1]) * t for t in (t0, t1)]
-                quad = [q[0][0], q[1][0], q[1][1], q[0][1]]
-                strip = abs(sum(quad[c].x * quad[(c + 1) % 4].y - quad[(c + 1) % 4].x * quad[c].y for c in range(4))) / 2.0
-                tm = 0.5 * (t0 + t1)
-                foot = m0[1][0].z + (m1[1][0].z - m0[1][0].z) * tm
-                head = 0.5 * ((m0[2][0].z + (m1[2][0].z - m0[2][0].z) * tm) + (m0[2][1].z + (m1[2][1].z - m0[2][1].z) * tm))
-                want += strip * (head - foot)
-    holds = sum(volume_of(s) for s in solids)
+    count = max(96, int(math.ceil(length / BAND_STEP_MM)))
+    solids, want, holds, lines_made = _lined_runs(runs, line, [i / float(count) for i in range(count)], length, "the band")
     if said is not None:
         said.update({"stretches": [(round(a, 4), round(b, 4), r) for a, b, r, _ring in runs], "lines": lines_made, "want_m3": round(want / 1e9, 4),
                      "holds_m3": round(holds / 1e9, 4), "solids": len(solids)})
     if not solids:
         return None
-    if not all(s.isValid() for s in solids) or abs(holds - want) > BAND_TOLERANCE * want:
-        raise ValueError("the band could not be made: %d solid(s), valid %s, %.4f m³ where its strips say %.4f"
-                         % (len(solids), all(s.isValid() for s in solids), holds / 1e9, want / 1e9))
     return solids[0] if len(solids) == 1 else Part.makeCompound(solids)
+
+
+def hung_member_shape(edge, closed, d1, d2, under, depth_mm, said=None, what="the member", zone=None):
+    """A member hung under a roof's underside along a plan curve (a rib, an edge beam, a ring:
+    RoofFrame): between d1 and d2 (mm to the left of `edge`), its top on the underside at its
+    two sides (under(x, y), mm; straight across), its bottom depth_mm under its top, straight
+    down. Made from its own faces as the band to the roof is (_stretches, _lined_solid);
+    where the curve turns tighter than it can follow it leaves a gap, and where its middle line
+    lies outside `zone` (a shapely polygon, when given) there is none of it; all round a closed
+    curve it is one ring. said: told its stretches, lines, what its strips say and what it holds.
+    Returns its solids (a list, empty where there is none)."""
+    from shapely.geometry import Point
+
+    length = edge.Length
+    folds = _folds(edge, d1, d2)
+
+    def there(f):
+        _g, u, p, left = _place(edge, closed, length, f)
+        if folds(u, p, left):
+            return None
+        if zone is not None:
+            q = p + left * (0.5 * (d1 + d2))
+            if not zone.contains(Point(q.x, q.y)):
+                return None
+        return True
+
+    def line(f, _state):
+        _g, _u, p, left = _place(edge, closed, length, f)
+        heads = []
+        for d in (d1, d2):
+            q = p + left * d
+            heads.append(App.Vector(q.x, q.y, under(q.x, q.y)))
+        return f, [h - App.Vector(0, 0, depth_mm) for h in heads], heads
+
+    runs = _stretches(length, closed, there)
+    count = max(96, int(math.ceil(length / BAND_STEP_MM)))
+    solids, want, holds, lines_made = _lined_runs(runs, line, [i / float(count) for i in range(count)], length, what)
+    if said is not None:
+        said.update({"stretches": [(round(a, 4), round(b, 4)) for a, b, _s, _ring in runs], "lines": lines_made,
+                     "want_m3": round(want / 1e9, 6), "holds_m3": round(holds / 1e9, 6), "solids": len(solids)})
+    return solids
+
+
+RIB_REACH_MM = 1000.0  # a rib whose station lies further than this outside its shell's plan (less the edge beam) is left out, and said
+
+
+def ridge_stations(points_mm, count):
+    """Stations at both ends of a ridge axis (straight runs between its points, in plan) and evenly between, by its
+    length in plan: [(the station, the unit vector square to the axis there, to its left)]; at a point of the axis, square
+    to the mean of its two runs."""
+    pts = [App.Vector(p.x, p.y, 0.0) for p in points_mm]
+    runs = [(a, b, (b - a).Length) for a, b in zip(pts, pts[1:]) if (b - a).Length > 1e-6]
+    total = sum(l for _a, _b, l in runs)
+    if count < 1 or not runs:
+        return []
+    out = []
+    for k in range(count):
+        s = total * k / float(count - 1) if count > 1 else total / 2.0
+        at = 0.0
+        for i, (a, b, l) in enumerate(runs):
+            if s <= at + l + 1e-6 or i == len(runs) - 1:
+                t = min(1.0, max(0.0, (s - at) / l))
+                p = a + (b - a) * t
+                d = b - a
+                d.normalize()
+                if t > 1.0 - 1e-9 and i < len(runs) - 1:  # on a point of the axis: the mean of its two runs
+                    e = runs[i + 1][1] - runs[i + 1][0]
+                    e.normalize()
+                    d = d + e
+                    d.normalize()
+                out.append((p, App.Vector(-d.y, d.x, 0.0)))
+                break
+            at += l
+    return out
+
+
+def roof_frame_shape(outline, holes, under, ridge, ribs, rib_w, rib_d, edge_w, edge_d, rings, said=None):
+    """A roof's frame under its shell (RoofFrame; Johny's point 7, its first step): its edge beam along the outline,
+    inside it, edge_w wide and edge_d deep; a ring round each hole, outside it, of the same section (when `rings`); and
+    `ribs` complete transverse ribs, rib_w wide and rib_d deep, from their stations on the ridge axis (ridge_stations)
+    square to it, both ways, to the edge beam, stopping at a ring where they meet a hole: the transverse line's piece
+    through the station of the plan less the edge beam and less the holes grown by the rings (shapely), each piece a
+    member. Every member hangs under the underside (hung_member_shape): under(x, y), mm, in the outline's own frame
+    (holes, ridge points too). Returns a compound of all their solids; `said` is told what was made: the stations, the
+    rib pieces and their lengths, the members' volumes, and what was left out and why."""
+    from shapely.geometry import LineString, Point, Polygon
+    from shapely.ops import unary_union
+
+    def ring_of(edge):
+        return [(q.x, q.y) for q in edge.discretize(Distance=20.0)]
+
+    report = {"stations": 0, "ribs": [], "edge": None, "rings": [], "left_out": []}
+    solids = []
+    whole = Polygon(ring_of(outline)).buffer(0)
+    cut = [Polygon(ring_of(h)).buffer(0) for h in holes]
+    # the edge beam: inside the outline (left of a counter-clockwise one); none where its middle line runs over a hole (a
+    # hole that cuts the outline: there the hole's ring frames the notch)
+    sgn = 1.0 if is_ccw(outline) else -1.0
+    a, b = (0.0, edge_w) if sgn > 0 else (-edge_w, 0.0)
+    said_e = {}
+    solids += hung_member_shape(outline, True, a, b, under, edge_d, said_e, "the edge beam", whole.difference(unary_union(cut)) if cut else None)
+    report["edge"] = said_e
+    # the rings: outside each hole (right of a counter-clockwise one), where their middle line lies within the outline
+    grown = []
+    for h, hole in zip(holes, cut):
+        if rings:
+            sgn = 1.0 if is_ccw(h) else -1.0
+            a, b = (-edge_w, 0.0) if sgn > 0 else (0.0, edge_w)
+            said_r = {}
+            solids += hung_member_shape(h, True, a, b, under, edge_d, said_r, "a ring", whole)
+            report["rings"].append(said_r)
+        grown.append(hole.buffer(edge_w if rings else 0.0))
+    # the ribs: each transverse line's piece through its station, of the plan less the edge beam, less the holes and rings
+    plan = whole.buffer(-edge_w)
+    stations = ridge_stations(ridge, ribs)
+    report["stations"] = len(stations)
+    for k, (p, across) in enumerate(stations):
+        far = 1.0e6
+        full = LineString([(p.x - across.x * far, p.y - across.y * far), (p.x + across.x * far, p.y + across.y * far)])
+        pieces = plan.intersection(full)
+        parts = [g for g in getattr(pieces, "geoms", [pieces]) if g.geom_type == "LineString" and not g.is_empty]
+        if not parts:
+            report["left_out"].append("rib %d: its line does not cross the plan" % (k + 1))
+            continue
+        here = Point(p.x, p.y)
+        mine = min(parts, key=lambda g: g.distance(here))
+        if mine.distance(here) > RIB_REACH_MM:  # (a station a little outside: on a leaf whose ridge is its own edge the ribs start at the edge beam)
+            report["left_out"].append("rib %d: its station lies %.2f m outside the plan, further than %.1f m" % (k + 1, mine.distance(here) / MM, RIB_REACH_MM / MM))
+            continue
+        rib = mine.difference(unary_union(grown)) if grown else mine
+        for g in getattr(rib, "geoms", [rib]):
+            if g.geom_type != "LineString" or g.length < 100.0:
+                continue
+            (x0, y0), (x1, y1) = g.coords[0], g.coords[-1]
+            e = Part.LineSegment(App.Vector(x0, y0, 0.0), App.Vector(x1, y1, 0.0)).toShape()
+            said_k = {}
+            got = hung_member_shape(e, False, -rib_w / 2.0, rib_w / 2.0, under, rib_d, said_k, "rib %d" % (k + 1))
+            solids += got
+            report["ribs"].append((k + 1, round(g.length / MM, 3), said_k.get("holds_m3")))
+    if said is not None:
+        said.update(report)
+    return Part.makeCompound(solids) if solids else None
 
 
 def path_at(edge, closed, s_mm):
