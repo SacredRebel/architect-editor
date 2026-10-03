@@ -1,5 +1,24 @@
 # NEW — for Johny, from lane A (FreeCAD) (newest on top; clear what you have read)
 
+## 2 Oct, 23:45 — new buttons: the shells and lattices from lane R's studies
+
+- **Organic toolbar:** **Wave vault** (a vault whose rise goes up and down along its length), **Conoid roof** (an
+  arch at one end running out to a straight line at the other), **Translation shell** (one arch slid along another).
+  The **Saddle shell** has a second kind, **Groined saddles**: saddles round one centre, as at Candela's Los
+  Manantiales (8 lobes = four saddles; 4 to 16).
+- **Sacred toolbar:** **Geodesic frame**: a dome of struts and node balls (a 5/8 or 3/8 dome), with its cutting list
+  (how many struts of each length).
+- **Biomimetic toolbar:** **Gridshell** now also works on a shell: select a dome, a vault, a leaf, a conoid or a
+  saddle, press it, and laths lie on its back both ways (turn them 45° for a diagonal grid, two layers, a beam
+  along its edges).
+- Pictures: `Architect-editor\docs\plans\organic\generators\`.
+- In the FreeCAD window open now, the new buttons sit at the end of each toolbar row; after FreeCAD's next start
+  they are in their places.
+- Each one is checked against lane R's own numbers and against formulas worked out in the checks, in FreeCAD's window
+  too. Nothing was sent to the map and nothing of your house changed.
+- Still with you: the backup-file question just below, the seven questions on the house, and the 1.1 GB of old trial
+  files.
+
 ## 2 Oct, 07:40 — the house sent again with its walls joined; a wave vault; one small question
 
 - **Your house (S01) was sent to the map's folder again at 05:15.** Where its walls end on each other (21 wall

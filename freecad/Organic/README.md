@@ -311,7 +311,7 @@ were joined, and how many meet other walls and stay square. A wall's joints are 
   parameters a lath's end swung 0.23 m below a dome's foot), each end leaving in the
   direction its own last three places show (left free, a lath read 0.14 % off its exact
   volume), ruled faces between them a few stations long. Every lath on a hemisphere is now
-  its exact volume (Pappus) to 0.0004 %. **A lath's edges are where its width reaches**,
+  its exact volume (Pappus) to 0.0015 %. **A lath's edges are where its width reaches**,
   square to its line and to the shell's normal: tested straight across in plan they left a
   steep dome's outline first, and laths on a hemisphere stopped up to 0.70 m above its foot
   (now 0.05 m, inside the ring beam).
