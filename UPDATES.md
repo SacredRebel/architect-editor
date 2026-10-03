@@ -3,6 +3,33 @@
 Rules: `C:\Playground\RULES.md` (Rule 3). After every report: the full entry here, then one line in `C:\Playground\UPDATES.md`.
 Entry shape: date/time · phase · what was done · commit sha · files written to `exchange\` · open items · needs.
 
+## 2026-10-03 14:50 (this PC's clock) · A · Johny's answers 1 to 6 in his house S01; built, checked, sent
+
+**The brief** (architect, relaying Johny's answers to A's seven questions of 2 Oct): levels: keep the house where it is, list the sills below the land; oaks: mark the house zone's oak check "stale data", lay the canopy as a toggle; the old house is replaced; lower slab 0.30 m; the band between wall top and roof skin both ways (glass by default, a property); cut the main slab round the chimney; then point 7 in steps, and the backups reviewed without deleting anything.
+
+**Rule 7.** Read: `knowledge\DATA-INVENTORY.md`, C's `land\oaks-removed.geojson` (3 Oct 02:09: the house zone, Johny's statement, no survey), C's `build-envelope.geojson` and existing-buildings mesh. Nothing about the land was collected or worked out here; the sills below the land are the map's own terrain at each opening.
+
+**What works, and how it was checked.**
+- **Records** (`spec_to_records.py --answers exchange\house\models\oak-canopy-s01.answers.json`, 80 pieces): `decided` (below_land, replaces the old house) beside the placement, the lower slab 0.30 m, the main floor's round opening at the chimney (CH-FLOOR, 1.90 m), a `WallBand` on each wall the spec carries to the roof (main exterior, mezzanine exterior, both courtyard walls). The records of 2 Oct are kept beside them (`oak-canopy-s01.2026-10-02.json`).
+- **Import and export:** the building keeps `decided` (`MapDecided`); the sent `.json` carries it, reads C's overlay (`envelope.stale` oak_protection 68.1 %) and the house it replaces (`envelope.replaced` house 9.1 %), and says both as facts, not faults; `no_building` empty.
+- **The band to the roof** (`WallBand`, `organic_geom.wall_band_shape`): made from its own faces, no boolean (cut out of a prism by tools, OCCT failed four ways in silence: empty, in pieces, 2 to 3 % short, one piece taking nothing). It runs up to the lowest roof whose plan meets its line across, where that stands at least 5 mm over the wall's top, steps where the roof over it changes (the spec's "stepped glazing at shell seams"), leaves a gap where the wall turns tighter than it can follow, and is one ring where it runs all round. Roof plans are read as shapely polygons (`plan_zone`): OCCT's flat booleans with them answered wrong in silence (the main wall's band: 0.07 m² under the roofs where 9.13 m² is). Glass: main 3.850 m³ (3 stretches), mezzanine 2.971 (5; gaps of 15 and 19 cm at its two tight turns, one where its outline closes on 35 mm), courtyard 1 0.581 (one ring), courtyard 2 0.698 (stops where its wall reaches into the roof). Kind switches to the wall carried up and back.
+- **The land layer:** `land_layer()` lays the land data's oak outlines on the design as the group "Land data (not the house)": 39 outlines, 22 marked out of date; shown or hidden with the space bar; not sent.
+- **Built in FreeCAD's window** (installed copy equal to the repository), saved (`Documents\SulphurMountain\Oak-Canopy-S01.FCStd`), sent at 14:24 (`exchange\godot\oak-canopy-s01.glb`, `.ifc`, `.json`); the window left as found (its size, its workbench, no documents).
+- **Checks:** `check_spec.py` with the answers: **36 checks, 26 forged pieces rejected**; the bands at 27 to 94 places stand on their wall's top within 0.4 mm and meet the spec's underside within 2 to 17 mm as glass, 3 to 29 mm as the wall (allowed 30, the roofs' own), faces within 0.4 mm; the main floor 355.33 m² (366.7 less the chimney's 11.34); the lower floor 0.30 m by Johny's answer. On the way the check learnt the band's rule (roofs over its line across, places near where a band starts, ends or steps and within 0.5 m of a turn tighter than it is wide not looked at: there the wall's fitted base curve leaves the spec's). `check_organic.py` on the house as sent: **101 checks**, the land lines among them (below the land as decided, nowhere in the air; the old house replaced; the out-of-date oaks said); its six forgeries for a building off the anchor, turned or not replacing the house do not bite on this house and are proven on the pavilion. Console suites: organic 66 + 39, toolbar 194 + 42, import 71 + 100.
+- **Found and fixed in the check:** its shoelace middle of a canopy, summed in raw degrees, lost every digit (21 of 22 middles fell up to 1.4 km away) and called live the oaks the export rightly called out of date; summed from the ring's first point it agrees with shapely's to the micrometre.
+- **Pictures:** `docs\plans\organic\house\answers\` (from the south-west; the bands as glass and as the wall, the roofs hidden; the main floor's chimney opening; the roof plan over the oak data).
+- **NEW.md:** the eight sills below the land (O01 1.68, O02 0.99, O03 1.81, O04 1.16, O05 1.91, O06 1.28, O12 0.13, O46 0.01 m), how to switch a band's kind, the oak layer; the backups and old trial files listed with a proposal.
+
+**A mistake:** saving the house made FreeCAD drop the oldest of its two backups of it (2 Oct 02:46) past the Recycle Bin, while the backups were Johny's to decide on. The records it was built from are kept; said in NEW.md and `knowledge\LESSONS.md`.
+
+**Written outside the repository:** `exchange\house\models\` (records, notes, the 2 Oct records kept); `exchange\godot\oak-canopy-s01.*` (sent); `exchange\godot\FORMAT.md` (the band rule as built, the state of the answers section with these numbers); `knowledge\LESSONS.md` (six lessons: booleans, plans, ruled faces, tight turns, raw-degree sums, trial folders, backups); `knowledge\tools\organic-workbench.md`; `agents\EDITOR-AGENT.md` (WallBand).
+
+**Commit:** `21c72ddb` on `eco/organic`, pushed as a backup.
+
+**Open:** point 7 in Johny's order (ribs and edge beams next: the spec's rib spacing is the ridge's plan length over count − 1 on every leaf); a band on a wall with corners is not built; the six forgeries of `check_organic.py` that need a building off the anchor do not apply to the house.
+
+**Needs:** Johny's yes or no on the backups and the trial folders (NEW.md).
+
 ## 2026-10-03 12:45 (this PC's clock) · A · E's piece-6 finding mended: a wall with corners keeps its shaped top (realize)
 
 **The brief** (architect, pasted during the band work for Johny's answers): "from E's piece 6: a cornered wall given top heights comes back 0.023 m low and misses its last height; test case in Spatial Map\spatial-map\docs\plans\godot-build-6\. Fix in realize, keep the rest of your order."
