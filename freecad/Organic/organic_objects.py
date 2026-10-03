@@ -334,8 +334,8 @@ def join_walls(walls):
     a corner of another wall's outline is not joined by that wall: neither of its two runs
     passes through there, and the old editor, whose walls are single runs, has no such case.
     Returns how many
-    ends meet other walls and were given their corners. A wall with a shaped top on a smooth
-    curve keeps square ends all the same (og.wall_shape): after the walls are built again,
+    ends meet other walls and were given their corners. A wall with a shaped top keeps square
+    ends all the same, on a smooth curve or one with corners (og.wall_shape): after the walls are built again,
     each wall's Proxy.ends_joined says how many of its ends its solid really has shaped."""
     rows = []
     for w in walls:

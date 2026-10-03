@@ -901,17 +901,29 @@ def sampled_top(edge, closed, heights, at_points):
     at_points: the heights belong to the points the base curve runs through, in their order
     (a curve through points made by points_curve: its parameter counts the points); the top
     line is then the smooth line through those heights, point for point. Otherwise they are
-    spread evenly along the centreline's length."""
+    spread evenly along the centreline's length.
+
+    Past an open wall's ends (where only the top's tools reach) the line runs on at its slope
+    there: held level, it bent the tool's spline at the end, and the top lay up to 6 mm under
+    the line within the last quarter metre of a steep wall (1.7 mm on a gentle one)."""
     heights = [float(h) for h in heights]
     n = len(heights)
     spans = n if closed else n - 1
     length = edge.Length
     u0 = edge.FirstParameter
 
-    def top(f):
-        f = f % 1.0 if closed else max(0.0, min(1.0, f))
+    def on(f):
         v = (edge.getParameterByLength(f * length) - u0) if at_points else f * spans
         return through_heights(heights, v, closed)
+
+    def top(f):
+        if closed:
+            return on(f % 1.0)
+        if f < 0.0:
+            return on(0.0) + f * (on(1e-4) - on(0.0)) / 1e-4
+        if f > 1.0:
+            return on(1.0) + (f - 1.0) * (on(1.0) - on(1.0 - 1e-4)) / 1e-4
+        return on(f)
 
     return top
 
@@ -946,12 +958,162 @@ def shaped_wall_volume(edge, d1, d2, band_area, below_mm, top, height_m, rise_m,
     return volume * band_area / area
 
 
+# A wall on an outline with corners (a WirePath) has its shaped top too (E's piece 6, 3 Oct 2026:
+# it was made flat at its lowest, and a retaining wall with heights along it lost its last one).
+# Its top is level along lines across it: square to each run inside the run, along the mitre at
+# each corner (the line that halves the corner), at the corner's own height, the same line for the
+# two runs that meet there. From a corner to the first square line the lines turn evenly from the
+# one to the other; that line stands off the corner twice as far as the mitre reaches along the run.
+# The turn is laid out in TURN_LINES steps at least: with the mitre and the square line alone, a
+# spline through them, OCCT's common with the piece of the tool there came back empty (a steep
+# right angle standing left of its line: the cut held 8 to 21 % too much, at every try).
+TURN_LINES = 5
+
+
+def _level(v):
+    """A vector laid flat and made a unit long."""
+    w = App.Vector(v.x, v.y, 0.0)
+    w.normalize()
+    return w
+
+
+def corner_mitre(t_in, t_out):
+    """Where an outline turns from the direction t_in to t_out (flat unit vectors): the vector
+    along the corner's mitre to the left of the outline that reaches a point one millimetre to
+    the left of it (the mitre's unit vector over the cosine of half the turn)."""
+    l_in, l_out = Z.cross(t_in), Z.cross(t_out)
+    m = l_in + l_out
+    if m.Length < 1e-6:
+        raise ValueError("the outline turns straight back on itself at a corner")
+    m.normalize()
+    return m * (1.0 / m.dot(l_in))
+
+
+def corner_sections(path, closed, offsets, step_mm, end_mm=0.0):
+    """The lines across a wall on an outline with corners along which its shaped top is level,
+    run by run: [[(f, s, base, across, kind)]], f the fraction of the outline's length where a
+    line crosses it (s, in mm), a point d mm to the left of the outline on it at base + across * d.
+    kind: "square" inside a run (one at least every step_mm) and at an open end, "mitre" at a
+    corner (the two runs that meet there share it), "turn" between a mitre and the next line
+    (blended evenly from the one to the other, TURN_LINES steps at least), "past" end_mm on
+    past an open end, straight on (no part of the wall). `offsets`: how far to the left (mm)
+    the lines are to reach; the first square line off a corner stands twice as far from it as
+    the mitre reaches along the run there, so a line through the points at one offset runs on
+    evenly enough that a spline through it does not turn back. ValueError where a run is too
+    short for its corners: the wall's sides would cross over it."""
+    length = path.Length
+    runs = []
+    for e, forward, start in path.parts:
+        a, b = e.tangentAt(e.FirstParameter), e.tangentAt(e.LastParameter)
+        t0, t1 = (a, b) if forward else (b * -1.0, a * -1.0)
+        runs.append((start, e.Length, _level(t0), _level(t1)))
+    n = len(runs)
+    corner = [None] * n  # at each run's start: (the corner, its mitre's vector to the left)
+    for i in range(n):
+        if i or closed:
+            corner[i] = (path.valueAt(runs[i][0]), corner_mitre(runs[i - 1][3], runs[i][2]))
+    out = []
+    for i, (start, run, t0, t1) in enumerate(runs):
+        at0, at1 = corner[i], (corner[(i + 1) % n] if closed or i < n - 1 else None)
+        reach0 = max([0.0] + [at0[1].dot(t0) * d for d in offsets]) if at0 else 0.0  # how far the mitres reach into the run
+        reach1 = max([0.0] + [-at1[1].dot(t1) * d for d in offsets]) if at1 else 0.0
+        lo = start + (max(2.0 * reach0, 1.0) if at0 else 0.0)
+        hi = start + run - (max(2.0 * reach1, 1.0) if at1 else 0.0)
+        if hi - lo >= 1.0:
+            k = max(1, int(math.ceil((hi - lo) / step_mm)))
+            places = [lo + (hi - lo) * j / k for j in range(k + 1)]
+        else:  # the two corners' turns meet: only an open end's own square line between them
+            places = [s for s, at in ((start, at0), (start + run, at1)) if at is None]
+        lines = [(start / length, start, at0[0], at0[1], "mitre")] if at0 else []
+        for s in places:
+            p, left = _across(path, s)
+            lines.append((s / length, s, p, left, "square"))
+        if at1:
+            lines.append(((start + run) / length, start + run, at1[0], at1[1], "mitre"))
+        turned = lines[:1]  # from a mitre to the next line the lines turn evenly, each laid out
+        for a, b in zip(lines, lines[1:]):
+            if "mitre" in (a[4], b[4]):
+                k = max(TURN_LINES, int(math.ceil((b[1] - a[1]) / step_mm)))
+                for j in range(1, k):
+                    t = j / float(k)
+                    turned.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t, "turn"))
+            turned.append(b)
+        lines = turned
+        if not closed and end_mm > 0 and i == 0:
+            f, s, p, left, _kind = lines[0]
+            lines.insert(0, (-end_mm / length, s, p - t0 * end_mm, left, "past"))
+        if not closed and end_mm > 0 and i == n - 1:
+            f, s, p, left, _kind = lines[-1]
+            lines.append((1.0 + end_mm / length, s, p + t1 * end_mm, left, "past"))
+        for a, b in zip(lines, lines[1:]):
+            way = _level(path.tangentAt(min(max(0.5 * (a[1] + b[1]), start), start + run)))
+            if any(((b[2] + b[3] * d) - (a[2] + a[3] * d)).dot(way) < 0.5 for d in offsets):
+                raise ValueError("a run %.3f m long is too short for the corners at its ends: the wall's sides would cross over it" % (run / MM))
+        out.append(lines)
+    return out
+
+
+def corner_wall_volume(path, closed, d1, d2, band_area, below_mm, top, height_m, rise_m, waves, count, step_mm=25.0):
+    """shaped_wall_volume on an outline with corners: strips between the lines along which the
+    top is level (corner_sections, laid as corner_top_tool lays them), from face to face, one at
+    least every step_mm, each as tall as the top at its middle; inside a run the lines square to
+    it, from a corner's mitre to the first square line the two blended; together scaled to the
+    band's own area."""
+    area = volume = 0.0
+    for lines in corner_sections(path, closed, (d1 - TOP_MARGIN_MM, d2 + TOP_MARGIN_MM), path.Length / float(count)):
+        lines = [x for x in lines if x[4] != "past"]
+        cuts = []
+        for a, b in zip(lines, lines[1:]):
+            k = max(1, int(math.ceil((b[1] - a[1]) / step_mm)))
+            for j in range(k):
+                t = j / float(k)
+                if a[4] == b[4] == "square":
+                    p, across = _across(path, a[1] + (b[1] - a[1]) * t)
+                else:
+                    p, across = a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t
+                cuts.append((a[0] + (b[0] - a[0]) * t, p + across * d1, p + across * d2))
+        f, _s, p, across, _kind = lines[-1]
+        cuts.append((f, p + across * d1, p + across * d2))
+        for (fa, a1, a2), (fb, b1, b2) in zip(cuts, cuts[1:]):
+            strip = abs(0.5 * (b2 - a1).cross(a2 - b1).z)
+            area += strip
+            volume += strip * (below_mm + top_height(top, height_m, rise_m, waves, 0.5 * (fa + fb)) * MM)
+    return volume * band_area / area
+
+
+def corner_top_tool(path, closed, d1, d2, z0, top, height_m, rise_m, waves, count, piece):
+    """top_tool on an outline with corners: run by run, ruled faces between two lines through
+    the points of corner_sections TOP_MARGIN_MM beyond the wall's two faces, each point at the
+    top's height at its line (the top level along it), `piece` lines to a face, pushed upwards.
+    The two runs at a corner share its mitre, so their faces meet there."""
+    offsets = (d1 - TOP_MARGIN_MM, d2 + TOP_MARGIN_MM)
+    solids = []
+    for lines in corner_sections(path, closed, offsets, path.Length / float(count), 0.0 if closed else TOP_END_MM):
+        params = [x[0] for x in lines]
+        rows = [[], []]
+        for f, _s, p, across, _kind in lines:
+            z = z0 + top_height(top, height_m, rise_m, waves, f) * MM
+            for row, d in zip(rows, offsets):
+                q = p + across * d
+                row.append(App.Vector(q.x, q.y, z))
+        n = max(1, int(math.ceil(len(params) / float(piece))))
+        cuts = [params[0] + (params[-1] - params[0]) * k / n for k in range(1, n)]
+        e0, e1 = spline(rows[0], False, params), spline(rows[1], False, params)
+        w0 = Part.Wire(e0.split(cuts).Edges) if cuts else Part.Wire(e0)
+        w1 = Part.Wire(e1.split(cuts).Edges) if cuts else Part.Wire(e1)
+        solids.extend(Part.makeRuledSurface(w0, w1).extrude(App.Vector(0, 0, BIG)).Solids)
+    return Part.makeCompound(solids)
+
+
 def top_tool(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, count, piece):
     """The solid above a shaped wall top: ruled faces through the top line at `count` stations
-    of arc length, `piece` stations to a face, pushed upwards.
+    of arc length, `piece` stations to a face, pushed upwards (on an outline with corners:
+    corner_top_tool).
 
     Both top lines are split at the same parameters, so the ruled faces pair up and each stays
     short enough for OCCT to measure (see pieces_of and TOP_PIECE_STATIONS)."""
+    if isinstance(edge, WirePath):
+        return corner_top_tool(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, count, piece)
     length = edge.Length
     places = [(_across(edge, u), f) for u, f in _stations(edge, closed, count)]
     if not closed and TOP_END_MM > 0:
@@ -986,8 +1148,11 @@ def cut_top(prism, edge, closed, d1, d2, z0, band_area, below_mm, top, height_m,
     (a precaution: on its own it changed none of the 120). And whatever comes back is held
     against what the wall must hold: other stations are tried where it does not agree, and a
     wall that never agrees is refused rather than drawn."""
-    want = shaped_wall_volume(edge, d1, d2, band_area, below_mm, top, height_m, rise_m, waves)
     count = max(48, int(math.ceil(edge.Length / (0.25 * MM))))
+    if isinstance(edge, WirePath):
+        want = corner_wall_volume(edge, closed, d1, d2, band_area, below_mm, top, height_m, rise_m, waves, count)
+    else:
+        want = shaped_wall_volume(edge, d1, d2, band_area, below_mm, top, height_m, rise_m, waves)
     seen = []
     for extra, piece in TOP_TRIES:
         try:
@@ -1011,9 +1176,12 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     highest point, and a shaped top is cut by a ruled surface through the top line.
     Openings are measured from the wall's base (base_z_m), not from the foundation.
 
+    On an outline with corners (a WirePath) the top is level along each corner's mitre, at the
+    corner's height (corner_top_tool).
+
     joints: where an open wall's ends meet other walls ({"start": (left corner, right corner),
-    "end": the same}, see open_band_joined). A wall with a shaped top keeps its ends square:
-    its top line is given along its own length only.
+    "end": the same}, see open_band_joined). A wall with a shaped top keeps its ends square,
+    on any base: its top line is given along its own length only.
     said: a dict to be told what was done with the joints: said["joined"] is whether the
     wall's ends were shaped by them (False: they were given and the ends are square all the same).
     """
@@ -1023,8 +1191,7 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
     shaped = callable(top) or (top != "Flat" and abs(top_rise_m) > 1e-9)
     joined = None
     if joints and not closed and (joints.get("start") or joints.get("end")):
-        corners_only = isinstance(edge, WirePath)  # (on an outline with corners a shaped top is made flat below: its ends may be joined)
-        if corners_only or not shaped:
+        if not shaped:
             joined = open_band_joined(edge, d1, d2, joints)
             if joined is None:
                 App.Console.PrintWarning("Organic: where this wall meets another its corners reach further than it is long; its ends are left square\n")
@@ -1040,11 +1207,6 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
             band = face_of(big.cut(small))
         else:
             band = joined if joined is not None else open_band(edge, d1, d2)
-        if shaped:
-            App.Console.PrintWarning("Organic: a shaped wall top needs a smooth base curve; this one has corners, so its top is flat\n")
-            if callable(top):  # heights along it: flat at the lowest of them, so it stays under what it was meant to meet
-                height_m = min(top(k / 200.0) for k in range(201))
-            top, shaped = "Flat", False
     elif closed:
         fa = Part.Face(wire_of(_side(edge, d1, closed)))
         fb = Part.Face(wire_of(_side(edge, d2, closed)))

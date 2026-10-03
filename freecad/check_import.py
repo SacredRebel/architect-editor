@@ -20,6 +20,18 @@ out here from the file's own numbers, not taken from the workbench:
      with a waved top (the map's curve: its cubic spans integrated here; t L (H + rise / 2) less
      its opening, which stands where the map measured it along its own drawn points); a wall on
      a petal plan, turned, at its own place (the petal's formula integrated here).
+  H. tops given as heights along a wall (TopHeights), on lines with corners too: E's own case
+     (spatial-map docs\\plans\\godot-build-6\\a-topheights-case.json, read from E's folder: a
+     wall of two runs with eight heights came back flat at its lowest, 0.023 m under its last
+     height; walls of one run and on a smooth curve beside it) and harder ones of this
+     workbench's own (a closed room, a steep right angle standing left of its line, a zigzag of
+     sharp corners with a sloped top, a door by a corner, a wall with heights whose end meets
+     another). Each top read on upright lines at its heights' places, at 96 places along its
+     line and along each corner's mitre, against the smooth line through its heights worked out
+     here (the format's rule, in its Bézier form); its volume against strips counted here
+     between the lines along which the format has the top level (square inside a run, the mitre
+     at a corner, turning evenly between); the end that meets another said to be square; and
+     E's file through realize.py: complete, each wall's top in the result's box.
   S. slabs: the room's floor inset from the wall's line ((a - 2 i)(b - 2 i) t); a round step
      (a "Step" is a slab: π r² t) lowered by its BaseOffset; a bench raised by its own.
   R. roofs and shells: the shell roof over the room (its crown eaves + rise, its eave the
@@ -979,6 +991,268 @@ def petal_points(n=20000):
     return out
 
 
+# ------------------------------------------------------------------ H. tops given as heights along a wall, on lines with corners too
+# E's piece 6 (3 Oct 2026): a wall with corners and TopHeights came back flat at its lowest, 0.023 m under its last height.
+TOP_CASE = os.environ.get("PLAYGROUND_TOP_CASE", r"C:\Playground\Spatial Map\spatial-map\docs\plans\godot-build-6\a-topheights-case.json")
+TOP_LINE = 96  # places along each wall's line where its top is read
+TOP_REACH = 0.03  # m: a top's tool reaches this far beyond the wall's faces, and a corner's turn is laid over twice as far as its mitre reaches along the run there
+TOP_AT = 0.0005  # m: how far the top may lie from a height at the height's own place
+TOP_ALONG = 0.0015  # m: and from the smooth line between, or from a corner's height along its mitre
+TOP_VOLUME = 5.0e-4  # how far (a share of it) a wall's volume may lie from what is counted here
+TOP_TITLES = {("E", "w1"): "H E's wall with corners (w1: two runs, eight heights)", ("E", "w2"): "H E's wall of one run, two heights (w2)",
+              ("E", "w3"): "H E's wall of one run, four heights (w3)", ("E", "w4"): "H E's wall on a smooth curve, its heights at its points (w4)",
+              ("own", "room"): "H a closed room of four runs, eight heights", ("own", "ell"): "H a steep right angle standing left of its line",
+              ("own", "zig"): "H a zigzag of sharp corners, its top sloped", ("own", "door"): "H a door by a corner",
+              ("own", "meet"): "H a wall with heights whose end meets another"}
+
+
+def top_cases():
+    """Walls of this workbench's own with shaped tops on lines with corners, harder than E's
+    case: a closed room with eight heights, a steep right angle standing left of its line, a
+    zigzag of sharp corners with a sloped top, a door by a corner, and a wall with heights whose
+    end meets a flat wall (its end is left square, and said to be)."""
+    def curve(key, points, x, y, closed=False):
+        return {"id": "c-" + key, "type": "PlanCurve", "name": "Line " + key, "placement": {"x": x, "y": y},
+                "params": {"Kind": "Points", "Points": points, "Closed": closed, "Smooth": False}}
+
+    def wall(key, **params):
+        return {"id": key, "type": "Wall", "name": "Wall " + key,
+                "params": dict({"Base": "c-" + key, "Thickness": 0.3, "Height": 2.5, "Foundation": 0.4, "Align": "Center", "Top": "Flat"}, **params)}
+
+    return {"format": "built/1", "name": "Tops with corners", "pieces": [
+        curve("room", [[0, 0], [6, 0], [6, 4], [0, 4]], 0.0, 40.0, closed=True), wall("room", TopHeights=[2.4, 2.6, 3.0, 2.8, 2.5, 2.4, 2.7, 3.1], Height=3.1),
+        curve("ell", [[0, 0], [5, 0], [5, 4]], 12.0, 40.0), wall("ell", Align="Left", Thickness=0.25, TopHeights=[0.5, 2.0, 1.0, 2.5, 0.8]),
+        curve("zig", [[0, 0], [4, 0], [0.5, 1.5], [4.5, 3]], 22.0, 40.0), wall("zig", Thickness=0.2, Top="Slope", TopRise=1.0, Height=2.0),
+        curve("door", [[0, 0], [4, 0], [4, 3]], 0.0, 50.0),
+        wall("door", TopHeights=[2.4, 2.8, 3.2, 2.6], Height=3.2, OpeningPositions=[3.2], OpeningWidths=[0.9], OpeningHeights=[2.0], OpeningSills=[0.0], OpeningShapes=["Rect"]),
+        curve("meet", [[0, 0], [4, 0], [4, 3]], 12.0, 50.0), wall("meet", TopHeights=[2.4, 2.8, 3.2, 2.6], Height=3.2),
+        curve("flat", [[4, 3], [0, 3]], 12.0, 50.0), wall("flat")]}
+
+
+def through(heights, v, closed):
+    """The smooth line through heights at 0, 1, 2, ... read at v (FORMAT.md, TopHeights: at
+    each height parallel to the line between its two neighbours; an open line's ends taken
+    twice), written here in its Bézier form."""
+    n = len(heights)
+    spans = n if closed else n - 1
+    v = v % spans if closed else max(0.0, min(float(spans), v))
+    i = min(int(math.floor(v)), spans - 1)
+    t = v - i
+    h = (lambda k: heights[k % n]) if closed else (lambda k: heights[max(0, min(n - 1, k))])  # noqa: E731
+    p0, p1, p2, p3 = h(i - 1), h(i), h(i + 1), h(i + 2)
+    b1, b2 = p1 + (p2 - p0) / 6.0, p2 - (p3 - p1) / 6.0
+    s = 1.0 - t
+    return s ** 3 * p1 + 3 * s * s * t * b1 + 3 * s * t * t * b2 + t ** 3 * p2
+
+
+def top_of(params, curve):
+    """A wall record's top line as the format says it: ("u", the height at its smooth curve's own
+    parameter: heights at the points) or ("f", the height at a fraction of its line's length)."""
+    heights = params.get("TopHeights") or []
+    cp = curve["params"]
+    closed = bool(cp.get("Closed"))
+    if len(heights) >= 2:
+        if cp.get("Smooth", True) and len(cp["Points"]) > 2 and len(heights) == len(cp["Points"]):
+            return "u", lambda u: through(heights, u, closed)
+        spans = len(heights) if closed else len(heights) - 1
+        return "f", lambda f: through(heights, f * spans, closed)
+    kind, high, rise = params.get("Top", "Flat"), params.get("Height", 2.7), params.get("TopRise", 0.0)
+    waves = max(1, int(params.get("TopWaves", 3)))
+    return "f", {"Slope": lambda f: high + rise * f, "Arch": lambda f: high + rise * math.sin(math.pi * f),
+                 "Wave": lambda f: high + rise * 0.5 * (1 - math.cos(2 * math.pi * waves * f))}.get(kind, lambda f: high)
+
+
+def wall_faces(params):
+    """A wall record's two faces, metres to the left of its line."""
+    t = params.get("Thickness", 0.3)
+    return {"Left": (0.0, t), "Right": (-t, 0.0)}.get(params.get("Align", "Center"), (-t / 2, t / 2))
+
+
+def mitre_across(t_in, t_out):
+    """Where a line turns from direction t_in to t_out: the vector along the corner's mitre (the
+    line that halves the corner), to the left, that reaches a point one metre to the left."""
+    li, lo = (-t_in[1], t_in[0]), (-t_out[1], t_out[0])
+    m = (li[0] + lo[0], li[1] + lo[1])
+    n = math.hypot(*m)
+    m = (m[0] / n, m[1] / n)
+    k = 1.0 / (m[0] * li[0] + m[1] * li[1])
+    return (m[0] * k, m[1] * k)
+
+
+def level_lines(points, closed, d1, d2):
+    """The lines along which a shaped top is level on straight runs through points (FORMAT.md,
+    TopHeights, written again here): square to each run inside it; along the mitre at a corner,
+    at the corner's own height; from a corner to twice as far along the run as the mitre reaches
+    there (TOP_REACH beyond the faces) turning evenly from the mitre to square. Returns ([(s0,
+    length, line, direction)] for each run, s0 metres along the whole line where it starts and
+    line(u) the level line u metres along the run: (its point on the run, the vector across it
+    to the left that reaches one metre), the whole length, [(s, corner, its mitre's vector)])."""
+    pts = [(float(p[0]), float(p[1])) for p in points]
+    runs = []
+    for a, b in list(zip(pts, pts[1:])) + ([(pts[-1], pts[0])] if closed else []):
+        n = math.dist(a, b)
+        runs.append((a, ((b[0] - a[0]) / n, (b[1] - a[1]) / n), n))
+    count = len(runs)
+    corner = [mitre_across(runs[i - 1][1], runs[i][1]) if i or closed else None for i in range(count)]
+    out, s0 = [], 0.0
+    for i, (a, t, l) in enumerate(runs):
+        c0, c1 = corner[i], (corner[(i + 1) % count] if closed or i < count - 1 else None)
+        left = (-t[1], t[0])
+        reach = (d1 - TOP_REACH, d2 + TOP_REACH)
+        g0 = 2.0 * max([0.0] + [(c0[0] * t[0] + c0[1] * t[1]) * d for d in reach]) if c0 else 0.0
+        g1 = 2.0 * max([0.0] + [-(c1[0] * t[0] + c1[1] * t[1]) * d for d in reach]) if c1 else 0.0
+        if g0 + g1 >= l:
+            raise ValueError("a run %.3f m long is shorter than its corners' turns (%.3f m): not a case this check counts" % (l, g0 + g1))
+
+        def line(u, a=a, t=t, l=l, left=left, c0=c0, c1=c1, g0=g0, g1=g1):
+            p = (a[0] + t[0] * u, a[1] + t[1] * u)
+            if c0 and u < g0:
+                w = u / g0
+                return p, ((1 - w) * c0[0] + w * left[0], (1 - w) * c0[1] + w * left[1])
+            if c1 and u > l - g1:
+                w = (u - (l - g1)) / g1
+                return p, ((1 - w) * left[0] + w * c1[0], (1 - w) * left[1] + w * c1[1])
+            return p, left
+
+        out.append((s0, l, line, t))
+        s0 += l
+    corners = [(sum(r[2] for r in runs[:i]), runs[i][0], corner[i]) for i in range(count) if corner[i]]
+    return out, s0, corners
+
+
+def level_count(points, closed, d1, d2, foundation, height, step=0.005):
+    """A wall's volume (m³) on straight runs, its top level along level_lines: strips no more
+    than `step` m wide between its level lines, from face to face, each as tall as the foundation
+    and the top at its middle (height(f), f the fraction of the line's length)."""
+    lines, total, _corners = level_lines(points, closed, d1, d2)
+    volume = 0.0
+    for s0, l, line, _t in lines:
+        k = max(1, int(math.ceil(l / step)))
+        before = None
+        for j in range(k + 1):
+            p, c = line(l * j / k)
+            here = ((p[0] + c[0] * d1, p[1] + c[1] * d1), (p[0] + c[0] * d2, p[1] + c[1] * d2))
+            if before is not None:
+                (a1, a2), (b1, b2) = before, here
+                area = 0.5 * abs((b2[0] - a1[0]) * (a2[1] - b1[1]) - (b2[1] - a1[1]) * (a2[0] - b1[0]))
+                volume += area * (foundation + height((s0 + l * (j - 0.5) / k) / total))
+            before = here
+    return volume
+
+
+def smooth_count(points, thickness, foundation, height, steps=2000):
+    """A centred wall's volume (m³) on the map's smooth curve through points, its top height(u)
+    at the curve's own parameter u: its thickness times foundation and top, summed along the
+    curve (a centred band holds its thickness times its line's length)."""
+    volume = 0.0
+    for i in range(len(points) - 1):
+        last = smooth_point(points, i, 0.0)
+        for k in range(1, steps + 1):
+            q = smooth_point(points, i, k / steps)
+            volume += math.dist(last, q) * thickness * (foundation + height(i + (k - 0.5) / steps))
+            last = q
+    return volume
+
+
+def top_on(shape, x, y):
+    """The highest z (m) of a solid on the upright line through (x, y) m; asked again a little
+    beside the place where the line runs along a seam of the solid's top, where OCCT's common has
+    given an edge reaching above the solid's own box."""
+    roof = shape.BoundBox.ZMax / MM + 1e-4
+    for dx, dy in ((0.0, 0.0), (0.0004, 0.0003), (-0.0003, 0.0004), (0.0004, -0.0003)):
+        zs, _at = upright(shape, x + dx, y + dy)
+        if zs is not None and zs[1] <= roof:
+            return zs[1]
+    return None
+
+
+def top_reads(params, curve, shape):
+    """Where a wall's top is read, worked out here from its record (the curve's points and its
+    placement), and what the solid (in its building's frame) has there: {"at": the parameter the
+    top is a function of ("f" or "u"), "places": [(where, top)] at its heights' own places,
+    "line": the same at TOP_LINE places along its line, "mitres": [(f, [top at its first face,
+    its middle, its other face])] for each corner}. On a wall whose line is one of its faces the
+    line is read a millimetre inside."""
+    cp, at = curve["params"], curve.get("placement", {})
+    pts = [(x + at.get("x", 0.0), y + at.get("y", 0.0)) for x, y in cp["Points"]]
+    closed = bool(cp.get("Closed"))
+    d1, d2 = wall_faces(params)
+    on = 0.0 if d1 < 0.0 < d2 else (0.001 if d1 >= 0.0 else -0.001)
+    kind, _height = top_of(params, curve)
+    heights = params.get("TopHeights") or []
+    out = {"at": kind, "places": [], "line": [], "mitres": []}
+    if kind == "u":  # on the map's smooth curve, by its own parameter
+        def read(u):
+            i = min(int(math.floor(u)), len(pts) - 2)
+            p = smooth_point(pts, i, u - i)
+            a, b = smooth_point(pts, i, max(0.0, u - i - 1e-4)), smooth_point(pts, i, min(1.0, u - i + 1e-4))
+            n = math.dist(a, b)
+            return top_on(shape, p[0] - (b[1] - a[1]) / n * on, p[1] + (b[0] - a[0]) / n * on)
+
+        span = len(pts) - 1
+        out["places"] = [(u, read(u)) for u in [min(span - 3e-4, max(3e-4, float(j))) for j in range(len(heights))]]
+        out["line"] = [(u, read(u)) for u in [(k + 0.37) / TOP_LINE * span for k in range(TOP_LINE)]]
+        return out
+    lines, total, corners = level_lines(pts, closed, d1, d2)
+
+    def read(s):
+        s0, l, line, t = next(r for r in reversed(lines) if s >= r[0] - 1e-12)
+        p, _c = line(min(l, s - s0))
+        return top_on(shape, p[0] - t[1] * on, p[1] + t[0] * on)
+
+    if heights:
+        spans = len(heights) if closed else len(heights) - 1
+        for j in range(len(heights)):
+            s = min(total - 1e-3, max(1e-3, total * j / spans)) if not closed else total * j / spans
+            out["places"].append((s / total, read(s)))
+    out["line"] = [((k + 0.37) / TOP_LINE, read((k + 0.37) / TOP_LINE * total)) for k in range(TOP_LINE)]
+    for s, v, across in corners:
+        out["mitres"].append((s / total, [top_on(shape, v[0] + across[0] * d, v[1] + across[1] * d) for d in (d1 + 0.01, 0.5 * (d1 + d2), d2 - 0.01)]))
+    return out
+
+
+def top_facts(doc):
+    """H. E's case (read from E's own file) and top_cases(), each made by the button's own
+    import. Of each wall with a shaped top: its solid, its volume (OCCT's adaptive measure) and
+    its top read on upright lines (top_reads); of each file what its notes say of wall ends."""
+    import organic_geom as og
+
+    try:
+        with open(TOP_CASE, encoding="utf-8") as fh:
+            e_case = json.load(fh)
+    except (OSError, ValueError):
+        e_case = None
+    out = {"e_case": e_case, "cases": {}}
+    for case, data in (("E", e_case), ("own", top_cases())):
+        if data is None:
+            continue
+        res = imported(doc, data, "tops-%s.json" % case.lower())
+        b = res["building"]
+        curves = {p["id"]: p for p in data["pieces"] if p["type"] == "PlanCurve"}
+        walls = {}
+        for p in data["pieces"]:
+            if p["type"] != "Wall":
+                continue
+            obj = res["made"].get(p["id"])
+            if obj is None or obj.Shape.isNull() or not obj.Shape.Solids:
+                walls[p["id"]] = {"made": False}
+                continue
+            shape = obj.Shape.copy()
+            shape.Placement = b.Placement.inverse().multiply(shape.Placement)
+            row = {"made": True, "valid": bool(shape.isValid()), "solids": len(shape.Solids), "volume": og.volume_of(shape) / 1e9,
+                   "ends_joined": int(getattr(obj.Proxy, "ends_joined", 0))}
+            if p["params"].get("TopHeights") or p["params"].get("Top", "Flat") != "Flat":
+                row.update(top_reads(p["params"], curves[p["params"]["Base"]], shape))
+            walls[p["id"]] = row
+        said = {"joined": 0, "square": 0}
+        for note in res["notes"]:
+            found = re.match(r"(\d+) wall ends? meets? other walls and (?:is|are) (joined there|left square)", note)
+            if found:
+                said["joined" if found.group(2) == "joined there" else "square"] += int(found.group(1))
+        out["cases"][case] = {"walls": walls, "notes": list(res["notes"]), "said": said}
+    return out
+
+
 # ------------------------------------------------------------------ read what was made
 def box_in(building, obj):
     """An object's shape in the building's own frame: (xmin, ymin, zmin, xmax, ymax, zmax) m."""
@@ -1082,6 +1356,8 @@ def gather():
                            "open_there": not inside(b2, wall, 1.5, 0.0, 1.5), "solid_before": inside(b2, wall, 0.5, 0.0, 1.5), "scale": res2["scale"]}
         # walls that end on each other
         facts["joints"] = joint_facts(doc)
+        # tops given as heights, on lines with corners too
+        facts["tops"] = top_facts(doc)
         # wave vaults
         facts["research"] = research_wave_cases()
         facts["waves"] = wave_facts(doc, facts["research"])
@@ -1128,6 +1404,14 @@ def gather():
         result = realize(records)
         facts["shells"]["realized"] = {"ok": result.get("ok"), "complete": result.get("complete"), "notes": result.get("notes"), "error": result.get("error"),
                                        "elements": {e.get("piece"): e for e in result.get("elements", [])}}
+    # H. E's case realized too, as E's check realizes it
+    if facts["tops"].get("e_case"):
+        records = os.path.join(folder, "a-topheights-case.json")
+        with open(records, "w", encoding="utf-8") as fh:
+            json.dump(facts["tops"]["e_case"], fh, indent=1)
+        result = realize(records)
+        facts["tops"]["realized"] = {"ok": result.get("ok"), "complete": result.get("complete"), "notes": result.get("notes"), "error": result.get("error"),
+                                     "boxes": {e.get("piece"): e.get("box_m") for e in result.get("elements", [])}}
     with open(SAMPLE, encoding="utf-8") as fh:
         facts["repo_sample"] = json.load(fh)
     facts["anchor"] = canonical_frame()
@@ -1710,6 +1994,67 @@ def judge(facts):
        and not any(n in notes for n in site),
        "Z what the map's files say of the place is kept apart from what was lost: %d line(s) about the place, the .json's own (%s), none of them among the %d notes"
        % (len(site or []), "; ".join(n[:70] for n in (site or [])) or "the land's files hold nothing against it, or are not in the folder", len(notes)))
+
+    # H. tops given as heights along a wall, on lines with corners too
+    tops = facts.get("tops") or {}
+    e_case = tops.get("e_case")
+    ok(e_case is not None, "H E's case file read (%s): %s" % (os.path.basename(TOP_CASE), "%d pieces" % len(e_case["pieces"]) if e_case else "not there"))
+    for case, data in (("E", e_case), ("own", top_cases())):
+        if data is None:
+            continue
+        got = tops.get("cases", {}).get(case, {})
+        curves = {p["id"]: p for p in data["pieces"] if p["type"] == "PlanCurve"}
+        for p in data["pieces"]:
+            title = TOP_TITLES.get((case, p["id"]))
+            if p["type"] != "Wall" or title is None:
+                continue
+            w = got.get("walls", {}).get(p["id"], {"made": False})
+            if not w.get("made"):
+                ok(False, "%s: not made" % title)
+                continue
+            params, curve = p["params"], curves[p["params"]["Base"]]
+            kind, height = top_of(params, curve)
+            off = lambda rows: [(abs(z - height(x)) if z is not None else float("inf"), x) for x, z in rows]  # noqa: E731
+            at, along = off(w.get("places", [])), off(w.get("line", []))
+            mitre = [(abs(z - height(x)) if z is not None else float("inf"), x) for x, zs in w.get("mitres", []) for z in zs]
+            cp, pl = curve["params"], curve.get("placement", {})
+            pts = [(x + pl.get("x", 0.0), y + pl.get("y", 0.0)) for x, y in cp["Points"]]
+            d1, d2 = wall_faces(params)
+            if kind == "u":
+                counted = smooth_count(pts, d2 - d1, params.get("Foundation", 0.0), height)
+            else:
+                counted = level_count(pts, bool(cp.get("Closed")), d1, d2, params.get("Foundation", 0.0), height)
+            counted -= sum(wd * ht * (d2 - d1) for wd, ht in zip(params.get("OpeningWidths", []), params.get("OpeningHeights", [])))
+            share = w["volume"] / counted - 1.0
+            worst = lambda rows: max(rows) if rows else (0.0, None)  # noqa: E731
+            good = (w["valid"] and w["solids"] == 1 and len(at) == len(params.get("TopHeights") or []) and worst(at)[0] <= TOP_AT
+                    and len(along) == TOP_LINE and worst(along)[0] <= TOP_ALONG and worst(mitre)[0] <= TOP_ALONG and abs(share) <= TOP_VOLUME)
+            more = ""
+            if (case, p["id"]) == ("own", "meet"):
+                said = got.get("said", {})
+                good = good and w.get("ends_joined") == 0 and said.get("square", 0) >= 1 and said.get("joined", 0) >= 1
+                more = "; its end left square (%d of its ends joined) and said to be: %d end(s) left square, %d joined (the flat wall's)" % (
+                    w.get("ends_joined", -1), said.get("square", 0), said.get("joined", 0))
+            ok(good, "%s: at its %d heights' places within %.5f m; along its line at %d places within %.5f m (the worst at %s %.3f); %s; %d solid(s), valid %s; "
+                     "its volume %.4f m³ against %.4f m³ counted here from its record (%+.3f %%)%s"
+               % (title, len(at), worst(at)[0], len(along), worst(along)[0], "u" if kind == "u" else "f", worst(along)[1] or 0.0,
+                  "level along its %d corner(s)' mitre at the corner's height within %.5f m" % (len(w.get("mitres", [])), worst(mitre)[0]) if w.get("mitres") else "no corner",
+                  w["solids"], w["valid"], w["volume"], counted, 100.0 * share, more))
+    real = tops.get("realized")
+    if e_case is not None:
+        rows, good = [], bool(real and real.get("ok") and real.get("complete"))
+        for p in e_case["pieces"]:
+            if p["type"] != "Wall":
+                continue
+            curve = next(c for c in e_case["pieces"] if c["id"] == p["params"]["Base"])
+            kind, height = top_of(p["params"], curve)
+            span = len(curve["params"]["Points"]) - 1 if kind == "u" else 1.0
+            want = max(height(span * k / 2000.0) for k in range(2001))
+            box = ((real or {}).get("boxes") or {}).get(p["id"])
+            rows.append("%s %.4f m (%.4f)" % (p["id"], box[1][2] if box else float("nan"), want))
+            good = good and box is not None and abs(box[1][2] - want) <= 0.001
+        ok(good, "H E's case realized (realize.py, as E's check calls it): ok %s, complete %s; each wall's top in the result's box against the highest of its line "
+                 "worked out here: %s" % ((real or {}).get("ok"), (real or {}).get("complete"), ", ".join(rows)))
     return oks, fails
 
 
@@ -1752,7 +2097,32 @@ def forgeries(facts):
     def wave(case, **values):
         return lambda g: g["waves"][case].update(values)
 
+    def top_wall(g, case, key):
+        return g["tops"]["cases"][case]["walls"][key]
+
+    def flat_top(g, case, key, z):  # every place of a wall's top read at one height
+        w = top_wall(g, case, key)
+        w["places"], w["line"] = [(x, z) for x, _z in w["places"]], [(x, z) for x, _z in w["line"]]
+        w["mitres"] = [(x, [z for _z in zs]) for x, zs in w["mitres"]]
+
+    def tilted_mitres(g, case, key, dz):  # each corner's top higher at one face than at the other
+        w = top_wall(g, case, key)
+        w["mitres"] = [(x, [zs[0] - dz, zs[1], zs[2] + dz]) for x, zs in w["mitres"]]
+
     return [
+        # H. tops given as heights along a wall
+        ("a wall with corners flat at its lowest: 0.2984 m where its last height is 0.321 (E's finding)", "H E's wall with corners", f(lambda g: flat_top(g, "E", "w1", 0.2984))),
+        ("a wall with corners that misses its last height", "H E's wall with corners",
+         f(lambda g: top_wall(g, "E", "w1")["places"].__setitem__(-1, (top_wall(g, "E", "w1")["places"][-1][0], 0.3)))),
+        ("a corner whose top is square to each run, not level along its mitre", "H a steep right angle", f(lambda g: tilted_mitres(g, "own", "ell", 0.02))),
+        ("the room's top 5 mm high all round", "H a closed room", f(lambda g: top_wall(g, "own", "room").__setitem__("line", [(x, z + 0.005) for x, z in top_wall(g, "own", "room")["line"]]))),
+        ("a piece of the top's tool that took nothing (OCCT's empty common beside the right angle: 7.95 % too much)", "H a steep right angle",
+         f(lambda g: top_wall(g, "own", "ell").__setitem__("volume", top_wall(g, "own", "ell")["volume"] * 1.0795))),
+        ("the sloped zigzag's top run the other way", "H a zigzag", f(lambda g: top_wall(g, "own", "zig").__setitem__("line", [(1.0 - x, z) for x, z in top_wall(g, "own", "zig")["line"]]))),
+        ("the door's opening not cut", "H a door by a corner", f(lambda g: top_wall(g, "own", "door").__setitem__("volume", top_wall(g, "own", "door")["volume"] + 0.9 * 2.0 * 0.3))),
+        ("a shaped end said to be joined", "H a wall with heights whose end meets another", f(lambda g: g["tops"]["cases"]["own"]["said"].update(joined=2, square=0))),
+        ("E's case realized with its wall with corners 0.023 m low", "H E's case realized", f(lambda g: g["tops"]["realized"]["boxes"]["w1"][1].__setitem__(2, 0.2984))),
+        ("E's case file not there to hold the walls against", "H E's case file", f(lambda g: g["tops"].__setitem__("e_case", None))),
         ("a wave vault built plain", "V lane R's wave vault, reference case B",
          f(lambda g: g["waves"]["B"].update(crest=g["research"]["B"]["Rise"], trough=g["research"]["B"]["Rise"], start=g["research"]["B"]["Rise"]))),
         ("a wave that begins at a trough", "V lane R's wave vault, reference case A",

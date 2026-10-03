@@ -343,13 +343,13 @@ def import_built(doc, source, join=True):
     # wall that ends on another stops at its face
     meet = oo.join_walls(list(made.values())) if join else 0
     doc.recompute()
-    # said of the solids as they now are: a wall with a shaped top on a smooth curve keeps square ends
+    # said of the solids as they now are: a wall with a shaped top keeps square ends
     joined = sum(int(getattr(obj.Proxy, "ends_joined", 0)) for obj in made.values() if type(obj.Proxy).__name__ == "Wall")
     ends = lambda n: "1 wall end meets other walls and is" if n == 1 else "%d wall ends meet other walls and are" % n  # noqa: E731
     if joined:
         notes.info("%s joined there, as the map joins them" % ends(joined))
     if meet > joined:
-        notes.info("%s left square, where the map joins them: a wall with a shaped top on a smooth curve has no joined end, nor has a wall shorter than its "
+        notes.info("%s left square, where the map joins them: a wall with a shaped top has no joined end, nor has a wall shorter than its "
                    "corners reach" % ends(meet - joined))
     for key, obj in made.items():
         shape = obj.Shape
