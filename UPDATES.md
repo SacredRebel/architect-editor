@@ -3,6 +3,31 @@
 Rules: `C:\Playground\RULES.md` (Rule 3). After every report: the full entry here, then one line in `C:\Playground\UPDATES.md`.
 Entry shape: date/time · phase · what was done · commit sha · files written to `exchange\` · open items · needs.
 
+## 2026-10-03 12:45 (this PC's clock) · A · E's piece-6 finding mended: a wall with corners keeps its shaped top (realize)
+
+**The brief** (architect, pasted during the band work for Johny's answers): "from E's piece 6: a cornered wall given top heights comes back 0.023 m low and misses its last height; test case in Spatial Map\spatial-map\docs\plans\godot-build-6\. Fix in realize, keep the rest of your order."
+
+**Rule 7.** Read: E's case file and `godot-build-6-done.md`, FORMAT.md's `TopHeights` row, its rule 2 for walls that meet, and E's finding (BUILD piece 6). Nothing about the land was collected or worked out: no row for `DATA-INVENTORY.md`.
+
+**The cause.** The kernel made any shaped top on an outline with corners flat at its lowest ("a shaped top needs a smooth base curve"). E's eight heights [0.3 × 7, 0.321] make a smooth line that dips to 0.2984 between the sixth and seventh, so the wall came back flat at 0.2984 m: 1.6 mm under 0.3 and 0.023 m under its last height.
+
+**What works, and how it was checked.**
+- **A wall on a curve with corners keeps its shaped top** (`TopHeights`, and `Top` Arch, Wave, Slope with a rise): level along each corner's mitre at the corner's own height, square to each run inside it; from a corner to twice as far along the run as the mitre reaches there, the lines turn evenly, laid out in five lines at least (`organic_geom.corner_sections`, `corner_top_tool`, `corner_wall_volume`). The cut is held against its own strip count, as every shaped top is.
+- **E's four-wall case through `realize.py`:** complete; w1's top 0.3210 m in its box; its eight heights within 0.00001 m at their places; the line between within 0.00002 m at 96 places; level along its corner's mitre at 0.3000; w2, w3, w4 as before. Picture: `docs\plans\organic\corner-tops\e-case-w1-top.png` (its top read off the solid at 400 places, its eight heights, the old flat top). The dip to 0.2984 m between its sixth and seventh heights is the smooth line's own, by the format's rule.
+- **A shaped top keeps square ends on any curve** (before, on a curve with corners its top was flat and its ends joined); the import's note says so.
+- **Past an open end the top's tool runs on at the line's own slope:** a sampled top no longer lies under its line within the last quarter metre (E's w2: 1.0 mm before, 0.03 mm now; a steep right angle: 6.4 mm, 0.7 mm).
+- **Found in OCCT on the way** (both in `LESSONS.md`): beside a steep right angle standing left of its line, the piece of the top's tool from the mitre to the first square line, a spline through the two, took nothing off the prism, in silence (the piece valid, points inside both): the cut held 8 to 21 % too much at every try, and only the strip count saw it; laid out in five lines it cuts right at every try. And an upright line along a seam of a top read an edge above the solid's own box.
+- **`check_import.py`, new section H:** E's own file, read from `godot-build-6\`, and five harder walls of this lane's own (a closed room of four runs with eight heights, a steep right angle standing left of its line, a zigzag of sharp corners with a sloped top, a door by a corner, a wall with heights whose end meets another): each top read on upright lines at its heights' places, at 96 places along its line and along each corner's mitre, against the smooth line worked out in the check (Bézier form); its volume against strips counted in the check from the format's rule; the end that meets another left square and said; E's file realized complete, each top in its box. Import 71 checks (was 60), 100 of 100 forged faults rejected (was 90): new are the old flat top, a missed last height, a corner not level along its mitre, a top 5 mm high, a piece of the cut that took nothing, a slope run backwards, an uncut door, a shaped end said joined, E's case realized low, E's file not there. Console, all three passed: organic 66 checks and 36 forgeries, toolbar 194 and 42, import 71 and 100.
+- Picture of the steep right angle: `docs\plans\organic\corner-tops\steep-right-angle.png`.
+
+**Written outside the repository:** `exchange\godot\FORMAT.md` (the `TopHeights` row: the top on a curve with corners; rule 2: square ends on any curve; "Mended" under E's finding, with the numbers); `knowledge\LESSONS.md` (three lessons, Geometry); `knowledge\tools\organic-workbench.md`; `agents\EDITOR-AGENT.md` (the wall row and "Not there yet", which also still listed the generators built on 2 Oct).
+
+**Commit:** `8965e5be` on `eco/organic`, pushed as a backup. The band work for Johny's answers 1 to 6 was parked in a git stash for this and goes on next, then point 7's steps.
+
+**Open:** a band to the roof on a wall with corners (none in Johny's house) is not built yet.
+
+**Needs:** nothing.
+
 ## 2026-10-02 23:45 (this PC's clock) · A · lane R's shells and lattices: each a record kind in FORMAT.md first, then a button
 
 **The brief** (architect): from R's studies S-003 and S-005, the generators the workbench lacks: conoid, translation shell, wave vault, the four saddles as one Saddle button with a kind, gridshell and geodesic on any Organic shell, the Voronoi wall; "each as a record kind in FORMAT.md first, then the button".
