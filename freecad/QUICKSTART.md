@@ -7,7 +7,7 @@ For Johny. One page, in the order you click. Everything here was done on this PC
 
 - FreeCAD 1.1 is open. The **Organic** workbench is already installed on this PC.
 - At the top of the window there is a box with the name of a workbench. Choose **Organic**
-  in it. Three rows of buttons appear: **Organic** (15 buttons), **Sacred** (7) and
+  in it. Three rows of buttons appear: **Organic** (18 buttons), **Sacred** (8) and
   **Biomimetic** (5). Rest the mouse on a button and it says its name.
 - The line of text at the bottom, **Report view**, says what each button did.
 
@@ -87,9 +87,23 @@ button) makes a petal-shaped room with a door, windows to the south, a roof and 
 about half a minute. Change its numbers afterwards.
 
 Other things to stand in the building, each one press: **Leaf shell roof**, **Ribbed
-vault**, **Catenary arch**, **Dome**, **Minimal surface**, **Saddle shell**; on the
-Biomimetic row **Gridshell**, **Hanging net**, **Cellular wall**, **Veined leaf shell**,
-**Branching column**.
+vault**, **Wave vault**, **Catenary arch**, **Dome**, **Minimal surface**, **Saddle shell**,
+**Conoid roof**, **Translation shell**; on the Sacred row **Geodesic dome** and **Geodesic
+frame**; on the Biomimetic row **Gridshell**, **Hanging net**, **Cellular wall**, **Veined
+leaf shell**, **Branching column**.
+
+**Added 2 Oct** (the shells and lattices from the Research Architect's studies):
+
+- **Saddle shell** has three kinds: click it, and on the Data tab choose **Kind**:
+  *Hypar*, *Groined saddles* (lobes that rise to their tips, groins that run down to eight
+  supports on the ground, as in Félix Candela's Los Manantiales at Xochimilco, 1958;
+  **Lobes** may be 4 to 16) or *Catenoid*.
+- **Geodesic frame** is the geodesic dome as struts and node balls; its **StrutList** on
+  the Data tab is the cutting list (how many struts of each length).
+- **Laths on a shell:** click a dome, a vault, a leaf roof, a conoid or a saddle, then press
+  **Gridshell**. Laths lie on its back both ways, with a beam along its edges. On the Data
+  tab: **Spacing**, **Turn** (45 makes a diagrid), **Layers** (2 lays a second lath on each),
+  **LathWidth**, **LathDepth**, **EdgeBeam**.
 
 ## 7. The sun and the proportions (the Sacred row)
 

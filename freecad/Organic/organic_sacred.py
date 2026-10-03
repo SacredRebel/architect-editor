@@ -346,14 +346,21 @@ def platonic_solid(kind, edge, standing="On a face"):
 
 
 def geodesic_mesh(frequency):
-    """A geodesic sphere of unit radius: an icosahedron, a vertex up, each face cut into
-    frequency^2 triangles (class I), every vertex pushed out to the sphere.
+    """A geodesic sphere of unit radius: an icosahedron, a vertex at the crown, each face cut
+    into frequency^2 triangles (class I), every vertex pushed out to the sphere. The
+    icosahedron stands as lane R's pattern card P-001 sets it and as the map draws it: its
+    upper ring of five at z = 1 / sqrt 5 (radius 2 / sqrt 5), the first of them over +X, the
+    others every 72 degrees; its lower ring at -1 / sqrt 5, turned 36 degrees.
     Returns (points, triangles wound outward)."""
     nu = max(1, int(frequency))
-    ico = platonic_vertices("Icosahedron", 2.0)
-    top = App.Vector(*ico[0])
-    rot = App.Rotation(top, App.Vector(0, 0, 1))
-    ico = [tuple(rot.multVec(App.Vector(*p))) for p in ico]
+    zr, rr = 1 / SQRT5, 2 / SQRT5
+    crown, nadir = (0.0, 0.0, 1.0), (0.0, 0.0, -1.0)
+    upper = [(rr * math.cos(math.radians(72.0 * k)), rr * math.sin(math.radians(72.0 * k)), zr) for k in range(5)]
+    lower = [(rr * math.cos(math.radians(72.0 * k + 36.0)), rr * math.sin(math.radians(72.0 * k + 36.0)), -zr) for k in range(5)]
+    faces = []
+    for k in range(5):
+        n = (k + 1) % 5
+        faces += [(crown, upper[k], upper[n]), (upper[k], lower[k], upper[n]), (upper[n], lower[k], lower[n]), (nadir, lower[n], lower[k])]
     index, points, tris = {}, [], []
 
     def vertex(p):
@@ -365,8 +372,14 @@ def geodesic_mesh(frequency):
             points.append(q)
         return index[key]
 
-    for a, b, c in hull_triangles(ico):
-        pa, pb, pc = ico[a], ico[b], ico[c]
+    def outward(a, b, c):
+        pa, pb, pc = points[a], points[b], points[c]
+        n = ((pb[1] - pa[1]) * (pc[2] - pa[2]) - (pb[2] - pa[2]) * (pc[1] - pa[1]),
+             (pb[2] - pa[2]) * (pc[0] - pa[0]) - (pb[0] - pa[0]) * (pc[2] - pa[2]),
+             (pb[0] - pa[0]) * (pc[1] - pa[1]) - (pb[1] - pa[1]) * (pc[0] - pa[0]))
+        return (a, b, c) if sum(n[t] * (pa[t] + pb[t] + pc[t]) for t in range(3)) > 0 else (a, c, b)
+
+    for pa, pb, pc in faces:
         grid = {}
         for i in range(nu + 1):
             for j in range(nu + 1 - i):
@@ -374,10 +387,25 @@ def geodesic_mesh(frequency):
                 grid[(i, j)] = vertex(tuple((pa[t] * k + pb[t] * i + pc[t] * j) / nu for t in range(3)))
         for i in range(nu):
             for j in range(nu - i):
-                tris.append((grid[(i, j)], grid[(i + 1, j)], grid[(i, j + 1)]))
+                tris.append(outward(grid[(i, j)], grid[(i + 1, j)], grid[(i, j + 1)]))
                 if i + j < nu - 1:
-                    tris.append((grid[(i + 1, j)], grid[(i + 1, j + 1)], grid[(i, j + 1)]))
+                    tris.append(outward(grid[(i + 1, j)], grid[(i + 1, j + 1)], grid[(i, j + 1)]))
     return points, tris
+
+
+def geodesic_rows(points, tris, frequency):
+    """The triangles of a geodesic sphere in rows from the crown, as indices into tris: 5, 15,
+    25, ... in the upper cap (frequency rows), 10 x frequency in each of the belt's frequency
+    rows, the lower cap as the upper. Counted off by the height of the triangles' centres
+    (lane R's construction; the map's port counts the same way)."""
+    nu = max(1, int(frequency))
+    order = sorted(range(len(tris)), key=lambda n: (-sum(points[i][2] for i in tris[n]) / 3.0, -n))
+    cap = [5 * (2 * n + 1) for n in range(nu)]
+    rows, at = [], 0
+    for count in cap + [10 * nu] * nu + cap[::-1]:
+        rows.append(order[at:at + count])
+        at += count
+    return rows
 
 
 def geodesic_dome(radius, frequency=3, thickness=0.15, portion=0.5):
@@ -395,17 +423,28 @@ def geodesic_dome(radius, frequency=3, thickness=0.15, portion=0.5):
     return og.solid_of(shell)
 
 
-def geodesic_net(frequency, portion=0.5):
-    """A geodesic dome as a net, on the unit sphere: the triangles of geodesic_mesh whose
-    centres stand in the upper `portion` of the sphere's height (0.625 at frequency 3: five rows
-    of triangles from the crown, the "five-eighths" dome), their edges as struts, and the foot
-    nodes (on edges that have one triangle only) set to their mean height, so the dome stands
-    level (lane R's construction, pattern card P-001).
+def geodesic_net(frequency, portion=0.5, bands=0):
+    """A geodesic dome as a net, on the unit sphere: whole rows of geodesic_mesh's triangles
+    from the crown, their edges as struts, and the foot nodes (on edges that have one triangle
+    only) set to their mean height, so the dome stands level (lane R's construction, pattern
+    card P-001).
+
+    Which rows: `bands` of them when it is given; else every row whose triangles' centres
+    stand, taken together, in the upper `portion` of the sphere's height. At frequency 3 that
+    is five rows from 0.5 up to 0.667 (the "five-eighths" dome: an odd frequency has no row
+    that ends on the equator) and four from 0.333 up to 0.5 (the "three-eighths"); at
+    frequency 2, three rows from 0.378 up to 0.622 (the hemisphere). (Measured: the rows' mean
+    centre heights on the unit sphere are, at frequency 3, 0.960, 0.844, 0.618, 0.335, 0.000.)
     Returns (points with the foot levelled, struts [(i, j)], foot node indices, triangles,
-    how far the foot nodes stood apart in height before levelling)."""
+    how far the foot nodes stood apart in height before levelling, the nodes used, rows)."""
     pts, tris = geodesic_mesh(frequency)
-    cut = 1 - 2 * max(0.1, min(1.0, portion))
-    kept = [t for t in tris if sum(pts[i][2] for i in t) / 3 >= cut - 1e-9]
+    rows = geodesic_rows(pts, tris, frequency)
+    if bands and int(bands) > 0:
+        rows = rows[:int(bands)]
+    else:
+        cut = 1 - 2 * max(0.1, min(1.0, portion))
+        rows = [row for row in rows if sum(sum(pts[i][2] for i in tris[n]) / 3 for n in row) / len(row) >= cut - 1e-9]
+    kept = [tris[n] for row in rows for n in row]
     count = {}
     for a, b, c in kept:
         for i, j in ((a, b), (b, c), (c, a)):
@@ -419,17 +458,19 @@ def geodesic_net(frequency, portion=0.5):
         for i in foot:
             points[i][2] = level
     used = sorted({i for edge in count for i in edge})
-    return points, sorted(count), foot, kept, spread, used
+    return points, sorted(count), foot, kept, spread, used, len(rows)
 
 
-def geodesic_frame(radius, frequency=3, portion=0.5, strut=0.09, hub=1.5):
+def geodesic_frame(radius, frequency=3, portion=0.5, strut=0.09, hub=1.5, bands=0):
     """A geodesic dome as a frame: a round strut of diameter `strut` along every edge of the
-    net and a ball of `hub` times that diameter at every node, standing on Z = 0 on its
-    levelled foot. A compound of solids: struts and balls overlap in the nodes.
-    Returns (compound, number of struts, their lengths in metres, number of nodes)."""
-    points, struts, foot, _tris, _spread, used = geodesic_net(frequency, portion)
+    net and a ball of `hub` times that diameter at every node, its foot nodes on Z = 0 (the
+    whole sphere: its lowest node). A compound of solids: struts and balls overlap in the nodes.
+    Returns (compound, the struts' lengths in metres, the nodes [(x, y, z) in metres], the
+    number of foot nodes, the rows of triangles that stand, how far apart in height the foot
+    nodes stood before they were set level, in metres)."""
+    points, struts, foot, _tris, spread, used, rows = geodesic_net(frequency, portion, bands)
     base = points[foot[0]][2] * radius if foot else -radius
-    at = lambda i: V(points[i][0] * radius, points[i][1] * radius, points[i][2] * radius - base)
+    at = lambda i: V(points[i][0] * radius, points[i][1] * radius, points[i][2] * radius - base)  # noqa: E731
     solids, lengths = [], []
     for i, j in struts:
         p, q = at(i), at(j)
@@ -437,7 +478,8 @@ def geodesic_frame(radius, frequency=3, portion=0.5, strut=0.09, hub=1.5):
         solids.append(Part.makeCylinder(strut * MM / 2, (q - p).Length, p, q - p))
     if hub and hub > 0:
         solids += [Part.makeSphere(strut * hub * MM / 2, at(i)) for i in used]
-    return Part.makeCompound(solids), len(struts), lengths, len(used)
+    nodes = [(points[i][0] * radius, points[i][1] * radius, points[i][2] * radius - base) for i in used]
+    return Part.makeCompound(solids), lengths, nodes, len(foot), rows, spread * radius
 
 
 # ---------------------------------------------------------------- the sun

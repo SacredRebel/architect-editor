@@ -2280,7 +2280,9 @@ def hypar_shape(size_x_m, size_y_m, rise_m, thickness_m):
 # vault, groined saddles. Each is given by a formula for its underside in its own frame: x
 # across, y along, z up, the origin in the middle of its footprint on the ground. Where the
 # formula is a polynomial of degree two each way the surface is that polynomial exactly (one
-# Bezier patch); the thickness is a true offset, upward along the surface's normal.
+# Bezier patch); the thickness is a true offset, upward along the surface's normal. (Lane R's
+# note says "straight up"; R's own assets are thickened along the normal, and so are these:
+# exchange\godot\FORMAT.md, "Lane R's shells and lattices as record kinds".)
 def quadratic_patch(xs, ys, heights):
     """The surface whose height is a polynomial of degree two or less each way, exactly, as
     one patch: xs and ys are the three poles' places each way (m; the middle one half-way),
@@ -2315,6 +2317,8 @@ def conoid_height(x, y, span_m, length_m, rise_m, eave_m):
 
 def conoid_shape(span_m, length_m, rise_m, eave_m, thickness_m):
     """A conoid shell: every line across it from the arch to the level end is straight."""
+    if span_m <= 0 or length_m <= 0 or thickness_m <= 0 or rise_m < 0:
+        raise ValueError("a conoid needs a span, a length and a thickness above nought, and a rise that is not below it")
     hs, hl = span_m / 2, length_m / 2
     arch, slide = (0.0, 2.0, 0.0), (1.0, 0.5, 0.0)  # the poles of 1 - (2x/S)^2 and of 1 - v
     face = quadratic_patch((-hs, 0.0, hs), (-hl, 0.0, hl), [[eave_m + rise_m * arch[i] * slide[j] for j in range(3)] for i in range(3)])
@@ -2329,60 +2333,143 @@ def translation_height(x, y, span_m, length_m, rise_x_m, rise_y_m, eave_m):
 
 def translation_shell_shape(span_m, length_m, rise_x_m, rise_y_m, eave_m, thickness_m):
     """A translation shell over a rectangle: one arch slid along another, both curving down."""
+    if span_m <= 0 or length_m <= 0 or thickness_m <= 0 or rise_x_m < 0 or rise_y_m < 0:
+        raise ValueError("a translation shell needs a span, a length and a thickness above nought, and rises that are not below it")
     hs, hl = span_m / 2, length_m / 2
     arch = (0.0, 2.0, 0.0)
     face = quadratic_patch((-hs, 0.0, hs), (-hl, 0.0, hl), [[eave_m + rise_x_m * arch[i] + rise_y_m * arch[j] for j in range(3)] for i in range(3)])
     return solid_of(thicken_up(face, thickness_m * MM))
 
 
-GROIN_HALF = math.pi / 8  # half a lobe: four saddles 45° apart make eight lobes
+GROIN_GRID = 12  # steps each way to one of a lobe's patches
+GROIN_LOBES = (4, 16)  # the fewest and the most lobes (two saddles to eight)
 
 
-def groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m):
+def groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m, lobes=8):
     """(a, b) of one saddle z = centre + a u^2 - b v^2 (u along its axis, v across): its tip, at
     tip_r_m along the axis, stands tip_h_m high, and the groin where it meets the next saddle
-    (22.5° off its axis) reaches the ground at support_r_m."""
+    (half a lobe off its axis: 22.5° for eight lobes) reaches the ground at support_r_m."""
+    half = math.pi / lobes
     a = (tip_h_m - centre_h_m) / tip_r_m ** 2
-    b = (centre_h_m / support_r_m ** 2 + a * math.cos(GROIN_HALF) ** 2) / math.sin(GROIN_HALF) ** 2
+    b = (centre_h_m / support_r_m ** 2 + a * math.cos(half) ** 2) / math.sin(half) ** 2
     return a, b
 
 
-def groined_height(x, y, support_r_m, tip_r_m, centre_h_m, tip_h_m):
-    """The underside of the groined saddles at (x, y) (m): the highest of the four saddles."""
-    a, b = groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m)
+def groined_height(x, y, support_r_m, tip_r_m, centre_h_m, tip_h_m, lobes=8):
+    """The underside of the groined saddles at (x, y) (m): the highest of the saddles."""
+    a, b = groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m, lobes)
     r, th = math.hypot(x, y), math.atan2(y, x)
-    return max(centre_h_m + r * r * (a * math.cos(th - i * math.pi / 4) ** 2 - b * math.sin(th - i * math.pi / 4) ** 2) for i in range(4))
+    turn = 2 * math.pi / lobes
+    return max(centre_h_m + r * r * (a * math.cos(th - i * turn) ** 2 - b * math.sin(th - i * turn) ** 2) for i in range(lobes // 2))
 
 
-def groined_edge(theta, support_r_m, tip_r_m):
+def groined_edge(theta, support_r_m, tip_r_m, lobes=8):
     """How far the roof reaches from its centre in the direction theta (m): to a support at a
     groin, to a tip on a lobe's axis."""
-    return support_r_m + (tip_r_m - support_r_m) * abs(math.cos(4 * theta))
+    return support_r_m + (tip_r_m - support_r_m) * abs(math.cos(lobes * theta / 2.0))
 
 
-def groined_saddles_shape(support_r_m, tip_r_m, centre_h_m, tip_h_m, thickness_m, edge_points=24):
-    """Four saddles (hyperbolic paraboloids) about one centre, each turned 45° from the last,
-    the roof being the highest of them everywhere: eight lobes that rise to their tips, eight
-    groins between them that run down to eight supports on the ground (the type of Candela's
-    Los Manantiales). Each lobe is its saddle exactly, made thick along its normal and cut to
-    its own eighth by upright planes through the groins and an upright cut along the free edge;
-    the eight are one solid."""
-    if tip_r_m <= support_r_m or tip_h_m <= centre_h_m or centre_h_m <= 0:
+def _between(b0, b1, l0, l1, n):
+    """A grid of plan points (n + 1) x (n + 1) filling the four-sided region between four lines
+    of n + 1 points: b0 and b1 run one way (the grid's first and last row), l0 and l1 the
+    other (its first and last column); each inner point is blended from the four."""
+    x00, x10, x01, x11 = b0[0], b0[n], b1[0], b1[n]
+    grid = []
+    for j in range(n + 1):
+        q = j / float(n)
+        row = []
+        for i in range(n + 1):
+            p = i / float(n)
+            row.append(tuple((1 - q) * b0[i][k] + q * b1[i][k] + (1 - p) * l0[j][k] + p * l1[j][k]
+                             - ((1 - p) * (1 - q) * x00[k] + p * (1 - q) * x10[k] + (1 - p) * q * x01[k] + p * q * x11[k]) for k in (0, 1)))
+        grid.append(row)
+    return grid
+
+
+def groined_saddles_shape(support_r_m, tip_r_m, centre_h_m, tip_h_m, thickness_m, lobes=8):
+    """Saddles (hyperbolic paraboloids) about one centre, each turned from the last, the roof
+    being the highest of them everywhere: `lobes` lobes that rise to their tips, as many groins
+    between them that run down to supports on the ground (eight lobes, four saddles: the type
+    of Candela's Los Manantiales; lane R's pattern card P-006).
+
+    Built from patches, with no boolean. A lobe is the region between its two groins and its
+    free edge: three four-sided patches underneath, on its saddle's own heights; the same three
+    on top, on the saddle moved thickness_m along its normal, read above the same plan points;
+    an upright face along its free edge. All lobes are sewn into one solid: its sides are
+    upright, its groins lie in upright planes.
+
+    (The lobe was first its saddle made thick and cut to its eighth by a boolean: a valid solid
+    with the right volume by the adaptive measure, which FreeCAD's own Volume read 3 % short,
+    and 19 % at Los Manantiales' size: one face to a lobe, its edge a long cut curve.)"""
+    lobes = int(lobes)
+    if lobes % 2 or not GROIN_LOBES[0] <= lobes <= GROIN_LOBES[1]:
+        raise ValueError("groined saddles have an even number of lobes, from %d (two saddles) to %d" % GROIN_LOBES)
+    if tip_r_m <= support_r_m or tip_h_m <= centre_h_m or centre_h_m <= 0 or support_r_m <= 0:
         raise ValueError("groined saddles need their tips further out than their supports and higher than their centre, and the centre above the ground")
-    a, b = groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m)
-    margin = 4 * thickness_m + 0.1
-    u0, u1 = -margin, tip_r_m + margin
-    w = max(groined_edge(p, support_r_m, tip_r_m) * math.sin(p) for p in [GROIN_HALF * k / 16 for k in range(17)]) + margin
-    face = quadratic_patch((u0, (u0 + u1) / 2, u1), (-w, 0.0, w),
-                           [[centre_h_m + a * du - b * dv for dv in (w * w, -w * w, w * w)] for du in (u0 * u0, u0 * u1, u1 * u1)])
-    thick = thicken_up(face, thickness_m * MM)
-    edge = [V(groined_edge(p, support_r_m, tip_r_m) * math.cos(p), groined_edge(p, support_r_m, tip_r_m) * math.sin(p))
-            for p in [-GROIN_HALF + 2 * GROIN_HALF * k / edge_points for k in range(edge_points + 1)]]
-    outline = Part.Face(wire_of([Part.LineSegment(V(0, 0), edge[0]).toShape(), spline(edge), Part.LineSegment(edge[-1], V(0, 0)).toShape()]))
-    lobe = solid_of(thick.common(prism_of(outline)))
-    lobes = []
-    for k in range(8):
-        one = lobe.copy()
-        one.rotate(App.Vector(), Z, 45.0 * k)
-        lobes.append(one)
-    return refined(solid_of(fuse_all(lobes)))
+    if thickness_m <= 0:
+        raise ValueError("a shell needs a thickness")
+    half, n, t = math.pi / lobes, GROIN_GRID, thickness_m
+    a, b = groined_coefficients(support_r_m, tip_r_m, centre_h_m, tip_h_m, lobes)
+
+    def under(x, y):
+        return centre_h_m + a * x * x - b * y * y
+
+    def top(x, y):
+        """The height over (x, y) of the saddle moved t along its normal: the point (u, v) of
+        the saddle whose normal passes over (x, y), u - 2atu/k = x and v + 2btv/k = y
+        (k = √(1 + 4a²u² + 4b²v²)), found by Newton's steps. (Plain stepping closed in by only
+        a factor 2bt a step: with narrow lobes and a thick shell it did not finish.)"""
+        u, v = x, y
+        for _ in range(60):
+            k2 = 1.0 + 4 * a * a * u * u + 4 * b * b * v * v
+            k = math.sqrt(k2)
+            f1, f2 = u - 2 * a * t * u / k - x, v + 2 * b * t * v / k - y
+            if abs(f1) + abs(f2) < 1e-13:
+                break
+            j11 = 1 - 2 * a * t * (k2 - 4 * a * a * u * u) / (k2 * k)
+            j12 = 2 * a * t * u * 4 * b * b * v / (k2 * k)
+            j21 = -2 * b * t * v * 4 * a * a * u / (k2 * k)
+            j22 = 1 + 2 * b * t * (k2 - 4 * b * b * v * v) / (k2 * k)
+            det = j11 * j22 - j12 * j21
+            if abs(det) < 1e-12:
+                raise ValueError("the shell is too thick for how sharply its saddles bend")
+            u -= (f1 * j22 - f2 * j12) / det
+            v -= (j11 * f2 - j21 * f1) / det
+        else:
+            raise ValueError("the shell is too thick for how sharply its saddles bend")
+        return under(u, v) + t / math.sqrt(1.0 + 4 * a * a * u * u + 4 * b * b * v * v)
+
+    line = lambda p0, p1: [(p0[0] + (p1[0] - p0[0]) * i / float(n), p0[1] + (p1[1] - p0[1]) * i / float(n)) for i in range(n + 1)]  # noqa: E731
+    rim = lambda th: (groined_edge(th, support_r_m, tip_r_m, lobes) * math.cos(th), groined_edge(th, support_r_m, tip_r_m, lobes) * math.sin(th))  # noqa: E731
+    centre, tip, hub = (0.0, 0.0), (tip_r_m, 0.0), (0.6 * support_r_m, 0.0)  # the hub: where the lobe's three patches meet, on its axis
+    faces = []
+    for side in (-1.0, 1.0):
+        foot = (support_r_m * math.cos(half), side * support_r_m * math.sin(half))  # the support at this side's groin
+        mid = (foot[0] / 2.0, foot[1] / 2.0)
+        # between the groin's outer half, the axis from the hub to the tip, and this side's half of the free edge
+        outer = _between(line(mid, foot), line(hub, tip), line(mid, hub), [rim(side * half * (1 - j / float(n))) for j in range(n + 1)], n)
+        grids = [outer]
+        if side < 0:  # the patch at the centre, once: between the two groins' inner halves and the hub
+            other = (mid[0], -mid[1])
+            grids.append(_between(line(centre, mid), line(other, hub), line(centre, other), line(mid, hub), n))
+        for grid in grids:
+            low = surface_through([[V(x, y, under(x, y)) for x, y in row] for row in grid])
+            high = surface_through([[V(x, y, top(x, y)) for x, y in row] for row in grid])
+            faces += [low.toShape(), high.toShape()]
+            if grid is outer:  # the free edge: the grid's last column, the same plan points under and on top
+                faces.append(Part.makeRuledSurface(low.vIso(1.0).toShape(), high.vIso(1.0).toShape()))
+    whole = []
+    for k in range(lobes):
+        for face in faces:
+            one = face.copy()
+            if k:
+                one.rotate(App.Vector(), Z, 360.0 * k / lobes)
+            whole.append(one)
+    shell = Part.Shell(whole)
+    shell.sewShape()
+    solid = Part.Solid(shell)
+    if solid.Volume < 0:
+        solid.reverse()
+    if not solid.isValid() or len(solid.Solids) != 1:
+        raise ValueError("the groined saddles could not be closed into one solid from these numbers")
+    return solid

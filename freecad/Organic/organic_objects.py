@@ -734,29 +734,94 @@ class SoapFilm(Organic):
 
 
 class MinimalShell(Organic):
-    """Two closed-form shells: the catenoid (a minimal surface) and the hypar (a doubly ruled
-    saddle)."""
+    """The saddle shell, of three kinds. Hypar: one hyperbolic paraboloid (a doubly ruled
+    saddle) over a rectangle, its corners up and down by Rise. Groined saddles: saddles about
+    one centre, the roof the highest of them everywhere, so that lobes rise to their tips and
+    groins run down between them to supports on the ground (eight lobes, four saddles: the type
+    of Candela's Los Manantiales; lane R's pattern card P-006). Catenoid: the minimal surface
+    of revolution, a tower."""
 
     ifc_type = "Roof"
     icon = "OrganicSaddle.svg"
+    KINDS = ["Hypar", "Groined saddles", "Catenoid"]
 
     def setup(self, obj):
         super().setup(obj)
         g = "Shell"
-        prop(obj, "App::PropertyEnumeration", "Kind", g, "the surface", enum=["Hypar", "Catenoid"])
+        prop(obj, "App::PropertyEnumeration", "Kind", g, "the surface", enum=self.KINDS)
+        if list(obj.getEnumerationsOfProperty("Kind")) != self.KINDS:  # a design saved before the groined saddles: its kind is kept
+            kind = str(obj.Kind)
+            obj.Kind = self.KINDS
+            obj.Kind = kind
         length(obj, "SizeX", g, "hypar: size along X; catenoid: waist radius", 8.0)
         length(obj, "SizeY", g, "hypar: size along Y; catenoid: height", 8.0)
         length(obj, "Rise", g, "hypar: corner rise", 1.5)
         length(obj, "Thickness", g, "shell thickness", 0.15)
+        length(obj, "SupportRadius", g, "groined saddles: from the centre to a support, the foot of a groin", 6.0)
+        length(obj, "TipRadius", g, "groined saddles: from the centre to a lobe's tip", 7.85)
+        length(obj, "CentreHeight", g, "groined saddles: height at the centre", 2.4)
+        length(obj, "TipHeight", g, "groined saddles: height of a lobe's tip", 4.0)
+        prop(obj, "App::PropertyInteger", "Lobes", g, "groined saddles: lobes, an even number from 4 to 16 (8: four saddles)", 8)
 
     def execute(self, obj):
         if self.fresh(obj):
             return
         if obj.Kind == "Catenoid":
             shape = og.catenoid_shape(m(obj.SizeX), m(obj.SizeY), m(obj.Thickness))
+        elif obj.Kind == "Groined saddles":
+            shape = og.groined_saddles_shape(m(obj.SupportRadius), m(obj.TipRadius), m(obj.CentreHeight), m(obj.TipHeight), m(obj.Thickness), obj.Lobes)
         else:
             shape = og.hypar_shape(m(obj.SizeX), m(obj.SizeY), m(obj.Rise), m(obj.Thickness))
         set_local(obj, shape)
+
+
+class Conoid(Organic):
+    """A conoid shell (lane R's pattern card P-003): a straight line slides with one end on an
+    arch and the other on a level line. In its own frame, x across the span and y along: the
+    arch (a parabola of Rise) stands at y = -ShellLength / 2, the level line at +ShellLength / 2,
+    both ends Eave above the base. The formula is its underside; its thickness is measured
+    square to it, upward."""
+
+    ifc_type = "Roof"
+    icon = "OrganicConoid.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Conoid"
+        length(obj, "Span", g, "across, between the arch's feet", 9.0)
+        length(obj, "ShellLength", g, "along, from the arch to the level line", 12.0)
+        length(obj, "Rise", g, "the arch's rise above its feet", 3.0)
+        length(obj, "Eave", g, "height of the level line and of the arch's feet above the base", 2.6)
+        length(obj, "Thickness", g, "shell thickness, square to the surface", 0.08)
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        set_local(obj, og.conoid_shape(m(obj.Span), m(obj.ShellLength), m(obj.Rise), m(obj.Eave), m(obj.Thickness)))
+
+
+class TranslationShell(Organic):
+    """A translation shell (lane R's pattern card P-004): one arch slid along another, both
+    curving down, over a rectangle; its four corners Eave above the base, its crown Eave +
+    RiseX + RiseY. The formula is its underside; its thickness is measured square to it, upward."""
+
+    ifc_type = "Roof"
+    icon = "OrganicTranslation.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Translation shell"
+        length(obj, "Span", g, "across (x)", 10.0)
+        length(obj, "ShellLength", g, "along (y)", 14.0)
+        length(obj, "RiseX", g, "rise of the arch across the span", 1.6)
+        length(obj, "RiseY", g, "rise of the arch along the length", 2.2)
+        length(obj, "Eave", g, "height of the four corners above the base", 2.6)
+        length(obj, "Thickness", g, "shell thickness, square to the surface", 0.08)
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        set_local(obj, og.translation_shell_shape(m(obj.Span), m(obj.ShellLength), m(obj.RiseX), m(obj.RiseY), m(obj.Eave), m(obj.Thickness)))
 
 
 # ---------------------------------------------------------------- the Sacred tab
@@ -827,8 +892,11 @@ class SacredSolid(Organic):
 
 
 class GeodesicDome(Organic):
-    """A geodesic dome shell: an icosahedron's faces cut into Frequency² triangles and pushed
-    out to the sphere, with a real thickness; Portion of the sphere's height stands."""
+    """A geodesic dome: an icosahedron's faces cut into Frequency² triangles and pushed out to
+    the sphere. As a shell: flat panels with a real thickness, cut level so that Portion of the
+    sphere's height stands. As a Frame (lane R's pattern card P-001): a round strut along every
+    edge and a ball at every node, whole rows of triangles from the crown, the foot set level;
+    StrutList is its cutting list."""
 
     ifc_type = "Roof"
     icon = "SacredGeodesic.svg"
@@ -838,17 +906,49 @@ class GeodesicDome(Organic):
         g = "Geodesic dome"
         length(obj, "Radius", g, "radius of the sphere through its outer vertices", 6.0)
         prop(obj, "App::PropertyInteger", "Frequency", g, "each icosahedron edge cut into this many struts (1-8)", 3)
-        length(obj, "Thickness", g, "shell thickness", 0.15)
-        prop(obj, "App::PropertyFloat", "Portion", g, "how much of the sphere's height stands: 0.5 a hemisphere, 0.625 a five-eighths dome", 0.5)
+        length(obj, "Thickness", g, "shell thickness (not read for a frame)", 0.15)
+        prop(obj, "App::PropertyFloat", "Portion", g, "how much of the sphere's height stands: 0.5 a hemisphere, 0.625 a five-eighths dome "
+             "(a frame stands in whole rows of triangles: the rows whose centres stand, taken together, in this much of the height)", 0.5)
+        prop(obj, "App::PropertyBool", "Frame", g, "a frame of struts and node balls instead of a shell", False)
+        length(obj, "StrutSection", g, "frame: diameter of a strut", 0.09)
+        prop(obj, "App::PropertyFloat", "Hub", g, "frame: diameter of the ball at each node, in strut diameters (0: none)", 1.5)
+        prop(obj, "App::PropertyInteger", "Bands", g, "frame: rows of triangles that stand, counted from the crown (0: as many as Portion says)", 0)
         prop(obj, "App::PropertyInteger", "Panels", "Measures", "triangles of the whole sphere at this frequency")
-        obj.setEditorMode("Panels", 1)
+        prop(obj, "App::PropertyInteger", "Struts", "Measures", "frame: number of struts")
+        prop(obj, "App::PropertyInteger", "Nodes", "Measures", "frame: number of nodes")
+        prop(obj, "App::PropertyInteger", "Rows", "Measures", "frame: rows of triangles that stand")
+        prop(obj, "App::PropertyStringList", "StrutList", "Measures", "frame: the struts by length, node to node: how many of each (m)")
+        prop(obj, "App::PropertyInteger", "FootNodes", "Measures", "frame: nodes at its foot, set level")
+        prop(obj, "App::PropertyFloat", "FootLevelled", "Measures", "frame: how far apart in height its foot nodes stood on the sphere before they were set level (m)")
+        for p in ("Panels", "Struts", "Nodes", "Rows", "StrutList", "FootNodes", "FootLevelled"):
+            obj.setEditorMode(p, 1)
+
+    def onChanged(self, obj, name):
+        """A frame is members, a shell a roof: the class follows Frame, unless it was set to something else."""
+        if name == "Frame" and "IfcType" in obj.PropertiesList and "Bands" in obj.PropertiesList:
+            want = "Member" if obj.Frame else "Roof"
+            if str(obj.IfcType) in ("Roof", "Member") and str(obj.IfcType) != want:
+                obj.IfcType = want
+                paint(obj)
 
     def execute(self, obj):
         if self.fresh(obj):
             return
         nu = max(1, min(8, obj.Frequency))
         obj.Panels = 20 * nu * nu
-        set_local(obj, sacred.geodesic_dome(m(obj.Radius), nu, m(obj.Thickness), obj.Portion))
+        if obj.Frame:
+            if m(obj.StrutSection) <= 0:
+                raise ValueError("%s needs a strut section above nought" % obj.Label)
+            shape, lengths, nodes, foot, rows, spread = sacred.geodesic_frame(m(obj.Radius), nu, obj.Portion, m(obj.StrutSection), max(0.0, obj.Hub), max(0, obj.Bands))
+            count = {}
+            for value in lengths:
+                count[round(value, 3)] = count.get(round(value, 3), 0) + 1
+            obj.Struts, obj.Nodes, obj.Rows, obj.FootNodes, obj.FootLevelled = len(lengths), len(nodes), rows, foot, spread
+            obj.StrutList = ["%d x %.3f m" % (n, value) for value, n in sorted(count.items())]
+        else:
+            shape = sacred.geodesic_dome(m(obj.Radius), nu, m(obj.Thickness), obj.Portion)
+            obj.Struts, obj.Nodes, obj.Rows, obj.FootNodes, obj.FootLevelled, obj.StrutList = 0, 0, 0, 0, 0.0, []
+        set_local(obj, shape)
 
 
 class SunRose(Organic):
@@ -914,9 +1014,17 @@ class Proportions(Organic):
 
 # ---------------------------------------------------------------- the Biomimetic tab
 class Gridshell(Organic):
-    """A net of laths over a closed base curve, found by the force density method: every
-    node in balance between its laths and its load. Standing, it is a gridshell; Hanging, a
-    catenary net. Without a base: a circle of radius 6 m."""
+    """A lattice of laths, of two kinds.
+
+    Over a closed base curve: a net found by the force density method, every node in balance
+    between its laths and its load. Standing, it is a gridshell; Hanging, a catenary net.
+    Without a base: a circle of radius 6 m.
+
+    On a Shell (any solid shell: a dome, a vault, a leaf, a conoid, a saddle): laths lying on
+    its back, every Spacing both ways in the shell's own frame, turned by Turn (45: a
+    diagrid), each flat on the shell from edge to edge; in one layer or two; with a beam of
+    EdgeBeam along each edge of the skin they lie on (a ring at a dome's foot, another round
+    its oculus). It lies where its shell lies (lane R's tool spec, study S-003)."""
 
     ifc_type = "Member"
     icon = "BioGridshell.svg"
@@ -924,21 +1032,43 @@ class Gridshell(Organic):
     def setup(self, obj):
         super().setup(obj)
         g = "Net"
-        prop(obj, "App::PropertyLink", "Base", g, "the closed boundary the laths end on")
+        prop(obj, "App::PropertyLink", "Base", g, "the closed boundary the laths end on (a net over a curve)")
+        prop(obj, "App::PropertyLink", "Shell", g, "a solid shell the laths lie on (then no base curve is read, nor Rise, nor Hanging)")
         length(obj, "Spacing", g, "distance between laths", 1.0)
-        length(obj, "Rise", g, "height of the highest node above the boundary (the lowest, below it, when hanging)", 3.0)
+        length(obj, "Rise", g, "over a curve: height of the highest node above the boundary (the lowest, below it, when hanging)", 3.0)
         length(obj, "LathWidth", g, "width of a lath, lying in the net", 0.08)
         length(obj, "LathDepth", g, "depth of a lath, square to the net", 0.05)
-        prop(obj, "App::PropertyBool", "Hanging", g, "hang the net below its boundary instead of standing it above", False)
-        length(obj, "EdgeBeam", g, "side of a square beam along the boundary (0: none)", 0.15)
+        prop(obj, "App::PropertyBool", "Hanging", g, "over a curve: hang the net below its boundary instead of standing it above", False)
+        length(obj, "EdgeBeam", g, "side of a square beam along the boundary, or along each edge of the shell (0: none)", 0.15)
+        prop(obj, "App::PropertyAngle", "Turn", g, "on a shell: the laths' lines turned in plan (45: a diagrid)", 0.0)
+        prop(obj, "App::PropertyInteger", "Layers", g, "on a shell: 1, or 2 for a second lath on each", 1)
         prop(obj, "App::PropertyInteger", "Laths", "Measures", "number of laths")
-        prop(obj, "App::PropertyFloat", "LathLength", "Measures", "total length of the laths (m)")
-        prop(obj, "App::PropertyFloat", "Residual", "Measures", "largest unbalanced force on a node, over the node load")
-        for p in ("Laths", "LathLength", "Residual"):
+        prop(obj, "App::PropertyFloat", "LathLength", "Measures", "total length of the laths (m; of two layers: one layer's)")
+        prop(obj, "App::PropertyFloat", "Residual", "Measures", "over a curve: largest unbalanced force on a node, over the node load")
+        prop(obj, "App::PropertyInteger", "Nodes", "Measures", "on a shell: places where two laths' lines cross on it")
+        prop(obj, "App::PropertyInteger", "Beams", "Measures", "on a shell: beams along its edges")
+        prop(obj, "App::PropertyFloat", "BeamLength", "Measures", "on a shell: length of edge the beams follow (m)")
+        for p in ("Laths", "LathLength", "Residual", "Nodes", "Beams", "BeamLength"):
             obj.setEditorMode(p, 1)
 
     def execute(self, obj):
         if self.fresh(obj):
+            return
+        shell = getattr(obj, "Shell", None)
+        if shell is not None:
+            if not hasattr(shell, "Shape") or shell.Shape.isNull() or not shell.Shape.Solids:
+                raise ValueError("%s: %s is not a solid shell" % (obj.Label, shell.Label))
+            if m(obj.Spacing) <= 0 or m(obj.LathWidth) <= 0 or m(obj.LathDepth) <= 0:
+                raise ValueError("%s needs a spacing and a lath section above nought" % obj.Label)
+            own = shell.Shape.copy()
+            own.Placement = App.Placement()  # the shell in its own frame: the laths' lines run along its own x and y
+            got = ob.net_on_shell(own, m(obj.Spacing), m(obj.LathWidth), m(obj.LathDepth), float(obj.Turn), 2 if obj.Layers >= 2 else 1, m(obj.EdgeBeam))
+            obj.Laths, obj.LathLength, obj.Residual = got["laths"], got["length_m"], 0.0
+            obj.Nodes, obj.Beams, obj.BeamLength = len(got["nodes"]), got["beams"], got["beam_m"]
+            self.nodes = got["nodes"]  # in the shell's own frame (m): for whoever wants to look at them
+            shape = got["shape"]
+            shape.Placement = obj.Placement.inverse().multiply(shell.Placement)  # from the shell's frame into this object's own
+            set_local(obj, shape)
             return
         edge, _closed = base_edge(obj, closed_required=True)
         if edge is None:
@@ -946,6 +1076,7 @@ class Gridshell(Organic):
         shape, laths, total, residual = ob.net_shape(edge, m(obj.Spacing), m(obj.Rise), m(obj.LathWidth), m(obj.LathDepth),
                                                     obj.Hanging, m(obj.EdgeBeam))
         obj.Laths, obj.LathLength, obj.Residual = laths, total, residual
+        obj.Nodes, obj.Beams, obj.BeamLength = 0, 0, 0.0
         set_local(obj, shape)
 
 
@@ -1033,16 +1164,20 @@ class ViewProviderOrganic:
         try:
             if kind == "Vault" and str(obj.IfcType) == "Member":
                 name = "OrganicArch.svg"
+            elif kind == "Vault" and obj.Waves > 0 and m(obj.WaveAmplitude) > 0:
+                name = "OrganicWaveVault.svg"
             elif kind == "LeafShell" and str(obj.RibPattern) == "Veins":
                 name = "BioVeins.svg"
-            elif kind == "Gridshell" and obj.Hanging:
+            elif kind == "Gridshell" and obj.Shell is None and obj.Hanging:
                 name = "BioNet.svg"
+            elif kind == "GeodesicDome" and obj.Frame:
+                name = "SacredFrame.svg"
         except Exception:
             pass
         return os.path.join(ICONS, name)
 
     def claimChildren(self):
-        base = getattr(self.Object, "Base", None)
+        base = getattr(self.Object, "Base", None)  # a curve that only this object stands on is shown under it (a shell that laths lie on is not: it is a piece of its own)
         return [base] if base is not None and getattr(base, "InList", None) and len(base.InList) == 1 else []
 
     def dumps(self):

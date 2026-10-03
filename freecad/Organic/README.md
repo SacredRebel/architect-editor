@@ -39,10 +39,13 @@ For Johny, click by click, from an empty FreeCAD to a building in the map:
 | Leaf shell roof | a shell from a ridge with four heights, an eave and a curl, with ribs; footings under its tips | plugin-eco leaf shell |
 | Shell roof on a closed wall | eaves + rise (1 − ρ^2.2) from the pole to the wall, drooping to the overhang | plugin-eco organic roof |
 | Ribbed vault | a barrel vault on an ellipse, semicircle, segmental, pointed, catenary or parabola, with ribs; a plinth under its springings; along an open curve when one is selected; a wave vault when `WaveAmplitude` and `Waves` are set | plugin-eco vault, plugin-hagia-sophia arch; the wave: lane R's study (Dieste's vaults) |
+| Wave vault | the vault with its wave set: a hanging-chain section, 8 m span, rise 2.4 m ± 0.6 m, three waves over 18 m, on walls 2.2 m high (its `Plinth`) | lane R's pattern card P-005 (study S-005) |
 | Catenary arch | a free-standing arch; `ThrustInMiddleThird` is the Poleni check; the same plinth | plugin-hagia-sophia arch |
 | Dome | ellipse, sphere, catenary, parabola or onion meridian, with an oculus | plugin-hagia-sophia dome |
 | Minimal surface | a membrane on a closed curve, lifted by a mast ring | plugin-eco minimal surface |
-| Saddle shell | a hypar, or a catenoid | — |
+| Saddle shell | its `Kind`: a hypar; **groined saddles** (saddles about one centre whose lobes rise to their tips and whose groins run down to supports on the ground; `Lobes` 4 to 16, eight by default: Candela's Los Manantiales type); or a catenoid | lane R's pattern card P-006 for the groined saddles |
+| Conoid roof | a straight line sliding from an arch to a level line (the north-light roof): 9 m span, 12 m long, the arch rising 3 m, eaves 2.6 m, 0.08 m thick | lane R's pattern card P-003 |
+| Translation shell | one arch slid along another over a rectangle: 10 by 14 m, rising 1.6 m across and 2.2 m along, corners 2.6 m up | lane R's pattern card P-004 |
 | Floor slab | a slab filling a closed curve; `BaseOffset` lifts or lowers it (a raised floor, a step) | — |
 | Send to the map | `<name>.glb`, `<name>.ifc`, `<name>.json` in the exchange folder | — |
 | Import from the map | a building drawn in the map (`exchange\godot\built\<name>.json`), rebuilt from these same objects at its place on the site | the map's build mode (`FORMAT.md`, `built/1`) |
@@ -53,7 +56,8 @@ For Johny, click by click, from an empty FreeCAD to a building in the map:
 |---|---|
 | Plan figure | vesica piscis, seed and flower of life, golden and root rectangles, turned squares, polygon, star, module grid: an outline to build on, with its construction lines |
 | Regular solid | tetrahedron, cube, octahedron, dodecahedron, icosahedron, by edge, on a face or a vertex |
-| Geodesic dome | an icosahedron cut by frequency and pushed out to a sphere, with a real thickness; a hemisphere or more |
+| Geodesic dome | an icosahedron cut by frequency and pushed out to a sphere, with a real thickness; a hemisphere or more. `Frame` makes it a frame instead |
+| Geodesic frame | the same dome as a frame (lane R's pattern card P-001): a round strut on every edge and a ball at every node, whole rows of triangles from the crown, the foot set level; 10 m across at frequency 3, five rows: 165 struts of three lengths. `StrutList` is its cutting list |
 | Sun rose | where the sun rises and sets at the year's eight stations, at the building's spot, from the land pack (over the ridge line, or on a level horizon) |
 | Turn to the sun | turns the building about its own origin so that its front, back or an end faces north, east, south, west or one of those sunrises or sunsets |
 | Snap to proportion | puts the selected objects' governing dimensions on whole modules and sets the dependent ones to the system's nearest ratio |
@@ -66,7 +70,7 @@ properties of the document's **Proportions** object, made on first use.
 
 | Button | Makes | Method |
 |---|---|---|
-| Gridshell | a net of laths over a closed curve, standing | force density: every node in balance |
+| Gridshell | a net of laths over a closed curve, standing; **or, with a shell selected** (a dome, a vault, a leaf, a conoid, a saddle), laths lying on its back both ways (`Turn` 45: a diagrid; `Layers` 2: a second lath on each), with a beam along each edge of it (a ring at a dome's foot, another round its oculus) | force density: every node in balance; on a shell: lane R's tool spec (study S-003) |
 | Hanging net | the same net, hung | the same |
 | Cellular wall | a wall opened into cells between ribs | Voronoi cells of scattered seeds, drawn back and rounded |
 | Veined leaf shell | a leaf shell whose ribs are grown as veins | space colonisation; widths by Murray's law |
@@ -100,9 +104,14 @@ set new documents to metres.
   heights on a grid over a plan outline: a formula, a scan), and `Holes` on a floor slab and
   on such a roof (closed curves cut straight through). They came with Johny's house spec
   (`..\spec_to_records.py`); the contract is `exchange\godot\FORMAT.md`.
-- **One solid or several:** a gridshell, a hanging net, a branching column and a veined leaf
-  are compounds of solids (laths, branches, ribs). Their volume counts the overlaps at the
-  joints twice.
+- **One solid or several:** a gridshell (over a curve or on a shell), a hanging net, a
+  geodesic frame, a branching column and a veined leaf are compounds of solids (laths, beams,
+  struts and balls, branches, ribs). Their volume counts the overlaps at the joints twice.
+- **Shells given by a formula** (the conoid, the translation shell, the groined saddles): the
+  formula is the underside, and the shell is made thick square to it, upward, as a shell's
+  thickness is measured (lane R's note says "straight up"; R's own assets are made thick
+  along their normals too). Their frame is R's: x across, y along, the origin in the middle
+  of the footprint on the ground; `Eave` lifts them.
 - **Reaching the ground where it falls away:** a wall has `Foundation`, a leaf shell and a
   vault have `Plinth` (how far their feet are carried below the base), a slab its
   `Thickness`. A dome, a net and a column stand on their base and need a wall or a slab
@@ -266,6 +275,50 @@ were joined, and how many meet other walls and stay square. A wall's joints are 
 - **FreeCAD keeps the words an object was refused with**: `obj.getStatusString()` gives the
   text of the error its `execute` raised. The import puts it into its note ("it could not be
   built from these numbers: …"), so a refusal reaches the map with its reason.
+- **A boolean can leave faces FreeCAD measures wrong, in a solid that is right.** The groined
+  saddles were first each lobe's saddle made thick and cut to its eighth by an upright prism:
+  a valid solid, the right volume by the adaptive measure, and FreeCAD's own Volume 3.2 %
+  short (19 % at Los Manantiales' size): one face to a lobe, bounded by a long cut curve. They
+  are now built from patches with no boolean (`groined_saddles_shape`): each lobe three
+  four-sided patches below and three on top, every face's edges short; both measures agree to
+  0.0003 % and hold the volume integrated over the plan in `check_organic.py`.
+- **The point of a surface over a plan place is found by Newton's steps on the face's own
+  surface**, not by a boolean or a distance search (`organic_biomimetic.Tops`). Measured per
+  place: a boolean of the solid with an upright line 13 ms on a conoid and 80 ms on a wave
+  vault; `distToShape` face by face 4 and 10 ms; `Surface.intersect` 2.6 and 72 ms;
+  `Surface.parameter` 0.6 and 6 ms; `isPartOfDomain` 1.3 ms on a top face trimmed by spline
+  edges; the surface's own value and derivatives 0.06 ms at most. So: Newton from where the
+  last place was found (or from the nearest of a few kept places of the face), the face's
+  boundary kept as a polygon in its own parameters, the kernel asked only within a hair of
+  that boundary. The same heights as the boolean at 90 places (to 4e-9 m), 0.1 to 0.5 ms a
+  place. Two traps: **a surface that closes on itself** (a sphere about its axis) must be
+  gone round at its seam, not stopped there (a lath over a dome's crown came in two pieces);
+  and **at a pole** one of its directions has no length: step off it and go on. Newton begun
+  on the far side of a pole runs on over it and off the face, and every place kept on a pole
+  stands at one spot: so when the last place fails, the two nearest kept places that stand
+  apart are tried (the two nearest, both on the crown of the Dome button's ellipse dome, left
+  the lath across it in two: 19 laths where 18 lines cross it).
+- **A side of a shell is not its back.** A shell made thick along its normal has end faces
+  that lean, and where its surface leans away one of them is seen from above (a conoid's
+  arch end, 2 cm wide; a hypar's edges). `Tops.is_side` asks, once a face, whether the solid
+  is still there two of the face's own widths behind it: for an end face it is (the shell
+  goes on), for the back it is not.
+- **Laths are made section by section, not swept.** OCCT's pipe (`makePipeShell`) could not
+  close a lath along a conoid's own straight lines, and keeps a section level where the shell
+  tilts it. `lath_through` lays a rectangle at every place, square to the line and to the
+  shell's normal there, runs a cubic through each corner (the four sharing their parameters:
+  the length along the lath, since the last place lies wherever the shell ends: at even
+  parameters a lath's end swung 0.23 m below a dome's foot), each end leaving in the
+  direction its own last three places show (left free, a lath read 0.14 % off its exact
+  volume), ruled faces between them a few stations long. Every lath on a hemisphere is now
+  its exact volume (Pappus) to 0.0004 %. **A lath's edges are where its width reaches**,
+  square to its line and to the shell's normal: tested straight across in plan they left a
+  steep dome's outline first, and laths on a hemisphere stopped up to 0.70 m above its foot
+  (now 0.05 m, inside the ring beam).
+- **Stepping to a fixed point can stop short where Newton does not.** The top of groined
+  saddles over a plan place is the point of the saddle whose normal passes over it. Plain
+  stepping closed in by a factor of 2bt a step (0.72 with sixteen lobes and 0.15 m of shell)
+  and gave up; Newton's steps finish in a few.
 - **A shell from a height field** is its top face cut to the plan and pushed straight down
   (`field_shell_shape`): under a second for 30 m by 11 m. Cutting the plan's prism by the
   solids above the top and below the underside did not finish in ten minutes.

@@ -7,6 +7,8 @@ can be measured:
   net        a net of laths found by the force density method (Schek 1974; Linkwitz): every
              free node in equilibrium between its neighbours and its load. Hung, it is a
              catenary net; turned over, a gridshell that carries the same load in compression.
+  laths      a lattice lying on the back of any shell: laths both ways at a spacing, each flat on
+             the shell from edge to edge, and a beam along each of the shell's edges.
   cells      a wall opened into cells: the Voronoi diagram of scattered seeds on the wall's
              unrolled face, each cell drawn back by half a rib and rounded, as in bone,
              dragonfly wings and dried mud.
@@ -27,6 +29,8 @@ import random
 
 import FreeCAD as App
 import Part
+
+import numpy as np
 
 import organic_geom as og
 
@@ -181,105 +185,582 @@ def net_shape(ring_edge, spacing_m=1.0, rise_m=3.0, lath_width_m=0.08, lath_dept
     return Part.makeCompound(solids), len(lines), length, equilibrium_residual(xyz, fixed, edges, load)
 
 
-def top_of(shape, x_mm, y_mm):
-    """The height (mm) of a solid's top on the upright line through (x, y), or None where the
-    line misses it."""
-    b = shape.BoundBox
-    line = Part.makeLine(App.Vector(x_mm, y_mm, b.ZMin - 1000.0), App.Vector(x_mm, y_mm, b.ZMax + 1000.0))
-    zs = [v.Point.z for v in shape.common(line).Vertexes]
-    return max(zs) if zs else None
+# ---------------------------------------------------------------- laths on any shell
+# Lane R's tool spec (study S-003): a lattice on a dome "or any Organic shell": laths at a
+# spacing, a ring beam at the base, a compression ring at an opening. The laths lie on the
+# shell's back: the part of it that is seen from above and is not one of its sides.
+TOP_SEEDS = 8  # places each way on a face from which the search for its point over a plan place starts
+SIDE_DEPTH = 2.0  # a face is a side of the shell, not its back, when this many of its own widths behind it is still in the solid
+RING_POINTS = 48  # places along each edge of a face's boundary, in the face's own parameters
+LATH_PIECE = 6  # stations to one face of a lath at most (FreeCAD's own Volume gives a face a fixed number of points)
+STATION_MM = 250.0  # a lath's line is read off the shell at places no further apart than this
+CREASE_DEG = 20.0  # two neighbouring places whose normals differ by more than this have a crease between them
+CORNER_DEG = 30.0  # an edge that turns more than this at a point has a corner there: a beam ends, another begins
+SKIN_BEND_DEG = 45.0  # a face carries the skin on across an edge when the two bend less than this there
+SKIN_UPRIGHT = 0.05  # and when it is not upright there (its outward normal rises at least this much): a plinth's side does not
 
 
-def net_on_shell(shell, spacing_m=1.0, lath_width_m=0.08, lath_depth_m=0.05, turn_deg=0.0):
-    """A net of laths lying on the back of any solid shell (a dome, a shell roof, a leaf, a
-    vault, a saddle, a conoid): grid lines every spacing_m both ways, turned turn_deg in plan
-    (45: a diagrid), each lath following the shell's own top from edge to edge, its underside
-    on the shell.
+class Tops:
+    """The back of a solid shell on upright lines: for a place (x, y) in mm, the highest point
+    of the solid there that lies on its back, the face it lies on and the upward normal there.
 
-    A node stands wherever two grid lines cross over the shell; each line's two ends are
-    found on the shell's edge to a thousandth of the spacing. One solid per lath, a compound
-    (they cross at the nodes).
-    Returns (the compound, number of laths, their total length in m, the nodes [(x, y, z) in m,
-    on the shell's top])."""
-    import numpy as np
+    Found on each face by its own surface: from where the last place asked was found on it (or
+    from the nearest of a few places kept of the face), Newton's steps to the point of the
+    surface that stands over (x, y); it counts when it lies within the face. Whether it does is
+    asked of the face's boundary as a polygon in the face's own parameters, and of the kernel
+    itself only close to that boundary (the kernel's own answer took 1.3 ms on a leaf shell's
+    top, against 0.01 ms for the point). A boolean of the solid with the line took 13 ms a
+    place on a conoid and 80 ms on a wave vault, and found the same heights.
 
+    A side of the shell is not its back: a face that still has the solid behind it SIDE_DEPTH
+    of its own widths in (the end face of a shell made thick along its normal leans, and is
+    seen from above; a lath does not lie on it). Of a face that an upright line meets twice
+    (a dome wider above its foot) the part nearest to where it looked last is found."""
+
+    def __init__(self, shape):
+        self.rows = []
+        for f in shape.Faces:
+            s = f.Surface
+            u0, u1, v0, v1 = f.ParameterRange
+            du, dv = (u1 - u0) or 1.0, (v1 - v0) or 1.0
+            seeds = []
+            for i in range(TOP_SEEDS + 1):
+                for j in range(TOP_SEEDS + 1):
+                    u, v = u0 + du * i / float(TOP_SEEDS), v0 + dv * j / float(TOP_SEEDS)
+                    q = s.value(u, v)
+                    seeds.append((q.x, q.y, u, v))
+            xs, ys = [q[0] for q in seeds], [q[1] for q in seeds]
+            b = f.BoundBox
+            periods = []
+            for closes, period in (("isUPeriodic", "UPeriod"), ("isVPeriodic", "VPeriod")):
+                try:
+                    periods.append(getattr(s, period)() if getattr(s, closes)() else None)
+                except Exception:
+                    periods.append(None)
+            row = {"face": f, "surface": s, "range": (u0, u1, v0, v1), "periods": tuple(periods), "seeds": seeds, "last": None, "side": None,
+                   "box": (min(min(xs), b.XMin) - 1.0, max(max(xs), b.XMax) + 1.0, min(min(ys), b.YMin) - 1.0, max(max(ys), b.YMax) + 1.0)}
+            row.update(self._boundary(f, u0, v0, du, dv))
+            self.rows.append(row)
+        self.asked = 0  # places asked
+        self.exact = 0  # of them, those the kernel itself had to say of whether they lie within a face
+
+    @staticmethod
+    def _boundary(f, u0, v0, du, dv):
+        """The face's boundary in its own parameters, each scaled to 0..1: its segments, how far
+        they may lie off the true boundary, and whether the face is its whole rectangle. No
+        polygon for a face with a seam or a point for an edge (a sphere, a cone): the kernel
+        says of those, and is quick about it."""
+        none = {"ring": None, "rect": False, "band": 0.0}
+        segs, sag = [], 0.0
+        try:
+            for w in f.Wires:
+                for e in w.OrderedEdges:
+                    if e.Degenerated or e.isSeam(f):
+                        return none
+                    c2, a, b = f.curveOnSurface(e)
+                    pts = []
+                    for i in range(2 * RING_POINTS + 1):
+                        p = c2.value(a + (b - a) * i / (2.0 * RING_POINTS))
+                        pts.append(((p.x - u0) / du, (p.y - v0) / dv))
+                    for i in range(0, 2 * RING_POINTS, 2):
+                        p, m, q = pts[i], pts[i + 1], pts[i + 2]
+                        segs.append((p[0], p[1], q[0], q[1]))
+                        cx, cy = q[0] - p[0], q[1] - p[1]
+                        length = math.hypot(cx, cy)
+                        if length > 1e-15:
+                            sag = max(sag, abs((m[0] - p[0]) * cy - (m[1] - p[1]) * cx) / length)
+        except Exception:
+            return none
+        if not segs:
+            return none
+        ring = np.array(segs, dtype=float)
+        on_box = np.all((np.abs(ring[:, [0, 2]] * (1 - ring[:, [0, 2]])) < 1e-7) | (np.abs(ring[:, [1, 3]] * (1 - ring[:, [1, 3]])) < 1e-7))
+        return {"ring": ring, "rect": bool(on_box) and sag < 1e-9 and len(f.Wires) == 1, "band": 4.0 * sag + 1e-7}
+
+    def _within(self, row, u, v):
+        """Whether (u, v) lies within the face."""
+        u0, u1, v0, v1 = row["range"]
+        if not (u0 - 1e-9 <= u <= u1 + 1e-9 and v0 - 1e-9 <= v <= v1 + 1e-9):
+            return False
+        if row["rect"]:
+            return True
+        ring = row["ring"]
+        if ring is None:
+            self.exact += 1
+            return row["face"].isPartOfDomain(u, v)
+        p, q = (u - u0) / ((u1 - u0) or 1.0), (v - v0) / ((v1 - v0) or 1.0)
+        x1, y1, x2, y2 = ring[:, 0], ring[:, 1], ring[:, 2], ring[:, 3]
+        dx, dy = x2 - x1, y2 - y1
+        t = np.clip(((p - x1) * dx + (q - y1) * dy) / np.maximum(dx * dx + dy * dy, 1e-30), 0.0, 1.0)
+        if float(np.min(np.hypot(p - (x1 + t * dx), q - (y1 + t * dy)))) < row["band"]:
+            self.exact += 1  # too close to the boundary for its polygon to say
+            return row["face"].isPartOfDomain(u, v)
+        cross = (y1 > q) != (y2 > q)
+        if not np.any(cross):
+            return False
+        at = x1[cross] + (q - y1[cross]) * dx[cross] / dy[cross]
+        return int(np.count_nonzero(at > p)) % 2 == 1
+
+    @staticmethod
+    def _over(row, x, y, u, v):
+        """Newton from (u, v) to the point of the face's surface over (x, y): (u, v, z, the
+        upward normal there) or None."""
+        s = row["surface"]
+        u0, u1, v0, v1 = row["range"]
+        du, dv = (u1 - u0) or 1.0, (v1 - v0) or 1.0
+        pu, pv = row["periods"]
+        inward = lambda a, lo, hi, step: a + step if a - lo < hi - a else a - step  # noqa: E731  (a little way into the range)
+        nudged = 0
+        for _ in range(24):
+            q = s.value(u, v)
+            ex, ey = x - q.x, y - q.y
+            a, b = s.getDN(u, v, 1, 0), s.getDN(u, v, 0, 1)
+            if ex * ex + ey * ey < 1e-12:
+                n = a.cross(b)
+                if n.Length < 1e-9 * (a.Length * b.Length + 1e-30):  # a pole (a sphere's crown): its normal a hair's breadth away
+                    a, b = s.getDN(inward(u, u0, u1, 1e-7 * du), inward(v, v0, v1, 1e-7 * dv), 1, 0), s.getDN(inward(u, u0, u1, 1e-7 * du), inward(v, v0, v1, 1e-7 * dv), 0, 1)
+                    n = a.cross(b)
+                    if n.Length < 1e-30:
+                        return None
+                n.normalize()
+                return u, v, q.z, (n if n.z >= 0 else n * -1.0)
+            det = a.x * b.y - a.y * b.x
+            if abs(det) < 1e-9 * (a.Length * b.Length + 1e-30):
+                if nudged == 3:
+                    return None  # the surface stands upright here: no point of it is over a plan place
+                nudged += 1  # or this is a pole, where one of its directions has no length: step off it and go on
+                u, v = inward(u, u0, u1, 1e-4 * du), inward(v, v0, v1, 1e-4 * dv)
+                continue
+            # a step no longer than a quarter of the face each way (near a pole one of them is huge)
+            u += max(-0.25 * du, min(0.25 * du, (ex * b.y - ey * b.x) / det))
+            v += max(-0.25 * dv, min(0.25 * dv, (a.x * ey - a.y * ex) / det))
+            # round a surface that closes on itself (a sphere about its axis) the step goes on past the seam; else it is
+            # kept within the face's own range, and a little beyond (a step from far off overshoots a narrow face)
+            u = u0 + (u - u0) % pu if pu else min(max(u, u0 - 0.02 * du), u1 + 0.02 * du)
+            v = v0 + (v - v0) % pv if pv else min(max(v, v0 - 0.02 * dv), v1 + 0.02 * dv)
+        return None
+
+    def crossings(self, x, y):
+        """Where the upright line through (x, y) meets the solid's faces, highest first:
+        [(z, face index, the upward normal, u, v)] (of each face one place at most; a face
+        that stands upright has none)."""
+        out = []
+        for k, row in enumerate(self.rows):
+            x0, x1, y0, y1 = row["box"]
+            if not (x0 <= x <= x1 and y0 <= y <= y1):
+                continue
+            got = None
+            if row["last"] is not None:
+                got = self._over(row, x, y, *row["last"])
+                if got is not None and not self._within(row, got[0], got[1]):
+                    got = None
+            if got is None:
+                # the two nearest kept places that stand apart: every place kept on a pole (a dome's crown) stands at one,
+                # and from it, on the far side, Newton runs on over the pole and off the face (it left a lath across the
+                # crown of an ellipse dome in two pieces)
+                tried = []
+                for seed in sorted(row["seeds"], key=lambda q: (q[0] - x) ** 2 + (q[1] - y) ** 2):
+                    if any(abs(seed[0] - a) < 1.0 and abs(seed[1] - b) < 1.0 for a, b in tried):
+                        continue
+                    tried.append((seed[0], seed[1]))
+                    got = self._over(row, x, y, seed[2], seed[3])
+                    if got is not None and self._within(row, got[0], got[1]):
+                        break
+                    got = None
+                    if len(tried) == 2:
+                        break
+            if got is not None:
+                row["last"] = (got[0], got[1])
+                out.append((got[2], k, got[3], got[0], got[1]))
+        out.sort(key=lambda hit: -hit[0])
+        return out
+
+    def is_side(self, k):
+        """Whether face k is a side of the shell: asked once, from its own middle, along its
+        outward normal there turned about (into the solid), SIDE_DEPTH of its own widths."""
+        row = self.rows[k]
+        if row["side"] is None:
+            f = row["face"]
+            u0, u1, v0, v1 = row["range"]
+            um, vm = (u0 + u1) / 2.0, (v0 + v1) / 2.0
+            around = sum(e.Length for e in f.Edges)
+            width = 2.0 * f.Area / around if around > 0 else 0.0
+            q = f.valueAt(um, vm) - f.normalAt(um, vm) * (SIDE_DEPTH * width)
+            above = sum(1 for hit in self.crossings(q.x, q.y) if hit[0] > q.z + 1e-6)
+            row["side"] = above % 2 == 1
+        return row["side"]
+
+    def at(self, x, y):
+        """(z, face index, normal) of the shell's back at (x, y) mm, or None where it has none."""
+        self.asked += 1
+        hits = self.crossings(x, y)
+        if not hits:
+            return None
+        z, k, normal, u, v = hits[0]
+        if self.rows[k]["face"].normalAt(u, v).z < -1e-6:
+            return None  # the highest face found here looks down: what lies above it was not found, so no back is said to be here
+        if self.is_side(k):
+            return None
+        return z, k, normal
+
+
+def _slope(points, u, i):
+    """dP/du at the i-th of three or more points given at parameters u: of the parabola through
+    it and its two neighbours (at an end, the end's own two), their spacing as it is."""
+    j = min(max(i - 1, 0), len(points) - 3)
+    (pa, pb, pc), (a, b, c) = points[j:j + 3], u[j:j + 3]
+    t = u[i]
+    return pa * ((2 * t - b - c) / ((a - b) * (a - c))) + pb * ((2 * t - a - c) / ((b - a) * (b - c))) + pc * ((2 * t - a - b) / ((c - a) * (c - b)))
+
+
+def lath_through(points, normals, width_mm, depth_mm, lift_mm=0.0, closed=False):
+    """A lath as one solid: a rectangle width x depth at every point of its line (mm vectors),
+    its underside on the line (lifted lift_mm along the normal), its width square to the line
+    and to the normal there, so it lies flat on the surface the normals are of and turns with
+    it. Four lines through the rectangles' corners (cubic, sharing their parameters: the
+    length along the lath's own line), ruled faces between them in pieces of a few stations, a
+    flat face at each end; a closed one (its last point its first) has none.
+
+    Not a section swept along a path: OCCT's pipe could not close a lath that runs straight (a
+    conoid's own straight lines), and keeps a section level where a shell tilts it."""
+    n = len(points)
+    if n < 2:
+        raise ValueError("a lath needs two points at least")
+    u = [0.0]  # the parameters the lath's lines share: the length along its own line, 0 to 1
+    for p, q in zip(points, points[1:]):
+        u.append(u[-1] + max((q - p).Length, 1e-6))
+    u = [v / u[-1] for v in u]
+    corners = [[], [], [], []]
+    for i in range(n):
+        if closed:  # its first point is its last: the neighbours of either are the second and the last but one
+            tan = points[(i + 1) % (n - 1)] - points[(i - 1) % (n - 1)]
+        else:  # the line's own direction at its place: the parabola through the place and its neighbours, the places' uneven spacing counted
+            tan = _slope(points, u, i) if n > 2 else points[1] - points[0]
+        side = tan.cross(App.Vector(normals[i]))
+        if side.Length < 1e-9 or tan.Length < 1e-9:
+            raise ValueError("a lath's line stands still, or runs along its own normal")
+        side.normalize()
+        up = side.cross(tan)
+        up.normalize()
+        base = points[i] + up * lift_mm
+        for k, (sw, sd) in enumerate(((-0.5, 0.0), (0.5, 0.0), (0.5, 1.0), (-0.5, 1.0))):
+            corners[k].append(base + side * (sw * width_mm) + up * (sd * depth_mm))
+    if closed:
+        for k in range(4):
+            corners[k][-1] = corners[k][0]
+    if n == 2:
+        rails = [Part.LineSegment(c[0], c[1]) for c in corners]
+        cuts = [(0.0, 1.0)]
+        edge = lambda rail, ua, ub: rail.toShape()  # noqa: E731
+    else:
+        # the places need not be evenly spaced (a lath's last lies wherever the shell ends): at even parameters a
+        # line through uneven places swings out, 0.23 m at one lath's foot; and each end leaves in the direction its
+        # own last three places show (left free, an end bent too little, 0.14 % of a lath's volume on a hemisphere)
+        rails = []
+        for c in corners:
+            rail = Part.BSplineCurve()
+            if closed:
+                rail.interpolate(Points=c[:-1], Parameters=u, PeriodicFlag=True)
+            else:
+                rail.interpolate(Points=c, Parameters=u, InitialTangent=_slope(c, u, 0), FinalTangent=_slope(c, u, n - 1), Scale=False)
+            rails.append(rail)
+        parts = int(math.ceil((n - 1) / float(LATH_PIECE)))
+        marks = sorted({int(round((n - 1) * k / float(parts))) for k in range(parts + 1)})
+        cuts = [(u[a], u[b]) for a, b in zip(marks, marks[1:])]
+        edge = lambda rail, ua, ub: Part.Edge(rail, ua, ub)  # noqa: E731
+    faces = []
+    for ua, ub in cuts:
+        for k in range(4):
+            faces.append(Part.makeRuledSurface(edge(rails[k], ua, ub), edge(rails[(k + 1) % 4], ua, ub)))
+    if not closed:
+        for i in (0, n - 1):
+            ring = [corners[k][i] for k in range(4)]
+            faces.append(Part.Face(Part.makePolygon(ring + [ring[0]])))
+    shell = Part.Shell(faces)
+    shell.sewShape()
+    solid = Part.Solid(shell)
+    if solid.Volume < 0:
+        solid.reverse()
+    return solid
+
+
+def laths_on(shell, spacing_m=1.0, width_m=0.08, depth_m=0.05, turn_deg=0.0, layers=1):
+    """Laths lying on the back of any solid shell: lines every spacing_m both ways in plan (in
+    the shell's own frame, about the middle of its box), turned turn_deg (45: a diagrid), each
+    lath following the shell's own back from edge to edge, flat on it, its underside on the
+    shell, the whole of its width on the shell. A lath ends at a crease of the shell (a groin, a
+    ridge) and another begins. With two layers a second lath lies on each.
+    Returns (the laths as solids, the nodes [(x, y, z) in mm: where two lines cross on the
+    shell], the laths' total length in mm (one layer's), the indices of the faces they lie on,
+    the Tops asked)."""
+    tops = Tops(shell)
     b = shell.BoundBox
-    cx, cy = (b.XMin + b.XMax) / 2, (b.YMin + b.YMax) / 2
-    reach = math.hypot(b.XLength, b.YLength) / 2
+    cx, cy = (b.XMin + b.XMax) / 2.0, (b.YMin + b.YMax) / 2.0
+    reach = math.hypot(b.XLength, b.YLength) / 2.0
     s = spacing_m * MM
+    per = max(1, int(math.ceil(s / STATION_MM)))
+    sub = s / per
     n = int(reach // s) + 1
     ca, sa = math.cos(math.radians(turn_deg)), math.sin(math.radians(turn_deg))
-    place = lambda p, q: (cx + p * ca - q * sa, cy + p * sa + q * ca)  # grid coordinates (mm) to plan
-    tops, held = {}, {}
-    clear = max(lath_width_m * MM, 0.05 * s)  # a lath keeps this far from the shell's edge
-
-    def above(p, q):
-        key = (round(p, 3), round(q, 3))
-        if key not in tops:
-            x, y = place(p, q)
-            tops[key] = top_of(shell, x, y) if (b.XMin - 1 <= x <= b.XMax + 1 and b.YMin - 1 <= y <= b.YMax + 1) else None
-        return tops[key]
+    w, d = width_m * MM, depth_m * MM
+    held = {}
 
     def top(p, q):
-        """The shell's top at a grid place, or None where the place is off the shell or within
-        `clear` of its edge (on the edge itself the upright line only grazes the shell's side)."""
-        key = (round(p, 3), round(q, 3))
+        key = (round(p, 4), round(q, 4))
         if key not in held:
-            z = above(p, q)
-            if z is not None and any(above(p + dp, q + dq) is None for dp, dq in ((clear, 0), (-clear, 0), (0, clear), (0, -clear))):
-                z = None
-            held[key] = z
+            held[key] = tops.at(cx + p * ca - q * sa, cy + p * sa + q * ca)
         return held[key]
 
-    def edge_between(inside, outside, along):
-        """The last place on the shell between a node on it and the next place off it."""
-        lo, hi = inside, outside
-        for _ in range(10):
-            mid = (lo + hi) / 2
-            if top(*along(mid)) is None:
-                hi = mid
-            else:
-                lo = mid
-        return lo
+    solids, nodes, total, faces = [], [], 0.0, set()
+    for family in (0, 1):
+        at = (lambda fixed, t: (fixed, t)) if family == 0 else (lambda fixed, t: (t, fixed))
+        plane = App.Vector(ca, sa, 0.0) if family == 0 else App.Vector(-sa, ca, 0.0)  # square to the upright plane this family's laths lie in
 
-    half = lath_depth_m * MM / 2
-    chains, nodes = [], {}
-    for axis in (0, 1):
+        def on(fixed, t):
+            """The shell's back under a lath's middle here, where its two edges lie on the shell too.
+            Its edges are where its width reaches: square to its line and to the shell's normal. (Taken
+            straight across in plan, they left a steep dome's outline long before the lath did: on a
+            hemisphere of 5 m laths stopped up to 0.70 m above its foot; now 0.05 m, inside the ring.)"""
+            p, q = at(fixed, t)
+            mid = top(p, q)
+            if mid is None:
+                return None
+            across = plane.cross(mid[2]).cross(mid[2])
+            if across.Length < 1e-9:
+                return None
+            across.normalize()
+            dx, dy = across.x * w / 2, across.y * w / 2
+            dp, dq = dx * ca + dy * sa, -dx * sa + dy * ca  # into the grid's own directions
+            if top(p + dp, q + dq) is None or top(p - dp, q - dq) is None:
+                return None
+            return mid
+
+        def last_on(fixed, inside, outside):
+            lo, hi = inside, outside
+            for _ in range(10):
+                mid = (lo + hi) / 2.0
+                if on(fixed, mid) is None:
+                    hi = mid
+                else:
+                    lo = mid
+            return lo
+
         for i in range(-n, n + 1):
             fixed = i * s
-            along = (lambda t, fixed=fixed: (fixed, t)) if axis == 0 else (lambda t, fixed=fixed: (t, fixed))
-            run = []
-            for j in range(-n - 1, n + 2):  # one step past the box each way: every run ends on a place off the shell
-                t = j * s
-                if top(*along(t)) is not None:
-                    if not run:  # the place before was off the shell: the lath starts on the edge between
-                        run.append(edge_between(t, t - s, along))
+            runs, run = [], []
+            for j in range(-(n + 1) * per, (n + 1) * per + 1):  # a step past the box each way: every run ends on a place off the shell
+                t = j * sub
+                if on(fixed, t) is not None:
+                    if not run:
+                        start = last_on(fixed, t, t - sub)
+                        if t - start > 1.0:
+                            run.append(start)
                     run.append(t)
-                    nodes[(i, j) if axis == 0 else (j, i)] = along(t)
                 elif run:
-                    run.append(edge_between(run[-1], t, along))
-                    if run[-1] - run[0] > 0.2 * s:
-                        chains.append((along, list(run)))
+                    end = last_on(fixed, run[-1], t)
+                    if end - run[-1] > 1.0:
+                        run.append(end)
+                    runs.append(run)
                     run = []
-    if not chains:
+            for run in runs:
+                if run[-1] - run[0] < 0.2 * s or len(run) < 2:
+                    continue
+                # a crease between two places (a groin, a ridge): the lath ends there and another begins
+                parts, part = [], [run[0]]
+                for t0, t1 in zip(run, run[1:]):
+                    n0, n1 = on(fixed, t0)[2], on(fixed, t1)[2]
+                    if n0.getAngle(n1) > math.radians(CREASE_DEG):
+                        lo, hi = t0, t1
+                        for _ in range(10):
+                            mid = (lo + hi) / 2.0
+                            got = on(fixed, mid)
+                            if got is None:
+                                break
+                            if got[2].getAngle(n0) < got[2].getAngle(n1):
+                                lo = mid
+                            else:
+                                hi = mid
+                        if lo - part[-1] > 1.0:
+                            part.append(lo)
+                        parts.append(part)
+                        part = [hi] if t1 - hi > 1.0 else []
+                    part.append(t1)
+                parts.append(part)
+                for part in parts:
+                    if len(part) < 2 or part[-1] - part[0] < 0.1 * s:
+                        continue
+                    # an end lies wherever the shell ends: a place closer to it than a third of a step is left out
+                    if len(part) > 2 and part[1] - part[0] < 0.3 * sub:
+                        del part[1]
+                    if len(part) > 2 and part[-1] - part[-2] < 0.3 * sub:
+                        del part[-2]
+                    pts, nrm = [], []
+                    for t in part:
+                        z, face, normal = on(fixed, t)
+                        p, q = at(fixed, t)
+                        pts.append(App.Vector(cx + p * ca - q * sa, cy + p * sa + q * ca, z))
+                        nrm.append(normal)
+                        faces.add(face)
+                    for layer in range(max(1, int(layers))):
+                        solids.append(lath_through(pts, nrm, w, d, layer * d))
+                    total += sum((q - p).Length for p, q in zip(pts, pts[1:]))
+    for i in range(-n, n + 1):
+        for j in range(-n, n + 1):
+            got = top(i * s, j * s)
+            if got is not None:
+                nodes.append((cx + i * s * ca - j * s * sa, cy + i * s * sa + j * s * ca, got[0]))
+    if not solids:
         raise ValueError("the shell is too small for laths %.2f m apart" % spacing_m)
-    solids, length = [], 0.0
-    for along, run in chains:
-        pts = []
-        for t in run:
-            x, y = place(*along(t))
-            z = top(*along(t))
-            if z is not None and (not pts or (App.Vector(x, y, z + half) - pts[-1]).Length > 1.0):
-                pts.append(App.Vector(x, y, z + half))
-        if len(pts) < 2:
-            continue
-        solids.append(lath(pts, lath_width_m, lath_depth_m))
-        length += sum(float(np.linalg.norm(np.array(q) - np.array(p))) for p, q in zip(pts, pts[1:])) / MM
-    out = []
-    for p, q in nodes.values():
-        x, y = place(p, q)
-        out.append((x / MM, y / MM, top(p, q) / MM))
-    return Part.makeCompound(solids), len(solids), length, out
+    return solids, nodes, total, faces, tops
+
+
+def _edge_faces(shell):
+    """{an edge's own number: [(face index, the edge)]} for every edge of the shell that is a
+    line of its own (not a face's seam, not a point)."""
+    out = {}
+    for k, f in enumerate(shell.Faces):
+        for e in f.Edges:
+            if e.Length < 1.0 or e.Degenerated or e.isSeam(f):
+                continue
+            out.setdefault(e.hashCode(), []).append((k, e))
+    return out
+
+
+def _outward(face, point):
+    u, v = face.Surface.parameter(point)
+    return face.normalAt(u, v)
+
+
+def skin_of(shell, faces):
+    """The skin the laths lie on, whole: the faces they lie on and every face that carries on
+    from one of them across an edge without a sharp bend and without standing upright (a foot
+    panel of a geodesic shell too small for a lath to reach; the toe of a vault, but not the
+    side of the plinth under it). Indices into shell.Faces."""
+    skin = set(faces)
+    pairs = [rows for rows in _edge_faces(shell).values() if len(rows) == 2]
+    said = {}
+    grew = True
+    while grew:
+        grew = False
+        for n, ((ka, e), (kb, _same)) in enumerate(pairs):
+            if (ka in skin) == (kb in skin):
+                continue
+            if n not in said:
+                p = e.valueAt((e.FirstParameter + e.LastParameter) / 2.0)
+                inside, other = (ka, kb) if ka in skin else (kb, ka)
+                na, nb = _outward(shell.Faces[inside], p), _outward(shell.Faces[other], p)
+                said[n] = na.getAngle(nb) < math.radians(SKIN_BEND_DEG) and nb.z > SKIN_UPRIGHT
+            if said[n]:
+                skin.add(kb if ka in skin else ka)
+                grew = True
+    return skin
+
+
+def skin_edges(shell, skin):
+    """The edges round a skin: those of its faces that only one of them has. As chains of (face
+    index, edge, its first point, its last point), each chain's edges following each other."""
+    alone = []
+    for rows in _edge_faces(shell).values():
+        mine = [row for row in rows if row[0] in skin]
+        if len(mine) == 1:
+            k, e = mine[0]
+            alone.append((k, e, e.valueAt(e.FirstParameter), e.valueAt(e.LastParameter)))
+    ends = lambda row: (row[2], row[3])  # noqa: E731
+    chains = []
+    while alone:
+        chain = [alone.pop(0)]
+        grew = True
+        while grew:
+            grew = False
+            for n, row in enumerate(alone):
+                if any((p - q).Length < 1e-3 for p in ends(chain[-1]) for q in ends(row)):
+                    chain.append(alone.pop(n))
+                    grew = True
+                    break
+                if any((p - q).Length < 1e-3 for p in ends(chain[0]) for q in ends(row)):
+                    chain.insert(0, alone.pop(n))
+                    grew = True
+                    break
+        chains.append(chain)
+    return chains
+
+
+def edge_beams(shell, skin, side_m):
+    """A square beam of side_m lying on a skin along each of its edges, inside the edge: its
+    foot on the skin, one of its sides on the edge (at a dome's foot: a ring round it, standing
+    on the ground the dome stands on). Where the edge has a corner, or the skin a crease, one
+    beam ends and the next begins (they share the corner); an edge that closes without a
+    corner has one beam that closes too.
+    Returns (the beams as solids, the length of edge they follow in mm)."""
+    b = side_m * MM
+    out, total = [], 0.0
+    for chain in skin_edges(shell, skin):
+        rows = []  # each edge's places in the chain's own direction: (point, the skin's outward normal, the way the edge runs)
+        for k, e, first, last in chain:
+            f = shell.Faces[k]
+            count = max(2, int(math.ceil(e.Length / STATION_MM)))
+            t0, t1 = e.FirstParameter, e.LastParameter
+            row = []
+            for i in range(count + 1):
+                t = t0 + (t1 - t0) * i / float(count)
+                p = e.valueAt(t)
+                row.append((p, _outward(f, p), e.tangentAt(t)))  # the face's own outward normal: the same side of the skin all round its edge
+            if rows:
+                flip = (last - rows[-1][-1][0]).Length < (first - rows[-1][-1][0]).Length
+            elif len(chain) > 1:
+                flip = min((first - q).Length for q in chain[1][2:4]) < min((last - q).Length for q in chain[1][2:4])
+            else:
+                flip = False
+            if flip:
+                row = [(p, nrm, tan * -1.0) for p, nrm, tan in reversed(row)]
+            rows.append(row)
+        # which way is into the skin: asked once, of the face the first edge is of
+        f0 = shell.Faces[chain[0][0]]
+        p, nrm, tan = rows[0][1]
+        cand = nrm.cross(tan)
+        cand.normalize()
+        u, v = f0.Surface.parameter(p + cand * 20.0)
+        sign = 1.0 if f0.isPartOfDomain(u, v) else -1.0
+        smooth = lambda a, c: a[2].getAngle(c[2]) < math.radians(CORNER_DEG) and a[1].getAngle(c[1]) < math.radians(CREASE_DEG)  # noqa: E731
+        runs = [list(rows[0])]
+        for row in rows[1:]:
+            if (row[0][0] - runs[-1][-1][0]).Length < 1e-3 and smooth(runs[-1][-1], row[0]):
+                runs[-1] += row[1:]
+            else:  # a corner, or a crease of the skin: one beam ends here, the next begins
+                runs.append(list(row))
+        closed = (runs[0][0][0] - runs[-1][-1][0]).Length < 1e-3
+        if closed and len(runs) > 1 and smooth(runs[-1][-1], runs[0][0]):
+            runs[0] = runs.pop() + runs[0][1:]
+        whole = closed and len(runs) == 1 and smooth(runs[0][-1], runs[0][0])
+        for run in runs:
+            if len(run) < 2:
+                continue
+            line = []
+            for p, nrm, tan in run:
+                inward = nrm.cross(tan) * sign
+                inward.normalize()
+                line.append(p + inward * (b / 2.0))
+            try:
+                out.append(lath_through(line, [nrm for _p, nrm, _tan in run], b, b, 0.0, closed=whole))
+                total += sum((q[0] - p[0]).Length for p, q in zip(run, run[1:]))
+            except Exception as exc:  # a beam is the shell's trim: said, and the laths stand without it
+                App.Console.PrintWarning("Organic: a beam along a shell's edge could not be made (%s)\n" % exc)
+    return out, total
+
+
+def net_on_shell(shell, spacing_m=1.0, lath_width_m=0.08, lath_depth_m=0.05, turn_deg=0.0, layers=1, edge_beam_m=0.0):
+    """A lattice lying on the back of any solid shell (a dome, a vault, a leaf, a conoid, a
+    saddle, a shell roof): laths every spacing_m both ways, turned turn_deg in plan (45: a
+    diagrid), in one layer or two, and with edge_beam_m a square beam of that side along each
+    edge of the skin they lie on (a ring at a dome's foot, another round its oculus). A
+    compound of solids: the laths cross at the nodes, the beams meet at the corners.
+    Returns {"shape", "laths" (their number), "length_m" (one layer's), "nodes" [(x, y, z) m],
+    "beams", "beam_m" (the length of edge they follow), "skin" (the face indices)}."""
+    solids, nodes, total, faces, _tops = laths_on(shell, spacing_m, lath_width_m, lath_depth_m, turn_deg, layers)
+    skin = skin_of(shell, faces)
+    beams, around = edge_beams(shell, skin, edge_beam_m) if edge_beam_m and edge_beam_m > 0 else ([], 0.0)
+    return {"shape": Part.makeCompound(solids + beams), "laths": len(solids), "length_m": total / MM, "nodes": [(x / MM, y / MM, z / MM) for x, y, z in nodes],
+            "beams": len(beams), "beam_m": around / MM, "skin": sorted(skin)}
 
 
 # ---------------------------------------------------------------- cellular walls

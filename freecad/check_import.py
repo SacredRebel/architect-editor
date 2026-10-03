@@ -60,9 +60,25 @@ out here from the file's own numbers, not taken from the workbench:
      how far the vault reaches, each worked out here too. And what is not built as asked, each
      with its note: a wave on a semicircle, a wave deeper than the vault is high, ribs under a
      wave, a segmental arch asked higher than a semicircle.
+  F. lane R's shells and lattices, written as the map's catalogue writes them (its type, R's
+     own params, "Figure", "Supports"), R's reference cases read from R's own note (ports\\
+     FROM-RESEARCH.md 1, 3, 4, 6): the conoid and the translation shell, cases A and B (R's
+     five heights against this check's formula at R's places, the solid's underside against
+     that formula there and at 49 places more, its box against the formula made thick along
+     its normal and against R's, its underside's area against the surface integrated here
+     and R's, FreeCAD's own volume against the adaptive measure); the groined saddles, A and
+     B, written GroinedSaddles (R's a and b and five heights, the underside at 45 places, the
+     supports' spacing and the overall size read off the solid, the area); the geodesic
+     frame, A and B (R's struts, nodes, foot nodes and strut lengths after levelling, its foot
+     levelled as far as R's, its nodes' span against R's box less its struts); the
+     catalogue's WaveVault read as a Vault; Figure and Supports passed over; six lobes built
+     as asked and said; laths on conoid A named by its id, every node on its back; and the
+     same file through realize.py, complete.
   N. nothing dropped in silence: the sample's one unknown type and one unknown parameter are
-     both named in the notes, and nothing else is; and a number that cannot be (a floor's
-     Inset below nought: a length here is never below nought) is named, not changed in silence.
+     both named in the notes, and nothing else is; a number that cannot be (a floor's Inset
+     below nought: a length here is never below nought) is named, not changed in silence; and
+     a form of the map's catalogue this workbench does not build (lane C's Merkaba, R's leaf
+     on ribs by its own parameters) is named and not made as something else.
   T. there and back: the imported building sent to the map again says the same longitude,
      latitude, altitude and turn the file said, and names the file it came from.
   Z. realized: the same file through realize.py (what the map calls, FreeCAD without its
@@ -616,6 +632,285 @@ def wave_facts(doc, ref):
     return out
 
 
+# ------------------------------------------------------------------ F. lane R's shells and lattices
+SHELL_THICKNESS = {"Conoid": 0.08, "TranslationShell": 0.08, "GroinedSaddles": 0.05}  # R's own records (FROM-RESEARCH.md 3, 4, 6)
+STRUT = 0.09  # R's struts (FROM-RESEARCH.md 1: "box with 0.09 m struts")
+SHELL_STEP = 60.0  # metres between the pieces of the file, along x
+
+
+def _num(text):
+    return float(text.replace(",", ""))
+
+
+def research_shell_cases():
+    """Lane R's reference cases of its conoid, translation shell, groined saddles and geodesic
+    frame, as R's port note states them (FROM-RESEARCH.md 1, 3, 4, 6): {"Conoid": {"A": {...},
+    "B": {...}}, "TranslationShell": ..., "GroinedSaddles": ..., "GeodesicDome": ...}, each case
+    with its numbers as R printed them (the heights as the strings R wrote, for their
+    decimals). {} when the note is not there."""
+    try:
+        with open(RESEARCH_NOTE, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return {}
+
+    def section(n):
+        found = re.search(r"\n## %d\. .*?(?=\n## |\Z)" % n, text, re.S)
+        return found.group(0) if found else ""
+
+    def heights(body):
+        """The heights R lists before its surface: the last number of each part between semicolons."""
+        before = re.sub(r"\([^)]*\)", "", body.split("surface")[0])
+        return [re.findall(r"\d+(?:\.\d+)?", part)[-1] for part in before.split(";") if re.findall(r"\d+(?:\.\d+)?", part)][:5]
+
+    def box(body):
+        found = re.search(r"box (?:with [\d.]+ m struts: )?([\d.]+) × ([\d.]+) × ([\d.]+)", body)
+        return tuple(float(v) for v in found.groups()) if found else None
+
+    out = {"Conoid": {}, "TranslationShell": {}, "GroinedSaddles": {}, "GeodesicDome": {}}
+    for found in re.finditer(r"\*\*Reference case ([AB]) \S+ Span ([\d.]+), ShellLength ([\d.]+), Rise ([\d.]+), Eave ([\d.]+)\*\*:(.*?)(?:\n\s*\n|\Z)", section(3), re.S):
+        body = " ".join(found.group(6).split())
+        out["Conoid"][found.group(1)] = {"Span": float(found.group(2)), "ShellLength": float(found.group(3)), "Rise": float(found.group(4)), "Eave": float(found.group(5)),
+                                         "heights": heights(body), "surface": _num(re.search(r"surface ([\d,.]+) m", body).group(1)), "box": box(body)}
+    for found in re.finditer(r"\*\*Reference case ([AB]) \S+ Span ([\d.]+), ShellLength ([\d.]+), RiseX ([\d.]+), RiseY ([\d.]+), Eave ([\d.]+)\*\*:(.*?)(?:\n\s*\n|\Z)",
+                             section(4), re.S):
+        body = " ".join(found.group(7).split())
+        out["TranslationShell"][found.group(1)] = {"Span": float(found.group(2)), "ShellLength": float(found.group(3)), "RiseX": float(found.group(4)), "RiseY": float(found.group(5)),
+                                                   "Eave": float(found.group(6)), "heights": heights(body), "surface": _num(re.search(r"surface ([\d,.]+) m", body).group(1)),
+                                                   "box": box(body)}
+    for found in re.finditer(r"\*\*Reference case ([AB]) \S+ SupportRadius ([\d.]+), TipRadius ([\d.]+), CentreHeight ([\d.]+), TipHeight ([\d.]+)\*\*(.*?)(?:\n\s*\n|\Z)",
+                             section(6), re.S):
+        body = " ".join(found.group(6).split())
+        axis = re.search(r"at r = ([\d.]+): ([\d.]+)", body)
+        half = re.search(r"half-way down a groin(?: \(r = [\d.]+, θ = [\d.]+°\))?:? ([\d.]+)", body)
+        apart = re.search(r"([\d.]+) m between (?:opposite )?supports, ([\d.]+) m overall", body)
+        finer = re.search(r"([\d,.]+) m² on 128 × 20|128 × 20, was [\d,]+ triangles and ([\d,.]+) m²", body)
+        out["GroinedSaddles"][found.group(1)] = {
+            "SupportRadius": float(found.group(2)), "TipRadius": float(found.group(3)), "CentreHeight": float(found.group(4)), "TipHeight": float(found.group(5)),
+            "a": re.search(r"`a` = ([\d.]+)", body).group(1), "b": re.search(r"`b` = ([\d.]+)", body).group(1),
+            "centre": re.search(r"centre ([\d.]+)", body).group(1), "tip": re.search(r"tip ([\d.]+)", body).group(1),
+            "foot": re.search(r"groin foot ([\d.]+)", body).group(1), "axis_r": float(axis.group(1)), "axis": axis.group(2), "half": half.group(1),
+            "supports": float(apart.group(1)), "overall": float(apart.group(2)), "surface": _num(re.search(r"surface ([\d,.]+) m", body).group(1)),
+            "finer": _num(next(g for g in finer.groups() if g)) if finer else None}
+    for found in re.finditer(r"\*\*Reference case ([AB]) \S+ Radius ([\d.]+), Frequency (\d+), (\d+) rows \(Portion ([\d.]+)\)\*\*:(.*?)(?:\n\s*\n|\Z)", section(1), re.S):
+        body = " ".join(found.group(6).split())
+        counts = re.search(r"(\d+) triangles, (\d+) nodes, (\d+) struts, (\d+) foot nodes", body)
+        lengths = re.search(r"strut lengths (?:are )?((?:[\d.]+ × \d+(?:, )?)+)", body)
+        spread = re.search(r"differ by ([\d.]+) m|\(([\d.]+) m to level\)", body)
+        out["GeodesicDome"][found.group(1)] = {
+            "Radius": float(found.group(2)), "Frequency": int(found.group(3)), "rows": int(found.group(4)), "Portion": float(found.group(5)),
+            "triangles": int(counts.group(1)), "nodes": int(counts.group(2)), "struts": int(counts.group(3)), "foot": int(counts.group(4)),
+            "lengths": {round(float(v), 3): int(n) for v, n in re.findall(r"([\d.]+) × (\d+)", lengths.group(1))} if lengths else {},
+            "spread": float(next(g for g in spread.groups() if g)) if spread else None, "box": box(body)}
+    return out if all(out.values()) else {}
+
+
+def conoid_z(x, y, p):
+    """Lane R's conoid (FROM-RESEARCH.md 3), written out again here."""
+    v = (y + p["ShellLength"] / 2) / p["ShellLength"]
+    return p["Eave"] + (1 - v) * p["Rise"] * (1 - (2 * x / p["Span"]) ** 2)
+
+
+def translation_z(x, y, p):
+    """Lane R's translation shell (FROM-RESEARCH.md 4), written out again here."""
+    return p["Eave"] + p["RiseX"] * (1 - (2 * x / p["Span"]) ** 2) + p["RiseY"] * (1 - (2 * y / p["ShellLength"]) ** 2)
+
+
+def groined_ab(p, lobes=8):
+    half = math.pi / lobes
+    a = (p["TipHeight"] - p["CentreHeight"]) / p["TipRadius"] ** 2
+    return a, (p["CentreHeight"] / p["SupportRadius"] ** 2 + a * math.cos(half) ** 2) / math.sin(half) ** 2
+
+
+def groined_z(x, y, p, lobes=8):
+    """Lane R's groined saddles (FROM-RESEARCH.md 6), written out again here: the highest of the saddles."""
+    a, b = groined_ab(p, lobes)
+    r, th = math.hypot(x, y), math.atan2(y, x)
+    return max(p["CentreHeight"] + r * r * (a * math.cos(th - i * 2 * math.pi / lobes) ** 2 - b * math.sin(th - i * 2 * math.pi / lobes) ** 2) for i in range(lobes // 2))
+
+
+def groined_rim(th, p, lobes=8):
+    return p["SupportRadius"] + (p["TipRadius"] - p["SupportRadius"]) * abs(math.cos(lobes * th / 2))
+
+
+def shell_box(kind, p, t):
+    """The box (x0, x1, y0, y1, z0, z1, m) of R's conoid or translation shell made thick t along
+    its upward normal ~ (-fx, -fy, 1), worked out here from its formula."""
+    if kind == "Conoid":
+        sx, ly = 4 * p["Rise"] / p["Span"], p["Rise"] / p["ShellLength"]
+        x = p["Span"] / 2 + t * sx / math.sqrt(1 + sx * sx)
+        return (-x, x, -p["ShellLength"] / 2, p["ShellLength"] / 2 + t * ly / math.sqrt(1 + ly * ly), p["Eave"], p["Eave"] + p["Rise"] + t / math.sqrt(1 + ly * ly))
+    sx, sy = 4 * p["RiseX"] / p["Span"], 4 * p["RiseY"] / p["ShellLength"]
+    x, y = p["Span"] / 2 + t * sx / math.sqrt(1 + sx * sx), p["ShellLength"] / 2 + t * sy / math.sqrt(1 + sy * sy)
+    return (-x, x, -y, y, p["Eave"], p["Eave"] + p["RiseX"] + p["RiseY"] + t)
+
+
+def shell_area(kind, p, n=400):
+    """The area (m²) of R's surface itself, integrated here: over the rectangle of a conoid or a
+    translation shell, √(1 + fx² + fy²); over each lobe of groined saddles (polar), √(1 + |∇z|²)
+    of its saddle. Midpoint rule, n × n."""
+    total = 0.0
+    if kind == "GroinedSaddles":
+        lobes = 8
+        a, b = groined_ab(p, lobes)
+        half = math.pi / lobes
+        for i in range(n):
+            th = -half + 2 * half * (i + 0.5) / n
+            edge = groined_rim(th, p, lobes)
+            for j in range(n):
+                r = edge * (j + 0.5) / n
+                u, v = r * math.cos(th), r * math.sin(th)
+                total += math.sqrt(1 + 4 * a * a * u * u + 4 * b * b * v * v) * r * (edge / n) * (2 * half / n)
+        return total * lobes
+    s, length = p["Span"], p["ShellLength"]
+    hx, hy = s / n, length / n
+    for i in range(n):
+        x = -s / 2 + (i + 0.5) * hx
+        for j in range(n):
+            y = -length / 2 + (j + 0.5) * hy
+            if kind == "Conoid":
+                g = (length / 2 - y) / length
+                fx, fy = p["Rise"] * g * (-8 * x / s ** 2), p["Rise"] * (1 - (2 * x / s) ** 2) * (-1.0 / length)
+            else:
+                fx, fy = -8 * p["RiseX"] * x / s ** 2, -8 * p["RiseY"] * y / length ** 2
+            total += math.sqrt(1 + fx * fx + fy * fy)
+    return total * hx * hy
+
+
+def shell_cases(ref):
+    """The pieces of one file, as the map's catalogue writes them (spatial-map\\godot\\ui\\ports\\
+    registry.gd: the type, R's own params, its "Figure", and "Supports" for the drawing aids):
+    R's conoid, translation shell and groined saddles, cases A and B; R's geodesic frame, A and
+    B; the catalogue's wave vault; groined saddles of six lobes; laths on conoid A by its id.
+    Each along x at its own place."""
+    pieces, at = [], 0
+    for kind in ("Conoid", "TranslationShell", "GroinedSaddles", "GeodesicDome"):
+        for letter, r in sorted(ref.get(kind, {}).items()):
+            if kind == "GeodesicDome":
+                params = {"Figure": kind, "Radius": r["Radius"], "Frequency": r["Frequency"], "Portion": r["Portion"], "Thickness": STRUT, "Frame": True, "StrutSection": STRUT}
+            else:
+                params = dict({k: r[k] for k in ("Span", "ShellLength", "Rise", "RiseX", "RiseY", "Eave", "SupportRadius", "TipRadius", "CentreHeight", "TipHeight") if k in r},
+                              Figure=kind, Thickness=SHELL_THICKNESS[kind])
+                params["Lobes" if kind == "GroinedSaddles" else "Supports"] = 8 if kind == "GroinedSaddles" else True
+            pieces.append({"id": "%s-%s" % (kind, letter), "type": kind, "name": "%s %s" % (kind, letter), "params": params, "placement": {"x": at * SHELL_STEP, "y": 0.0}})
+            at += 1
+    pieces.append({"id": "wave", "type": "WaveVault", "name": "Wave vault", "placement": {"x": at * SHELL_STEP, "y": 0.0, "z": 2.2},
+                   "params": {"Figure": "WaveVault", "Profile": "Catenary", "Span": 8.0, "Rise": 2.4, "VaultLength": 18.0, "WaveAmplitude": 0.6, "Waves": 3, "Plinth": 2.2,
+                              "Thickness": WAVE_THICKNESS}})
+    pieces.append({"id": "six", "type": "MinimalShell", "name": "Six lobes", "placement": {"x": (at + 1) * SHELL_STEP, "y": 0.0},
+                   "params": {"Kind": "Groined saddles", "Lobes": 6, "SupportRadius": 6.0, "TipRadius": 7.85, "CentreHeight": 2.4, "TipHeight": 4.0, "Thickness": 0.05}})
+    pieces.append({"id": "laths", "type": "Gridshell", "name": "Laths on conoid A",
+                   "params": {"Shell": "Conoid-A", "Spacing": 1.0, "Turn": 45.0, "LathWidth": 0.08, "LathDepth": 0.05, "Layers": 2, "EdgeBeam": 0.15}})
+    return {"format": "built/1", "name": "Lane R's shells and lattices", "pieces": pieces}
+
+
+def upright(shape, x, y):
+    """(the lowest and the highest z of a solid on the upright line through (x, y) m, the place
+    asked): asked again 2 mm beside the place where a seam between two faces swallows the line."""
+    b = shape.BoundBox
+    for dx, dy in ((0.0, 0.0), (0.002, 0.0), (-0.002, 0.0), (0.0, 0.002), (0.0, -0.002)):
+        hit = shape.common(Part.makeLine(App.Vector((x + dx) * MM, (y + dy) * MM, b.ZMin - 1000.0), App.Vector((x + dx) * MM, (y + dy) * MM, b.ZMax + 1000.0)))
+        zs = [v.Point.z / MM for v in hit.Vertexes]
+        if zs:
+            return (min(zs), max(zs)), (x + dx, y + dy)
+    return None, (x, y)
+
+
+def shell_facts(doc, ref):
+    """F. R's shells and lattices made by the button's own import from shell_cases(), and read off
+    their solids here."""
+    import organic_geom as og
+
+    data = shell_cases(ref)
+    res = imported(doc, data, "research-shells.json")
+    made = res["made"]
+    out = {"data": data, "notes": list(res["notes"]), "lost": list(res["lost"]), "made": sorted(made), "pieces": {}}
+    for piece in data["pieces"]:
+        key, kind = piece["id"], piece["type"]
+        obj = made.get(key)
+        if obj is None or obj.Shape.isNull() or not obj.Shape.Solids:
+            out["pieces"][key] = None
+            continue
+        own = obj.Shape.copy()
+        own.Placement = App.Placement()  # the piece in its own frame: R's
+        bb = own.optimalBoundingBox(False, False)
+        row = {"class": type(obj.Proxy).__name__, "ifc": str(getattr(obj, "IfcType", "")), "solids": len(own.Solids), "valid": all(s.isValid() for s in own.Solids),
+               "box": (bb.XMin / MM, bb.XMax / MM, bb.YMin / MM, bb.YMax / MM, bb.ZMin / MM, bb.ZMax / MM), "plain": own.Volume / 1e9, "exact": og.volume_of(own) / 1e9}
+        out["pieces"][key] = row
+        if kind in ("Conoid", "TranslationShell", "GroinedSaddles"):
+            p = piece["params"]
+            if kind == "GroinedSaddles":
+                rim = lambda th: groined_rim(th, p)  # noqa: E731
+                half = math.pi / 8
+                foot = (p["SupportRadius"] - 0.002) * math.cos(half), (p["SupportRadius"] - 0.002) * math.sin(half)
+                places = [(0.0, 0.0), (p["TipRadius"] - 0.002, 0.0), foot, (R_AXIS(ref, key), 0.0), (3.0 * math.cos(half), 3.0 * math.sin(half))]
+                places += [(r * math.cos(th), r * math.sin(th)) for th in (-0.33, -0.17, 0.05, 0.21, 0.36, 1.1, 2.3, 3.0, 4.4, 5.9)
+                           for r in (0.3 * rim(th), 0.55 * rim(th), 0.8 * rim(th), 0.97 * rim(th))]
+                formula = lambda x, y: groined_z(x, y, p)  # noqa: E731
+            else:
+                s, length = p["Span"], p["ShellLength"]
+                if kind == "Conoid":
+                    places = [(0.0, -length / 2 + 0.001), (0.0, 0.0), (s / 4, -length / 2 + 0.001), (0.0, length / 2 - 0.001), (s / 2 - 0.001, -length / 2 + 0.001)]
+                    formula = lambda x, y: conoid_z(x, y, p)  # noqa: E731
+                else:
+                    places = [(0.0, 0.0), (s / 2 - 0.001, 0.0), (0.0, length / 2 - 0.001), (s / 2 - 0.001, length / 2 - 0.001), (s / 4, length / 4)]
+                    formula = lambda x, y: translation_z(x, y, p)  # noqa: E731
+                places += [(s * (i / 8.0 - 0.5) * 0.98, length * (j / 8.0 - 0.5) * 0.98) for i in range(1, 8) for j in range(1, 8)]
+            readings = []
+            for x, y in places:
+                got, (px, py) = upright(own, x, y)
+                readings.append((x, y, px, py, None if got is None else got[0], formula(px, py)))
+            # its underside: the faces that look down, less the narrow strips along its edges (a shell made thick along its
+            # normal has sides that lean out and look down too: 2.6 m² of them on conoid A), by their own width, 2 A / P
+            below = sum(f.Area for f in own.Faces if f.normalAt(*[(lo + hi) / 2 for lo, hi in zip(f.ParameterRange[0::2], f.ParameterRange[1::2])]).z < -0.1
+                        and 2 * f.Area / sum(e.Length for e in f.Edges) > 500.0) / 1e6
+            row.update(readings=readings, underside=below)
+            if kind == "GroinedSaddles":  # where the solid meets the ground: its supports, read off its own corners
+                feet = [(v.Point.x / MM, v.Point.y / MM) for v in own.Vertexes if abs(v.Point.z) < 1e-3]
+                row.update(feet=feet, lobes=obj.Lobes)
+        if kind == "GeodesicDome":
+            balls = [s.CenterOfMass for s in own.Solids if len(s.Faces) == 1 and type(s.Faces[0].Surface).__name__ == "Sphere"]
+            row.update(struts=obj.Struts, nodes=obj.Nodes, foot=obj.FootNodes, rows=obj.Rows, levelled=obj.FootLevelled, cutting=list(obj.StrutList), frame=bool(obj.Frame),
+                       centres=[(c.x / MM, c.y / MM, c.z / MM) for c in balls])
+        if key == "wave":
+            row.update(ribs=obj.Ribs, amplitude=oo_m(obj.WaveAmplitude), waves=obj.Waves)
+        if key == "six":
+            row.update(lobes=obj.Lobes, kind=str(obj.Kind))
+        if key == "laths":
+            shell = made.get("Conoid-A")
+            if shell is not None:
+                conoid = shell.Shape.copy()
+                conoid.Placement = App.Placement()
+                nodes = list(getattr(obj.Proxy, "nodes", []))  # in the conoid's own frame (m)
+                on = [(conoid.isInside(App.Vector(x * MM, y * MM, z * MM - 2.0), 0.01, True), conoid.isInside(App.Vector(x * MM, y * MM, z * MM + 2.0), 0.01, True))
+                      for x, y, z in nodes]
+                row.update(laths=obj.Laths, nodes=len(nodes), on=on, beams=obj.Beams, layers=obj.Layers, shell=obj.Shell.Name if obj.Shell is not None else None,
+                           conoid=shell.Name, placed=obj.Placement.isSame(shell.Placement, 1e-9))
+    return out
+
+
+def R_AXIS(ref, key):
+    """Where R reads a height on a lobe's axis (r = 6.0 for case A)."""
+    return ref["GroinedSaddles"][key.split("-")[1]]["axis_r"]
+
+
+def oo_m(q):
+    return float(q.Value) / MM if hasattr(q, "Value") else float(q)
+
+
+def not_built_facts(doc):
+    """N. Forms of the map's catalogue that this workbench does not build, written as the map
+    writes them: a Merkaba (lane C's, a SacredSolid with a Figure), R's leaf on ribs (a
+    HeightFieldShell by R's own parameters)."""
+    data = {"format": "built/1", "name": "Forms not built here", "pieces": [
+        {"id": "mk", "type": "SacredSolid", "name": "Merkaba", "params": {"Figure": "Merkaba", "Scale": 2.4}},
+        {"id": "lf", "type": "HeightFieldShell", "name": "Leaf roof on ribs", "params": {"Figure": "HeightFieldShell", "Length": 12.0, "Width": 7.0, "Taper": 0.6, "Base": 2.6,
+                                                                                         "Thickness": 0.10, "RibCount": 10}},
+        {"id": "ok", "type": "Conoid", "name": "A conoid beside them", "params": {"Figure": "Conoid", "Span": 6.0, "ShellLength": 8.0, "Rise": 2.0, "Eave": 2.4, "Thickness": 0.08}}]}
+    res = imported(doc, data, "not-built.json")
+    return {"notes": list(res["notes"]), "lost": list(res["lost"]), "made": sorted(res["made"])}
+
+
 def canonical_frame():
     with open(BRAIN, encoding="utf-8") as fh:
         text = fh.read().replace("−", "-").replace("*", "")
@@ -790,6 +1085,10 @@ def gather():
         # wave vaults
         facts["research"] = research_wave_cases()
         facts["waves"] = wave_facts(doc, facts["research"])
+        # lane R's shells and lattices, as the map's catalogue writes them; and forms of the catalogue not built here
+        facts["shells_ref"] = research_shell_cases()
+        facts["shells"] = shell_facts(doc, facts["shells_ref"]) if facts["shells_ref"] else {}
+        facts["not_built"] = not_built_facts(doc)
         # a number a property cannot take
         res3 = imported(doc, refused_sample(), "refused-sample.json")
         floor = res3["made"]["s"]
@@ -821,6 +1120,14 @@ def gather():
             written = json.load(fh)
         facts["realized"]["written"] = {"ok": written.get("ok"), "complete": written.get("complete"), "notes": written.get("notes"),
                                         "site_notes": written.get("site_notes"), "elements": {e["piece"]: e for e in written.get("elements", [])}}
+    # F. lane R's shells and lattices realized too
+    if facts.get("shells"):
+        records = os.path.join(folder, "research-shells.json")
+        with open(records, "w", encoding="utf-8") as fh:
+            json.dump(facts["shells"]["data"], fh, indent=1)
+        result = realize(records)
+        facts["shells"]["realized"] = {"ok": result.get("ok"), "complete": result.get("complete"), "notes": result.get("notes"), "error": result.get("error"),
+                                       "elements": {e.get("piece"): e for e in result.get("elements", [])}}
     with open(SAMPLE, encoding="utf-8") as fh:
         facts["repo_sample"] = json.load(fh)
     facts["anchor"] = canonical_frame()
@@ -1224,7 +1531,118 @@ def judge(facts):
           *("%.4f" % v if v is not None else "nothing" for v in (deep.get("crest"), deep.get("trough"), ribbed.get("crest"), ribbed.get("trough"))),
           WAVE_PLAIN["Span"], "%.4f" % seg["crest"] if seg.get("crest") is not None else "nothing"))
 
+    # F. lane R's shells and lattices: R's own numbers (read from R's note) and this check's formulas against the solids
+    ref, sh = facts.get("shells_ref") or {}, facts.get("shells") or {}
+    ok(bool(ref) and bool(sh),
+       "F lane R's reference cases read from R's own note (FROM-RESEARCH.md 1, 3, 4, 6): %s" % (", ".join("%s %s" % (k, " and ".join(sorted(v))) for k, v in sorted(ref.items())) or "NOT THERE"))
+    if ref and sh:
+        pieces = sh["pieces"]
+        printed = lambda s: 0.5 * 10 ** -(len(s.split(".")[1]) if "." in s else 0) + 1e-9  # noqa: E731  (how far R's rounding lets its number lie)
+        for kind, title in (("Conoid", "conoid"), ("TranslationShell", "translation shell")):
+            for letter, r in sorted(ref[kind].items()):
+                row = pieces.get("%s-%s" % (kind, letter))
+                if row is None:
+                    ok(False, "F %s %s: not made" % (title, letter))
+                    continue
+                s, length, t = r["Span"], r["ShellLength"], SHELL_THICKNESS[kind]
+                fn = conoid_z if kind == "Conoid" else translation_z
+                at = ([(0.0, -length / 2), (0.0, 0.0), (s / 4, -length / 2), (0.0, length / 2), (s / 2, -length / 2)] if kind == "Conoid"
+                      else [(0.0, 0.0), (s / 2, 0.0), (0.0, length / 2), (s / 2, length / 2), (s / 4, length / 4)])
+                said = max(abs(fn(x, y, r) - float(h)) - printed(h) for (x, y), h in zip(at, r["heights"])) if len(r["heights"]) == 5 else float("inf")
+                missed = sum(1 for q in row["readings"] if q[4] is None)
+                worst = max([abs(q[4] - q[5]) for q in row["readings"] if q[4] is not None] or [float("inf")])
+                formula_box = shell_box(kind, r, t)
+                box_off = max(abs(g - w) for g, w in zip(row["box"], formula_box))
+                mine = (row["box"][1] - row["box"][0], row["box"][3] - row["box"][2], row["box"][5])
+                r_off = max(abs(g - w) for g, w in zip(mine, r["box"])) if r["box"] else float("inf")
+                area = shell_area(kind, r)
+                ok(said <= 0 and not missed and worst <= 5e-4 and box_off <= 0.002 and r_off <= 0.006 and abs(row["underside"] - area) <= 1e-4 * area
+                   and abs(row["underside"] - r["surface"]) <= 0.005 * r["surface"] and abs(row["plain"] - row["exact"]) <= 1e-4 * row["exact"]
+                   and row["valid"] and row["solids"] == 1 and row["class"] == kind,
+                   "F %s %s (R's Span %g, ShellLength %g): R's five heights (%s) are this check's formula's at R's places; the solid's underside is that formula there and at %d "
+                   "places more (worst %.6f m, %d missed); its box %s is the formula made thick along its normal (worst %.4f m) and R's %s within %.4f (R's asset was made thick "
+                   "by Blender along its own mesh's normals); its underside %.2f m² (integrated here %.2f; R's %.2f on its grid); FreeCAD's own volume and the adaptive "
+                   "measure agree (%.5f, %.5f m³)"
+                   % (title, letter, s, length, ", ".join(r["heights"]), len(row["readings"]) - 5, worst, missed, "%.3f x %.3f x %.3f" % mine, box_off,
+                      " x ".join("%g" % v for v in (r["box"] or ())), r_off, row["underside"], area, r["surface"], row["plain"], row["exact"]))
+        for letter, r in sorted(ref["GroinedSaddles"].items()):
+            row = pieces.get("GroinedSaddles-%s" % letter)
+            if row is None:
+                ok(False, "F groined saddles %s: not made" % letter)
+                continue
+            ga, gb = groined_ab(r)
+            half = math.pi / 8
+            rs, rt = r["SupportRadius"], r["TipRadius"]
+            at = [((0.0, 0.0), r["centre"]), ((rt, 0.0), r["tip"]), ((rs * math.cos(half), rs * math.sin(half)), r["foot"]), ((r["axis_r"], 0.0), r["axis"]),
+                  ((rs / 2 * math.cos(half), rs / 2 * math.sin(half)), r["half"])]
+            said = max([abs(groined_z(x, y, r) - float(h)) - printed(h) for (x, y), h in at] + [abs(ga - float(r["a"])) - printed(r["a"]), abs(gb - float(r["b"])) - printed(r["b"])])
+            missed = sum(1 for q in row["readings"] if q[4] is None)
+            worst = max([abs(q[4] - q[5]) for q in row["readings"] if q[4] is not None] or [float("inf")])
+            feet = row.get("feet") or []
+            apart = max([math.dist(p, q) for p in feet for q in feet] or [0.0])
+            overall = row["box"][1] - row["box"][0]
+            area = shell_area("GroinedSaddles", r)
+            finer = r.get("finer") or r["surface"]
+            ok(said <= 0 and not missed and worst <= 5e-4 and abs(apart - r["supports"]) <= 0.05 and abs(apart - 2 * rs) <= 0.001 and abs(overall - r["overall"]) <= 0.05
+               and abs(overall - 2 * rt) <= 0.001 and abs(row["box"][4]) <= 1e-3 and abs(row["underside"] - area) <= 1e-4 * area and abs(row["underside"] - finer) <= 0.005 * finer
+               and abs(row["plain"] - row["exact"]) <= 1e-4 * row["exact"] and row["valid"] and row["solids"] == 1 and row["class"] == "MinimalShell" and row["lobes"] == 8,
+               "F groined saddles %s (R's SupportRadius %g, TipRadius %g, written as GroinedSaddles: made as the saddle shell of that kind): R's a %s and b %s and its five "
+               "heights (%s) are this check's formula's at R's places; the solid's underside is that formula there and at %d places more (worst %.6f m, %d missed); "
+               "%.3f m between opposite supports, read off the solid where it meets the ground (R: %g), %.3f m overall (R: %g); its underside %.2f m² (integrated here %.2f; "
+               "R's %.2f on its finer mesh); FreeCAD's own volume and the adaptive measure agree (%.5f, %.5f m³)"
+               % (letter, rs, rt, r["a"], r["b"], ", ".join(h for _p, h in at), len(row["readings"]) - 5, worst, missed, apart, r["supports"], overall, r["overall"],
+                  row["underside"], area, finer, row["plain"], row["exact"]))
+        for letter, r in sorted(ref["GeodesicDome"].items()):
+            row = pieces.get("GeodesicDome-%s" % letter)
+            if row is None:
+                ok(False, "F geodesic frame %s: not made" % letter)
+                continue
+            listed = {}
+            for line in row["cutting"]:
+                count, value = line.split(" x ")
+                listed[round(float(value.split()[0]), 3)] = int(count)
+            c = row["centres"]
+            spans = tuple(max(p[i] for p in c) - min(p[i] for p in c) for i in range(3)) if c else (float("nan"),) * 3
+            r_spans = tuple(v - STRUT for v in r["box"]) if r["box"] else None
+            ok(row["frame"] and row["struts"] == r["struts"] and row["nodes"] == r["nodes"] == len(c) and row["foot"] == r["foot"] and row["rows"] == r["rows"]
+               and listed == r["lengths"] and r["spread"] is not None and abs(row["levelled"] - r["spread"]) <= printed("%g" % r["spread"]) + 5e-5
+               and r_spans is not None and max(abs(g - w) for g, w in zip(spans, r_spans)) <= 0.008 and row["ifc"] == "Member",
+               "F geodesic frame %s (R's Radius %g, Frequency %d, %d rows; Portion %g): %d struts, %d nodes, %d of them at its foot (R: %d, %d, %d); its cutting list is R's "
+               "strut lengths after levelling (%s); its foot set level by %.4f m (R: %g); its nodes span %.3f x %.3f x %.3f m (R's box less its %.2f m struts: %s, within 0.008 m: R's box is of its asset's mesh of square struts); a member"
+               % (letter, r["Radius"], r["Frequency"], r["rows"], r["Portion"], row["struts"], row["nodes"], row["foot"], r["struts"], r["nodes"], r["foot"],
+                  ", ".join(row["cutting"]), row["levelled"], r["spread"], spans[0], spans[1], spans[2], STRUT, " x ".join("%.3f" % v for v in (r_spans or ()))))
+        wave = pieces.get("wave")
+        wave_closed = wave_volume({"Span": 8.0, "Rise": 2.4, "WaveAmplitude": 0.6, "Waves": 3, "Thickness": WAVE_THICKNESS, "Plinth": 2.2}, 18.0)
+        ok(wave is not None and wave["class"] == "Vault" and wave["ribs"] == 0 and wave["waves"] == 3 and abs(wave["amplitude"] - 0.6) <= 1e-9 and abs(wave["exact"] - wave_closed) <= 1e-4 * wave_closed,
+           "F the catalogue's wave vault, written WaveVault, is read as a Vault with its wave and no ribs: %.4f m³ (its section's closed form summed along the wave here: %.4f)"
+           % (wave["exact"] if wave else float("nan"), wave_closed))
+        ok(not [n for n in sh["notes"] if "Figure" in n or "Supports" in n] and not sh["lost"],
+           "F what the map writes for its own use (Figure, Supports) is passed over: no note names it, and nothing of the file is lost (the notes: %s)" % ("; ".join(sh["notes"]) or "none"))
+        six = pieces.get("six")
+        told = [n for n in sh["notes"] if "'six'" in n and "6 lobes" in n and "eight" in n]
+        ok(six is not None and six["lobes"] == 6 and six["kind"] == "Groined saddles" and six["valid"] and six["solids"] == 1 and told and told[0] not in sh["lost"],
+           "F groined saddles of six lobes are built as asked (%s lobes), and the note says the map draws eight: %s" % (six["lobes"] if six else None, told[0] if told else "NOTHING SAID"))
+        la = pieces.get("laths")
+        on = la.get("on", []) if la else []
+        ok(la is not None and la["shell"] == la["conoid"] and la["placed"] and la["layers"] == 2 and la["laths"] > 0 and la["beams"] == 4 and on and all(b and not a for b, a in on),
+           "F laths on conoid A, named by its id (Shell): %d laths of two layers, a diagrid; every one of its %d nodes on the conoid's back (the solid 2 mm under it, air 2 mm over it); "
+           "%d beams along its edges; it lies where the conoid lies" % (la["laths"] if la else 0, len(on), la["beams"] if la else 0))
+        rz = sh.get("realized") or {}
+        els = rz.get("elements") or {}
+        keys = sorted(p["id"] for p in sh["data"]["pieces"])
+        ca = els.get("Conoid-A", {}).get("box_m")
+        row = pieces.get("Conoid-A") or {}
+        ca_off = max(abs(g - w) for g, w in zip((ca[0][0], ca[1][0], ca[0][1], ca[1][1], ca[0][2], ca[1][2]), row["box"])) if ca and row else float("inf")
+        ok(rz.get("ok") is True and rz.get("complete") is True and sorted(els) == keys and ca_off <= 0.001,
+           "F the same file realized, as the map calls for it: complete, every piece an element of the result (%d of %d), conoid A's box_m its box here within %.4f m"
+           % (len(els), len(keys), ca_off))
+
     # N. nothing dropped in silence
+    nb = facts.get("not_built") or {}
+    mk = [n for n in nb.get("lost", []) if "'mk'" in n and "Merkaba" in n and "not made" in n]
+    lf = [n for n in nb.get("lost", []) if "'lf'" in n and "HeightFieldShell" in n and "not made" in n]
+    ok(nb.get("made") == ["ok"] and mk and lf and len(nb.get("lost", [])) == 2,
+       "N a form of the map's catalogue this workbench does not build is named and not made as something else: %s" % ("; ".join(nb.get("lost", [])) or "NOTHING SAID"))
     notes = facts["notes"]
     pool = [x for x in notes if "x-pool" in x and "not known" in x]
     colour = [x for x in notes if "c-bench" in x and "Colour" in x and "left out" in x]
@@ -1433,7 +1851,36 @@ def forgeries(facts):
          f(lambda g: g["realized"]["result"]["notes"].append("by the map's build envelope, 66 % of it (its points in plan) lies under protected oaks"))),
         ("a line about the place that the .json does not have", "Z what the map's files say of the place",
          f(lambda g: g["realized"]["result"]["site_notes"].append("it stands on a road"))),
+        # F. lane R's shells and lattices
+        ("lane R's note not read", "F lane R's reference cases", f(lambda g: g.update(shells_ref={}))),
+        ("the conoid's underside a centimetre low at R's crown", "F conoid A", f(lambda g: low_reading(g, "Conoid-A"))),
+        ("the conoid made thick straight up", "F conoid A", f(lambda g: g["shells"]["pieces"]["Conoid-A"].__setitem__("box", (-4.5, 4.5, -6.0, 6.0, 2.6, 5.68)))),
+        ("the translation shell's underside a centimetre low", "F translation shell B", f(lambda g: low_reading(g, "TranslationShell-B"))),
+        ("the groined saddles made by a boolean (FreeCAD's own volume 3.2 % short)", "F groined saddles A",
+         f(lambda g: g["shells"]["pieces"]["GroinedSaddles-A"].__setitem__("plain", g["shells"]["pieces"]["GroinedSaddles-A"]["exact"] * 0.968))),
+        ("groined saddles whose supports stand 0.1 m apart from R's", "F groined saddles B",
+         f(lambda g: g["shells"]["pieces"]["GroinedSaddles-B"].__setitem__("feet", [(x * 1.004, y * 1.004) for x, y in g["shells"]["pieces"]["GroinedSaddles-B"]["feet"]]))),
+        ("a strut length of the frame off R's", "F geodesic frame A",
+         f(lambda g: g["shells"]["pieces"]["GeodesicDome-A"]["cutting"].__setitem__(0, "30 x 1.744 m"))),
+        ("a frame's foot not set level", "F geodesic frame A", f(lambda g: g["shells"]["pieces"]["GeodesicDome-A"].__setitem__("levelled", 0.0))),
+        ("a frame of fewer rows than R's", "F geodesic frame B",
+         f(lambda g: g["shells"]["pieces"]["GeodesicDome-B"].update(rows=2, struts=40))),
+        ("the catalogue's wave vault not made", "F the catalogue's wave vault", f(lambda g: g["shells"]["pieces"].__setitem__("wave", None))),
+        ("the map's own Figure named as left out", "F what the map writes for its own use",
+         f(lambda g: g["shells"]["notes"].append("Conoid 'Conoid-A': Figure is not a property of a Conoid; left out"))),
+        ("six lobes asked, eight built", "F groined saddles of six lobes", f(lambda g: g["shells"]["pieces"]["six"].__setitem__("lobes", 8))),
+        ("a lath node in the air over the conoid", "F laths on conoid A",
+         f(lambda g: g["shells"]["pieces"]["laths"]["on"].__setitem__(0, (False, False)))),
+        ("the shells' file realized with a piece missing", "F the same file realized", f(lambda g: g["shells"]["realized"]["elements"].pop("wave"))),
+        ("a Merkaba made as a regular solid", "N a form of the map's catalogue", f(lambda g: g["not_built"].update(made=["mk", "ok"], lost=[n for n in g["not_built"]["lost"] if "'mk'" not in n]))),
     ]
+
+
+def low_reading(g, key):
+    """One of R's places read a centimetre lower than the solid has it."""
+    rows = g["shells"]["pieces"][key]["readings"]
+    x, y, px, py, z, want = rows[0]
+    rows[0] = (x, y, px, py, z - 0.01, want)
 
 
 def write_sample():

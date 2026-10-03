@@ -314,6 +314,26 @@ class ArchCmd(Command):
         return [place(a, doc)]
 
 
+class WaveVault(Command):
+    pixmap = "OrganicWaveVault.svg"
+    menu = "Wave vault"
+    tip = ("A vault whose rise goes up and down as a wave along its length (Eladio Dieste's Gaussian vaults: the "
+           "wave gives a thin vault depth against buckling). A hanging-chain section everywhere, 8 m span, rise "
+           "2.4 m ± 0.6 m, three waves over 18 m, on walls 2.2 m high under its springings. It is the Ribbed "
+           "vault with two more numbers: WaveAmplitude and Waves.")
+    WALLS = 2.2  # metres: the walls under its springings (the vault's own Plinth), so that it stands on the ground
+
+    def make(self, doc):
+        v = oo.make(oo.Vault, "WaveVault", "Wave vault", doc)
+        v.Profile = "Catenary"
+        v.Span, v.Rise, v.Thickness, v.VaultLength = 8.0 * MM, 2.4 * MM, 0.12 * MM, 18.0 * MM
+        v.Ribs = 0
+        v.WaveAmplitude, v.Waves = 0.6 * MM, 3
+        v.Plinth = self.WALLS * MM
+        v.Placement = App.Placement(App.Vector(0, 0, self.WALLS * MM), App.Rotation())  # its springings that high: its walls' feet on the ground
+        return [place(v, doc)]
+
+
 class Dome(Command):
     pixmap = "OrganicDome.svg"
     menu = "Dome"
@@ -388,10 +408,33 @@ class SoapFilm(Command):
 class Hypar(Command):
     pixmap = "OrganicSaddle.svg"
     menu = "Saddle shell"
-    tip = "A hyperbolic-paraboloid shell (switch Kind to Catenoid for the minimal-surface tower)."
+    tip = ("A saddle shell. Its Kind says which: Hypar, one hyperbolic paraboloid over a rectangle; Groined "
+           "saddles, saddles about one centre whose lobes rise to their tips and whose groins run down to "
+           "supports on the ground (eight lobes: four saddles, Candela's Los Manantiales; Lobes may be 4 to 16); "
+           "Catenoid, the minimal-surface tower.")
 
     def make(self, doc):
         return [place(oo.make(oo.MinimalShell, "SaddleShell", "Saddle shell", doc), doc)]
+
+
+class ConoidCmd(Command):
+    pixmap = "OrganicConoid.svg"
+    menu = "Conoid roof"
+    tip = ("A conoid shell: a straight line slides with one end on an arch and the other on a level line (the "
+           "north-light roof). 9 m span, 12 m long, the arch rising 3 m, eaves 2.6 m, 0.08 m thick.")
+
+    def make(self, doc):
+        return [place(oo.make(oo.Conoid, "Conoid", "Conoid roof", doc), doc)]
+
+
+class Translation(Command):
+    pixmap = "OrganicTranslation.svg"
+    menu = "Translation shell"
+    tip = ("A translation shell: one arch slid along another, both curving down, over a rectangle. 10 m by 14 m, "
+           "rising 1.6 m across and 2.2 m along, its corners 2.6 m up, 0.08 m thick.")
+
+    def make(self, doc):
+        return [place(oo.make(oo.TranslationShell, "TranslationShell", "Translation shell", doc), doc)]
 
 
 # ---------------------------------------------------------------- grow a building
@@ -529,10 +572,25 @@ class Solid(Command):
 class Geodesic(Command):
     pixmap = "SacredGeodesic.svg"
     menu = "Geodesic dome"
-    tip = "A geodesic dome shell of real thickness: radius, frequency (how finely the icosahedron is cut) and how much of the sphere stands."
+    tip = ("A geodesic dome shell of real thickness: radius, frequency (how finely the icosahedron is cut) and how much "
+           "of the sphere stands. Frame turns it into struts and node balls (the Geodesic frame button makes that).")
 
     def make(self, doc):
         return [place(oo.make(oo.GeodesicDome, "GeodesicDome", "Geodesic dome", doc), doc)]
+
+
+class GeodesicFrame(Command):
+    pixmap = "SacredFrame.svg"
+    menu = "Geodesic frame"
+    tip = ("A geodesic dome as a frame: a strut along every edge, a ball at every node, the foot set level. "
+           "10 m across at frequency 3, five rows of triangles (the five-eighths dome): 165 struts of three "
+           "lengths. StrutList is its cutting list.")
+
+    def make(self, doc):
+        d = oo.make(oo.GeodesicDome, "GeodesicFrame", "Geodesic frame", doc)
+        d.Radius, d.Frequency, d.Portion, d.StrutSection = 5.0 * MM, 3, 0.625, 0.09 * MM
+        d.Frame = True
+        return [place(d, doc)]
 
 
 def place_of(doc, obj=None):
@@ -722,17 +780,44 @@ class Report(Command):
 
 
 # ================================================================ the Biomimetic tab
+def shells_in(selected):
+    """The solid shells among objects, for laths to lie on: any solid that is not itself a
+    lattice or a wall (a dome, a vault, a leaf, a conoid, a saddle, a shell roof)."""
+    out = []
+    for s in selected:
+        shape = getattr(s, "Shape", None)
+        if shape is None or shape.isNull() or not shape.Solids or is_building(s):
+            continue
+        if any(is_kind(s, kind) for kind in ("Gridshell", "Wall", "CellularWall", "Slab", "Steps", "BranchingColumn")):
+            continue
+        out.append(s)
+    return out
+
+
 class GridshellCmd(Command):
     pixmap = "BioGridshell.svg"
     menu = "Gridshell"
-    tip = ("A gridshell of laths over each selected closed curve (without a selection, a 6 m circle): the "
-           "form a net takes when every node is in balance, turned over so it stands in compression. "
-           "Spacing, rise, lath size and an edge beam are properties.")
+    tip = ("On each selected shell (a dome, a vault, a leaf, a conoid, a saddle): laths lying on its back both "
+           "ways, with a beam along its edges; Turn 45 makes a diagrid, Layers 2 a second lath on each. On each "
+           "selected closed curve (without a selection, a 6 m circle): a gridshell of laths in the form a net "
+           "takes when every node is in balance, turned over so it stands in compression. Spacing, rise, lath "
+           "size and the edge beam are properties.")
     hanging = False
 
     def make(self, doc, selected=None):
+        chosen = selection() if selected is None else selected
         out = []
-        for c in curves_in(selection() if selected is None else selected) or [None]:
+        for s in ([] if self.hanging else shells_in(chosen)):  # laths on a shell: where the shell lies
+            g = oo.make(oo.Gridshell, "Gridshell", self.menu, doc)
+            g.Shell = s
+            g.Placement = s.Placement
+            for parent in s.InList:
+                if is_building(parent):
+                    parent.addObject(g)
+            out.append(g)
+        if out:
+            return out
+        for c in curves_in(chosen) or [None]:
             g = oo.make(oo.Gridshell, "Gridshell", self.menu, doc)
             g.Hanging = self.hanging
             if c is not None:
@@ -801,10 +886,13 @@ COMMANDS = [
     ("Organic_LeafShell", LeafShell()),
     ("Organic_ShellRoof", ShellRoof()),
     ("Organic_Vault", Vault()),
+    ("Organic_WaveVault", WaveVault()),
     ("Organic_Arch", ArchCmd()),
     ("Organic_Dome", Dome()),
     ("Organic_SoapFilm", SoapFilm()),
     ("Organic_Hypar", Hypar()),
+    ("Organic_Conoid", ConoidCmd()),
+    ("Organic_Translation", Translation()),
     ("Organic_Slab", Slab()),
     ("Organic_ExportGodot", ExportGodot()),
     ("Organic_ImportMap", ImportMap()),
@@ -813,6 +901,7 @@ SACRED_COMMANDS = [
     ("Sacred_Figure", Figure()),
     ("Sacred_Solid", Solid()),
     ("Sacred_Geodesic", Geodesic()),
+    ("Sacred_GeodesicFrame", GeodesicFrame()),
     ("Sacred_SunRose", SunRoseCmd()),
     ("Sacred_Orient", Orient()),
     ("Sacred_Snap", Snap()),

@@ -33,18 +33,32 @@ from organic_points import STEP, along_map_points, map_points  # noqa: F401  (th
 MM = og.MM
 FORMATS = ("built/1",)
 # the pieces a built file may hold: the workbench's own classes, by their own names
-TYPES = ("PlanCurve", "Wall", "Slab", "ShellRoof", "LeafShell", "Vault", "Dome", "Steps", "SoapFilm", "MinimalShell",
+TYPES = ("PlanCurve", "Wall", "Slab", "ShellRoof", "LeafShell", "Vault", "Dome", "Steps", "SoapFilm", "MinimalShell", "Conoid", "TranslationShell",
          "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell")
-ALIASES = {"Step": "Slab"}  # a step is a slab that is named a step
+# A kind under another name: a step is a slab that is named a step; lane R's groined saddles are
+# the saddle shell of that kind; the wave vault of the map's catalogue is a vault (FORMAT.md,
+# "Lane R's shells and lattices as record kinds").
+ALIASES = {"Step": "Slab", "GroinedSaddles": "MinimalShell", "WaveVault": "Vault"}
+# what such a name says of the piece beyond its type, where its params do not say it themselves
+PRESETS = {"GroinedSaddles": {"Kind": "Groined saddles"}, "WaveVault": {"Ribs": 0}}
 LABELS = {"PlanCurve": "Plan curve", "Wall": "Curved wall", "Slab": "Floor slab", "ShellRoof": "Shell roof", "LeafShell": "Leaf shell roof",
           "Vault": "Ribbed vault", "Dome": "Dome", "Steps": "Steps", "SoapFilm": "Minimal surface", "MinimalShell": "Saddle shell", "SacredFigure": "Plan figure",
           "SacredSolid": "Regular solid", "GeodesicDome": "Geodesic dome", "Gridshell": "Gridshell", "CellularWall": "Cellular wall",
-          "BranchingColumn": "Branching column", "Revolved": "Solid of revolution", "HeightFieldShell": "Height field shell"}
+          "BranchingColumn": "Branching column", "Revolved": "Solid of revolution", "HeightFieldShell": "Height field shell",
+          "Conoid": "Conoid roof", "TranslationShell": "Translation shell", "GroinedSaddles": "Groined saddles", "WaveVault": "Wave vault"}
 # What the map writes on a piece for its own use, which says nothing the piece's other numbers do
 # not say (FORMAT.md, "What the map adds"): the outline a leaf or a dome was fitted over, and how.
 # The leaf's spine, span, ridge and place, the dome's radius, stretch and place are worked out
 # from these by the map and stand in the record too; a vault on a curve takes its length from it.
-PASSED_OVER = {"LeafShell": ("Base", "Overhang", "Rise"), "Dome": ("Base",)}
+# And "Supports": the posts and walls the map draws under a roof from its catalogue so that it
+# stands at its height, drawing aids that are not part of the piece (a vault's walls are its Plinth).
+PASSED_OVER = {"LeafShell": ("Base", "Overhang", "Rise"), "Dome": ("Base",), "Conoid": ("Supports",), "TranslationShell": ("Supports",), "Vault": ("Supports",),
+               "MinimalShell": ("Supports",), "GeodesicDome": ("Supports",)}
+# The forms of the map's catalogue that this workbench builds (lane R's pattern cards): on these
+# the map writes "Figure", its own name for the form, which is the type itself. Any other piece
+# with a Figure is one of the catalogue's forms that this workbench does not build (lane C's: a
+# Merkaba, a torus knot; lane R's leaf on ribs, written by its own parameters): named, not made.
+FIGURES = ("GeodesicDome", "Conoid", "TranslationShell", "GroinedSaddles", "WaveVault")
 # lists of plain numbers that are metres (a list has no unit of its own)
 METRE_LISTS = ("OpeningPositions", "OpeningWidths", "OpeningHeights", "OpeningSills", "RidgeHeights", "TopHeights", "Heights")
 
@@ -241,8 +255,9 @@ def import_built(doc, source, join=True):
     made, drawn = {}, {}
     pieces = data.get("pieces", []) or []
     # what stands on nothing first (curves, figures, domes), whatever the order in the file: walls,
-    # floors and roofs name a piece as their Base
-    order = [p for p in pieces if "Base" not in (p.get("params") or {})] + [p for p in pieces if "Base" in (p.get("params") or {})]
+    # floors and roofs name a piece as their Base; laths name the shell they lie on, which may stand on a curve itself
+    rank = lambda p: 2 if "Shell" in (p.get("params") or {}) else 1 if "Base" in (p.get("params") or {}) else 0  # noqa: E731
+    order = sorted(pieces, key=rank)
     for i, piece in enumerate(order):
         asked = str(piece.get("type", ""))
         kind = ALIASES.get(asked, asked)
@@ -251,13 +266,20 @@ def import_built(doc, source, join=True):
         left = sorted(k for k in piece if k not in ("id", "type", "name", "params", "placement", "ifc_type", "layer", "building", "land"))
         if left:
             notes.append("%s: not understood, left out: %s" % (where, ", ".join(left)))
+        params = dict(piece.get("params") or {})
+        figure = params.pop("Figure", None)
+        if figure is not None and not (str(figure) == asked and asked in FIGURES):
+            notes.append("%s: it is the form %r of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: %s)"
+                         % (where, str(figure), ", ".join(FIGURES)))
+            continue
         if kind not in TYPES:
-            notes.append("%s: this type is not known here and was not made (known: %s)" % (where, ", ".join(TYPES)))
+            notes.append("%s: this type is not known here and was not made (known: %s)" % (where, ", ".join(TYPES + tuple(sorted(ALIASES)))))
             continue
         cls = getattr(oo, kind)
-        params = dict(piece.get("params") or {})
+        for name, value in PRESETS.get(asked, {}).items():
+            params.setdefault(name, value)
         try:
-            obj = oo.make(cls, kind, str(piece.get("name") or LABELS[kind]), doc)
+            obj = oo.make(cls, kind, str(piece.get("name") or LABELS.get(asked) or LABELS[kind]), doc)
             obj.addProperty("App::PropertyString", "MapPiece", "From the map", "the id of this piece in the built file it was made from")
             obj.MapPiece = key  # carried into what is sent back, so the map can hold each solid against the piece it drew
             if piece.get("land") is not None:  # what the map read of the land at this piece: kept as it is, for the record
@@ -281,7 +303,9 @@ def import_built(doc, source, join=True):
                     notes.info("%s: its wave of %.2f m is taken as %.2f m: a trough keeps %.1f m of rise (as on the map)" % (where, asked, wave, og.WAVE_TROUGH_M))
                 if str(obj.Profile) == "Segmental" and oo.m(obj.Rise) > oo.m(obj.Span) / 2 + 1e-9:
                     notes.info("%s: a segmental arch is at most a semicircle: its rise of %.2f m is taken as %.2f m (as on the map)" % (where, oo.m(obj.Rise), oo.m(obj.Span) / 2))
-            based = getattr(obj, "Base", None) if "Base" in obj.PropertiesList else None
+            if kind == "MinimalShell" and str(obj.Kind) == "Groined saddles" and obj.Lobes != 8:  # built as asked; what the map shows is said
+                notes.info("%s: its %d lobes are built as asked; the map's own drawing of groined saddles shows eight, whatever Lobes says" % (where, obj.Lobes))
+            based = next((getattr(obj, link) for link in ("Shell", "Base") if link in obj.PropertiesList and getattr(obj, link) is not None), None)
             if based is not None and piece.get("placement"):
                 notes.append("%s: it stands on %s, which says where it lies; its own placement is left out" % (where, based.Label))
             obj.Placement = b.Placement if based is not None else piece_placement(b, piece.get("placement"), scale, notes, where)

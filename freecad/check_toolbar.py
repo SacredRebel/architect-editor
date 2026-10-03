@@ -28,6 +28,10 @@ Every expectation is derived here, not taken from the workbench:
   O. the Organic toolbar against closed forms: the curved wall t H R θ; the opening's volume
      as the integral of the chord through the wall's ring over the opening's outline; the
      arch's height (rise + ring) and its thrust line; the dome's and the saddle's boxes; the
+     wave vault on its walls (their feet on the ground, its crest rise + wave + shell over
+     its springings); the conoid's and the translation shell's boxes, their formulas made
+     thick along their normals, worked out here; the saddle shell's groined kind on its
+     supports, the top above a tip worked out here; the
      slab π r² t; the grown building's parts; the site of a new building against BRAIN.md §3,
      and where it stands after a click on the land (there) or on anything else (the origin);
      a wall on a line of straight runs through given points (t H L, its corners kept); the
@@ -35,14 +39,18 @@ Every expectation is derived here, not taken from the workbench:
      element when the building is sent again from another place, turned another way.
      ("Import from the map", the toolbar's other way, has its own check: check_import.py.)
   S. the Sacred toolbar: the seed of life's outline 4 π r; the icosahedron 5 (3 + √5) / 12 a³;
-     the geodesic dome's vertices on its sphere and its shell inside the sphere's; this
+     the geodesic dome's vertices on its sphere and its shell inside the sphere's; the
+     geodesic frame against lane R's construction built here (its struts, every node ball on
+     R's node, its cutting list, a member); this
      workbench's own sun (NOAA's equations) against the land pack's (astronomy-engine) at all
      eight stations of the year, within 0.1°; the sun rose's azimuths against the pack's file,
      and its size against the building it is drawn for (it shows beyond it);
      "Turn to the sun": the building's own -Y axis at the pack's bearing, its parts carried
      along; the snap against the ratios and the module worked out here; the report's rows.
   B. the Biomimetic toolbar: the net's nodes in balance (forces summed here) and on the
-     membrane's paraboloid, its laths' volume w d L; the hanging net below its ring; the
+     membrane's paraboloid, its laths' volume w d L; the gridshell pressed with a dome
+     selected: laths lying on it, its nodes on the dome's ellipse, one ring beam at its foot,
+     b² 2π (R + b / 2); the hanging net below its ring; the
      cellular wall one solid, its open share by its volume against points sampled through
      it; the veined leaf a shell and its ribs under it; the branching column's tips n^levels,
      level, within the crown.
@@ -55,7 +63,10 @@ building, the wall half as thick, the opening twice as wide, an element meshed a
 its building stands, the sun 1° off, the building turned the wrong way, a
 part left behind by the turn, a snap off its module, a report row missing, the net out of
 balance, the net off its paraboloid, the cells closed, a rib above the shell, a column tip
-short) and must see every one rejected by the check meant for it.
+short, the wave vault on the ground without its walls, the conoid made thick straight up,
+the translation shell's crown a thickness low, groined saddles off their supports, a strut of
+the frame missing, a frame node 1 mm off R's, a lath node off the dome, the dome's ring beam
+left out) and must see every one rejected by the check meant for it.
 """
 
 import copy
@@ -162,6 +173,84 @@ def nearest(ratios, a, b):
     return min(ratios, key=lambda v: abs(lo / hi - v))
 
 
+def conoid_box(span, length, rise, eave, t):
+    """The box (x0, x1, y0, y1, z0, z1, m) of lane R's conoid made thick t along its upward
+    normal n ~ (-fx, -fy, 1): furthest out across where its arch's feet are steepest, along
+    where its level end leans out most (the axis), highest over the arch's crown."""
+    sx = 4 * rise / span  # -fx at an arch foot
+    ly = rise / length  # -fy on the axis at the level end, and at the crown
+    x = span / 2 + t * sx / math.sqrt(1 + sx * sx)
+    return (-x, x, -length / 2, length / 2 + t * ly / math.sqrt(1 + ly * ly), eave, eave + rise + t / math.sqrt(1 + ly * ly))
+
+
+def translation_box(span, length, rise_x, rise_y, eave, t):
+    """The box of lane R's translation shell made thick t along its upward normal: furthest out
+    at the middle of each edge, highest over its crown."""
+    sx, sy = 4 * rise_x / span, 4 * rise_y / length
+    x, y = span / 2 + t * sx / math.sqrt(1 + sx * sx), length / 2 + t * sy / math.sqrt(1 + sy * sy)
+    return (-x, x, -y, y, eave, eave + rise_x + rise_y + t)
+
+
+def groined_tip_top(support, tip, centre, tip_h, t, lobes=8):
+    """The top of groined saddles above a lobe's tip (m): the saddle moved t along its normal,
+    read above the tip (the point of the saddle on its axis whose normal passes over the tip)."""
+    half = math.pi / lobes
+    a = (tip_h - centre) / tip ** 2
+    u = tip
+    for _ in range(200):
+        u = tip + t * 2 * a * u / math.sqrt(1 + 4 * a * a * u * u)
+    return centre + a * u * u + t / math.sqrt(1 + 4 * a * a * u * u)
+
+
+def r_geodesic(frequency, rows):
+    """Lane R's geodesic dome frame (pattern card P-001), built here as R's note says: an
+    icosahedron with a vertex at the crown, its upper ring at z = 1/√5 (radius 2/√5) at 0°, 72°,
+    ..., its lower ring at -1/√5 turned 36°; each face divided `frequency` times, the points
+    pushed onto the unit sphere; the triangles sorted by the height of their centres and the
+    first `rows` rows kept (5, 15, 25 ... in the cap, 10 x frequency in the belt); the foot
+    nodes (on edges of one triangle) set to their mean height. Returns (nodes [(x, y, z)], struts
+    [(i, j)], foot node indices), on the unit sphere."""
+    f = int(frequency)
+    zr, rr = 1 / math.sqrt(5), 2 / math.sqrt(5)
+    top, bottom = (0.0, 0.0, 1.0), (0.0, 0.0, -1.0)
+    upper = [(rr * math.cos(math.radians(72 * k)), rr * math.sin(math.radians(72 * k)), zr) for k in range(5)]
+    lower = [(rr * math.cos(math.radians(72 * k + 36)), rr * math.sin(math.radians(72 * k + 36)), -zr) for k in range(5)]
+    faces = []
+    for k in range(5):
+        n = (k + 1) % 5
+        faces += [(top, upper[k], upper[n]), (upper[k], lower[k], upper[n]), (upper[n], lower[k], lower[n]), (bottom, lower[n], lower[k])]
+    index, verts, tris = {}, [], []
+
+    def vid(p):
+        ln = math.sqrt(sum(c * c for c in p))
+        q = tuple(c / ln for c in p)
+        key = tuple(round(c, 7) for c in q)
+        if key not in index:
+            index[key] = len(verts)
+            verts.append(q)
+        return index[key]
+
+    for a, b, c in faces:
+        pt = lambda i, j: vid(tuple((a[t] * (f - i - j) + b[t] * i + c[t] * j) / f for t in range(3)))  # noqa: E731
+        for i in range(f):
+            for j in range(f - i):
+                tris.append((pt(i, j), pt(i + 1, j), pt(i, j + 1)))
+                if i + j < f - 1:
+                    tris.append((pt(i + 1, j), pt(i + 1, j + 1), pt(i, j + 1)))
+    order = sorted(range(len(tris)), key=lambda n: (-sum(verts[v][2] for v in tris[n]) / 3, -n))
+    counts = [5 * (2 * n + 1) for n in range(f)] + [10 * f] * f
+    kept = [tris[n] for n in order[:sum(counts[:rows])]]
+    edges = {}
+    for t in kept:
+        for i, j in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
+            edges[(min(i, j), max(i, j))] = edges.get((min(i, j), max(i, j)), 0) + 1
+    foot = sorted({v for e, n in edges.items() if n == 1 for v in e})
+    used = sorted({v for e in edges for v in e})
+    level = sum(verts[v][2] for v in foot) / len(foot) if foot else None
+    nodes = {v: (verts[v][0], verts[v][1], level if v in foot else verts[v][2]) for v in used}
+    return nodes, sorted(edges), foot
+
+
 GOLDEN = [1.0, PHI ** -0.5, 1 / PHI, 5 ** -0.5, PHI ** -2, PHI ** -3]  # short : long, the system the snap is tried in
 
 
@@ -234,11 +323,24 @@ def pressed(turned):
         press("Organic_Opening", doc, picked=[(wall, None)])
         out["Opening"] = dict(solid_facts(wall, b), removed=before - wall.Shape.Volume / 1e9, openings=len(wall.OpeningPositions))
 
+        made = {}
         for name, case in (("Organic_LeafShell", "Leaf shell roof"), ("Organic_Vault", "Ribbed vault"), ("Organic_Arch", "Catenary arch"),
                            ("Organic_Dome", "Dome"), ("Organic_Hypar", "Saddle shell"), ("Sacred_Solid", "Regular solid"),
-                           ("Sacred_Geodesic", "Geodesic dome"), ("Bio_Column", "Branching column"), ("Bio_VeinLeaf", "Veined leaf shell")):
+                           ("Sacred_Geodesic", "Geodesic dome"), ("Bio_Column", "Branching column"), ("Bio_VeinLeaf", "Veined leaf shell"),
+                           ("Organic_WaveVault", "Wave vault"), ("Organic_Conoid", "Conoid roof"), ("Organic_Translation", "Translation shell"),
+                           ("Sacred_GeodesicFrame", "Geodesic frame")):
             obj = press(name, doc)[0]
+            made[case] = obj
             out[case] = solid_facts(obj, b)
+            if case == "Wave vault":
+                out[case].update(amplitude=oo.m(obj.WaveAmplitude), waves=obj.Waves, rise=oo.m(obj.Rise), plinth=oo.m(obj.Plinth), thickness=oo.m(obj.Thickness))
+            if case in ("Conoid roof", "Translation shell"):
+                out[case].update({p: oo.m(getattr(obj, p)) for p in ("Span", "ShellLength", "Rise", "RiseX", "RiseY", "Eave", "Thickness") if p in obj.PropertiesList})
+            if case == "Geodesic frame":  # its node balls' centres, in the building's own frame
+                back = b.Placement.inverse()
+                balls = [back.multVec(s.CenterOfMass) for s in obj.Shape.Solids if len(s.Faces) == 1 and type(s.Faces[0].Surface).__name__ == "Sphere"]
+                out[case].update(struts=obj.Struts, nodes=obj.Nodes, rows=obj.Rows, ifc=str(obj.IfcType), cutting=list(obj.StrutList), radius=oo.m(obj.Radius),
+                                 hub=obj.Hub * oo.m(obj.StrutSection), centres=[(p.x / MM, p.y / MM, p.z / MM) for p in balls])
             if case == "Catenary arch":
                 out[case].update(thrust=bool(obj.ThrustInMiddleThird), deviation=float(obj.ThrustDeviation))
             if case == "Geodesic dome":
@@ -254,6 +356,18 @@ def pressed(turned):
                                  rib_top=max(true_box(s).ZMax for s in solids[1:]) / MM if len(solids) > 1 else float("nan"),
                                  shell_top=true_box(solids[0]).ZMax / MM)
 
+        # the saddle shell's other kind, and laths lying on the dome
+        groined = press("Organic_Hypar", doc)[0]
+        groined.Kind = "Groined saddles"
+        doc.recompute()
+        out["Groined saddles"] = dict(solid_facts(groined, b), **{p: oo.m(getattr(groined, p)) for p in ("SupportRadius", "TipRadius", "CentreHeight", "TipHeight", "Thickness")})
+        out["Groined saddles"]["lobes"] = groined.Lobes
+        dome = made["Dome"]
+        laths = press("Bio_Gridshell", doc, selected=[dome])[0]
+        out["Gridshell on a dome"] = dict(solid_facts(laths, b), laths=laths.Laths, nodes=list(getattr(laths.Proxy, "nodes", [])), beams=laths.Beams, edge=laths.BeamLength,
+                                          beam=oo.m(laths.EdgeBeam), profile=str(dome.Profile), radius=oo.m(dome.Radius), dome_rise=oo.m(dome.Rise),
+                                          shell=laths.Shell.Name if laths.Shell is not None else None, dome=dome.Name,
+                                          beam_volumes=[og.volume_of(s) / 1e9 for s in laths.Shape.Solids[laths.Laths:]])
         ring = circle_curve(doc, 8.0)
         slab = press("Organic_Slab", doc, selected=[ring])[0]
         out["Floor slab"] = solid_facts(slab, b)
@@ -368,13 +482,16 @@ def options():
     doc, _b = scene(False)
     out = {}
     try:
-        def tried(label, cls, name, setup, solid=True):
+        def tried(label, cls, name, setup, solid=True, many=False):
             obj = oo.make(cls, name, label, doc)
             try:
                 setup(obj)
                 doc.recompute()
                 s = obj.Shape
-                good = "Invalid" not in obj.State and not s.isNull() and (len(s.Solids) == 1 and s.isValid() if solid else bool(s.Edges))
+                if many:  # several solids by design (a frame, laths): every one valid
+                    good = "Invalid" not in obj.State and not s.isNull() and len(s.Solids) >= 2 and all(p.isValid() for p in s.Solids)
+                else:
+                    good = "Invalid" not in obj.State and not s.isNull() and (len(s.Solids) == 1 and s.isValid() if solid else bool(s.Edges))
             except Exception as exc:
                 good = False
                 label += " (%s)" % exc
@@ -422,6 +539,29 @@ def options():
             def setup(o, freq=freq, portion=portion):
                 o.Frequency, o.Portion = freq, portion
             tried("geodesic dome frequency %d, portion %.3f" % (freq, portion), oo.GeodesicDome, "Geodesic", setup)
+        for freq, portion, bands in ((1, 0.5, 0), (2, 0.5, 0), (3, 0.375, 0), (4, 0.625, 0), (3, 0.625, 3), (3, 1.0, 0)):
+            def setup(o, freq=freq, portion=portion, bands=bands):
+                o.Frequency, o.Portion, o.Bands, o.Frame = freq, portion, bands, True
+            tried("geodesic frame frequency %d, portion %.3f%s" % (freq, portion, ", %d rows" % bands if bands else ""), oo.GeodesicDome, "Frame", setup, many=True)
+        for lobes in (4, 6, 8, 12, 16):
+            def setup(o, lobes=lobes):
+                o.Kind, o.Lobes = "Groined saddles", lobes
+            tried("saddle shell as groined saddles of %d lobes" % lobes, oo.MinimalShell, "Shell", setup)
+        for kind, cls in (("conoid", oo.Conoid), ("translation shell", oo.TranslationShell)):
+            tried(kind, cls, "Shell", lambda o: None)
+        # laths on shells of every kind: the shells first, then laths on each (a diagrid of two layers on one)
+        shells = {"a conoid": oo.make(oo.Conoid, "Conoid", "conoid", doc), "a ribbed vault": oo.make(oo.Vault, "Vault", "vault", doc),
+                  "a leaf shell": oo.make(oo.LeafShell, "Leaf", "leaf", doc), "a saddle": oo.make(oo.MinimalShell, "Saddle", "saddle", doc),
+                  "groined saddles": oo.make(oo.MinimalShell, "Groined", "groined", doc), "a dome with an oculus": oo.make(oo.Dome, "Dome", "dome", doc)}
+        shells["groined saddles"].Kind = "Groined saddles"
+        shells["a dome with an oculus"].Profile, shells["a dome with an oculus"].Oculus = "Catenary", 0.8 * MM
+        doc.recompute()
+        for label, shell in shells.items():
+            def setup(o, shell=shell, diagrid=label == "a conoid"):
+                o.Shell = shell
+                if diagrid:
+                    o.Turn, o.Layers = 45.0, 2
+            tried("laths on %s%s" % (label, ", a diagrid of two layers" if label == "a conoid" else ""), oo.Gridshell, "Laths", setup, many=True)
     finally:
         App.closeDocument(doc.Name)
     return out
@@ -456,6 +596,12 @@ def moves():
         made("tetrahedron on a vertex", oo.SacredSolid, vertex)
         made("geodesic dome, five eighths", oo.GeodesicDome, lambda o: setattr(o, "Portion", 0.625))
         made("catenoid", oo.MinimalShell, lambda o: setattr(o, "Kind", "Catenoid"))
+        made("groined saddles", oo.MinimalShell, lambda o: setattr(o, "Kind", "Groined saddles"))
+
+        def frame(o):
+            o.Radius, o.Frequency, o.Portion, o.Frame = 5000.0, 3, 0.625, True
+        made("geodesic frame", oo.GeodesicDome, frame)
+        made("conoid", oo.Conoid, lambda o: None)
         ring = oc.place(oo.make(oo.PlanCurve, "Ring", "ring", doc), doc)
         ring.Kind, ring.Radius = "Circle", 1200.0
         ring.Placement = b.Placement.multiply(App.Placement(App.Vector(0, -5000, 180), App.Rotation()))
@@ -609,10 +755,11 @@ def read_facts():
 # ------------------------------------------------------------------ judge
 SOLID_CASES = ["Curved wall", "Opening", "Leaf shell roof", "Ribbed vault", "Catenary arch", "Dome", "Saddle shell", "Regular solid",
                "Geodesic dome", "Branching column", "Veined leaf shell", "Floor slab", "Shell roof on a closed wall", "Minimal surface",
-               "Gridshell", "Hanging net", "Cellular wall", "A wall on a figure", "A wall on a hexagon", "A wall on a vesica", "A wall on corner points"]
+               "Gridshell", "Hanging net", "Cellular wall", "A wall on a figure", "A wall on a hexagon", "A wall on a vesica", "A wall on corner points",
+               "Wave vault", "Conoid roof", "Translation shell", "Geodesic frame", "Groined saddles", "Gridshell on a dome"]
 CORNER_POINTS = [(0.0, 0.0), (5.0, 0.0), (8.0, 4.0), (8.0, 9.0), (3.0, 11.0)]  # metres: four straight runs, three corners, not closed
-COMPOUNDS = {"Branching column", "Veined leaf shell", "Gridshell", "Hanging net"}  # several solids by design
-OFFSETS = {}  # every command makes its object at the building's own origin
+COMPOUNDS = {"Branching column", "Veined leaf shell", "Gridshell", "Hanging net", "Geodesic frame", "Gridshell on a dome"}  # several solids by design
+OFFSETS = {"Wave vault": (0.0, 0.0, 2.2)}  # every command makes its object at the building's own origin, but the wave vault, whose springings stand on its walls
 
 
 def pack_azimuth(sky, lnglat, key, part, block):
@@ -669,6 +816,19 @@ def judge(facts):
     ok(near(pick("geodesic dome, five eighths", (2, 5)), (0.0, 7.5)),
        "M the five-eighths geodesic dome stands on its cut: z %s (1.25 R = 7.5)" % (pick("geodesic dome, five eighths", (2, 5)),))
     ok(near(pick("catenoid", (2, 5)), (0.0, 8.0)), "M the catenoid stands on the ground: z %s (its height 8)" % (pick("catenoid", (2, 5)),))
+    tip_top = groined_tip_top(6.0, 7.85, 2.4, 4.0, 0.15)
+    ok(near(pick("groined saddles", (0, 3, 1, 4, 2, 5)), (-7.85, 7.85, -7.85, 7.85, 0.0, tip_top)),
+       "M groined saddles stand on their eight supports, on the ground: x %s, y %s, z %s (their tips 7.85 m out; the top above a tip %.4f m, worked out here)"
+       % (pick("groined saddles", (0, 3)), pick("groined saddles", (1, 4)), pick("groined saddles", (2, 5)), tip_top))
+    nodes, _struts, _foot = r_geodesic(3, 5)
+    height = 5.0 * (max(z for _x, _y, z in nodes.values()) - min(z for _x, _y, z in nodes.values()))
+    ok(near(pick("geodesic frame", (2, 5)), (-0.0675, height + 0.0675)),
+       "M the geodesic frame stands on its levelled foot: z %s (its foot nodes on z = 0, its crown %.4f m up by R's construction worked out here; balls of 0.135 m)"
+       % (pick("geodesic frame", (2, 5)), height))
+    box = conoid_box(9.0, 12.0, 3.0, 2.6, 0.08)
+    ok(near(pick("conoid", (0, 3, 1, 4, 2, 5)), box, 0.002),
+       "M the conoid in its own frame: x %s, y %s, z %s (worked out here from its formula and its normals: %s)"
+       % (pick("conoid", (0, 3)), pick("conoid", (1, 4)), pick("conoid", (2, 5)), tuple(round(v, 4) for v in box)))
     ok(near(pick("slab on a ring 5 m off", (0, 3, 1, 4, 2, 5)), (-1.2, 1.2, -6.2, -3.8, -0.44, 0.18), 0.006),
        "M a slab on a ring 5 m from its building's origin and 0.18 m up lies there: x %s, y %s, z %s"
        % (pick("slab on a ring 5 m off", (0, 3)), pick("slab on a ring 5 m off", (1, 4)), pick("slab on a ring 5 m off", (2, 5))))
@@ -730,6 +890,49 @@ def judge(facts):
        "O Saddle shell: 8 m by 8 m, standing on its two low corners (%.3f m up; worked out here %.3f), its high ones %.3f m up (twice the rise + the shell); "
        "with its thickness leaning out, %.3f m by %.3f m (worked out here: %.3f)"
        % (s["box"][2], foot, s["box"][5], s["box"][3] - s["box"][0], s["box"][4] - s["box"][1], side))
+    wv = here["Wave vault"]
+    crest = wv["rise"] + wv["amplitude"] + wv["thickness"]
+    ok(wv["waves"] == 3 and abs(wv["amplitude"] - 0.6) <= 1e-9 and abs(wv["box"][2] + wv["plinth"]) <= 0.002 and abs(wv["box"][5] - crest) <= 0.002
+       and math.dist(wv["offset"], (0.0, 0.0, wv["plinth"])) <= 0.001,
+       "O Wave vault: three waves of ±%.1f m on a rise of %.1f m, standing on its walls with their feet on the ground: in its own frame z %.3f..%.3f "
+       "(its walls %.1f m deep; its crest rise + wave + shell = %.3f), its springings %.1f m above the building's floor"
+       % (wv["amplitude"], wv["rise"], wv["box"][2], wv["box"][5], wv["plinth"], crest, wv["offset"][2]))
+    for case, box in (("Conoid roof", conoid_box(9.0, 12.0, 3.0, 2.6, 0.08)), ("Translation shell", translation_box(10.0, 14.0, 1.6, 2.2, 2.6, 0.08))):
+        f = here[case]
+        got = (f["box"][0], f["box"][3], f["box"][1], f["box"][4], f["box"][2], f["box"][5])
+        ok(near(got, box, 0.002),
+           "O %s: x %.4f..%.4f, y %.4f..%.4f, z %.4f..%.4f (worked out here from its formula, made thick along its normal: %s)"
+           % ((case,) + got + (", ".join("%.4f" % v for v in box),)))
+    gs = here["Groined saddles"]
+    tip_top = groined_tip_top(gs["SupportRadius"], gs["TipRadius"], gs["CentreHeight"], gs["TipHeight"], gs["Thickness"], gs["lobes"])
+    got = (gs["box"][0], gs["box"][3], gs["box"][1], gs["box"][4], gs["box"][2], gs["box"][5])
+    ok(gs["lobes"] == 8 and near(got, (-gs["TipRadius"], gs["TipRadius"], -gs["TipRadius"], gs["TipRadius"], 0.0, tip_top), 0.002),
+       "O Saddle shell, its other kind, groined saddles: %d lobes, %.2f m across from tip to tip, standing on its supports (z %.4f), its top above a tip %.4f m (worked out here: %.4f)"
+       % (gs["lobes"], got[1] - got[0], got[4], got[5], tip_top))
+    gf = here["Geodesic frame"]
+    r_nodes, r_struts, r_foot = r_geodesic(3, 5)
+    level = min(z for _x, _y, z in r_nodes.values())
+    want = [(x * gf["radius"], y * gf["radius"], (z - level) * gf["radius"]) for x, y, z in r_nodes.values()]
+    worst = max((min(math.dist(w, c) for c in gf["centres"]) for w in want), default=float("inf")) if gf["centres"] else float("inf")
+    cut = {}
+    for i, j in r_struts:
+        n = round(gf["radius"] * math.dist(r_nodes[i], r_nodes[j]), 3)
+        cut[n] = cut.get(n, 0) + 1
+    listed = {}
+    for row in gf["cutting"]:
+        count, value = row.split(" x ")
+        listed[round(float(value.split()[0]), 3)] = int(count)
+    ok(gf["struts"] == len(r_struts) and gf["nodes"] == len(r_nodes) == len(gf["centres"]) and gf["rows"] == 5 and gf["ifc"] == "Member" and worst <= 1e-6 and listed == cut,
+       "O Geodesic frame: %d struts and %d node balls (lane R's construction worked out here: %d and %d, %d of them at its levelled foot); every ball within %.2g m "
+       "of R's node; its cutting list %s; a member, not a roof" % (gf["struts"], len(gf["centres"]), len(r_struts), len(r_nodes), len(r_foot), worst, ", ".join(gf["cutting"])))
+    gd_ = here["Gridshell on a dome"]
+    big, rise, side = gd_["radius"], gd_["dome_rise"], gd_["beam"]
+    off = max([abs((math.hypot(x, y) / big) ** 2 + (z / rise) ** 2 - 1.0) for x, y, z in gd_["nodes"]] or [float("inf")])
+    ring = side * side * 2 * math.pi * (big + side / 2)
+    ok(gd_["shell"] == gd_["dome"] and gd_["profile"] == "Ellipse" and gd_["laths"] > 0 and off <= 2e-5 and gd_["beams"] == 1 and len(gd_["beam_volumes"]) == 1
+       and abs(gd_["beam_volumes"][0] - ring) <= 5e-4 * ring,
+       "B Gridshell pressed with the dome selected: %d laths lying on it, its %d nodes on the dome's ellipse (r / %.0f)² + (z / %.1f)² = 1 (worst %.2g); one ring beam at its foot, "
+       "%s m³ (b² 2π (R + b / 2) = %.5f)" % (gd_["laths"], len(gd_["nodes"]), big, rise, off, ", ".join("%.5f" % v for v in gd_["beam_volumes"]) or "none", ring))
     sl = here["Floor slab"]
     exact = math.pi * 64 * 0.2
     ok(abs(sl["volume"] - exact) <= 0.001 * exact, "O Floor slab on a circle of radius 8 m: %.4f m³ (π r² t = %.4f)" % (sl["volume"], exact))
@@ -913,6 +1116,20 @@ def forgeries(facts):
         ("the cells closed", "B Cellular wall", f(lambda g: g["origin"]["Cellular wall"].__setitem__("volume", g["origin"]["Cellular wall"]["plain"]))),
         ("a rib above the shell", "B Veined leaf shell", f(lambda g: g["origin"]["Veined leaf shell"].__setitem__("rib_top", g["origin"]["Veined leaf shell"]["shell_top"] + 0.1))),
         ("a column tip short", "B Branching column", f(lambda g: g["origin"]["Branching column"]["tips"].__setitem__(0, (0.5, 0.5, 4.5)))),
+        ("the wave vault standing on the ground without its walls", "O Wave vault", f(lambda g: g["origin"]["Wave vault"].__setitem__("offset", (0.0, 0.0, 0.0)))),
+        ("the conoid made thick straight up", "O Conoid roof",
+         f(lambda g: g["origin"]["Conoid roof"].__setitem__("box", (-4.5, -6.0, 2.6, 4.5, 6.0, 5.68)))),
+        ("the translation shell's crown a thickness low", "O Translation shell",
+         f(lambda g: g["origin"]["Translation shell"].__setitem__("box", g["origin"]["Translation shell"]["box"][:5] + (g["origin"]["Translation shell"]["box"][5] - 0.08,)))),
+        ("groined saddles off their supports", "O Saddle shell, its other kind",
+         f(lambda g: g["origin"]["Groined saddles"].__setitem__("box", g["origin"]["Groined saddles"]["box"][:2] + (0.1,) + g["origin"]["Groined saddles"]["box"][3:]))),
+        ("a strut of the geodesic frame missing", "O Geodesic frame", f(lambda g: g["origin"]["Geodesic frame"].__setitem__("struts", 164))),
+        ("a node of the geodesic frame 1 mm off R's", "O Geodesic frame",
+         f(lambda g: g["origin"]["Geodesic frame"]["centres"].__setitem__(0, tuple(c + 0.001 for c in g["origin"]["Geodesic frame"]["centres"][0])))),
+        ("a lath node off the dome", "B Gridshell pressed with the dome selected",
+         f(lambda g: g["origin"]["Gridshell on a dome"]["nodes"].__setitem__(0, tuple(c * 1.001 for c in g["origin"]["Gridshell on a dome"]["nodes"][0])))),
+        ("the dome's ring beam left out", "B Gridshell pressed with the dome selected",
+         f(lambda g: g["origin"]["Gridshell on a dome"].update(beams=0, beam_volumes=[]))),
     ]
 
 

@@ -18,8 +18,24 @@ Every expectation is derived here, not taken from the workbench's own constants:
      parabola and an ellipse the band t L + t² φ with its toes and its plinth); walls with a shaped top on an arc and on
      smooth curves through points, open and closed (t L times the top line's mean height,
      L the curve's cubic spans integrated here); a top cut that does nothing refused by the
-     kernel, not drawn; and every kernel, the leaf shell and the organic roof included, a
-     valid solid whose triangles enclose OCCT's volume within 0.5 %.
+     kernel, not drawn; lane R's shells given by a formula, R's cases A and B: the conoid and
+     the translation shell against their parallel bodies (the integral over their plan of
+     (t - t² H + t³ K / 3) √(1 + fx² + fy²), H and K their curvatures, worked out here), the
+     groined saddles of 4, 6, 8 and 12 lobes against the height of each lobe's saddle moved t
+     along its normal less its own, integrated over the lobe's plan here (FreeCAD's own
+     Volume of the lobes first made by a boolean read 3.2 % short); and every kernel, the leaf
+     shell and the organic roof included, a valid solid whose triangles enclose OCCT's volume
+     within 0.5 %.
+  G. laths on shells (the Biomimetic tab's gridshell on a shell): the top of a shell found
+     face by face, against a boolean of the solid with the upright line, at 90 places on a
+     hemisphere, a conoid and a wave vault; laths on a hemisphere, each one valid, its nodes
+     on the sphere, each lath's volume w d ρ θ (Pappus: its middle line's circle and the arc
+     between its two end faces, read off it); on it and on the Dome button's own dome (an
+     ellipse, its crown a pole) every lath whole from foot to foot: one on each grid line that
+     crosses the dome with the whole of a lath's width (|c| + w / 2 < R), both its ends within
+     0.1 m of the foot (the ring's); the ring beam at its foot, b² 2π (R + b / 2);
+     a conoid's leaning end face found to be a side, with no lath on it, and laths along the
+     conoid's own straight lines valid solids (OCCT's swept section could not close them).
   B. the GLB, read back: one node per element of the design's building, named and classed
      as in FreeCAD; each mesh's enclosed volume (the divergence theorem over its own
      triangles) within 1 % of the element's solid.
@@ -64,7 +80,10 @@ wall half as thick, the land file's roads off the pack's, an element's base 0.15
 ground, the plinth left out of the vault, a wave top and an arch top left uncut on smooth
 walls through points (what OCCT returned until 1 Oct), the kernel taking a cut that did nothing,
 the export's reading of the build envelope another building's, the building under the protected
-oaks (where the pavilion stood until the night of 1 Oct).
+oaks (where the pavilion stood until the night of 1 Oct), the groined saddles made by a boolean,
+a conoid made thick straight up, a top the face-by-face finder misses, a lath node 5 mm off the
+hemisphere, a lath half as deep, laths stopping short of the foot, a lath in two at a dome's
+crown, the ring beam left out, a lath on the conoid's leaning end face.
 """
 
 import copy
@@ -197,6 +216,116 @@ def ellipse_line(span, rise, steps=20000):
     speed = lambda k: math.hypot(span / 2 * math.sin(k), rise * math.cos(k))  # noqa: E731
     h = math.pi / steps
     return h / 3 * (speed(0.0) + speed(math.pi) + sum((4 if k % 2 else 2) * speed(k * h) for k in range(1, steps))), float("inf")
+
+
+def parallel_volume(slopes, x0, x1, y0, y1, t, n=400):
+    """The volume (m³) of a surface z = f(x, y) over a rectangle made thick t along its upward
+    normal (the parallel body): the integral of (t - t² H + t³ K / 3) W, W = √(1 + fx² + fy²),
+    H and K its mean and Gaussian curvature taken with the upward normal (H < 0 where it bends
+    down: the body grows outward there). slopes(x, y) gives fx, fy, fxx, fyy, fxy; midpoint
+    rule, n × n."""
+    hx, hy = (x1 - x0) / n, (y1 - y0) / n
+    total = 0.0
+    for i in range(n):
+        x = x0 + (i + 0.5) * hx
+        for j in range(n):
+            fx, fy, fxx, fyy, fxy = slopes(x, y0 + (j + 0.5) * hy)
+            w2 = 1.0 + fx * fx + fy * fy
+            w = math.sqrt(w2)
+            h = ((1 + fy * fy) * fxx - 2 * fx * fy * fxy + (1 + fx * fx) * fyy) / (2 * w2 * w)
+            k = (fxx * fyy - fxy * fxy) / (w2 * w2)
+            total += (t - t * t * h + t ** 3 * k / 3) * w
+    return total * hx * hy
+
+
+def conoid_slopes(span, length, rise):
+    """The slopes of lane R's conoid, z = eave + (1 - v) rise (1 - (2x / span)²), v = (y + length / 2) / length."""
+    def slopes(x, y):
+        a, da, dda = 1 - (2 * x / span) ** 2, -8 * x / span ** 2, -8 / span ** 2
+        g, dg = (length / 2 - y) / length, -1.0 / length
+        return rise * g * da, rise * a * dg, rise * g * dda, 0.0, rise * da * dg
+    return slopes
+
+
+def translation_slopes(span, length, rise_x, rise_y):
+    """The slopes of lane R's translation shell, z = eave + rise_x (1 - (2x / span)²) + rise_y (1 - (2y / length)²)."""
+    return lambda x, y: (-8 * rise_x * x / span ** 2, -8 * rise_y * y / length ** 2, -8 * rise_x / span ** 2, -8 * rise_y / length ** 2, 0.0)
+
+
+def groined_volume(support, tip, centre, tip_h, t, lobes=8, n=400):
+    """The volume (m³) of lane R's groined saddles: over one lobe's plan (between its two groins,
+    out to its free edge r = support + (tip - support) |cos(lobes θ / 2)|), the height of its
+    saddle moved t along the saddle's normal less the saddle's own, times the lobes. The moved
+    saddle is read above each place by stepping to the point of the saddle whose normal passes
+    over it. Polar midpoint rule, n × n."""
+    half = math.pi / lobes
+    a = (tip_h - centre) / tip ** 2
+    b = (centre / support ** 2 + a * math.cos(half) ** 2) / math.sin(half) ** 2
+    total = 0.0
+    for i in range(n):
+        th = -half + 2 * half * (i + 0.5) / n
+        edge = support + (tip - support) * abs(math.cos(lobes * th / 2))
+        for j in range(n):
+            r = edge * (j + 0.5) / n
+            x, y = r * math.cos(th), r * math.sin(th)
+            u, v = x, y
+            for _ in range(80):
+                k = math.sqrt(1 + 4 * a * a * u * u + 4 * b * b * v * v)
+                nu, nv = x + t * 2 * a * u / k, y - t * 2 * b * v / k
+                done = abs(nu - u) + abs(nv - v) < 1e-13
+                u, v = nu, nv
+                if done:
+                    break
+            k = math.sqrt(1 + 4 * a * a * u * u + 4 * b * b * v * v)
+            total += ((a * u * u - b * v * v + t / k) - (a * x * x - b * y * y)) * r * (edge / n) * (2 * half / n)
+    return total * lobes
+
+
+def lattice_facts():
+    """G. Laths lying on shells, read here: the top of a shell found face by face against a
+    boolean of the solid with the upright line; laths on a hemisphere, each lath's volume, its
+    nodes, the ring at its foot; a conoid's leaning end face, and laths along its own straight
+    lines."""
+    import random
+
+    import organic_biomimetic as ob
+
+    rng = random.Random(11)
+    shells = {"hemisphere": og.dome_shape("Sphere", 5.0, 5.0, 0.15), "conoid": og.conoid_shape(9.0, 12.0, 3.0, 2.6, 0.08),
+              "wave vault": og.wave_vault_shape("Catenary", 8.0, 2.4, 0.12, 18.0, 0.6, 3, 2.2)[0]}
+    out = {"tops": []}
+    for name, shell in shells.items():
+        tops = ob.Tops(shell)
+        b = shell.BoundBox
+        for _ in range(30):
+            x, y = rng.uniform(b.XMin, b.XMax), rng.uniform(b.YMin, b.YMax)
+            hits = tops.crossings(x, y)
+            zs = [v.Point.z for v in shell.common(Part.makeLine(App.Vector(x, y, b.ZMin - 1000.0), App.Vector(x, y, b.ZMax + 1000.0))).Vertexes]
+            out["tops"].append((name, hits[0][0] / MM if hits else None, max(zs) / MM if zs else None))
+    def ends(s):
+        caps = [f.CenterOfMass for f in s.Faces if type(f.Surface).__name__ == "Plane"]
+        return {"caps": [(p.x / MM, p.y / MM, p.z / MM) for p in caps], "low": min(p.z for p in caps) / MM if caps else float("inf"),
+                "high": max(p.z for p in caps) / MM if caps else float("inf")}
+
+    got = ob.net_on_shell(shells["hemisphere"], 1.0, 0.08, 0.05, 0.0, 1, 0.15)
+    solids = got["shape"].Solids
+    laths = [dict(ends(s), valid=s.isValid(), volume=og.volume_of(s) / 1e9) for s in solids[:got["laths"]]]
+    out["hemisphere"] = {"radius": 5.0, "width": 0.08, "depth": 0.05, "spacing": 1.0, "laths": laths, "nodes": got["nodes"],
+                         "beams": [{"valid": s.isValid(), "volume": og.volume_of(s) / 1e9} for s in solids[got["laths"]:]], "side": 0.15}
+    # the Dome button's own dome, an ellipse 5.5 m high on a 5 m radius: its crown a pole, where a lath once came in two
+    solids = ob.laths_on(og.dome_shape("Ellipse", 5.0, 5.5, 0.30), 1.0, 0.08, 0.05, 0.0, 1)[0]
+    out["ellipse dome"] = {"radius": 5.0, "width": 0.08, "spacing": 1.0, "laths": [ends(s) for s in solids]}
+    conoid = shells["conoid"]
+    solids, _nodes, _total, faces, tops = ob.laths_on(conoid, 1.0, 0.08, 0.05, 0.0, 1)
+    # the faces of the conoid seen from above and what the finder makes of them: its back, or one of its sides
+    seen = {}
+    for k in range(len(conoid.Faces)):
+        if tops.rows[k]["side"] is not None:
+            seen[k] = "side" if tops.rows[k]["side"] else "back"
+    b = conoid.BoundBox
+    end = [k for k, f in enumerate(conoid.Faces) if abs(f.BoundBox.YMin - b.YMin) < 1.0 and f.BoundBox.YLength < 50.0 and f.BoundBox.ZLength > 1000.0]  # the arch's end face, 2 cm deep
+    out["conoid"] = {"faces": sorted(faces), "seen": seen, "end": end, "laths": len(solids), "valid": all(s.isValid() and len(s.Solids) == 1 for s in solids)}
+    return out
 
 
 
@@ -640,6 +769,19 @@ def read_facts():
         "parabolic vault on a plinth, section by section": (og.sectioned_vault("Parabola", 6.0, 3.0, 0.2, 8.0, plinth_m=0.6)[0],
                                                             offset_band(*parabola_line(6.0, 3.0), 0.2, 0.6) * 8.0),
         "elliptic vault, section by section": (og.sectioned_vault("Ellipse", 6.0, 2.5, 0.15, 8.0)[0], offset_band(*ellipse_line(6.0, 2.5), 0.15) * 8.0),
+        # lane R's shells given by a formula (FROM-RESEARCH.md 3, 4, 6; R's cases A and B, R's thicknesses): each against
+        # its volume worked out here, the conoid and the translation shell as parallel bodies, the groined saddles over their plan
+        "conoid (R's case A)": (og.conoid_shape(9.0, 12.0, 3.0, 2.6, 0.08), parallel_volume(conoid_slopes(9.0, 12.0, 3.0), -4.5, 4.5, -6.0, 6.0, 0.08)),
+        "conoid (R's case B)": (og.conoid_shape(6.0, 8.0, 2.0, 2.4, 0.08), parallel_volume(conoid_slopes(6.0, 8.0, 2.0), -3.0, 3.0, -4.0, 4.0, 0.08)),
+        "translation shell (R's case A)": (og.translation_shell_shape(10.0, 14.0, 1.6, 2.2, 2.6, 0.08),
+                                           parallel_volume(translation_slopes(10.0, 14.0, 1.6, 2.2), -5.0, 5.0, -7.0, 7.0, 0.08)),
+        "translation shell (R's case B)": (og.translation_shell_shape(6.0, 6.0, 1.2, 1.2, 2.4, 0.08),
+                                           parallel_volume(translation_slopes(6.0, 6.0, 1.2, 1.2), -3.0, 3.0, -3.0, 3.0, 0.08)),
+        "groined saddles, eight lobes (R's case A)": (og.groined_saddles_shape(6.0, 7.85, 2.4, 4.0, 0.05), groined_volume(6.0, 7.85, 2.4, 4.0, 0.05)),
+        "groined saddles at Los Manantiales' size (R's case B)": (og.groined_saddles_shape(16.2, 21.2, 5.8, 9.9, 0.05), groined_volume(16.2, 21.2, 5.8, 9.9, 0.05)),
+        "groined saddles, four lobes": (og.groined_saddles_shape(6.0, 7.85, 2.4, 4.0, 0.05, 4), groined_volume(6.0, 7.85, 2.4, 4.0, 0.05, 4)),
+        "groined saddles, six lobes, 0.08 m thick": (og.groined_saddles_shape(6.0, 7.85, 2.4, 4.0, 0.08, 6), groined_volume(6.0, 7.85, 2.4, 4.0, 0.08, 6)),
+        "groined saddles, twelve lobes": (og.groined_saddles_shape(6.0, 7.85, 2.4, 4.0, 0.05, 12), groined_volume(6.0, 7.85, 2.4, 4.0, 0.05, 12)),
         "leaf shell": (og.leaf_shell_shape(16.0, 10.0, (0.4, 5.4, 6.0, 0.4), 0.4, 1.0, 0.2, 0.15, 2.0, outline="Pointed"), None),
         "leaf shell on footings": (og.leaf_shell_shape(16.0, 10.0, (0.4, 5.4, 6.0, 0.4), 0.4, 1.0, 0.2, 0.15, 2.0, outline="Pointed", plinth_m=0.6), None),
         "organic roof": (og.organic_roof_shape(lob, 3.2, 2.4, 0.8, 0.2), None),
@@ -668,6 +810,8 @@ def read_facts():
     finally:
         og.top_tool, og.TOP_TOLERANCE = real_tool, real_tolerance
     facts["idle_cut"]["closed_form"] = 0.3 * smooth_length(GARDEN_POINTS, False) * (1.8 + 0.3 / 2)
+    # G. laths on shells
+    facts["lattice"] = lattice_facts()
     # the design
     target = os.path.normcase(os.path.abspath(DESIGN))
     doc = next((d for d in App.listDocuments().values() if d.FileName and os.path.normcase(os.path.abspath(d.FileName)) == target), None)
@@ -760,6 +904,58 @@ def judge(facts):
        "A a top cut that does nothing is refused, not drawn: %s"
        % (("the kernel said: " + idle["said"]) if idle["refused"]
           else "the kernel returned a wall of %.4f m³ where t L (H + rise / 2) = %.4f m³" % (idle["volume"], facts["idle_cut"]["closed_form"])))
+
+    # G. laths on shells
+    lat = facts["lattice"]
+    pairs = lat["tops"]
+    differ = [p for p in pairs if (p[1] is None) != (p[2] is None)]
+    worst = max([abs(a - b) for _n, a, b in pairs if a is not None and b is not None] or [0.0])
+    ok(not differ and worst <= 1e-6 and len(pairs) >= 90,
+       "G the top of a shell found face by face: at %d places on a hemisphere, a conoid and a wave vault, the same height as a boolean of the solid "
+       "with the upright line (worst %.2g m), and nothing where that finds nothing (%d places disagree)" % (len(pairs), worst, len(differ)))
+    hs = lat["hemisphere"]
+    big, w, d = hs["radius"], hs["width"], hs["depth"]
+    off = max([abs(math.sqrt(x * x + y * y + z * z) - big) for x, y, z in hs["nodes"]] or [float("inf")])
+    gaps = []
+    for lath in hs["laths"]:
+        caps = lath["caps"]
+        if len(caps) != 2:
+            gaps.append(float("inf"))
+            continue
+        (x1, y1, z1), (x2, y2, z2) = caps
+        # its line lies in an upright plane x = c or y = c, on the circle the sphere has there; its section's middle runs on that
+        # circle grown by 1 + d / 2R: Pappus gives its volume as w d times that circle's arc between its two end faces
+        across = 0 if abs(x1 - x2) < abs(y1 - y2) else 1
+        p1, p2 = ((y1, z1), (y2, z2)) if across == 0 else ((x1, z1), (x2, z2))
+        rho = (math.hypot(*p1) + math.hypot(*p2)) / 2.0
+        theta = abs(math.atan2(p1[0] * p2[1] - p1[1] * p2[0], p1[0] * p2[0] + p1[1] * p2[1]))
+        gaps.append(abs(lath["volume"] - w * d * rho * theta) / (w * d * rho * theta))
+    ok(hs["laths"] and all(lath["valid"] for lath in hs["laths"]) and off <= 1e-6 and max(gaps) <= 5e-4,
+       "G laths on a hemisphere of radius %.0f m, 1 m apart: %d laths, each one valid solid; its %d nodes on the sphere (worst %.2g m); each lath's volume "
+       "w d ρ θ, its middle line's circle and the arc between its two end faces read off it (worst %.3f %%)"
+       % (big, len(hs["laths"]), len(hs["nodes"]), off, 100 * max(gaps or [float("inf")])))
+    # a line x = c or y = c crosses a dome on a circle of radius R once, from foot to foot: one lath on each line with the
+    # whole of the lath's width on the dome (|c| + w / 2 < R), both its ends at the foot (a lath in two ends on the back)
+    whole = []
+    for name in ("hemisphere", "ellipse dome"):
+        dome = lat[name]
+        lines = 2 * sum(1 for i in range(-50, 51) if abs(i * dome["spacing"]) + dome["width"] / 2 < dome["radius"])
+        whole.append((name, len(dome["laths"]), lines, [z for lath in dome["laths"] for z in (lath["low"], lath["high"])]))
+    ok(all(got == lines and heights and max(heights) <= 0.1 for _n, got, lines, heights in whole),
+       "G every lath on a dome runs whole from its foot to its foot, inside the ring beam (%.2f m high): %s"
+       % (hs["side"], "; ".join("on the %s %d laths, one on each line 1 m apart that crosses it with the whole of a lath's width (%d), their ends "
+                                "%.3f to %.3f m above the foot" % (n, got, lines, min(heights or [float("nan")]), max(heights or [float("nan")]))
+                                for n, got, lines, heights in whole)))
+    side = hs["side"]
+    ring = side * side * 2 * math.pi * (big + side / 2)
+    beams = hs["beams"]
+    ok(len(beams) == 1 and beams[0]["valid"] and abs(beams[0]["volume"] - ring) <= 5e-4 * ring,
+       "G the ring beam at the hemisphere's foot: one closed beam of %.2f m standing on the ground outside the shell, %s m³ (b² 2π (R + b / 2) = %.5f)"
+       % (side, ", ".join("%.5f" % b["volume"] for b in beams) or "none", ring))
+    cn = lat["conoid"]
+    ok(cn["end"] and all(cn["seen"].get(k) == "side" for k in cn["end"]) and not set(cn["end"]) & set(cn["faces"]) and cn["valid"] and cn["laths"] > 0,
+       "G a conoid's leaning end face is one of its sides, not its back (face %s: %s): no lath lies on it (they lie on face %s); and %d laths along its own "
+       "straight lines are valid solids (OCCT's swept section could not close them)" % (cn["end"], [cn["seen"].get(k) for k in cn["end"]], cn["faces"], cn["laths"]))
 
     design, meshes = facts["design"], facts["glb"]
     # B
@@ -1057,6 +1253,39 @@ def forgeries(facts):
         """The kernel's own comparison switched off: what it then returned for the idle cut."""
         g["idle_cut"]["guarded"] = g["idle_cut"]["unguarded"]
 
+    def by_boolean(g):
+        """The groined saddles as they were first made: each lobe its saddle made thick and cut
+        by a boolean, whose one long cut edge FreeCAD's own Volume read 3.2 % short (11.853 m³
+        where the adaptive measure said 12.239)."""
+        kernel = g["kernels"]["groined saddles, eight lobes (R's case A)"]
+        kernel["volume"] = 11.85305
+
+    def straight_up(g):
+        """A conoid made thick straight up, as R's note reads: its volume t times its plan."""
+        kernel = g["kernels"]["conoid (R's case A)"]
+        kernel["volume"] = kernel["mesh"] = 0.08 * 9.0 * 12.0
+
+    def off_sphere(g):
+        x, y, z = g["lattice"]["hemisphere"]["nodes"][0]
+        g["lattice"]["hemisphere"]["nodes"][0] = (x * 1.001, y * 1.001, z * 1.001)
+
+    def shallow(g):
+        g["lattice"]["hemisphere"]["laths"][0]["volume"] /= 2
+
+    def on_the_end(g):
+        g["lattice"]["conoid"]["faces"] = sorted(set(g["lattice"]["conoid"]["faces"]) | set(g["lattice"]["conoid"]["end"]))
+
+    def in_two(g):
+        """The lath across the ellipse dome's crown as the seeds once left it: two laths, each from
+        the foot to the crown (5.525 m, the lath's middle there)."""
+        laths = g["lattice"]["ellipse dome"]["laths"]
+        laths[0]["high"] = 5.525
+        laths.append(dict(laths[0]))
+
+    def missed_top(g):
+        row = next(r for r in g["lattice"]["tops"] if r[1] is not None)
+        g["lattice"]["tops"][g["lattice"]["tops"].index(row)] = (row[0], None, row[2])
+
     return [
         ("the GLB Z-up", "C every element", f(lambda g: each_mesh(g, lambda p: p[:, [0, 2, 1]] * np.array([1, -1, 1])))),
         ("the GLB in millimetres", "B ", f(lambda g: each_mesh(g, lambda p: p * 1000.0))),
@@ -1085,6 +1314,17 @@ def forgeries(facts):
         ("an arch top left uncut on a smooth ring through points", "A smooth ring through points, arch top",
          f(lambda g: uncut(g, "smooth ring through points, arch top", 1.8, 0.9, 1.8 + 0.9 * 2 / math.pi))),
         ("the kernel taking a cut that did nothing", "A a top cut that does nothing", f(unguarded)),
+        ("the groined saddles made by a boolean (FreeCAD's own Volume 3.2 % short)", "A groined saddles, eight lobes (R's case A)", f(by_boolean)),
+        ("a conoid made thick straight up", "A conoid (R's case A)", f(straight_up)),
+        ("a top that the face-by-face finder misses", "G the top of a shell found face by face", f(missed_top)),
+        ("a lath node 5 mm off the hemisphere", "G laths on a hemisphere", f(off_sphere)),
+        ("a lath half as deep", "G laths on a hemisphere", f(shallow)),
+        ("the ring beam left out", "G the ring beam", f(lambda g: g["lattice"]["hemisphere"].__setitem__("beams", []))),
+        ("laths stopping short of the foot (their edges tested straight across in plan: up to 0.70 m above it)", "G every lath on a dome runs whole",
+         f(lambda g: g["lattice"]["hemisphere"]["laths"][0].__setitem__("low", 0.697))),
+        ("a lath in two at a dome's crown (Newton from the far side of its pole ran off the face: 19 laths on the ellipse dome)", "G every lath on a dome runs whole",
+         f(in_two)),
+        ("a lath on the conoid's leaning end face", "G a conoid's leaning end face", f(on_the_end)),
         ("the export's reading of the build envelope another building's", "D the export reads the map's build envelope",
          f(lambda g: g["sidecar"]["envelope"].__setitem__("buildable", 0.5))),
         ("the building under the protected oaks (where the pavilion stood until the night of 1 Oct)", "D inside the map's buildable envelope", f(lambda g: stand_at(g, *OAK_SPOT))),
