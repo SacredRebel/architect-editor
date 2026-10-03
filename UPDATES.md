@@ -3,6 +3,21 @@
 Rules: `C:\Playground\RULES.md` (Rule 3). After every report: the full entry here, then one line in `C:\Playground\UPDATES.md`.
 Entry shape: date/time · phase · what was done · commit sha · files written to `exchange\` · open items · needs.
 
+## 2026-10-03 16:40 (this PC's clock) · A · point 7, its first step (the roof frames): a save point, paused at Johny's word
+
+**Where it stands.** Johny's point 7, its first step: the ribs and edge beams under the house's three roofs (RS-S, RS-NW, RS-NE), as the `RoofFrame` record kind written in `exchange\godot\FORMAT.md` before the code (15:49).
+- Written, not yet sent: the builder (`organic_geom.roof_frame_shape`: each member hung under the roof's underside, made from its own faces as the bands are), the `RoofFrame` object, the import, and `spec_to_records` writing one frame for each roof from the spec's numbers (each `est` there). On the trial records: RS-S 18 ribs in 21 pieces (split at the rings of OC2 and the chimney's cut), its edge beam in 2 stretches, 2 rings, 14.24 m³; RS-NW 10 ribs in 13 pieces, 10.57 m³; RS-NE 10 ribs in 13 pieces, 11.37 m³; each valid.
+- Checked from the spec alone (`check_spec.py`, new lines "M … its ribs" and "M … its edge beam and rings"): all six pass on the trial. The members' sides within 0.4 mm of where the spec's rule puts them, their depths exact, their tops within 0.6 mm of the roof's own underside as built (read at each member's two sides) and within 0.03 m of the spec's expression; nothing at 60 places between the ribs of each roof, nothing over the holes, nothing 0.10 m outside the outlines.
+- Found on the way: a member's top runs straight across from side to side (the format's rule), so under the sharp crest by RS-NW's apex the middle of OC1's ring stands up to 28 mm below the curved underside. By the rule; Johny will be told when the frames are sent.
+
+**Not done yet (next, in this order).** Run the 8 frame forgeries (written: one rib fewer, one more between each two, ribs deeper, ribs wider, edge beam wider, edge beam deeper, no rings, the frame hung 0.05 m off its roof); make the measure quicker (about 2 minutes a frame now; reading the roof through its own faces takes 0.09 s against OCCT's common 0.21 s); the full spec check with its self-test; the console suites; then the real records, the backups copied aside, the house rebuilt in the window, pictures, sent to the map, one line in `NEW.md`, the state in `FORMAT.md` with the measured numbers.
+
+**Commit.** `2a1d621c` (a save point: the code as it stands). Nothing written to `exchange\` in this step.
+
+**Open.** Three old probe processes of this morning (freecadcmd, PIDs 23392, 28424, 3556) are stuck on their way out: idle, no CPU; Windows will not end them ("no running instance of the task"). A restart of the PC clears them; nothing else depends on them.
+
+**Needs.** Nothing. Paused at Johny's word; it goes on when he is back.
+
 ## 2026-10-03 14:50 (this PC's clock) · A · Johny's answers 1 to 6 in his house S01; built, checked, sent
 
 **The brief** (architect, relaying Johny's answers to A's seven questions of 2 Oct): levels: keep the house where it is, list the sills below the land; oaks: mark the house zone's oak check "stale data", lay the canopy as a toggle; the old house is replaced; lower slab 0.30 m; the band between wall top and roof skin both ways (glass by default, a property); cut the main slab round the chimney; then point 7 in steps, and the backups reviewed without deleting anything.
