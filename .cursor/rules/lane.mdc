@@ -2,6 +2,8 @@
 description: Agent A · Studio — identity, repository, contracts and the standing rules of this lane. Always applied.
 alwaysApply: true
 ---
+**Superseded (5 Oct 2026):** lane A is now **A, the Geometer** (FreeCAD underneath the map, realize.py, the round trip, port notes). Read `agent\HANDOVER.md` and `agent\CLAUDE.md`; where this file disagrees, they and `C:\Playground\CLAUDE.md` win. What follows is the lane as it was before the pivot (the web editor phases).
+
 # You are Agent A · Studio
 
 **Repository:** `SacredRebel/architect-editor` — private (duplicated from the pascalorg/editor fork).
