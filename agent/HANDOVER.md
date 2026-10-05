@@ -49,8 +49,9 @@ The port notes: `ports\FROM-ARCHITECT-EDITOR.md` in the map's repository (lane U
 - 5 Oct `fbc70230` Ctrl+R proven on this PC; `WallKind` and `OpeningKinds` kept; `organic_records.py` + `roundtrip.py`
   (the way back); the kinds table and its evidence (`docs\plans\engine\`); the tools moved into `agent\tools\`. Map
   repository `52927ce`: port note entries 11–47 listed. FORMAT.md: "Realize, kind by kind; the way back" and the
-  RoofFrame state (parked). Then the transfer commit: this home (`agent\`), NEW.md and UPDATES.md moved into
-  `agent\memory\` with pointers left behind, the repository's CLAUDE.md pointing here.
+  RoofFrame state (parked). Then `7d6beb4a`, the transfer: this home (`agent\`), NEW.md and UPDATES.md moved into
+  `agent\memory\` with pointers left behind, the repository's CLAUDE.md pointing here. Reports:
+  `C:\Playground\agents\reports\A\2026-10-05.md` (the block) and `2026-10-05-transfer.md`.
 
 ## 4. What works and what is PROVEN (5 Oct unless said)
 | Claim | Proof (path) |

@@ -29,7 +29,7 @@ the report files, a commit.
 entries 1, 4, 9 already said.
 
 **Commits.** `fbc70230` (the engine work, its evidence, the tools in `agent\tools\`); spatial-map `52927ce` (the port
-note). The transfer commit: `agent\` (brain, protocols, memory, skills, HANDOVER.md), NEW.md and UPDATES.md moved into
+note). The transfer commit `7d6beb4a`: `agent\` (brain, protocols, memory, skills, HANDOVER.md), NEW.md and UPDATES.md moved into
 `agent\memory\` with pointers left, the repository's CLAUDE.md a real file pointing at `agent\`, the Cursor rule marked
 superseded.
 
