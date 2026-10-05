@@ -1,0 +1,39 @@
+{
+  "save": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\rt-api\\scratch-save\\edits.sulphur-mountain.geojson",
+  "features": 16,
+  "by_layer": {
+    "trees": 10,
+    "models": 1,
+    "pieces": 5
+  },
+  "buildings": [
+    {
+      "building": "h-muvufv9r-3",
+      "pieces_in_save": 5,
+      "pieces_layer": 5,
+      "records_sent": 5,
+      "made_in_freecad": 5,
+      "solids": 4,
+      "records_back": 5,
+      "lost_on_the_way_in": [],
+      "said_coming_back": [
+        "Wall 'p-muvufv9r-5': Height 3.1 in FreeCAD (was 3.3)",
+        "Slab 'p-muvufvay-6': Thickness 0.25 in FreeCAD (was 0.2)"
+      ],
+      "edits_asked_in_freecad": [
+        "edited in FreeCAD: p-muvufv9r-5 Height = 3.1",
+        "edited in FreeCAD: p-muvufvay-6 Thickness = 0.25"
+      ],
+      "changed_in_the_save": [
+        "p-muvufv9r-5 Height: 3.3 -> 3.1",
+        "p-muvufvay-6 Thickness: 0.2 -> 0.25"
+      ],
+      "unchanged_lengths_came_back_within_m": 0.0,
+      "furthest_at": ""
+    }
+  ],
+  "save_back": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\rt-api\\trip-b\\edits.sulphur-mountain.geojson",
+  "features_back": 16,
+  "seconds": 11.6,
+  "ok": true
+}

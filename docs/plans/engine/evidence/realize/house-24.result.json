@@ -1,0 +1,159 @@
+{
+ "ok": true,
+ "complete": false,
+ "records": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\wall-check\\x\\built\\house-24.json",
+ "notes": [
+  "Wall 'p-muvulvaa-107': OpeningKinds is not a property of a Wall; left out",
+  "Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out",
+  "Wall 'p-muvulvb2-111': WallKind is not a property of a Wall; left out"
+ ],
+ "files": {
+  "glb": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\wall-check\\x\\built\\realized\\house-24.glb",
+  "ifc": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\wall-check\\x\\built\\realized\\house-24.ifc",
+  "json": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\wall-check\\x\\built\\realized\\house-24.json",
+  "design": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\wall-check\\x\\built\\realized\\house-24.FCStd"
+ },
+ "name": "House 24",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 6,
+ "made": 6,
+ "solids": 3,
+ "elements": [
+  {
+   "name": "Wall 1",
+   "piece": "p-muvulvaa-107",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 8.548387,
+   "mesh_volume_m3": 8.552705,
+   "triangles": 220,
+   "box_m": [
+    [
+     -0.1206,
+     -0.0894,
+     -0.5
+    ],
+    [
+     8.1166,
+     2.158,
+     2.7
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 4.0,
+     "width_m": 1.0,
+     "sill_m": 0.9,
+     "height_m": 1.2,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "Wall 2",
+   "piece": "p-muvulvan-109",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 17.425148,
+   "mesh_volume_m3": 17.427,
+   "triangles": 160,
+   "box_m": [
+    [
+     11.85,
+     -0.15,
+     -0.5
+    ],
+    [
+     18.15,
+     4.15,
+     2.7
+    ]
+   ],
+   "openings": 2,
+   "opening_list": [
+    {
+     "at_m": 3.0,
+     "width_m": 2.4,
+     "sill_m": 0.0,
+     "height_m": 2.2,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 11.0,
+     "width_m": 0.9,
+     "sill_m": 1.2,
+     "height_m": 0.9,
+     "shape": "Round"
+    }
+   ]
+  },
+  {
+   "name": "Wall 3",
+   "piece": "p-muvulvb2-111",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 8.64,
+   "mesh_volume_m3": 8.64,
+   "triangles": 12,
+   "box_m": [
+    [
+     0.0,
+     7.775,
+     -0.5
+    ],
+    [
+     6.0,
+     8.225,
+     2.7
+    ]
+   ],
+   "openings": 0
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4349029
+  ],
+  "altitude_m": 2.758,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 428.388,
+  "offset_m": {
+   "east": 0.0,
+   "north": 199.996,
+   "up": 2.758
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 218.1,
+  "easement": 205.39,
+  "existing_building": 191.91
+ },
+ "site_notes": [
+  "by the map's build envelope, 100 % of it (its points in plan) lies outside the area that may be built on"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 436,
+  "buildable": 0.0,
+  "no_building": {},
+  "stale": {},
+  "replaced": {}
+ },
+ "seconds": 1.8
+}

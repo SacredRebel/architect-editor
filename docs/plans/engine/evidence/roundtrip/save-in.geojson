@@ -1,0 +1,448 @@
+{
+  "community": "sulphur-mountain",
+  "datum_m": 425.63,
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1556414,
+          34.4330979
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-17b5acd6fa",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1556294,
+          34.4329857
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-ce6e1f1e6a",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1555804,
+          34.4330273
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-5f9566bff5",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.155575,
+          34.4329739
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-18bdb7bdb5",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1555521,
+          34.4329368
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-d1a09f418a",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1554955,
+          34.4330264
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-5f962fb33d",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1552755,
+          34.4328455
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-6d35a64337",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1552264,
+          34.4329061
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-fc3bbda7e2",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1551045,
+          34.4330228
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-f2d7c2354d",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1550772,
+          34.4330463
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "approval": "remove",
+        "by": "owner",
+        "layer": "trees",
+        "op": "remove",
+        "reason": "house clearing",
+        "reported": "2026-10-05",
+        "tree_id": "t-db89657a20",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1549248,
+          34.4333704
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "actor": "owner",
+        "altitude_m": 0.279,
+        "drawn": true,
+        "id": "h-muvufv9r-3",
+        "layer": "models",
+        "name": "House 1",
+        "op": "place",
+        "pieces": 5,
+        "placed": "2026-10-05",
+        "rotation_deg": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "scale": 1.0,
+        "source_file": "drawn:h-muvufv9r-3",
+        "source_lane": "E"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1549248,
+          34.4333704
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "building": "h-muvufv9r-3",
+        "by": "owner",
+        "id": "p-muvufv9r-4",
+        "ifc_type": "Building Element Proxy",
+        "layer": "pieces",
+        "name": "Curve 1",
+        "params": {
+          "Angle": 90.0,
+          "Closed": true,
+          "Depth": 0.35,
+          "Inset": 0.0,
+          "Kind": "Circle",
+          "Lobes": 5,
+          "Points": [],
+          "Radius": 3.0,
+          "Smooth": true,
+          "Turn": 0.0,
+          "Turns": 1.5
+        },
+        "reported": "2026-10-05",
+        "type": "PlanCurve",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1549248,
+          34.4333704
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "building": "h-muvufv9r-3",
+        "by": "owner",
+        "id": "p-muvufv9r-5",
+        "ifc_type": "Wall",
+        "layer": "pieces",
+        "name": "Wall 1",
+        "params": {
+          "Align": "Center",
+          "Base": "p-muvufv9r-4",
+          "BaseOffset": 0.0,
+          "Foundation": 0.5,
+          "Height": 3.3,
+          "OpeningHeights": [
+            2.2
+          ],
+          "OpeningKinds": [
+            ""
+          ],
+          "OpeningPositions": [
+            2.0
+          ],
+          "OpeningShapes": [
+            "Arch"
+          ],
+          "OpeningSills": [
+            0.0
+          ],
+          "OpeningSwings": [
+            ""
+          ],
+          "OpeningWidths": [
+            1.0
+          ],
+          "Thickness": 0.3,
+          "Top": "Flat",
+          "TopHeights": [],
+          "TopRise": 0.0,
+          "TopWaves": 3,
+          "WallKind": ""
+        },
+        "reported": "2026-10-05",
+        "type": "Wall",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1549248,
+          34.4333704
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "building": "h-muvufv9r-3",
+        "by": "owner",
+        "id": "p-muvufvay-6",
+        "ifc_type": "Slab",
+        "layer": "pieces",
+        "name": "Floor 1",
+        "params": {
+          "Base": "p-muvufv9r-4",
+          "Inset": 0.0,
+          "Thickness": 0.2
+        },
+        "reported": "2026-10-05",
+        "type": "Slab",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1549248,
+          34.4333704
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "building": "h-muvufv9r-3",
+        "by": "owner",
+        "id": "p-muvufvb3-7",
+        "ifc_type": "Roof",
+        "layer": "pieces",
+        "name": "Leaf roof 1",
+        "params": {
+          "Asymmetry": 1.0,
+          "Base": "p-muvufv9r-4",
+          "Curvature": 0.15,
+          "Eave": 3.3,
+          "LeafSpan": 7.202,
+          "Outline": "Ellipse",
+          "Overhang": 0.6,
+          "Plinth": 0.0,
+          "RibSpacing": 0.0,
+          "RidgeHeights": [
+            3.3,
+            4.226,
+            4.8,
+            3.3
+          ],
+          "Rise": 1.5,
+          "RiseFactor": 1.0,
+          "Spine": 7.202,
+          "Thickness": 0.12
+        },
+        "placement": {
+          "turn": 0.0,
+          "x": 0.001,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "reported": "2026-10-05",
+        "type": "LeafShell",
+        "via": "godot"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -119.1549248,
+          34.4333704
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "building": "h-muvufv9r-3",
+        "by": "owner",
+        "id": "p-muvufvbj-8",
+        "ifc_type": "Roof",
+        "layer": "pieces",
+        "name": "Dome 1",
+        "params": {
+          "Base": "",
+          "Oculus": 0.0,
+          "Profile": "Sphere",
+          "Radius": 2.0,
+          "Rise": 2.0,
+          "StretchX": 1.0,
+          "StretchY": 1.0,
+          "Thickness": 0.3
+        },
+        "placement": {
+          "turn": 0.0,
+          "x": 9.0,
+          "y": 2.0,
+          "z": 0.0
+        },
+        "reported": "2026-10-05",
+        "type": "Dome",
+        "via": "godot"
+      },
+      "type": "Feature"
+    }
+  ],
+  "format": "edits/2",
+  "house_clearing": {
+    "anchor": [
+      -119.15536,
+      34.4331
+    ],
+    "radius_m": 30.0,
+    "trees": 10
+  },
+  "name": "edits",
+  "note": "The map's state as Johny left it. layer models: one record per building on the map, in the shape of exchange/godot/FORMAT.md (Closing the loop). layer trees: the pack's own edit ops. Nothing leaves this PC yet.",
+  "saved": "2026-10-05T22:51:03Z",
+  "type": "FeatureCollection"
+}

@@ -1,0 +1,32 @@
+files: export-check house-1-2: 1 records -> not realized; export-check house-1-part: 3 records -> not realized; export-check house-1: 11 records -> made 11 of 11, 8 solids, complete True, 1 notes; export-check house-3: 2 records -> made 2 of 2, 1 solids, complete True, 0 notes; export-check house-4: 4 records -> made 4 of 4, 2 solids, complete True, 0 notes; wall-check house-17: 4 records -> not realized; wall-check house-24: 6 records -> made 6 of 6, 3 solids, complete False, 3 notes; ground-check house-8: 15 records -> made 15 of 15, 10 solids, complete True, 0 notes; struct-check house-7: 28 records -> made 28 of 28, 20 solids, complete True, 0 notes; hand-check house-12: 6 records -> made 6 of 6, 3 solids, complete True, 0 notes; hand-check house-13: 5 records -> made 5 of 5, 2 solids, complete True, 0 notes; S01 oak-canopy-s01: 80 records -> made 80 of 80, 42 solids, complete True, 1 notes
+Dome                                         records   3  realized   1  made   1  export-check  
+PlanCurve                                    records  29  realized  26  made  26  export-check,ground-check,hand-check,struct-check,wall-check  
+PlanCurve · Circle                           records   2  realized   1  made   1  export-check  
+Slab                                         records  10  realized   9  made   9  export-check,ground-check,hand-check,struct-check  
+Wall                                         records  18  realized  16  made  13  export-check,ground-check,hand-check,struct-check,wall-check  Wall 'p-muvulvaa-107': OpeningKinds is not a property of a Wall; left out | Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out | Wall 'p-muvulvb2-111': WallKind is not a property of a Wall; left out
+Wall · kind (none)                           records  16  realized  15  made  13  export-check,ground-check,hand-check,struct-check,wall-check  Wall 'p-muvulvaa-107': OpeningKinds is not a property of a Wall; left out | Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out
+Wall · top Flat                              records  16  realized  14  made  11  export-check,hand-check,struct-check,wall-check  Wall 'p-muvulvaa-107': OpeningKinds is not a property of a Wall; left out | Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out | Wall 'p-muvulvb2-111': WallKind is not a property of a Wall; left out
+Wall · opening (no kind)                     records   3  realized   3  made   3  export-check,struct-check  
+Wall · opening shape Arch                    records   2  realized   2  made   2  export-check  
+ShellRoof                                    records   2  realized   2  made   2  export-check,hand-check  
+Steps                                        records   3  realized   3  made   3  export-check,struct-check  
+Vault                                        records   1  realized   1  made   1  export-check  
+PlanCurve · Points                           records  25  realized  23  made  23  export-check,ground-check,hand-check,struct-check,wall-check  
+Wall · kind Straw bale                       records   2  realized   1  made   0  wall-check  Wall 'p-muvulvb2-111': WallKind is not a property of a Wall; left out
+PlanCurve · Arc                              records   1  realized   1  made   1  wall-check  
+Wall · opening Window                        records   1  realized   1  made   0  wall-check  Wall 'p-muvulvaa-107': OpeningKinds is not a property of a Wall; left out
+Wall · opening shape Rect                    records   3  realized   3  made   1  struct-check,wall-check  Wall 'p-muvulvaa-107': OpeningKinds is not a property of a Wall; left out | Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out
+Wall · opening Sliding                       records   1  realized   1  made   0  wall-check  Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out
+Wall · opening Round window                  records   1  realized   1  made   0  wall-check  Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out
+Wall · opening shape Round                   records   1  realized   1  made   0  wall-check  Wall 'p-muvulvan-109': OpeningKinds is not a property of a Wall; left out
+Wall · top Flat + TopHeights                 records   1  realized   1  made   1  ground-check  
+Revolved                                     records  14  realized  14  made  14  ground-check,struct-check  
+Wall · IFC Member                            records   2  realized   2  made   2  struct-check  
+PlanCurve · Oval                             records   1  realized   1  made   1  struct-check  
+BranchingColumn                              records   1  realized   1  made   1  struct-check  
+HeightFieldShell                             records   2  realized   2  made   2  hand-check,struct-check  
+Wall · IFC Railing                           records   1  realized   1  made   1  struct-check  
+SacredFigure                                 records   2  realized   2  made   2  hand-check  
+SacredFigure · Vesica piscis                 records   1  realized   1  made   1  hand-check  
+Wall · top Slope                             records   1  realized   1  made   1  hand-check  
+SacredFigure · Seed of life                  records   1  realized   1  made   1  hand-check  

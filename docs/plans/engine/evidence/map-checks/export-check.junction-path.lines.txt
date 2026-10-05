@@ -1,0 +1,6 @@
+[export-check] records PASS — built\house-1.json: 11 pieces of 11, format and id right and the building's own place, height, turn 20°, scale: true; every parameter as drawn: true; keys lane A does not know: []; the map's own fields left in: []; 5320 bytes, no geometry: true; exported again: "house-1"; another building of the same name: "house-1-2"
+[export-check] glb PASS — house-1.glb read back: 8 nodes for 8 pieces with a body, each named by its piece, the same triangles and the same box: true (2899520 bytes)
+[export-check] pieces PASS — the floor and the dome selected, Ctrl+E's own call: built\house-1-part.json holds 3 records (those two and the curve the floor stands on: 3): true
+[export-check] whynot PASS — FreeCAD looked for where it is not: can run: false — "FreeCAD's command-line program was not found at C:\Users\paul\AppData\Local\Temp\claude\C--AI-Work-Ai-apps---Codebase-Pl"; nothing started: true; the panel says it: true
+[export-check] realize FAIL — not run: FreeCAD's command-line program was not found at C:/Playground/FreeCAD/bin/freecadcmd.exe (start the map with --freecad=<path to freecadcmd.exe>)
+[check] export FAIL — realize

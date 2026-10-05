@@ -1,0 +1,160 @@
+{
+  "community": "sulphur-mountain",
+  "format": "built/1",
+  "generator": "the Godot map, BUILD mode (lane E)",
+  "id": "h-muvumj8c-56",
+  "name": "House 12",
+  "pieces": [
+    {
+      "id": "p-muvumj8d-57",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 1",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            10.0,
+            0.0
+          ],
+          [
+            10.0,
+            7.998
+          ],
+          [
+            0.0,
+            7.998
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvumj8d-58",
+      "ifc_type": "Slab",
+      "name": "Floor 1",
+      "params": {
+        "Base": "p-muvumj8d-57",
+        "Inset": 0.0,
+        "Thickness": 0.2
+      },
+      "type": "Slab"
+    },
+    {
+      "id": "p-muvumj8d-59",
+      "ifc_type": "Wall",
+      "name": "Wall 1",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvumj8d-57",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 2.7,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.3,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvumj8r-60",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 2",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            -1.002,
+            -0.998
+          ],
+          [
+            11.002,
+            -0.998
+          ],
+          [
+            11.002,
+            8.996
+          ],
+          [
+            -1.002,
+            8.996
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": true,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvumj8s-61",
+      "ifc_type": "Roof",
+      "name": "Roof 1",
+      "params": {
+        "Base": "p-muvumj8r-60",
+        "Eaves": 2.7,
+        "Overhang": 0.6,
+        "Rise": 3.1,
+        "Thickness": 0.2
+      },
+      "type": "ShellRoof"
+    },
+    {
+      "id": "p-muvumj9l-62",
+      "ifc_type": "Building Element Proxy",
+      "name": "Vesica piscis 1",
+      "params": {
+        "CellsY": 0,
+        "Construction": true,
+        "Count": 2,
+        "Kind": "Vesica piscis",
+        "Root": "2",
+        "Size": 8.0,
+        "Step": 2,
+        "Turn": 0.0
+      },
+      "placement": {
+        "x": 5.0,
+        "y": 4.005
+      },
+      "type": "SacredFigure"
+    }
+  ],
+  "placement": {
+    "altitude_m": 83.534,
+    "coordinates": [
+      -119.15536,
+      34.4302153
+    ],
+    "rotation_deg": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "scale": 1.0
+  },
+  "saved": "2026-10-05T22:56:11Z",
+  "units": "m"
+}

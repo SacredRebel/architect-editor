@@ -1,0 +1,423 @@
+{
+  "community": "sulphur-mountain",
+  "format": "built/1",
+  "generator": "the Godot map, BUILD mode (lane E)",
+  "id": "h-muvum2iu-47",
+  "name": "House 8",
+  "pieces": [
+    {
+      "id": "p-muvum2iv-48",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 1",
+      "params": {
+        "Closed": false,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            12.004,
+            2.995
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum2iv-49",
+      "ifc_type": "Wall",
+      "name": "Retaining wall 0",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvum2iv-48",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 0.321,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.3,
+        "Top": "Flat",
+        "TopHeights": [
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.321
+        ],
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvum2j8-50",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 2",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0,
+            6
+          ],
+          [
+            6,
+            6
+          ],
+          [
+            6,
+            10
+          ],
+          [
+            0,
+            10
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "z": 0.972
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum2j8-51",
+      "ifc_type": "Slab",
+      "name": "Floor 1",
+      "params": {
+        "Base": "p-muvum2j8-50",
+        "Inset": 0.0,
+        "Thickness": 0.2
+      },
+      "type": "Slab"
+    },
+    {
+      "id": "p-muvum2ji-52",
+      "ifc_type": "Column",
+      "name": "Pier 1",
+      "params": {
+        "Profile": [
+          [
+            0.15,
+            0.0
+          ],
+          [
+            0.15,
+            0.7
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 1.0,
+        "y": 7.0,
+        "z": 0.072
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum2ji-53",
+      "ifc_type": "Column",
+      "name": "Pier 2",
+      "params": {
+        "Profile": [
+          [
+            0.15,
+            0.0
+          ],
+          [
+            0.15,
+            0.719
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 1.0,
+        "y": 9.0,
+        "z": 0.053
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum2ji-54",
+      "ifc_type": "Column",
+      "name": "Pier 3",
+      "params": {
+        "Profile": [
+          [
+            0.15,
+            0.0
+          ],
+          [
+            0.15,
+            0.661
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 3.0,
+        "y": 7.0,
+        "z": 0.111
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum2ji-55",
+      "ifc_type": "Column",
+      "name": "Pier 4",
+      "params": {
+        "Profile": [
+          [
+            0.15,
+            0.0
+          ],
+          [
+            0.15,
+            0.681
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 3.0,
+        "y": 9.0,
+        "z": 0.091
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum2ji-56",
+      "ifc_type": "Column",
+      "name": "Pier 5",
+      "params": {
+        "Profile": [
+          [
+            0.15,
+            0.0
+          ],
+          [
+            0.15,
+            0.621
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 5.0,
+        "y": 7.0,
+        "z": 0.151
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum2ji-57",
+      "ifc_type": "Column",
+      "name": "Pier 6",
+      "params": {
+        "Profile": [
+          [
+            0.15,
+            0.0
+          ],
+          [
+            0.15,
+            0.644
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 5.0,
+        "y": 9.0,
+        "z": 0.128
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum2kl-60",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 4",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            13.0,
+            10.0
+          ],
+          [
+            10.0,
+            10.0
+          ],
+          [
+            10.0,
+            6.0
+          ],
+          [
+            13.0,
+            6.0
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum2kl-61",
+      "ifc_type": "Slab",
+      "name": "Floor 3",
+      "params": {
+        "Base": "p-muvum2kl-60",
+        "Inset": 0.0,
+        "Thickness": 0.2
+      },
+      "type": "Slab"
+    },
+    {
+      "id": "p-muvum2kl-62",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 5",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            16.0,
+            10.0
+          ],
+          [
+            13.0,
+            10.0
+          ],
+          [
+            13.0,
+            6.0
+          ],
+          [
+            16.0,
+            6.0
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum2kl-63",
+      "ifc_type": "Slab",
+      "name": "Floor 4",
+      "params": {
+        "Base": "p-muvum2kl-62",
+        "Inset": 0.0,
+        "Thickness": 0.2
+      },
+      "type": "Slab"
+    },
+    {
+      "id": "p-muvum2kw-64",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 5",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            20.001,
+            0.0
+          ],
+          [
+            26.003,
+            0.0
+          ],
+          [
+            26.003,
+            4.005
+          ],
+          [
+            20.001,
+            4.005
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    }
+  ],
+  "placement": {
+    "altitude_m": 5.26,
+    "coordinates": [
+      -119.15536,
+      34.4358044
+    ],
+    "rotation_deg": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "scale": 1.0
+  },
+  "saved": "2026-10-05T22:55:49Z",
+  "units": "m"
+}

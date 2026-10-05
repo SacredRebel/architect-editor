@@ -1,0 +1,278 @@
+{
+ "ok": true,
+ "complete": true,
+ "records": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\ground-check\\x\\built\\house-8.json",
+ "notes": [],
+ "files": {
+  "glb": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\ground-check\\x\\built\\realized\\house-8.glb",
+  "ifc": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\ground-check\\x\\built\\realized\\house-8.ifc",
+  "json": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\ground-check\\x\\built\\realized\\house-8.json",
+  "design": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\ground-check\\x\\built\\realized\\house-8.FCStd"
+ },
+ "name": "House 8",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 15,
+ "made": 15,
+ "solids": 10,
+ "elements": [
+  {
+   "name": "Pier 1",
+   "piece": "p-muvum2ji-52",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.04948,
+   "mesh_volume_m3": 0.049,
+   "triangles": 100,
+   "box_m": [
+    [
+     0.85,
+     6.85,
+     0.072
+    ],
+    [
+     1.15,
+     7.15,
+     0.772
+    ]
+   ]
+  },
+  {
+   "name": "Pier 2",
+   "piece": "p-muvum2ji-53",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.050823,
+   "mesh_volume_m3": 0.05033,
+   "triangles": 100,
+   "box_m": [
+    [
+     0.85,
+     8.85,
+     0.053
+    ],
+    [
+     1.15,
+     9.15,
+     0.772
+    ]
+   ]
+  },
+  {
+   "name": "Pier 3",
+   "piece": "p-muvum2ji-54",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.046723,
+   "mesh_volume_m3": 0.04627,
+   "triangles": 100,
+   "box_m": [
+    [
+     2.85,
+     6.85,
+     0.111
+    ],
+    [
+     3.15,
+     7.15,
+     0.772
+    ]
+   ]
+  },
+  {
+   "name": "Pier 4",
+   "piece": "p-muvum2ji-55",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.048137,
+   "mesh_volume_m3": 0.04767,
+   "triangles": 100,
+   "box_m": [
+    [
+     2.85,
+     8.85,
+     0.091
+    ],
+    [
+     3.15,
+     9.15,
+     0.772
+    ]
+   ]
+  },
+  {
+   "name": "Pier 5",
+   "piece": "p-muvum2ji-56",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.043896,
+   "mesh_volume_m3": 0.04347,
+   "triangles": 100,
+   "box_m": [
+    [
+     4.85,
+     6.85,
+     0.151
+    ],
+    [
+     5.15,
+     7.15,
+     0.772
+    ]
+   ]
+  },
+  {
+   "name": "Pier 6",
+   "piece": "p-muvum2ji-57",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.045522,
+   "mesh_volume_m3": 0.04508,
+   "triangles": 100,
+   "box_m": [
+    [
+     4.85,
+     8.85,
+     0.128
+    ],
+    [
+     5.15,
+     9.15,
+     0.772
+    ]
+   ]
+  },
+  {
+   "name": "Retaining wall 0",
+   "piece": "p-muvum2iv-49",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.97438,
+   "mesh_volume_m3": 2.974844,
+   "triangles": 36,
+   "box_m": [
+    [
+     -0.0363,
+     -0.1455,
+     -0.5
+    ],
+    [
+     12.0403,
+     3.1405,
+     0.321
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Floor 1",
+   "piece": "p-muvum2j8-51",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 4.8,
+   "mesh_volume_m3": 4.8,
+   "triangles": 12,
+   "box_m": [
+    [
+     0.0,
+     6.0,
+     0.772
+    ],
+    [
+     6.0,
+     10.0,
+     0.972
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Floor 3",
+   "piece": "p-muvum2kl-61",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 2.4,
+   "mesh_volume_m3": 2.4,
+   "triangles": 12,
+   "box_m": [
+    [
+     10.0,
+     6.0,
+     -0.2
+    ],
+    [
+     13.0,
+     10.0,
+     0.0
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Floor 4",
+   "piece": "p-muvum2kl-63",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 2.4,
+   "mesh_volume_m3": 2.4,
+   "triangles": 12,
+   "box_m": [
+    [
+     13.0,
+     6.0,
+     -0.2
+    ],
+    [
+     16.0,
+     10.0,
+     0.0
+    ]
+   ],
+   "holes": 0
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4358044
+  ],
+  "altitude_m": 5.26,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 430.89,
+  "offset_m": {
+   "east": 0.0,
+   "north": 299.9996,
+   "up": 5.26
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 317.83,
+  "easement": 286.1,
+  "existing_building": 291.87
+ },
+ "site_notes": [
+  "by the map's build envelope, 100 % of it (its points in plan) lies outside the area that may be built on"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 756,
+  "buildable": 0.0,
+  "no_building": {},
+  "stale": {},
+  "replaced": {}
+ },
+ "seconds": 2.0
+}

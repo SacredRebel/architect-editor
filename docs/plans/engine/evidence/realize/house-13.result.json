@@ -1,0 +1,108 @@
+{
+ "ok": true,
+ "complete": true,
+ "records": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\house-13.json",
+ "notes": [],
+ "files": {
+  "glb": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-13.glb",
+  "ifc": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-13.ifc",
+  "json": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-13.json",
+  "design": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-13.FCStd"
+ },
+ "name": "House 13",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 5,
+ "made": 5,
+ "solids": 2,
+ "elements": [
+  {
+   "name": "Wall 1",
+   "piece": "p-muvun9p7-65",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 8.76,
+   "mesh_volume_m3": 8.76,
+   "triangles": 36,
+   "box_m": [
+    [
+     -0.0,
+     -0.15,
+     -0.5
+    ],
+    [
+     8.0,
+     0.15,
+     3.6
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Leaf roof (height field) 1",
+   "piece": "p-muvun9pl-67",
+   "type": "HeightFieldShell",
+   "ifcType": "Roof",
+   "volume_m3": 19.718746,
+   "mesh_volume_m3": 19.686115,
+   "triangles": 1968,
+   "box_m": [
+    [
+     -2.004,
+     2.5135,
+     2.5762
+    ],
+    [
+     10.0,
+     9.487,
+     4.4
+    ]
+   ],
+   "holes": 0
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4296744
+  ],
+  "altitude_m": 109.575,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 535.205,
+  "offset_m": {
+   "east": 0.0,
+   "north": -380.0024,
+   "up": 109.575
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 302.19,
+  "easement": 337.77,
+  "existing_building": 301.13
+ },
+ "site_notes": [
+  "by the map's build envelope, 100 % of it (its points in plan) lies outside the area that may be built on"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 1174,
+  "buildable": 0.0,
+  "no_building": {},
+  "stale": {},
+  "replaced": {}
+ },
+ "seconds": 3.6
+}

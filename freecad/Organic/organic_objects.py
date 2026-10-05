@@ -260,6 +260,12 @@ class Wall(Organic):
         prop(obj, "App::PropertyFloatList", "OpeningHeights", g, "height of each opening (m)")
         prop(obj, "App::PropertyFloatList", "OpeningSills", g, "sill of each opening above the base (m)")
         prop(obj, "App::PropertyStringList", "OpeningShapes", g, "Rect, Arch, Pointed or Round")
+        # the map's words for what each opening and the wall are (FORMAT.md, BUILD piece 5): kept, sent on and written
+        # back; nothing is built differently by them
+        prop(obj, "App::PropertyStringList", "OpeningKinds", g, "what each opening is, in the map's words: Door, Window, Arch, Round window, Oculus, Sliding, "
+             "or nothing (a word only: the shape and the sizes are the other lists)")
+        prop(obj, "App::PropertyString", "WallKind", "Wall", "what the wall is made of, in the map's words: Rammed earth, Straw bale, Stone, Timber frame, "
+             "Glass line, or nothing (a word only: nothing is built differently by it)")
         g = "Joints"
         tip = ("where this wall's %s meets other walls: the end of its left face and of its right face, from the end point, in millimetres "
                "(left and right of the base curve's own direction). Worked out by join_walls; empty: the end is cut square")

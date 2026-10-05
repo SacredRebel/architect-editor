@@ -1,0 +1,647 @@
+{
+  "failed": [],
+  "forge": "",
+  "fps": 186.0,
+  "glb": {
+    "by_piece": {
+      "p-muvr7m9r-3": {
+        "pass": true,
+        "triangles_glb": 1632,
+        "triangles_map": 1632
+      },
+      "p-muvr7mcs-4": {
+        "pass": true,
+        "triangles_glb": 500,
+        "triangles_map": 500
+      },
+      "p-muvr7md7-5": {
+        "pass": true,
+        "triangles_glb": 7056,
+        "triangles_map": 7056
+      },
+      "p-muvr7mdz-6": {
+        "pass": true,
+        "triangles_glb": 12096,
+        "triangles_map": 12096
+      },
+      "p-muvr7mfe-7": {
+        "pass": true,
+        "triangles_glb": 10,
+        "triangles_map": 10
+      },
+      "p-muvr7mg0-8": {
+        "pass": true,
+        "triangles_glb": 1336,
+        "triangles_map": 1336
+      },
+      "p-muvr7mge-10": {
+        "pass": true,
+        "triangles_glb": 162,
+        "triangles_map": 162
+      },
+      "p-muvr7mh1-12": {
+        "pass": true,
+        "triangles_glb": 146,
+        "triangles_map": 146
+      }
+    },
+    "bytes": 2899520,
+    "nodes": 8,
+    "pass": true,
+    "pieces_with_a_body": 8
+  },
+  "level": {
+    "freecads_floor_against_the_maps_m": 0.001,
+    "its_curves_placement_z": 3.8,
+    "level_in_the_built_file": false,
+    "pass": true,
+    "the_floors_level_in_the_map": "mezzanine"
+  },
+  "open-L": {
+    "faces_m": {
+      "east": {
+        "freecad": 4.4462,
+        "the_curve_itself": 4.4463,
+        "the_map": 4.4443
+      },
+      "north": {
+        "freecad": 2.0,
+        "the_curve_itself": 2.0,
+        "the_map": 2.0
+      },
+      "south": {
+        "freecad": -0.2981,
+        "the_curve_itself": -0.2981,
+        "the_map": -0.2979
+      },
+      "west": {
+        "freecad": 0.0,
+        "the_curve_itself": 0.0,
+        "the_map": 0.0
+      }
+    },
+    "freecad_off_m": 0.0001,
+    "pass": true,
+    "points_on_the_maps_curve": 31,
+    "the_map_off_m": 0.002,
+    "the_panel_says": "matches (0.002 m)"
+  },
+  "pass": true,
+  "pieces": {
+    "file": "house-1-part",
+    "in_it": 3,
+    "pass": true,
+    "wanted": 3
+  },
+  "realize": {
+    "complete": true,
+    "each_solid_against_the_maps_piece": [
+      {
+        "box_freecad_m": [
+          5.0,
+          2.5,
+          5.0
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          4.997,
+          2.5,
+          4.998
+        ],
+        "name": "Dome 1",
+        "off_m": 0.003,
+        "piece": "p-muvr7mdz-6",
+        "type": "Dome",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          4.0,
+          0.355,
+          1.2
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          4.0,
+          0.355,
+          1.2
+        ],
+        "name": "Steps 1",
+        "off_m": 0.0,
+        "piece": "p-muvr7mfe-7",
+        "type": "Steps",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          3.312,
+          2.65,
+          4.0
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          3.313,
+          2.65,
+          4.0
+        ],
+        "name": "Vault 1",
+        "off_m": 0.0,
+        "piece": "p-muvr7mg0-8",
+        "type": "Vault",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          8.3,
+          3.2,
+          8.3
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          8.3,
+          3.2,
+          8.298
+        ],
+        "name": "Wall 1",
+        "off_m": 0.001,
+        "openings_freecad": 2.0,
+        "openings_map": 2.0,
+        "openings_off_m": 0.0,
+        "piece": "p-muvr7m9r-3",
+        "type": "Wall",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          8.0,
+          0.2,
+          8.0
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          8.0,
+          0.2,
+          7.998
+        ],
+        "name": "Floor 1",
+        "off_m": 0.001,
+        "piece": "p-muvr7mcs-4",
+        "type": "Slab",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          9.2,
+          2.251,
+          9.2
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          9.2,
+          2.245,
+          9.197
+        ],
+        "name": "Roof 1",
+        "off_m": 0.006,
+        "piece": "p-muvr7md7-5",
+        "type": "ShellRoof",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          4.15,
+          3.2,
+          0.3
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          4.15,
+          3.2,
+          0.3
+        ],
+        "name": "Wall 2",
+        "off_m": 0.0,
+        "openings_freecad": 0.0,
+        "openings_map": 0.0,
+        "piece": "p-muvr7mge-10",
+        "type": "Wall",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          0.3,
+          3.2,
+          3.65
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          0.3,
+          3.2,
+          3.65
+        ],
+        "name": "Wall 3",
+        "off_m": 0.0,
+        "openings_freecad": 0.0,
+        "openings_map": 0.0,
+        "piece": "p-muvr7mh1-12",
+        "type": "Wall",
+        "within": true
+      }
+    ],
+    "elements": [
+      {
+        "box_m": [
+          [
+            6.499,
+            -3.498,
+            0.0
+          ],
+          [
+            11.499,
+            1.502,
+            2.5
+          ]
+        ],
+        "ifcType": "Roof",
+        "mesh_volume_m3": 10.39353,
+        "name": "Dome 1",
+        "piece": "p-muvr7mdz-6",
+        "triangles": 3306.0,
+        "type": "Dome",
+        "volume_m3": 10.423804
+      },
+      {
+        "box_m": [
+          [
+            -2.0,
+            -9.6,
+            -0.223
+          ],
+          [
+            2.0,
+            -8.4,
+            0.132
+          ]
+        ],
+        "ifcType": "Stair",
+        "mesh_volume_m3": 1.704,
+        "name": "Steps 1",
+        "piece": "p-muvr7mfe-7",
+        "triangles": 12.0,
+        "type": "Steps",
+        "volume_m3": 1.704
+      },
+      {
+        "box_m": [
+          [
+            -13.6601,
+            -0.003,
+            -0.5
+          ],
+          [
+            -10.3479,
+            3.997,
+            2.15
+          ]
+        ],
+        "ifcType": "Roof",
+        "mesh_volume_m3": 3.941033,
+        "name": "Vault 1",
+        "piece": "p-muvr7mg0-8",
+        "triangles": 6850.0,
+        "type": "Vault",
+        "volume_m3": 3.956526
+      },
+      {
+        "box_m": [
+          [
+            -4.15,
+            -4.15,
+            -0.5
+          ],
+          [
+            4.15,
+            4.15,
+            2.7
+          ]
+        ],
+        "ifcType": "Wall",
+        "mesh_volume_m3": 23.006612,
+        "name": "Wall 1",
+        "opening_list": [
+          {
+            "at_m": 3.0,
+            "height_m": 2.2,
+            "shape": "Arch",
+            "sill_m": 0.0,
+            "width_m": 1.0
+          },
+          {
+            "at_m": 12.0,
+            "height_m": 1.3,
+            "shape": "Arch",
+            "sill_m": 0.9,
+            "width_m": 1.2
+          }
+        ],
+        "openings": 2.0,
+        "piece": "p-muvr7m9r-3",
+        "triangles": 6354.0,
+        "type": "Wall",
+        "volume_m3": 23.074889
+      },
+      {
+        "box_m": [
+          [
+            -4.0,
+            -4.0,
+            -0.2
+          ],
+          [
+            4.0,
+            4.0,
+            0.0
+          ]
+        ],
+        "holes": 0.0,
+        "ifcType": "Slab",
+        "mesh_volume_m3": 10.044556,
+        "name": "Floor 1",
+        "piece": "p-muvr7mcs-4",
+        "triangles": 812.0,
+        "type": "Slab",
+        "volume_m3": 10.053078
+      },
+      {
+        "box_m": [
+          [
+            -4.6,
+            -4.6,
+            2.4493
+          ],
+          [
+            4.6,
+            4.6,
+            4.7
+          ]
+        ],
+        "ifcType": "Roof",
+        "mesh_volume_m3": 15.566929,
+        "name": "Roof 1",
+        "piece": "p-muvr7md7-5",
+        "triangles": 6426.0,
+        "type": "ShellRoof",
+        "volume_m3": 15.608222
+      },
+      {
+        "box_m": [
+          [
+            9.0,
+            -9.15,
+            -0.5
+          ],
+          [
+            13.15,
+            -8.85,
+            2.7
+          ]
+        ],
+        "ifcType": "Wall",
+        "mesh_volume_m3": 3.84,
+        "name": "Wall 2",
+        "openings": 0.0,
+        "piece": "p-muvr7mge-10",
+        "triangles": 12.0,
+        "type": "Wall",
+        "volume_m3": 3.84
+      },
+      {
+        "box_m": [
+          [
+            12.85,
+            -9.15,
+            -0.5
+          ],
+          [
+            13.15,
+            -5.5,
+            2.7
+          ]
+        ],
+        "ifcType": "Wall",
+        "mesh_volume_m3": 3.36,
+        "name": "Wall 3",
+        "openings": 0.0,
+        "piece": "p-muvr7mh1-12",
+        "triangles": 12.0,
+        "type": "Wall",
+        "volume_m3": 3.36
+      }
+    ],
+    "error": "",
+    "files_there": true,
+    "notes": [
+      "2 wall ends meet other walls and are joined there, as the map joins them"
+    ],
+    "objects_made": 11,
+    "pass": true,
+    "pieces_in_the_records": 11,
+    "said": "realized in 45 s: 11 of 11 pieces made, 8 solids (.FCStd, .glb, .ifc in built\\realized); 8 of 8 match the map within 0.02 m · FreeCAD notes: 1",
+    "seconds": 44.6,
+    "solids": 8,
+    "started": {
+      "name": "house-1",
+      "ok": true,
+      "why": ""
+    },
+    "state": "done",
+    "the_two_agree": true,
+    "this_checks_own_reading_m": {
+      "p-muvr7m9r-3": 0.000487804412841797,
+      "p-muvr7mcs-4": 0.00124335289001465,
+      "p-muvr7md7-5": 0.00565719604492188,
+      "p-muvr7mdz-6": 0.00310707092285156,
+      "p-muvr7mfe-7": 0.0000000149011611938477,
+      "p-muvr7mg0-8": 0.000360488891601563,
+      "p-muvr7mge-10": 0.0,
+      "p-muvr7mh1-12": 0.0
+    }
+  },
+  "records": {
+    "another_of_the_same_name": "house-1-2",
+    "bytes": 5320,
+    "exported_again": "house-1",
+    "file": "house-1.json",
+    "keys_lane_A_does_not_know": [],
+    "no_geometry": true,
+    "parameters_as_drawn": true,
+    "pass": true,
+    "pieces": 11,
+    "placement_said_twice": [],
+    "the_maps_own_fields_left_in": [],
+    "the_maps_pieces": 11,
+    "where_it_stands": true
+  },
+  "stated": {
+    "lane_A_states_them": true,
+    "pass": true,
+    "rows": [
+      {
+        "box_freecad_m": [
+          5.0,
+          2.5,
+          4.993
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          4.997,
+          2.5,
+          4.998
+        ],
+        "name": "Dome 1",
+        "off_m": 0.5,
+        "piece": "p-muvr7mdz-6",
+        "type": "Dome",
+        "within": false
+      },
+      {
+        "box_freecad_m": [
+          4.0,
+          0.355,
+          1.2
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          4.0,
+          0.355,
+          1.2
+        ],
+        "name": "Steps 1",
+        "off_m": 0.0,
+        "piece": "p-muvr7mfe-7",
+        "type": "Steps",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          3.312,
+          2.65,
+          4.0
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          3.313,
+          2.65,
+          4.0
+        ],
+        "name": "Vault 1",
+        "off_m": 0.0,
+        "piece": "p-muvr7mg0-8",
+        "type": "Vault",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          8.3,
+          3.2,
+          8.297
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          8.3,
+          3.2,
+          8.298
+        ],
+        "name": "Wall 1",
+        "off_m": 0.0,
+        "openings_differ": true,
+        "openings_freecad": 1.0,
+        "openings_map": 2.0,
+        "piece": "p-muvr7m9r-3",
+        "type": "Wall",
+        "within": false
+      },
+      {
+        "box_freecad_m": [
+          8.0,
+          0.2,
+          8.0
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          8.0,
+          0.2,
+          7.998
+        ],
+        "name": "Floor 1",
+        "off_m": 0.001,
+        "piece": "p-muvr7mcs-4",
+        "type": "Slab",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          9.2,
+          2.251,
+          9.2
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          9.2,
+          2.245,
+          9.197
+        ],
+        "name": "Roof 1",
+        "off_m": 0.006,
+        "piece": "p-muvr7md7-5",
+        "type": "ShellRoof",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          4.15,
+          3.2,
+          0.3
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          4.15,
+          3.2,
+          0.3
+        ],
+        "name": "Wall 2",
+        "off_m": 0.0,
+        "openings_freecad": 0.0,
+        "openings_map": 0.0,
+        "piece": "p-muvr7mge-10",
+        "type": "Wall",
+        "within": true
+      },
+      {
+        "box_freecad_m": [
+          0.3,
+          3.2,
+          3.65
+        ],
+        "box_from": "lane A's result",
+        "box_map_m": [
+          0.3,
+          3.2,
+          3.65
+        ],
+        "name": "Wall 3",
+        "off_m": 0.0,
+        "openings_freecad": 0.0,
+        "openings_map": 0.0,
+        "piece": "p-muvr7mh1-12",
+        "type": "Wall",
+        "within": true
+      }
+    ]
+  },
+  "whynot": {
+    "in_the_panel": "not realized: FreeCAD's command-line program was not found at C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\exe-real\\out/nowhere/freecadcmd.exe (start the map with --freecad=<path to freecadcmd.exe>)",
+    "pass": true,
+    "says": "FreeCAD's command-line program was not found at C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\exe-real\\out/nowhere/freecadcmd.exe (start the map with --freecad=<path to freecadcmd.exe>)"
+  }
+}

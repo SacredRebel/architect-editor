@@ -1,0 +1,1383 @@
+{
+ "ok": true,
+ "complete": true,
+ "records": "C:\\AI-Work\\Ai apps & Codebase\\Playground\\exchange\\house\\models\\oak-canopy-s01.json",
+ "notes": [
+  "21 wall ends meet other walls and are joined there, as the map joins them"
+ ],
+ "files": {
+  "glb": "C:\\AI-Work\\Ai apps & Codebase\\Playground\\exchange\\godot\\built\\realized\\oak-canopy-s01.glb",
+  "ifc": "C:\\AI-Work\\Ai apps & Codebase\\Playground\\exchange\\godot\\built\\realized\\oak-canopy-s01.ifc",
+  "json": "C:\\AI-Work\\Ai apps & Codebase\\Playground\\exchange\\godot\\built\\realized\\oak-canopy-s01.json",
+  "design": "C:\\AI-Work\\Ai apps & Codebase\\Playground\\exchange\\godot\\built\\realized\\oak-canopy-s01.FCStd"
+ },
+ "name": "Oak Canopy S01",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 80,
+ "made": 80,
+ "solids": 42,
+ "elements": [
+  {
+   "name": "Chimney",
+   "piece": "chimney",
+   "type": "Revolved",
+   "ifcType": "Chimney",
+   "volume_m3": 92.328298,
+   "mesh_volume_m3": 91.711272,
+   "triangles": 1016,
+   "box_m": [
+    [
+     -1.9,
+     -1.9,
+     -3.0
+    ],
+    [
+     1.9,
+     1.9,
+     10.0
+    ]
+   ]
+  },
+  {
+   "name": "L-EXT exterior wall",
+   "piece": "L-EXT",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 47.154149,
+   "mesh_volume_m3": 47.128261,
+   "triangles": 12018,
+   "box_m": [
+    [
+     -11.9386,
+     9.8988,
+     -3.0
+    ],
+    [
+     6.07,
+     16.9904,
+     -0.3
+    ]
+   ],
+   "openings": 6,
+   "opening_list": [
+    {
+     "at_m": 8.2255,
+     "width_m": 1.0,
+     "sill_m": 0.0,
+     "height_m": 2.3,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 9.684,
+     "width_m": 1.1,
+     "sill_m": 0.7,
+     "height_m": 1.6,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 13.6339,
+     "width_m": 1.0,
+     "sill_m": 0.0,
+     "height_m": 2.3,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 15.7874,
+     "width_m": 1.1,
+     "sill_m": 0.7,
+     "height_m": 1.6,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 19.6421,
+     "width_m": 1.0,
+     "sill_m": 0.0,
+     "height_m": 2.3,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 20.8615,
+     "width_m": 1.1,
+     "sill_m": 0.7,
+     "height_m": 1.6,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-EXT exterior wall",
+   "piece": "M-EXT",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 149.392164,
+   "mesh_volume_m3": 149.385372,
+   "triangles": 30170,
+   "box_m": [
+    [
+     -16.0104,
+     -4.5572,
+     -0.0
+    ],
+    [
+     12.0758,
+     16.1303,
+     7.1409
+    ]
+   ],
+   "openings": 10,
+   "opening_list": [
+    {
+     "at_m": 0.2002,
+     "width_m": 1.8,
+     "sill_m": 0.0,
+     "height_m": 2.7,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 71.1013,
+     "width_m": 2.0,
+     "sill_m": 0.35,
+     "height_m": 2.9,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 65.3972,
+     "width_m": 3.8,
+     "sill_m": 0.15,
+     "height_m": 3.15,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 59.8928,
+     "width_m": 4.0,
+     "sill_m": 0.0,
+     "height_m": 5.8,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 53.885,
+     "width_m": 3.5,
+     "sill_m": 0.0,
+     "height_m": 4.92,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 44.7077,
+     "width_m": 3.0,
+     "sill_m": 0.0,
+     "height_m": 3.4,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 31.3476,
+     "width_m": 2.2,
+     "sill_m": 0.55,
+     "height_m": 2.7,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 25.5005,
+     "width_m": 2.5,
+     "sill_m": 0.55,
+     "height_m": 2.7,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 19.7631,
+     "width_m": 1.8,
+     "sill_m": 0.6,
+     "height_m": 2.4,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 14.6948,
+     "width_m": 2.5,
+     "sill_m": 0.4,
+     "height_m": 2.8,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "Z-EXT exterior wall",
+   "piece": "Z-EXT",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 24.448186,
+   "mesh_volume_m3": 24.379764,
+   "triangles": 4392,
+   "box_m": [
+    [
+     -9.5314,
+     -2.2804,
+     3.8
+    ],
+    [
+     2.0124,
+     5.3887,
+     6.7
+    ]
+   ],
+   "openings": 3,
+   "opening_list": [
+    {
+     "at_m": 20.0561,
+     "width_m": 3.4,
+     "sill_m": 0.05,
+     "height_m": 2.65,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 7.7627,
+     "width_m": 1.2,
+     "sill_m": 1.1,
+     "height_m": 1.2,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 28.7887,
+     "width_m": 1.1,
+     "sill_m": 0.0,
+     "height_m": 2.3,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-COURT1 courtyard glazing",
+   "piece": "M-COURT1",
+   "type": "Wall",
+   "ifcType": "Curtain Wall",
+   "volume_m3": 1.078105,
+   "mesh_volume_m3": 1.077371,
+   "triangles": 2242,
+   "box_m": [
+    [
+     -8.46,
+     5.38,
+     -0.0
+    ],
+    [
+     -4.29,
+     9.54,
+     6.5972
+    ]
+   ],
+   "openings": 8,
+   "opening_list": [
+    {
+     "at_m": 0.0,
+     "width_m": 1.49,
+     "sill_m": 0.12,
+     "height_m": 4.66,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 11.0986,
+     "width_m": 1.49,
+     "sill_m": 0.12,
+     "height_m": 4.45,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 9.5096,
+     "width_m": 1.49,
+     "sill_m": 0.12,
+     "height_m": 4.41,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 7.9305,
+     "width_m": 1.49,
+     "sill_m": 0.12,
+     "height_m": 4.43,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 6.3396,
+     "width_m": 1.49,
+     "sill_m": 0.12,
+     "height_m": 4.6,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 4.7502,
+     "width_m": 1.49,
+     "sill_m": 0.12,
+     "height_m": 4.9,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 3.1747,
+     "width_m": 1.49,
+     "sill_m": 0.0,
+     "height_m": 6.32,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 1.5894,
+     "width_m": 1.49,
+     "sill_m": 0.12,
+     "height_m": 5.03,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-COURT2 courtyard glazing",
+   "piece": "M-COURT2",
+   "type": "Wall",
+   "ifcType": "Curtain Wall",
+   "volume_m3": 1.692932,
+   "mesh_volume_m3": 1.690903,
+   "triangles": 1802,
+   "box_m": [
+    [
+     -1.43,
+     4.61,
+     -0.0
+    ],
+    [
+     4.46,
+     10.51,
+     7.7235
+    ]
+   ],
+   "openings": 8,
+   "opening_list": [
+    {
+     "at_m": 0.0,
+     "width_m": 2.17,
+     "sill_m": 0.12,
+     "height_m": 4.6,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 15.8714,
+     "width_m": 2.17,
+     "sill_m": 0.12,
+     "height_m": 4.34,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 13.604,
+     "width_m": 2.17,
+     "sill_m": 0.12,
+     "height_m": 4.26,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 11.3351,
+     "width_m": 2.17,
+     "sill_m": 0.12,
+     "height_m": 4.26,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 9.0679,
+     "width_m": 2.17,
+     "sill_m": 0.12,
+     "height_m": 4.36,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 6.7992,
+     "width_m": 2.17,
+     "sill_m": 0.12,
+     "height_m": 5.4,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 4.5304,
+     "width_m": 2.17,
+     "sill_m": 0.0,
+     "height_m": 5.71,
+     "shape": "Rect"
+    },
+    {
+     "at_m": 2.2632,
+     "width_m": 2.17,
+     "sill_m": 0.12,
+     "height_m": 4.97,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "L-P01 partition",
+   "piece": "L-P01",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 5.551479,
+   "mesh_volume_m3": 5.541447,
+   "triangles": 5814,
+   "box_m": [
+    [
+     -10.38,
+     10.68,
+     -3.0
+    ],
+    [
+     -6.94,
+     13.62,
+     -0.3
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 4.6376,
+     "width_m": 0.85,
+     "sill_m": 0.0,
+     "height_m": 2.25,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "L-P02 partition",
+   "piece": "L-P02",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 3.657306,
+   "mesh_volume_m3": 3.657195,
+   "triangles": 2190,
+   "box_m": [
+    [
+     -6.3098,
+     10.66,
+     -3.0
+    ],
+    [
+     -5.8893,
+     16.3074,
+     -0.3
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "L-P03 partition",
+   "piece": "L-P03",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 5.553773,
+   "mesh_volume_m3": 5.553289,
+   "triangles": 6260,
+   "box_m": [
+    [
+     -4.83,
+     10.68,
+     -3.0
+    ],
+    [
+     -1.39,
+     13.62,
+     -0.3
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 4.6395,
+     "width_m": 0.85,
+     "sill_m": 0.0,
+     "height_m": 2.25,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "L-P04 partition",
+   "piece": "L-P04",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 3.481952,
+   "mesh_volume_m3": 3.482017,
+   "triangles": 1964,
+   "box_m": [
+    [
+     -0.3198,
+     10.5384,
+     -3.0
+    ],
+    [
+     0.08,
+     15.9163,
+     -0.3
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "L-P05 partition",
+   "piece": "L-P05",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 5.556809,
+   "mesh_volume_m3": 5.55242,
+   "triangles": 6076,
+   "box_m": [
+    [
+     0.9,
+     10.68,
+     -3.0
+    ],
+    [
+     4.34,
+     13.62,
+     -0.3
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 4.6417,
+     "width_m": 0.85,
+     "sill_m": 0.0,
+     "height_m": 2.25,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P01 partition",
+   "piece": "M-P01",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.082599,
+   "mesh_volume_m3": 2.082549,
+   "triangles": 1436,
+   "box_m": [
+    [
+     -11.5258,
+     3.76,
+     -0.0
+    ],
+    [
+     -11.1001,
+     7.65,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 1.9431,
+     "width_m": 1.8,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P02 partition",
+   "piece": "M-P02",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.308695,
+   "mesh_volume_m3": 2.308763,
+   "triangles": 1928,
+   "box_m": [
+    [
+     -14.2829,
+     3.56,
+     -0.0
+    ],
+    [
+     -11.41,
+     3.8772,
+     3.4
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "M-P03 partition",
+   "piece": "M-P03",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.954409,
+   "mesh_volume_m3": 2.953263,
+   "triangles": 1346,
+   "box_m": [
+    [
+     -15.5039,
+     7.4501,
+     -0.0
+    ],
+    [
+     -11.22,
+     7.7707,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 2.1407,
+     "width_m": 0.85,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P04 partition",
+   "piece": "M-P04",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 9.943365,
+   "mesh_volume_m3": 9.927485,
+   "triangles": 5278,
+   "box_m": [
+    [
+     -11.462,
+     -1.3541,
+     -0.0
+    ],
+    [
+     -4.6001,
+     3.8254,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 6.3076,
+     "width_m": 1.0,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P05 partition",
+   "piece": "M-P05",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.791173,
+   "mesh_volume_m3": 2.791294,
+   "triangles": 1994,
+   "box_m": [
+    [
+     -11.1612,
+     9.12,
+     -0.0
+    ],
+    [
+     -7.7076,
+     9.3807,
+     3.4
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "M-P06 partition",
+   "piece": "M-P06",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.182217,
+   "mesh_volume_m3": 2.182287,
+   "triangles": 1892,
+   "box_m": [
+    [
+     -4.9445,
+     8.8901,
+     -0.0
+    ],
+    [
+     -1.2055,
+     9.2799,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 1.8718,
+     "width_m": 1.5,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P07 partition",
+   "piece": "M-P07",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 1.233907,
+   "mesh_volume_m3": 1.233905,
+   "triangles": 1920,
+   "box_m": [
+    [
+     -11.3349,
+     7.6441,
+     -0.0
+    ],
+    [
+     -11.0393,
+     9.25,
+     3.4
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "M-P08 partition",
+   "piece": "M-P08",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 7.354427,
+   "mesh_volume_m3": 7.339368,
+   "triangles": 1142,
+   "box_m": [
+    [
+     4.2156,
+     -3.3826,
+     -0.0
+    ],
+    [
+     4.625,
+     6.5787,
+     3.6
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 4.924,
+     "width_m": 2.0,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P09 partition",
+   "piece": "M-P09",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 4.590223,
+   "mesh_volume_m3": 4.591928,
+   "triangles": 1522,
+   "box_m": [
+    [
+     4.415,
+     6.3813,
+     -0.0
+    ],
+    [
+     10.7913,
+     6.7,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 3.1303,
+     "width_m": 0.9,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P10 partition",
+   "piece": "M-P10",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 3.250051,
+   "mesh_volume_m3": 3.250186,
+   "triangles": 1934,
+   "box_m": [
+    [
+     -4.7198,
+     11.02,
+     -0.0
+    ],
+    [
+     -4.3593,
+     15.0662,
+     3.4
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "M-P11 partition",
+   "piece": "M-P11",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 4.776832,
+   "mesh_volume_m3": 4.777816,
+   "triangles": 1514,
+   "box_m": [
+    [
+     -11.14,
+     10.9001,
+     -0.0
+    ],
+    [
+     -4.48,
+     11.2515,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 3.3315,
+     "width_m": 1.1,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P12 partition",
+   "piece": "M-P12",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 3.042769,
+   "mesh_volume_m3": 3.042943,
+   "triangles": 1752,
+   "box_m": [
+    [
+     -0.3598,
+     10.86,
+     -0.0
+    ],
+    [
+     0.0007,
+     13.9168,
+     3.4
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "M-P13 partition",
+   "piece": "M-P13",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.904905,
+   "mesh_volume_m3": 2.905081,
+   "triangles": 1188,
+   "box_m": [
+    [
+     -4.4848,
+     10.7401,
+     -0.0
+    ],
+    [
+     -0.15,
+     11.1343,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 2.1711,
+     "width_m": 1.0,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P14 partition",
+   "piece": "M-P14",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 7.965707,
+   "mesh_volume_m3": 7.96652,
+   "triangles": 1440,
+   "box_m": [
+    [
+     -0.1537,
+     10.6688,
+     -0.0
+    ],
+    [
+     8.4761,
+     11.0999,
+     3.4
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 4.3121,
+     "width_m": 1.1,
+     "sill_m": 0.0,
+     "height_m": 2.4,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "M-P15 partition",
+   "piece": "M-P15",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.759173,
+   "mesh_volume_m3": 2.759171,
+   "triangles": 1972,
+   "box_m": [
+    [
+     -14.5749,
+     9.0301,
+     -0.0
+    ],
+    [
+     -11.16,
+     9.37,
+     3.4
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "M-P16 partition",
+   "piece": "M-P16",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 3.755285,
+   "mesh_volume_m3": 3.75536,
+   "triangles": 2126,
+   "box_m": [
+    [
+     4.2782,
+     8.83,
+     -0.0
+    ],
+    [
+     8.8854,
+     9.1999,
+     3.4
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Z-P01 partition",
+   "piece": "Z-P01",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 0.908237,
+   "mesh_volume_m3": 0.907393,
+   "triangles": 1662,
+   "box_m": [
+    [
+     -3.7407,
+     2.61,
+     3.8
+    ],
+    [
+     -3.49,
+     5.0326,
+     6.7
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 1.2108,
+     "width_m": 0.85,
+     "sill_m": 0.0,
+     "height_m": 2.25,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "Z-P02 partition",
+   "piece": "Z-P02",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.0461,
+   "mesh_volume_m3": 2.046197,
+   "triangles": 1862,
+   "box_m": [
+    [
+     -3.7513,
+     -1.9941,
+     3.8
+    ],
+    [
+     -3.4601,
+     2.6107,
+     6.7
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 2.3003,
+     "width_m": 0.85,
+     "sill_m": 0.0,
+     "height_m": 2.25,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "Z-P03 partition",
+   "piece": "Z-P03",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 0.928283,
+   "mesh_volume_m3": 0.928269,
+   "triangles": 1760,
+   "box_m": [
+    [
+     -7.3907,
+     -0.6624,
+     3.8
+    ],
+    [
+     -7.18,
+     2.04,
+     6.7
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 1.3502,
+     "width_m": 0.95,
+     "sill_m": 0.0,
+     "height_m": 2.25,
+     "shape": "Rect"
+    }
+   ]
+  },
+  {
+   "name": "Z-P04 partition",
+   "piece": "Z-P04",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 2.514208,
+   "mesh_volume_m3": 2.514256,
+   "triangles": 1748,
+   "box_m": [
+    [
+     -3.65,
+     2.42,
+     3.8
+    ],
+    [
+     1.2113,
+     2.6974,
+     6.7
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Z-GUARD guard",
+   "piece": "Z-GUARD",
+   "type": "Wall",
+   "ifcType": "Railing",
+   "volume_m3": 0.49599,
+   "mesh_volume_m3": 0.495909,
+   "triangles": 4596,
+   "box_m": [
+    [
+     -10.6302,
+     1.9583,
+     3.8
+    ],
+    [
+     -6.6567,
+     5.8248,
+     4.9
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Main floor",
+   "piece": "floor-main",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 106.599649,
+   "mesh_volume_m3": 106.616611,
+   "triangles": 3672,
+   "box_m": [
+    [
+     -16.0104,
+     -4.5572,
+     -0.3
+    ],
+    [
+     12.0758,
+     16.1303,
+     0.0
+    ]
+   ],
+   "holes": 3
+  },
+  {
+   "name": "Lower floor",
+   "piece": "floor-lower",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 32.392349,
+   "mesh_volume_m3": 32.376437,
+   "triangles": 1134,
+   "box_m": [
+    [
+     -11.9386,
+     9.8988,
+     -3.3
+    ],
+    [
+     6.07,
+     16.9904,
+     -3.0
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Mezzanine floor",
+   "piece": "floor-mezzanine",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 15.353151,
+   "mesh_volume_m3": 15.350018,
+   "triangles": 1160,
+   "box_m": [
+    [
+     -9.5314,
+     -2.2804,
+     3.5
+    ],
+    [
+     2.0124,
+     5.3887,
+     3.8
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "RS-S South great-room/master leaf, with west entrance tip",
+   "piece": "RS-S",
+   "type": "HeightFieldShell",
+   "ifcType": "Roof",
+   "volume_m3": 76.070346,
+   "mesh_volume_m3": 76.061925,
+   "triangles": 6262,
+   "box_m": [
+    [
+     -16.7339,
+     -5.6956,
+     4.2218
+    ],
+    [
+     12.9967,
+     5.183,
+     8.5245
+    ]
+   ],
+   "holes": 2
+  },
+  {
+   "name": "RS-NW North-west wellness leaf",
+   "piece": "RS-NW",
+   "type": "HeightFieldShell",
+   "ifcType": "Roof",
+   "volume_m3": 53.48963,
+   "mesh_volume_m3": 53.481967,
+   "triangles": 3884,
+   "box_m": [
+    [
+     -17.1611,
+     4.4036,
+     4.4301
+    ],
+    [
+     -1.4852,
+     17.2808,
+     7.5705
+    ]
+   ],
+   "holes": 1
+  },
+  {
+   "name": "RS-NE Rear north-east music/kitchen leaf",
+   "piece": "RS-NE",
+   "type": "HeightFieldShell",
+   "ifcType": "Roof",
+   "volume_m3": 48.968897,
+   "mesh_volume_m3": 48.971136,
+   "triangles": 3060,
+   "box_m": [
+    [
+     -2.319,
+     3.9611,
+     4.53
+    ],
+    [
+     13.2602,
+     17.137,
+     7.5697
+    ]
+   ],
+   "holes": 1
+  },
+  {
+   "name": "M-EXT band to the roof",
+   "piece": "M-EXT.band",
+   "type": "WallBand",
+   "ifcType": "Curtain Wall",
+   "volume_m3": 3.850012,
+   "mesh_volume_m3": 3.848364,
+   "triangles": 1670,
+   "box_m": [
+    [
+     -15.7954,
+     -4.3422,
+     3.9272
+    ],
+    [
+     11.8608,
+     15.9153,
+     7.5833
+    ]
+   ]
+  },
+  {
+   "name": "Z-EXT band to the roof",
+   "piece": "Z-EXT.band",
+   "type": "WallBand",
+   "ifcType": "Curtain Wall",
+   "volume_m3": 2.971248,
+   "mesh_volume_m3": 2.965499,
+   "triangles": 1312,
+   "box_m": [
+    [
+     -9.4414,
+     -2.1902,
+     6.7
+    ],
+    [
+     1.9224,
+     5.3625,
+     8.0429
+    ]
+   ]
+  },
+  {
+   "name": "M-COURT1 band to the roof",
+   "piece": "M-COURT1.band",
+   "type": "WallBand",
+   "ifcType": "Curtain Wall",
+   "volume_m3": 0.581303,
+   "mesh_volume_m3": 0.580802,
+   "triangles": 598,
+   "box_m": [
+    [
+     -8.46,
+     5.38,
+     4.6098
+    ],
+    [
+     -4.29,
+     9.54,
+     7.0635
+    ]
+   ]
+  },
+  {
+   "name": "M-COURT2 band to the roof",
+   "piece": "M-COURT2.band",
+   "type": "WallBand",
+   "ifcType": "Curtain Wall",
+   "volume_m3": 0.69812,
+   "mesh_volume_m3": 0.696547,
+   "triangles": 596,
+   "box_m": [
+    [
+     -1.43,
+     4.6622,
+     4.4598
+    ],
+    [
+     4.46,
+     10.51,
+     7.1859
+    ]
+   ]
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4331
+  ],
+  "altitude_m": 0.0,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 425.63,
+  "offset_m": {
+   "east": 0.0,
+   "north": 0.0,
+   "up": 0.0
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 15.84,
+  "easement": 124.9,
+  "existing_building": 37.03
+ },
+ "site_notes": [
+  "it replaces the existing house (Johny: 2026-10-03), and stands on it",
+  "by the map's build envelope, 68 % of it (its points in plan) lies in oak_protection that is out of date there: Johny's statement, 3 Oct; no survey -- the oaks at the house site were cut about a month ago; the surveyed canopy and the oak-protection zones inside this zone are out of date"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 81689,
+  "buildable": 1.0,
+  "no_building": {},
+  "stale": {
+   "oak_protection": {
+    "share": 0.6811,
+    "reason": "Johny's statement, 3 Oct; no survey -- the oaks at the house site were cut about a month ago; the surveyed canopy and the oak-protection zones inside this zone are out of date"
+   }
+  },
+  "replaced": {
+   "house": 0.0912
+  }
+ },
+ "seconds": 84.4
+}

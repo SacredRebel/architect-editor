@@ -1,0 +1,189 @@
+{
+ "ok": true,
+ "complete": false,
+ "records": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\forms.json",
+ "notes": [
+  "SacredSolid 'form-1': it is the form 'Merkaba' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredFigure 'form-2': it is the form 'SriYantra' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-3': it is the form 'SriYantra' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredFigure 'form-4': it is the form 'FibonacciSpiral' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredFigure 'form-5': it is the form 'TorusKnot' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-6': it is the form 'Nested5Platonic' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-7': it is the form 'CubeOctahedronCompound' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-8': it is the form 'StellatedIcoDodCompound' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-9': it is the form 'StellatedIcoDodCompound' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-10': it is the form 'StellatedIcoDodCompound' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-11': it is the form 'StellatedIcoDodCompoundApprox' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-12': it is the form 'StarMother3Shell' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-13': it is the form 'StarMotherRecursive' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-14': it is the form 'StellyDodecahedralLattice13' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "SacredSolid 'form-15': it is the form 'KleinBottle' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "FoldedRevolution 'form-102': it is the form 'FoldedRevolution' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)",
+  "HeightFieldShell 'form-107': it is the form 'HeightFieldShell' of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: GeodesicDome, Conoid, TranslationShell, GroinedSaddles, WaveVault)"
+ ],
+ "files": {
+  "glb": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\forms-out\\forms.glb",
+  "ifc": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\forms-out\\forms.ifc",
+  "json": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\forms-out\\forms.json",
+  "design": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\forms-out\\forms.FCStd"
+ },
+ "name": "Kind",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 22,
+ "made": 5,
+ "solids": 5,
+ "elements": [
+  {
+   "name": "Geodesic dome frame",
+   "piece": "form-101",
+   "type": "GeodesicDome",
+   "ifcType": "Building Element Proxy",
+   "volume_m3": 2.166593,
+   "mesh_volume_m3": 2.142637,
+   "triangles": 35044,
+   "box_m": [
+    [
+     7.7608,
+     -18.9647,
+     -0.0675
+    ],
+    [
+     17.7183,
+     -9.0353,
+     5.9523
+    ]
+   ]
+  },
+  {
+   "name": "Conoid roof",
+   "piece": "form-103",
+   "type": "Conoid",
+   "ifcType": "Building Element Proxy",
+   "volume_m3": 9.575896,
+   "mesh_volume_m3": 9.561636,
+   "triangles": 1872,
+   "box_m": [
+    [
+     58.1756,
+     -20.0,
+     2.6
+    ],
+    [
+     67.3036,
+     -7.9806,
+     5.6776
+    ]
+   ]
+  },
+  {
+   "name": "Translation shell",
+   "piece": "form-104",
+   "type": "TranslationShell",
+   "ifcType": "Building Element Proxy",
+   "volume_m3": 12.673343,
+   "mesh_volume_m3": 12.648921,
+   "triangles": 3064,
+   "box_m": [
+    [
+     -67.3036,
+     3.9574,
+     2.6
+    ],
+    [
+     -57.2173,
+     18.0426,
+     6.48
+    ]
+   ]
+  },
+  {
+   "name": "Wave vault",
+   "piece": "form-105",
+   "type": "Vault",
+   "ifcType": "Building Element Proxy",
+   "volume_m3": 33.560551,
+   "mesh_volume_m3": 33.503886,
+   "triangles": 7346,
+   "box_m": [
+    [
+     -41.4344,
+     2.0,
+     -2.2
+    ],
+    [
+     -33.0865,
+     20.0,
+     3.12
+    ]
+   ]
+  },
+  {
+   "name": "Groined saddles",
+   "piece": "form-106",
+   "type": "MinimalShell",
+   "ifcType": "Building Element Proxy",
+   "volume_m3": 12.241,
+   "mesh_volume_m3": 12.255038,
+   "triangles": 8788,
+   "box_m": [
+    [
+     -20.1104,
+     3.15,
+     -0.0
+    ],
+    [
+     -4.4104,
+     18.85,
+     4.054
+    ]
+   ]
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.154682639,
+   34.433676939
+  ],
+  "altitude_m": 0.0,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 425.63,
+  "offset_m": {
+   "east": 62.2604,
+   "north": 64.0,
+   "up": 0.0
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 83.04,
+  "easement": 137.75,
+  "existing_building": 53.92
+ },
+ "site_notes": [
+  "the building's own origin is 89 m from what it holds (move the building, not its parts): the origin written is the middle of the footprint",
+  "its level (z = 0) is 1.3 m below the map's ground there",
+  "by the map's build envelope, 100 % of it (its points in plan) lies outside the area that may be built on"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 38993,
+  "buildable": 0.0,
+  "no_building": {},
+  "stale": {},
+  "replaced": {}
+ },
+ "seconds": 7.9
+}

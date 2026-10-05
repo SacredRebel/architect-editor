@@ -1,0 +1,9 @@
+[api-check] place PASS — a round room, a door, a floor, a leaf roof, a dome: ["Dome", "LeafShell", "PlanCurve", "Slab", "Wall"]; the wall's inner face 2.849 m from the middle (radius 3 less half of 0.3); refused: ["there is no piece kind \"Banana\"", "a Slab needs a closed outline", "a new building needs a place: at = [lng, lat]", "that curve already carries a Slab"]
+[api-check] edit PASS — {"all_three_undone":true,"delete_undone":true,"field":true,"field_redone":true,"field_undone":true,"moved_turned_scaled":true,"no_such_field":true,"pass":true,"piece_deleted":true,"piece_moved":true,"selected":true}
+[api-check] camera PASS — fly_to: {"distance_m":50.0,"heading_deg":90.0,"lnglat":[-119.1547943,34.4333704],"mode":"orbit","pitch_deg":-30.0}; plan: pitch -89.0°, heading 0.0°; walk: mode walk; back to orbit
+[api-check] layers PASS — the property line on and off; the Wall tool in hand switches BUILD on: true; a layer and a tool that do not exist are refused; 125 tools, 24 kinds
+[api-check] save PASS — 16 records, 5 of them this building's pieces; level: {"height_m":0.0,"index":1,"name":"ground"}; export: ""
+[api-check] piece4 PASS — {"changed_by_key":{"build":2,"preset":1},"heading_after_the_turn":45.0,"keys":80,"kit":{"plan_view":"plan-view-20261005-155105.png","touring":[true,false],"viewpoint":true,"viewpoint_9_refused":true},"pass":true,"revision":[19,20,21,23],"revision_rises":true,"said":{"changed":0,"view_changed":3},"steps":{"after_0.5":1.0,"angle":[0.0,15.0,45.0],"grid":[0.5,1.0,0.1,0.0]},"terrain_layer":{"a_building_is_on_it":false,"layer":20,"the_terrain_is_on_it":true},"view_only":true}
+[api-check] asked PASS — {"exchange_dir":true,"form":true,"frame":true,"ground_at":true,"look":true,"pick":true,"set_hud":true}
+[api-check] shell PASS — ui_root.tscn stands on its own layer and was handed the API: true
+[check] api PASS

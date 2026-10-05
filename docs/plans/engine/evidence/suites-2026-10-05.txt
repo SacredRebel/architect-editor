@@ -1,0 +1,7 @@
+check_organic OK (66 checks)
+check_organic --self-test OK (39/39 forgeries rejected)
+check_toolbar OK (194 checks; 30 commands pressed in two places; the 31th, Import from the map, is held by check_import)
+check_toolbar --self-test OK (42/42 forgeries rejected)
+check_import OK (71 checks)
+check_import --self-test OK (100/100 forgeries rejected)
+=== all steps passed

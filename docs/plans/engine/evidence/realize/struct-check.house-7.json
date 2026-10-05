@@ -1,0 +1,948 @@
+{
+  "community": "sulphur-mountain",
+  "format": "built/1",
+  "generator": "the Godot map, BUILD mode (lane E)",
+  "id": "h-muvum9co-128",
+  "name": "House 7",
+  "pieces": [
+    {
+      "id": "p-muvum9co-129",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 1",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            6,
+            4
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9co-130",
+      "ifc_type": "Wall",
+      "name": "Wall 1",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvum9co-129",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 2.7,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.3,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvum9cy-131",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 2",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            6,
+            4
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "z": 2.7
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9cy-132",
+      "ifc_type": "Member",
+      "name": "Ring beam 1",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvum9cy-131",
+        "BaseOffset": 0.0,
+        "Foundation": 0.0,
+        "Height": 0.3,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.35,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvum9d6-133",
+      "ifc_type": "Column",
+      "name": "Column 1",
+      "params": {
+        "Profile": [
+          [
+            0.15,
+            0.0
+          ],
+          [
+            0.15,
+            2.7
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 10.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9db-134",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 3",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Oval",
+        "Lobes": 5,
+        "Points": [],
+        "Radius": 0.25,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 12.004,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9db-135",
+      "ifc_type": "Column",
+      "name": "Oval column 2",
+      "params": {
+        "Base": "p-muvum9db-134",
+        "BaseOffset": 2.7,
+        "Inset": 0.0,
+        "Thickness": 2.7
+      },
+      "type": "Slab"
+    },
+    {
+      "id": "p-muvum9dl-136",
+      "ifc_type": "Column",
+      "name": "Tree column 3",
+      "params": {
+        "Branches": 3,
+        "Exponent": 2.3,
+        "Fan": 110.0,
+        "Height": 5.0,
+        "Levels": 2,
+        "Spread": 2.5,
+        "TipRadius": 0.04,
+        "Trunk": 2.2,
+        "TrunkRadius": 0.18
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 16.003,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "BranchingColumn"
+    },
+    {
+      "id": "p-muvum9du-137",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 4",
+      "params": {
+        "Closed": false,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0.0,
+            -4.992
+          ],
+          [
+            6.002,
+            -4.992
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 2.7
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9du-138",
+      "ifc_type": "Member",
+      "name": "Beam 1",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvum9du-137",
+        "BaseOffset": 0.0,
+        "Foundation": 0.0,
+        "Height": 0.3,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.2,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvum9e8-139",
+      "ifc_type": "Building Element Proxy",
+      "name": "Pool: its outline",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            20.001,
+            0.0
+          ],
+          [
+            26.003,
+            0.0
+          ],
+          [
+            26.003,
+            3.006
+          ],
+          [
+            20.001,
+            3.006
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": true,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9e8-140",
+      "ifc_type": "Wall",
+      "name": "Pool: its wall",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvum9e8-139",
+        "BaseOffset": 0.0,
+        "Foundation": 0.0,
+        "Height": 1.5,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.25,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvum9e8-141",
+      "ifc_type": "Slab",
+      "name": "Pool: its floor",
+      "params": {
+        "Base": "p-muvum9e8-139",
+        "Inset": 0.0,
+        "Thickness": 0.25
+      },
+      "type": "Slab"
+    },
+    {
+      "id": "p-muvum9ev-143",
+      "ifc_type": "Column",
+      "name": "Water tank 1",
+      "params": {
+        "Profile": [
+          [
+            1.5,
+            0.0
+          ],
+          [
+            1.5,
+            2.0
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 30.001,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9f8-144",
+      "ifc_type": "Column",
+      "name": "Solar frame: post 1",
+      "params": {
+        "Profile": [
+          [
+            0.05,
+            0.0
+          ],
+          [
+            0.05,
+            0.6
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 34.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9f8-145",
+      "ifc_type": "Column",
+      "name": "Solar frame: post 2",
+      "params": {
+        "Profile": [
+          [
+            0.05,
+            0.0
+          ],
+          [
+            0.05,
+            0.6
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 35.999,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9f8-146",
+      "ifc_type": "Column",
+      "name": "Solar frame: post 3",
+      "params": {
+        "Profile": [
+          [
+            0.05,
+            0.0
+          ],
+          [
+            0.05,
+            0.6
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 37.998,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9f8-147",
+      "ifc_type": "Column",
+      "name": "Solar frame: post 4",
+      "params": {
+        "Profile": [
+          [
+            0.05,
+            0.0
+          ],
+          [
+            0.05,
+            1.8
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 34.0,
+        "y": 2.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9f8-148",
+      "ifc_type": "Column",
+      "name": "Solar frame: post 5",
+      "params": {
+        "Profile": [
+          [
+            0.05,
+            0.0
+          ],
+          [
+            0.05,
+            1.8
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 35.999,
+        "y": 2.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9f8-149",
+      "ifc_type": "Column",
+      "name": "Solar frame: post 6",
+      "params": {
+        "Profile": [
+          [
+            0.05,
+            0.0
+          ],
+          [
+            0.05,
+            1.8
+          ]
+        ]
+      },
+      "placement": {
+        "turn": 0.0,
+        "x": 37.998,
+        "y": 2.0,
+        "z": 0.0
+      },
+      "type": "Revolved"
+    },
+    {
+      "id": "p-muvum9f8-150",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 6",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            34.0,
+            0.0
+          ],
+          [
+            37.998,
+            0.0
+          ],
+          [
+            37.998,
+            2.0
+          ],
+          [
+            34.0,
+            2.0
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9f8-151",
+      "ifc_type": "Roof",
+      "name": "Solar frame: panel",
+      "params": {
+        "Base": "p-muvum9f8-150",
+        "Formula": "a plane: 0.65 m on the front row, 1.85 m on the back row 2.00 m behind it (its top 0.05 m over the posts)",
+        "GridColumns": 19,
+        "GridOrigin": [
+          33.7498,
+          -0.25
+        ],
+        "GridStep": 0.25,
+        "Heights": [
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.65,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          0.95,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.25,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.4,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.55,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.7,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          1.85,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ],
+        "Holes": [],
+        "Thickness": 0.05
+      },
+      "type": "HeightFieldShell"
+    },
+    {
+      "id": "p-muvum9g8-152",
+      "ifc_type": "Stair",
+      "name": "Stair 1, lower flight",
+      "params": {
+        "Count": 9,
+        "Foundation": 0.3,
+        "From": [
+          44.0,
+          0.0,
+          0.0
+        ],
+        "Rise": 0.1667,
+        "Run": 0.28,
+        "To": [
+          44.0,
+          2.52,
+          1.5
+        ],
+        "Width": 1.0
+      },
+      "type": "Steps"
+    },
+    {
+      "id": "p-muvum9g8-153",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 7",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            43.5,
+            2.52
+          ],
+          [
+            45.6,
+            2.52
+          ],
+          [
+            45.6,
+            3.52
+          ],
+          [
+            43.5,
+            3.52
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9g8-154",
+      "ifc_type": "Slab",
+      "name": "Stair 2, landing",
+      "params": {
+        "Base": "p-muvum9g8-153",
+        "BaseOffset": 1.5,
+        "Inset": 0.0,
+        "Thickness": 1.5
+      },
+      "type": "Slab"
+    },
+    {
+      "id": "p-muvum9g8-155",
+      "ifc_type": "Stair",
+      "name": "Stair 2, upper flight",
+      "params": {
+        "Count": 9,
+        "Foundation": 0.3,
+        "From": [
+          45.1,
+          2.52,
+          1.5
+        ],
+        "Rise": 0.1667,
+        "Run": 0.28,
+        "To": [
+          45.1,
+          0.0,
+          3.0
+        ],
+        "Width": 1.0
+      },
+      "type": "Steps"
+    },
+    {
+      "id": "p-muvum9gy-156",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 8",
+      "params": {
+        "Closed": false,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            40.002,
+            0.0
+          ],
+          [
+            46.004,
+            0.0
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvum9gy-157",
+      "ifc_type": "Railing",
+      "name": "Fence 1",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvum9gy-156",
+        "BaseOffset": 0.0,
+        "Foundation": 0.4,
+        "Height": 1.2,
+        "OpeningHeights": [
+          1.2
+        ],
+        "OpeningPositions": [
+          3.001
+        ],
+        "OpeningShapes": [
+          "Rect"
+        ],
+        "OpeningSills": [
+          0.0
+        ],
+        "OpeningWidths": [
+          1.2
+        ],
+        "Thickness": 0.1,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    }
+  ],
+  "placement": {
+    "altitude_m": -425.63,
+    "coordinates": [
+      -119.15536,
+      34.4267897
+    ],
+    "rotation_deg": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "scale": 1.0
+  },
+  "saved": "2026-10-05T22:55:58Z",
+  "units": "m"
+}

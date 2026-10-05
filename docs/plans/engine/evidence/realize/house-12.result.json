@@ -1,0 +1,135 @@
+{
+ "ok": true,
+ "complete": true,
+ "records": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\house-12.json",
+ "notes": [],
+ "files": {
+  "glb": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-12.glb",
+  "ifc": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-12.ifc",
+  "json": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-12.json",
+  "design": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\hand-check\\x\\built\\realized\\house-12.FCStd"
+ },
+ "name": "House 12",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 6,
+ "made": 6,
+ "solids": 3,
+ "elements": [
+  {
+   "name": "Floor 1",
+   "piece": "p-muvumj8d-58",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 15.996,
+   "mesh_volume_m3": 15.996,
+   "triangles": 12,
+   "box_m": [
+    [
+     0.0,
+     0.0,
+     -0.2
+    ],
+    [
+     10.0,
+     7.998,
+     0.0
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Wall 1",
+   "piece": "p-muvumj8d-59",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 34.55616,
+   "mesh_volume_m3": 34.55616,
+   "triangles": 32,
+   "box_m": [
+    [
+     -0.15,
+     -0.15,
+     -0.5
+    ],
+    [
+     10.15,
+     8.148,
+     2.7
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Roof 1",
+   "piece": "p-muvumj8s-61",
+   "type": "ShellRoof",
+   "ifcType": "Roof",
+   "volume_m3": 44.482787,
+   "mesh_volume_m3": 44.405756,
+   "triangles": 10400,
+   "box_m": [
+    [
+     -3.1025,
+     -2.8473,
+     2.4575
+    ],
+    [
+     13.1025,
+     10.8453,
+     5.8
+    ]
+   ]
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4302153
+  ],
+  "altitude_m": 83.534,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 509.164,
+  "offset_m": {
+   "east": 0.0,
+   "north": -320.0003,
+   "up": 83.534
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 274.68,
+  "easement": 283.24,
+  "existing_building": 239.77
+ },
+ "site_notes": [
+  "by the map's build envelope, 100 % of it (its points in plan) lies outside the area that may be built on",
+  "by the map's build envelope, 62 % of it (its points in plan) lies where there is to be no building: protected tree canopy (height 11.7 m) + 1.5 m -- no building"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 5486,
+  "buildable": 0.0,
+  "no_building": {
+   "oak_protection": {
+    "share": 0.6218,
+    "reason": "protected tree canopy (height 11.7 m) + 1.5 m -- no building"
+   }
+  },
+  "stale": {},
+  "replaced": {}
+ },
+ "seconds": 30.7
+}

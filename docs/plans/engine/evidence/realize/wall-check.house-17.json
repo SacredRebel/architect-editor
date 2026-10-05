@@ -1,0 +1,123 @@
+{
+  "community": "sulphur-mountain",
+  "format": "built/1",
+  "generator": "the Godot map, BUILD mode (lane E)",
+  "id": "h-muvultol-77",
+  "name": "House 17",
+  "pieces": [
+    {
+      "id": "p-muvultol-78",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 1",
+      "params": {
+        "Closed": false,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": true,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvultol-79",
+      "ifc_type": "Wall",
+      "name": "Wall 1",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvultol-78",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 2.7,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.3,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3,
+        "WallKind": "Straw bale"
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvultvf-80",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 2",
+      "params": {
+        "Closed": false,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0,
+            3
+          ],
+          [
+            5,
+            3
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": true,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvultvf-81",
+      "ifc_type": "Wall",
+      "name": "Wall 2",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvultvf-80",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 2.7,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.3,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    }
+  ],
+  "placement": {
+    "altitude_m": 0.069,
+    "coordinates": [
+      -119.15536,
+      34.4340015
+    ],
+    "rotation_deg": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "scale": 1.0
+  },
+  "saved": "2026-10-05T22:55:38Z",
+  "units": "m"
+}

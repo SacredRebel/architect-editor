@@ -1,0 +1,441 @@
+{
+ "format": "built/1",
+ "id": "h-forms",
+ "name": "The catalogue's ported forms",
+ "saved": "2026-10-05T23:30:00Z",
+ "generator": "lane A's kinds test, from the map's ui/ports/registry.gd",
+ "units": "m",
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4331
+  ],
+  "altitude_m": 0.0,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "scale": 1.0
+ },
+ "pieces": [
+  {
+   "id": "form-1",
+   "type": "SacredSolid",
+   "name": "Merkaba",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 2.4,
+    "Figure": "Merkaba"
+   },
+   "placement": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-2",
+   "type": "SacredFigure",
+   "name": "Sri Yantra",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "BaseRadius": 1.0,
+    "Thickness": 0.03,
+    "Figure": "SriYantra"
+   },
+   "placement": {
+    "x": 25.0,
+    "y": 0.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-3",
+   "type": "SacredSolid",
+   "name": "Sri Yantra, extruded",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 3.0,
+    "Depth": 0.3,
+    "Figure": "SriYantra"
+   },
+   "placement": {
+    "x": 50.0,
+    "y": 0.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-4",
+   "type": "SacredFigure",
+   "name": "Fibonacci spiral",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Count": 144,
+    "RadialConstant": 0.15,
+    "Rise": 1.2,
+    "Figure": "FibonacciSpiral"
+   },
+   "placement": {
+    "x": 75.0,
+    "y": 0.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-5",
+   "type": "SacredFigure",
+   "name": "Torus knot",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "P": 2,
+    "Q": 3,
+    "MajorRadius": 1.0,
+    "MinorRadius": 0.35,
+    "TubeRadius": 0.045,
+    "Figure": "TorusKnot"
+   },
+   "placement": {
+    "x": 100.0,
+    "y": 0.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-6",
+   "type": "SacredSolid",
+   "name": "Five nested solids",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 0.5,
+    "Figure": "Nested5Platonic"
+   },
+   "placement": {
+    "x": 125.0,
+    "y": 0.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-7",
+   "type": "SacredSolid",
+   "name": "Cube and octahedron",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 1.0,
+    "Figure": "CubeOctahedronCompound"
+   },
+   "placement": {
+    "x": 0.0,
+    "y": 25.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-8",
+   "type": "SacredSolid",
+   "name": "Stellated compound",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 0.5,
+    "Figure": "StellatedIcoDodCompound"
+   },
+   "placement": {
+    "x": 25.0,
+    "y": 25.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-9",
+   "type": "SacredSolid",
+   "name": "Stellated compound, long tips",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 0.5,
+    "TipVariant": "inverted",
+    "Figure": "StellatedIcoDodCompound"
+   },
+   "placement": {
+    "x": 50.0,
+    "y": 25.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-10",
+   "type": "SacredSolid",
+   "name": "Stellated compound, short tips",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 0.5,
+    "TipVariant": "short_spikes",
+    "Figure": "StellatedIcoDodCompound"
+   },
+   "placement": {
+    "x": 75.0,
+    "y": 25.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-11",
+   "type": "SacredSolid",
+   "name": "Poked compound",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 1.5,
+    "IcoPokeFactor": 0.809017,
+    "DodPokeFactor": 0.999945,
+    "Figure": "StellatedIcoDodCompoundApprox"
+   },
+   "placement": {
+    "x": 100.0,
+    "y": 25.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-12",
+   "type": "SacredSolid",
+   "name": "Star Mother, three shells",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Scale": 0.4,
+    "Figure": "StarMother3Shell"
+   },
+   "placement": {
+    "x": 125.0,
+    "y": 25.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-13",
+   "type": "SacredSolid",
+   "name": "Star Mother, n shells",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "OuterScale": 3.0,
+    "Shells": 5,
+    "Figure": "StarMotherRecursive"
+   },
+   "placement": {
+    "x": 0.0,
+    "y": 50.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-14",
+   "type": "SacredSolid",
+   "name": "Thirteen compounds",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Radius": 1.0,
+    "Figure": "StellyDodecahedralLattice13"
+   },
+   "placement": {
+    "x": 25.0,
+    "y": 50.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-15",
+   "type": "SacredSolid",
+   "name": "Klein bottle",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Size": 6.0,
+    "UResolution": 80,
+    "VResolution": 60,
+    "Figure": "KleinBottle"
+   },
+   "placement": {
+    "x": 50.0,
+    "y": 50.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-101",
+   "type": "GeodesicDome",
+   "name": "Geodesic dome frame",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Radius": 5.0,
+    "Frequency": 3,
+    "Portion": 0.625,
+    "Thickness": 0.09,
+    "Frame": true,
+    "StrutSection": 0.09,
+    "Figure": "GeodesicDome"
+   },
+   "placement": {
+    "x": 75.0,
+    "y": 50.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-102",
+   "type": "FoldedRevolution",
+   "name": "Dome folded from one sheet",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Radius": 4.0,
+    "Sides": 12,
+    "Flap": 0.25,
+    "Oculus": 12.0,
+    "Steps": 9,
+    "Thickness": 0.03,
+    "Figure": "FoldedRevolution"
+   },
+   "placement": {
+    "x": 100.0,
+    "y": 50.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-103",
+   "type": "Conoid",
+   "name": "Conoid roof",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Span": 9.0,
+    "ShellLength": 12.0,
+    "Rise": 3.0,
+    "Eave": 2.6,
+    "Thickness": 0.08,
+    "Figure": "Conoid"
+   },
+   "placement": {
+    "x": 125.0,
+    "y": 50.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-104",
+   "type": "TranslationShell",
+   "name": "Translation shell",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Span": 10.0,
+    "ShellLength": 14.0,
+    "RiseX": 1.6,
+    "RiseY": 2.2,
+    "Eave": 2.6,
+    "Thickness": 0.08,
+    "Figure": "TranslationShell"
+   },
+   "placement": {
+    "x": 0.0,
+    "y": 75.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-105",
+   "type": "WaveVault",
+   "name": "Wave vault",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Profile": "Catenary",
+    "Span": 8.0,
+    "Rise": 2.4,
+    "VaultLength": 18.0,
+    "WaveAmplitude": 0.6,
+    "Waves": 3,
+    "Plinth": 2.2,
+    "Thickness": 0.12,
+    "Figure": "WaveVault"
+   },
+   "placement": {
+    "x": 25.0,
+    "y": 75.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-106",
+   "type": "GroinedSaddles",
+   "name": "Groined saddles",
+   "ifc_type": "Building Element Proxy",
+   "params": {
+    "Lobes": 8,
+    "SupportRadius": 6.0,
+    "TipRadius": 7.85,
+    "CentreHeight": 2.4,
+    "TipHeight": 4.0,
+    "Thickness": 0.05,
+    "Figure": "GroinedSaddles"
+   },
+   "placement": {
+    "x": 50.0,
+    "y": 75.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  },
+  {
+   "id": "form-107",
+   "type": "HeightFieldShell",
+   "name": "Leaf roof on ribs",
+   "ifc_type": "Roof",
+   "params": {
+    "Length": 12.0,
+    "Width": 7.0,
+    "Taper": 0.6,
+    "Base": 2.6,
+    "Bumps": [
+     {
+      "A": 1.2,
+      "Cx": 0.0,
+      "Cy": 0.0,
+      "Sx": 2.3333,
+      "Sy": 4.0,
+      "P": 2
+     }
+    ],
+    "Thickness": 0.1,
+    "RibCount": 10,
+    "VeinAngle": 65.0,
+    "RibWidth": 0.12,
+    "RibDepth": 0.3,
+    "MidribWidth": 0.16,
+    "MidribDepth": 0.45,
+    "Figure": "HeightFieldShell"
+   },
+   "placement": {
+    "x": 75.0,
+    "y": 75.0,
+    "z": 0.0,
+    "turn": 0.0
+   }
+  }
+ ]
+}

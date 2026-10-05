@@ -1,0 +1,109 @@
+{
+ "ok": true,
+ "complete": true,
+ "records": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\wall-check\\x\\built\\house-17.json",
+ "notes": [],
+ "files": {
+  "glb": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds-after\\house-17.glb",
+  "ifc": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds-after\\house-17.ifc",
+  "json": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds-after\\house-17.json",
+  "design": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds-after\\house-17.FCStd"
+ },
+ "name": "House 17",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 4,
+ "made": 4,
+ "solids": 2,
+ "elements": [
+  {
+   "name": "Wall 1",
+   "piece": "p-muvultol-79",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 4.8,
+   "mesh_volume_m3": 4.8,
+   "triangles": 12,
+   "box_m": [
+    [
+     0.0,
+     -0.15,
+     -0.5
+    ],
+    [
+     5.0,
+     0.15,
+     2.7
+    ]
+   ],
+   "openings": 0,
+   "wall_kind": "Straw bale"
+  },
+  {
+   "name": "Wall 2",
+   "piece": "p-muvultvf-81",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 4.8,
+   "mesh_volume_m3": 4.8,
+   "triangles": 12,
+   "box_m": [
+    [
+     0.0,
+     2.85,
+     -0.5
+    ],
+    [
+     5.0,
+     3.15,
+     2.7
+    ]
+   ],
+   "openings": 0
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4340015
+  ],
+  "altitude_m": 0.069,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 425.699,
+  "offset_m": {
+   "east": 0.0,
+   "north": 100.0036,
+   "up": 0.069
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 118.59,
+  "easement": 149.84,
+  "existing_building": 91.87
+ },
+ "site_notes": [
+  "by the map's build envelope, 100 % of it (its points in plan) lies outside the area that may be built on"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 48,
+  "buildable": 0.0,
+  "no_building": {},
+  "stale": {},
+  "replaced": {}
+ },
+ "seconds": 2.1
+}

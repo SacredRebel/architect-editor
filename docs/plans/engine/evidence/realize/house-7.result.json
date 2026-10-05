@@ -1,0 +1,502 @@
+{
+ "ok": true,
+ "complete": true,
+ "records": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\struct-check\\x\\built\\house-7.json",
+ "notes": [],
+ "files": {
+  "glb": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\struct-check\\x\\built\\realized\\house-7.glb",
+  "ifc": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\struct-check\\x\\built\\realized\\house-7.ifc",
+  "json": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\struct-check\\x\\built\\realized\\house-7.json",
+  "design": "C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\kinds\\struct-check\\x\\built\\realized\\house-7.FCStd"
+ },
+ "name": "House 7",
+ "format": "built/1",
+ "scale": 1.0,
+ "pieces": 28,
+ "made": 28,
+ "solids": 20,
+ "elements": [
+  {
+   "name": "Column 1",
+   "piece": "p-muvum9d6-133",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.190852,
+   "mesh_volume_m3": 0.189,
+   "triangles": 100,
+   "box_m": [
+    [
+     9.85,
+     -0.15,
+     0.0
+    ],
+    [
+     10.15,
+     0.15,
+     2.7
+    ]
+   ]
+  },
+  {
+   "name": "Tree column 3",
+   "piece": "p-muvum9dl-136",
+   "type": "BranchingColumn",
+   "ifcType": "Column",
+   "volume_m3": 0.578068,
+   "mesh_volume_m3": 0.55745,
+   "triangles": 8642,
+   "box_m": [
+    [
+     13.7245,
+     -1.7909,
+     0.0
+    ],
+    [
+     18.2815,
+     2.5757,
+     5.0
+    ]
+   ]
+  },
+  {
+   "name": "Water tank 1",
+   "piece": "p-muvum9ev-143",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 14.137167,
+   "mesh_volume_m3": 14.108554,
+   "triangles": 224,
+   "box_m": [
+    [
+     28.501,
+     -1.5,
+     0.0
+    ],
+    [
+     31.501,
+     1.5,
+     2.0
+    ]
+   ]
+  },
+  {
+   "name": "Solar frame: post 1",
+   "piece": "p-muvum9f8-144",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.004712,
+   "mesh_volume_m3": 0.004667,
+   "triangles": 100,
+   "box_m": [
+    [
+     33.95,
+     -0.05,
+     0.0
+    ],
+    [
+     34.05,
+     0.05,
+     0.6
+    ]
+   ]
+  },
+  {
+   "name": "Solar frame: post 2",
+   "piece": "p-muvum9f8-145",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.004712,
+   "mesh_volume_m3": 0.004667,
+   "triangles": 100,
+   "box_m": [
+    [
+     35.949,
+     -0.05,
+     0.0
+    ],
+    [
+     36.049,
+     0.05,
+     0.6
+    ]
+   ]
+  },
+  {
+   "name": "Solar frame: post 3",
+   "piece": "p-muvum9f8-146",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.004712,
+   "mesh_volume_m3": 0.004667,
+   "triangles": 100,
+   "box_m": [
+    [
+     37.948,
+     -0.05,
+     0.0
+    ],
+    [
+     38.048,
+     0.05,
+     0.6
+    ]
+   ]
+  },
+  {
+   "name": "Solar frame: post 4",
+   "piece": "p-muvum9f8-147",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.014137,
+   "mesh_volume_m3": 0.014,
+   "triangles": 100,
+   "box_m": [
+    [
+     33.95,
+     1.95,
+     0.0
+    ],
+    [
+     34.05,
+     2.05,
+     1.8
+    ]
+   ]
+  },
+  {
+   "name": "Solar frame: post 5",
+   "piece": "p-muvum9f8-148",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.014137,
+   "mesh_volume_m3": 0.014,
+   "triangles": 100,
+   "box_m": [
+    [
+     35.949,
+     1.95,
+     0.0
+    ],
+    [
+     36.049,
+     2.05,
+     1.8
+    ]
+   ]
+  },
+  {
+   "name": "Solar frame: post 6",
+   "piece": "p-muvum9f8-149",
+   "type": "Revolved",
+   "ifcType": "Column",
+   "volume_m3": 0.014137,
+   "mesh_volume_m3": 0.014,
+   "triangles": 100,
+   "box_m": [
+    [
+     37.948,
+     1.95,
+     0.0
+    ],
+    [
+     38.048,
+     2.05,
+     1.8
+    ]
+   ]
+  },
+  {
+   "name": "Stair 1, lower flight",
+   "piece": "p-muvum9g8-152",
+   "type": "Steps",
+   "ifcType": "Stair",
+   "volume_m3": 2.856,
+   "mesh_volume_m3": 2.856,
+   "triangles": 76,
+   "box_m": [
+    [
+     43.5,
+     0.0,
+     -0.3
+    ],
+    [
+     44.5,
+     2.52,
+     1.5
+    ]
+   ]
+  },
+  {
+   "name": "Stair 2, upper flight",
+   "piece": "p-muvum9g8-155",
+   "type": "Steps",
+   "ifcType": "Stair",
+   "volume_m3": 2.856,
+   "mesh_volume_m3": 2.856,
+   "triangles": 76,
+   "box_m": [
+    [
+     44.6,
+     -0.0,
+     1.2
+    ],
+    [
+     45.6,
+     2.52,
+     3.0
+    ]
+   ]
+  },
+  {
+   "name": "Wall 1",
+   "piece": "p-muvum9co-130",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 19.2,
+   "mesh_volume_m3": 19.2,
+   "triangles": 32,
+   "box_m": [
+    [
+     -0.15,
+     -0.15,
+     -0.5
+    ],
+    [
+     6.15,
+     4.15,
+     2.7
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Ring beam 1",
+   "piece": "p-muvum9cy-132",
+   "type": "Wall",
+   "ifcType": "Member",
+   "volume_m3": 2.1,
+   "mesh_volume_m3": 2.1,
+   "triangles": 32,
+   "box_m": [
+    [
+     -0.175,
+     -0.175,
+     2.7
+    ],
+    [
+     6.175,
+     4.175,
+     3.0
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Oval column 2",
+   "piece": "p-muvum9db-135",
+   "type": "Slab",
+   "ifcType": "Column",
+   "volume_m3": 0.47713,
+   "mesh_volume_m3": 0.470654,
+   "triangles": 1110,
+   "box_m": [
+    [
+     11.704,
+     -0.1875,
+     -0.0
+    ],
+    [
+     12.304,
+     0.1875,
+     2.7
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Beam 1",
+   "piece": "p-muvum9du-138",
+   "type": "Wall",
+   "ifcType": "Member",
+   "volume_m3": 0.36012,
+   "mesh_volume_m3": 0.36012,
+   "triangles": 12,
+   "box_m": [
+    [
+     0.0,
+     -5.092,
+     2.7
+    ],
+    [
+     6.002,
+     -4.892,
+     3.0
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Pool: its wall",
+   "piece": "p-muvum9e8-140",
+   "type": "Wall",
+   "ifcType": "Wall",
+   "volume_m3": 7.210356,
+   "mesh_volume_m3": 7.201254,
+   "triangles": 1078,
+   "box_m": [
+    [
+     19.1257,
+     -0.5008,
+     -1.5
+    ],
+    [
+     26.8783,
+     3.5068,
+     0.0
+    ]
+   ],
+   "openings": 0
+  },
+  {
+   "name": "Pool: its floor",
+   "piece": "p-muvum9e8-141",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 6.164354,
+   "mesh_volume_m3": 6.156499,
+   "triangles": 536,
+   "box_m": [
+    [
+     19.2507,
+     -0.3758,
+     -1.75
+    ],
+    [
+     26.7533,
+     3.3818,
+     -1.5
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Solar frame: panel",
+   "piece": "p-muvum9f8-151",
+   "type": "HeightFieldShell",
+   "ifcType": "Roof",
+   "volume_m3": 0.3998,
+   "mesh_volume_m3": 0.3998,
+   "triangles": 96,
+   "box_m": [
+    [
+     34.0,
+     -0.0,
+     0.6
+    ],
+    [
+     37.998,
+     2.0,
+     1.85
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Stair 2, landing",
+   "piece": "p-muvum9g8-154",
+   "type": "Slab",
+   "ifcType": "Slab",
+   "volume_m3": 3.15,
+   "mesh_volume_m3": 3.15,
+   "triangles": 12,
+   "box_m": [
+    [
+     43.5,
+     2.52,
+     0.0
+    ],
+    [
+     45.6,
+     3.52,
+     1.5
+    ]
+   ],
+   "holes": 0
+  },
+  {
+   "name": "Fence 1",
+   "piece": "p-muvum9gy-157",
+   "type": "Wall",
+   "ifcType": "Railing",
+   "volume_m3": 0.81632,
+   "mesh_volume_m3": 0.81632,
+   "triangles": 28,
+   "box_m": [
+    [
+     40.002,
+     -0.05,
+     -0.4
+    ],
+    [
+     46.004,
+     0.05,
+     1.2
+    ]
+   ],
+   "openings": 1,
+   "opening_list": [
+    {
+     "at_m": 3.001,
+     "width_m": 1.2,
+     "sill_m": 0.0,
+     "height_m": 1.2,
+     "shape": "Rect"
+    }
+   ]
+  }
+ ],
+ "placement": {
+  "coordinates": [
+   -119.15536,
+   34.4267897
+  ],
+  "altitude_m": -425.63,
+  "rotation_deg": {
+   "x": 0.0,
+   "y": 0.0,
+   "z": 0.0
+  },
+  "elevation_m": 0.0,
+  "offset_m": {
+   "east": 0.0,
+   "north": -700.0027,
+   "up": -425.63
+  },
+  "anchor": [
+   -119.15536,
+   34.4331
+  ],
+  "datum_m": 425.63,
+  "metres_per_degree": [
+   91916.198,
+   110930.184
+  ]
+ },
+ "clearance_m": {
+  "road": 399.11,
+  "easement": 646.05,
+  "existing_building": 626.26
+ },
+ "site_notes": [
+  "by the map's build envelope, 100 % of it (its points in plan) lies outside the area that may be built on"
+ ],
+ "envelope": {
+  "file": "build-envelope.geojson",
+  "points": 8777,
+  "buildable": 0.0,
+  "no_building": {},
+  "stale": {},
+  "replaced": {}
+ },
+ "seconds": 3.6
+}

@@ -1,0 +1,8 @@
+roundtrip h-muvufv9r-3: 5 pieces in the save (5 in its pieces layer) -> 5 records sent -> 5 made in FreeCAD (4 solids) -> 5 records back; the lengths not changed came back within 0.000000 m (furthest: none); changed in the save: 2
+   p-muvufv9r-5 Height: 3.3 -> 3.1
+   p-muvufvay-6 Thickness: 0.2 -> 0.25
+roundtrip OK: 16 features in, 16 back (models 1, pieces 5, trees 10); 11.6 s
+FreeCAD 1.1.4, Libs: 1.1.4R20260928 (Git shallow)
+(C) 2001-2026 FreeCAD contributors
+FreeCAD is free and open-source software licensed under the terms of LGPL2+ license.
+

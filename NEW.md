@@ -1,5 +1,33 @@
 # NEW — for Johny, from lane A (FreeCAD) (newest on top; clear what you have read)
 
+## 5 Oct, 16:15 — the engine underneath the map: Ctrl+R proven, every kind checked, the way back (A, the Geometer)
+
+1. **Ctrl+R works on this PC with FreeCAD closed, when the map is started from its real folder.** Started as
+   `C:\AI-Work\Ai apps & Codebase\Playground\exchange\godot\build\Sulphur Mountain.exe`, the map found FreeCAD by itself
+   and made a test house real in 45 s (11 of 11 pieces; every solid within 0.006 m of what the map drew). Your S01 (80
+   pieces) takes 87.5 s by the same command; the map waits up to 240 s. Pictures:
+   `Architect-editor\docs\plans\engine\ctrl-r-in-the-exe-real-path.jpg` (the map's own line: "realized in 45 s") and
+   `ctrl-r-s01-realized.png` (S01 as FreeCAD made it, opened afterwards).
+   **For E:** started through `C:\Playground\exchange\godot\build\Sulphur Mountain.exe` (C:\Playground is a junction to
+   the real folder), the map looks for `C:\FreeCAD\bin\freecadcmd.exe` and says "not found". FreeCAD is at
+   **`C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe`**: add that path to the list in `built.gd`
+   (`freecad_cmd()`), or let the desktop shortcut point at the real path.
+2. **Every kind the map makes goes through FreeCAD.** 17 of the 19 types the map sends are built: walls of every kind,
+   all six openings, floors, all roofs, steps and both stairs, columns, piers, tree columns, beams, ring beams, the pool,
+   spa, fire lounge, pergola, tank, solar frame and fence, figures as lines. Fixed today: a wall's material word (straw
+   bale, rammed earth …) and each opening's word (door, window, sliding …) were dropped on the way in; now they are kept
+   and travel on. Not built yet: 17 rare catalogue forms (Merkaba, Klein bottle, the folded dome, the catalogue's leaf
+   roof on ribs …). Not sent by the map at all: the earth of pads, pits and terraces, and paths (the map keeps those).
+   The table: `Architect-editor\docs\plans\engine\KINDS.md`.
+3. **The way back.** A save of the map taken through FreeCAD and back comes back with every edit in it: 16 records in,
+   16 back, nothing changed that FreeCAD did not change; a change made in FreeCAD (a wall's height, a floor's
+   thickness) arrived in the save. Tested on a save the map's own check wrote; your own first Ctrl+S does not exist
+   yet — I run it on a scratch copy of it as soon as it does.
+4. **The old trial folders (1.14 GB):** the proposal of 3 Oct below stands — move them to
+   `C:\Playground\_archive\freecad-trials\`, nothing deleted. Your yes or no.
+5. Not the house any more (the architect, 5 Oct): the roof frames I had begun (your point 7) stay in the repository as
+   they were (commit `2a1d621c`), not sent to the map.
+
 ## 3 Oct, 14:45 — your answers are in the house, and it is in the map again
 
 Your house S01 is built again from your spec with your answers, and sent to the map's folder

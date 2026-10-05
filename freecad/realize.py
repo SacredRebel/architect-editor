@@ -43,7 +43,9 @@ own three lines of greeting after it) — is one JSON object:
                 z max]] (x east, y north, z up, before the building is turned; in the map's
                 scale, as the .glb is); for a wall openings (how many are cut through it) and
                 opening_list (each one's at_m along the base curve, width_m, sill_m, height_m,
-                shape, as they stand in the solid); for a floor or a roof holes; and land
+                shape, as they stand in the solid, and kind, the map's word for it, where the
+                records give one) and wall_kind (the map's word for what it is made of, where
+                given); for a floor or a roof holes; and land
                 when the records carry the map's reading of the land at that piece (kept as
                 written, here and in the .json)
     placement   as written into the .json (coordinates, altitude_m, rotation_deg, ...)
@@ -116,7 +118,7 @@ def realize(records, out_dir=None, land=None):
             "pieces": len(pieces), "made": len(made["made"]), "solids": len(report["elements"]),
             "elements": [dict({"name": row["name"], "piece": ids.get(row["freecadName"], ""), "type": kinds.get(row["freecadName"], ""), "ifcType": row["ifcType"],
                                "volume_m3": round(row["volume_m3"], 6), "mesh_volume_m3": round(row["mesh_volume_m3"], 6), "triangles": row["triangles"]},
-                              **{k: row[k] for k in ("box_m", "openings", "opening_list", "holes", "land") if k in row})
+                              **{k: row[k] for k in ("box_m", "openings", "opening_list", "wall_kind", "holes", "land") if k in row})
                          for row in report["elements"]],
             "placement": report["placement"], "clearance_m": report["clearance_m"],
             "site_notes": list(report["notes"]), "envelope": report.get("envelope"),

@@ -1,0 +1,86 @@
+{
+  "failed": [
+    "realize"
+  ],
+  "forge": "",
+  "fps": 158.0,
+  "glb": {
+    "by_piece": {
+      "p-muvr6o8z-3": {
+        "pass": true,
+        "triangles_glb": 1632,
+        "triangles_map": 1632
+      },
+      "p-muvr6o9d-4": {
+        "pass": true,
+        "triangles_glb": 500,
+        "triangles_map": 500
+      },
+      "p-muvr6o9g-5": {
+        "pass": true,
+        "triangles_glb": 7056,
+        "triangles_map": 7056
+      },
+      "p-muvr6o9z-6": {
+        "pass": true,
+        "triangles_glb": 12096,
+        "triangles_map": 12096
+      },
+      "p-muvr6oat-7": {
+        "pass": true,
+        "triangles_glb": 10,
+        "triangles_map": 10
+      },
+      "p-muvr6ob4-8": {
+        "pass": true,
+        "triangles_glb": 1336,
+        "triangles_map": 1336
+      },
+      "p-muvr6obh-10": {
+        "pass": true,
+        "triangles_glb": 162,
+        "triangles_map": 162
+      },
+      "p-muvr6obs-12": {
+        "pass": true,
+        "triangles_glb": 146,
+        "triangles_map": 146
+      }
+    },
+    "bytes": 2899520,
+    "nodes": 8,
+    "pass": true,
+    "pieces_with_a_body": 8
+  },
+  "pass": false,
+  "pieces": {
+    "file": "house-1-part",
+    "in_it": 3,
+    "pass": true,
+    "wanted": 3
+  },
+  "realize": {
+    "pass": false,
+    "why": "FreeCAD's command-line program was not found at C:/Playground/FreeCAD/bin/freecadcmd.exe (start the map with --freecad=<path to freecadcmd.exe>)"
+  },
+  "records": {
+    "another_of_the_same_name": "house-1-2",
+    "bytes": 5320,
+    "exported_again": "house-1",
+    "file": "house-1.json",
+    "keys_lane_A_does_not_know": [],
+    "no_geometry": true,
+    "parameters_as_drawn": true,
+    "pass": true,
+    "pieces": 11,
+    "placement_said_twice": [],
+    "the_maps_own_fields_left_in": [],
+    "the_maps_pieces": 11,
+    "where_it_stands": true
+  },
+  "whynot": {
+    "in_the_panel": "not realized: FreeCAD's command-line program was not found at C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\exe-junction\\out/nowhere/freecadcmd.exe (start the map with --freecad=<path to freecadcmd.exe>)",
+    "pass": true,
+    "says": "FreeCAD's command-line program was not found at C:\\Users\\paul\\AppData\\Local\\Temp\\claude\\C--AI-Work-Ai-apps---Codebase-Playground\\b86c2e68-9067-4d33-b379-cf2270242506\\scratchpad\\ctrlr\\exe-junction\\out/nowhere/freecadcmd.exe (start the map with --freecad=<path to freecadcmd.exe>)"
+  }
+}

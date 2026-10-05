@@ -828,8 +828,12 @@ def openings_of(el):
         cut = proxy.openings(el)
         out["openings"] = len(cut)
         if cut:
-            out["opening_list"] = [{"at_m": round(o["position_m"], 4), "width_m": round(o["width_m"], 4), "sill_m": round(o["sill_m"], 4),
-                                    "height_m": round(o["height_m"], 4), "shape": str(o["shape"])} for o in cut]
+            kinds = list(getattr(el, "OpeningKinds", []) or [])  # the map's word for each opening (BUILD piece 5), where it gave one
+            out["opening_list"] = [dict({"at_m": round(o["position_m"], 4), "width_m": round(o["width_m"], 4), "sill_m": round(o["sill_m"], 4),
+                                         "height_m": round(o["height_m"], 4), "shape": str(o["shape"])}, **({"kind": kinds[i]} if i < len(kinds) and kinds[i] else {}))
+                                    for i, o in enumerate(cut)]
+    if str(getattr(el, "WallKind", "") or ""):  # the map's word for what the wall is made of (BUILD piece 5)
+        out["wall_kind"] = str(el.WallKind)
     if "Holes" in el.PropertiesList:
         out["holes"] = len(el.Holes or [])
     return out

@@ -1,0 +1,207 @@
+{
+  "community": "sulphur-mountain",
+  "format": "built/1",
+  "generator": "the Godot map, BUILD mode (lane E)",
+  "id": "h-muvulvaa-105",
+  "name": "House 24",
+  "pieces": [
+    {
+      "id": "p-muvulvaa-106",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 1",
+      "params": {
+        "Angle": 106.656,
+        "Closed": false,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Arc",
+        "Lobes": 5,
+        "Points": [],
+        "Radius": 4.985,
+        "Turn": 36.672,
+        "Turns": 1.5
+      },
+      "placement": {
+        "x": 3.998,
+        "y": -2.977
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvulvaa-107",
+      "ifc_type": "Wall",
+      "name": "Wall 1",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvulvaa-106",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 2.7,
+        "OpeningHeights": [
+          1.2
+        ],
+        "OpeningKinds": [
+          "Window"
+        ],
+        "OpeningPositions": [
+          4.0
+        ],
+        "OpeningShapes": [
+          "Rect"
+        ],
+        "OpeningSills": [
+          0.9
+        ],
+        "OpeningWidths": [
+          1.0
+        ],
+        "Thickness": 0.3,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvulvan-108",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 2",
+      "params": {
+        "Closed": true,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            12,
+            0
+          ],
+          [
+            18,
+            0
+          ],
+          [
+            18,
+            4
+          ],
+          [
+            12,
+            4
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": false,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvulvan-109",
+      "ifc_type": "Wall",
+      "name": "Wall 2",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvulvan-108",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 2.7,
+        "OpeningHeights": [
+          2.2,
+          0.9
+        ],
+        "OpeningKinds": [
+          "Sliding",
+          "Round window"
+        ],
+        "OpeningPositions": [
+          3.0,
+          11.0
+        ],
+        "OpeningShapes": [
+          "Rect",
+          "Round"
+        ],
+        "OpeningSills": [
+          0.0,
+          1.2
+        ],
+        "OpeningWidths": [
+          2.4,
+          0.9
+        ],
+        "Thickness": 0.3,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3
+      },
+      "type": "Wall"
+    },
+    {
+      "id": "p-muvulvb2-110",
+      "ifc_type": "Building Element Proxy",
+      "name": "Curve 3",
+      "params": {
+        "Closed": false,
+        "Depth": 0.35,
+        "Inset": 0.0,
+        "Kind": "Points",
+        "Lobes": 5,
+        "Points": [
+          [
+            0,
+            8
+          ],
+          [
+            6,
+            8
+          ]
+        ],
+        "Radius": 4.0,
+        "Smooth": true,
+        "Turn": 0.0,
+        "Turns": 1.5
+      },
+      "type": "PlanCurve"
+    },
+    {
+      "id": "p-muvulvb2-111",
+      "ifc_type": "Wall",
+      "name": "Wall 3",
+      "params": {
+        "Align": "Center",
+        "Base": "p-muvulvb2-110",
+        "BaseOffset": 0.0,
+        "Foundation": 0.5,
+        "Height": 2.7,
+        "OpeningHeights": [],
+        "OpeningPositions": [],
+        "OpeningShapes": [],
+        "OpeningSills": [],
+        "OpeningWidths": [],
+        "Thickness": 0.45,
+        "Top": "Flat",
+        "TopRise": 0.0,
+        "TopWaves": 3,
+        "WallKind": "Straw bale"
+      },
+      "type": "Wall"
+    }
+  ],
+  "placement": {
+    "altitude_m": 2.758,
+    "coordinates": [
+      -119.15536,
+      34.4349029
+    ],
+    "rotation_deg": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "scale": 1.0
+  },
+  "saved": "2026-10-05T22:55:40Z",
+  "units": "m"
+}
