@@ -111,7 +111,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() els
 sys.path.insert(0, os.path.join(HERE, "Organic"))
 import organic_geom as og  # noqa: E402  (the kernels under test)
 
-EXCHANGE = os.environ.get("ORGANIC_EXCHANGE_DIR", r"C:\Playground\exchange\godot")
+PLAYGROUND = next((p for p in (os.path.normpath(os.path.join(HERE, "..", "..")), r"C:\Playground") if os.path.isfile(os.path.join(p, "BRAIN.md"))), r"C:\Playground")  # the Playground folder (it moved on 6 Oct; C:\Playground is its address)
+EXCHANGE = os.environ.get("ORGANIC_EXCHANGE_DIR", os.path.join(PLAYGROUND, "exchange", "godot"))
 DESIGN = os.environ.get("ORGANIC_DESIGN") or os.path.join(os.path.expanduser("~"), "Documents", "SulphurMountain", "Organic-test-pavilion.FCStd")
 EXPORT = os.environ.get("ORGANIC_EXPORT") or os.path.join(EXCHANGE, "organic-test-pavilion.glb")
 LAND = os.environ.get("ORGANIC_LAND_DIR") or EXCHANGE  # the map's land files; apart from EXCHANGE only for a trial export
@@ -121,10 +122,10 @@ ENVELOPE = os.path.join(LAND, "build-envelope.geojson")  # lane C's: where one m
 OAKS_REMOVED = os.path.join(LAND, "land", "oaks-removed.geojson")  # lane C's overlay from Johny's word (no survey): the oaks there were cut
 # The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
 # first (the dataset of record), its published copy only where that folder is not there.
-LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+LOCAL_PACK = os.path.join(PLAYGROUND, "Sulphur - Spatial - Map", "sulphur-mountain-world")
 PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
 GROUND_ABOVE = 0.02  # metres an element's base may read above the land file's triangles and still count as standing in the ground
-BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
+BRAIN = os.environ.get("PLAYGROUND_BRAIN", os.path.join(PLAYGROUND, "BRAIN.md"))
 MM = 1000.0
 # where the first pavilion stood (29 Sep), in metres from the anchor: on the driveway
 DRIVEWAY_SPOT = (-77.52, -33.00)

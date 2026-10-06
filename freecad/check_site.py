@@ -60,12 +60,13 @@ import FreeCAD as App
 
 # The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
 # first (the dataset of record), its published copy only where that folder is not there.
-LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+PLAYGROUND = next((p for p in (os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else r"C:\Playground\Architect-editor\freecad", "..", "..")), r"C:\Playground") if os.path.isfile(os.path.join(p, "BRAIN.md"))), r"C:\Playground")  # the Playground folder (it moved on 6 Oct; C:\Playground is its address)
+LOCAL_PACK = os.path.join(PLAYGROUND, "Sulphur - Spatial - Map", "sulphur-mountain-world")
 PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
 FCSTD = os.environ.get("SITE_FCSTD") or os.path.join(
     os.path.expanduser("~"), "Documents", "SulphurMountain", "SulphurMountain-site.FCStd"
 )
-BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
+BRAIN = os.environ.get("PLAYGROUND_BRAIN", os.path.join(PLAYGROUND, "BRAIN.md"))
 SETBACKS_M = {"front": 6.10, "side": 1.52, "rear": 4.57}
 FOOT_M = 0.3048
 

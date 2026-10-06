@@ -114,9 +114,10 @@ import organic_sacred as sacred  # noqa: E402
 
 # The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is read
 # first (the dataset of record), its published copy only where that folder is not there.
-LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+PLAYGROUND = next((p for p in (os.path.normpath(os.path.join(HERE, "..", "..")), r"C:\Playground") if os.path.isfile(os.path.join(p, "BRAIN.md"))), r"C:\Playground")  # the Playground folder (it moved on 6 Oct; C:\Playground is its address)
+LOCAL_PACK = os.path.join(PLAYGROUND, "Sulphur - Spatial - Map", "sulphur-mountain-world")
 PACK = os.environ.get("SITE_PACK_URL") or ((pathlib.Path(LOCAL_PACK).as_uri() + "/") if os.path.isdir(LOCAL_PACK) else "https://sulphur-mountain-world.vercel.app/")
-BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
+BRAIN = os.environ.get("PLAYGROUND_BRAIN", os.path.join(PLAYGROUND, "BRAIN.md"))
 MM = 1000.0
 PHI = (1 + 5 ** 0.5) / 2
 SPOT = App.Placement(App.Vector(-112e3, 31e3, -6.07e3), App.Rotation(App.Vector(0, 0, 1), -30.0))

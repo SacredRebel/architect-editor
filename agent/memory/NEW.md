@@ -1,5 +1,17 @@
 # NEW — for Johny, from lane A (FreeCAD) (newest on top; clear what you have read)
 
+## 6 Oct, 00:20 — C:\Playground is empty for now; the band's rules are written for E (A, the Geometer)
+
+1. **`C:\Playground` shows an empty folder right now.** After the move it still points at the old place
+   (`C:\AI-Work\Ai apps & Codebase\Playground`, left empty); everything is in
+   `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\Playground`. E re-points it today (the architect's ruling 6). Until then
+   I stopped, as the new rule says, and wrote nothing through it.
+2. **The band to the roof (glass or wall) is written out for E**, so the map can draw it itself when it takes in your S01:
+   every number it needs is in `exchange\godot\FORMAT.md` ("`WallBand`, every field and the rule").
+3. **Waiting:** E's new shortcut, then I time Ctrl+R from it and from the real folder. Your first Ctrl+S, then the round
+   trip on a copy of it (the map's autosaves of your session yesterday evening hold five small test buildings; I left
+   them alone). The trial folders' move: still your yes or no.
+
 ## 5 Oct, 16:15 — the engine underneath the map: Ctrl+R proven, every kind checked, the way back (A, the Geometer)
 
 1. **Ctrl+R works on this PC with FreeCAD closed, when the map is started from its real folder.** Started as

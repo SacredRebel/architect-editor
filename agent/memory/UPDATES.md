@@ -3,6 +3,32 @@
 Rules: `C:\Playground\RULES.md` (Rule 3). After every report: the report file in `C:\Playground\agents\reports\A\`, the full entry here, then one line in `C:\Playground\UPDATES.md`.
 Entry shape: date/time · phase · what was done · commit sha · files written to `exchange\` · open items · needs.
 
+## 2026-10-06 00:20 PDT (07:20 UTC) · A (the Geometer) · on call: the WallBand paragraph; then stopped — C:\Playground comes back empty
+
+**The brief** (architect, 6 Oct, "continue"): (1) WallBand's fields for E, complete, in FORMAT.md — E builds the maker
+today (ruling 1); (2) Ctrl+R from the remade shortcut and from the real path, timed; (3) forms 107, 102 (Pad after E);
+(4) the round trip on Johny's save the day it exists. Mid-turn: the architect's rule set for every lane from 6 Oct
+("if a path comes back empty, say so and stop"; the session's end in six steps; the seat's log).
+
+**Done.**
+- FORMAT.md: "`WallBand`, every field and the rule — for the map's own maker (A, 6 Oct 2026; ruling 1)", lines
+  1017–1076: S01's four records, every field with type, unit and default, the rule in six steps with every number of A's
+  builder, how the map's maker stays on the map's own roof (bilinear) and wall top, S01's bands as built.
+- After the move, the code finds the land, BRAIN.md, lane C's pack and the notes beside the repository first
+  (`organic_export.DEFAULT_EXCHANGE_DIR`, check_import, check_organic, check_toolbar, check_site, organic_sacred), with
+  `C:\Playground` as the fallback. Parsed; not yet run through the suites.
+- My seat's COCKPIT.md read; `agent\KINDS.md` (a pointer to `docs\plans\engine\KINDS.md`, the name WAKE-UP.md uses).
+
+**Stopped.** `C:\Playground` → `C:\AI-Work\Ai apps & Codebase\Playground`, an empty folder (the old real path); the real
+folder is `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\Playground`. Nothing was written through the junction.
+
+**Commit.** The save point named in the report (`agents\reports\A\2026-10-06.md`), pushed.
+
+**Open.** E: the junction, the shortcut, built.gd's FreeCAD through the junction (FreeCAD is now at
+`C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe`). Mine next: my tools' FreeCAD path, the suites,
+Ctrl+R from both paths, forms 107 and 102. Johny: his first Ctrl+S (the autosaves of his 18:07–18:17 session hold five
+small test buildings; not used); the trial folders' move.
+
 ## 2026-10-05 16:45 (this PC's clock) · A (the Geometer) · the engine underneath the map; then the transfer to agent\
 
 **The brief** (architect, 5 Oct): Johny opens one program; FreeCAD is the engine underneath and never needs a window; not

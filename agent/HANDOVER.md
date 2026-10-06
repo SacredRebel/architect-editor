@@ -1,7 +1,36 @@
 # HANDOVER — to the next instance of A, the Geometer (written 5 Oct 2026 by the instance that worked 1–5 Oct)
 
 You wake with no chat history. This letter, `agent\CLAUDE.md` and the files it names are all there is. Read this whole
-letter once; then `C:\Playground\STATE.md` → `agents\PLAN.md` §0 → your block in `agents\QUEUE.md`.
+letter once; then `C:\Playground\STATE.md` → `agents\PLAN.md` §0 → `agents\WAKE-UP.md` (the rulings) → your block in
+`agents\QUEUE.md` or the architect's message → `agent\brain\PRIORITIES.md`, `agent\memory\NEW.md` →
+`git --no-optional-locks log -5` (the architect's rule set of 6 Oct; the session's end in six steps: `protocols\SESSION.md`).
+
+## 0. First, as of 6 Oct 2026 00:20 PDT (the newest; sections 1–10 are 5 Oct's and still hold)
+- **The folder moved.** Real path: `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\Playground\` (this repository:
+  `…\Playground\Architect-editor`). `C:\Playground` is the junction every file spells — **check it first: `dir
+  C:\Playground` must list the Playground's files.** On 6 Oct 00:10 it still pointed at the old real path
+  `C:\AI-Work\Ai apps & Codebase\Playground`, an EMPTY folder, and the session stopped (the rule: a path that comes
+  back empty → say so and stop). E re-points it (ruling 6). Never write through it while it is empty.
+- **FreeCAD moved too:** `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe`. My tools
+  (`agent\tools\*.ps1`, `tools\house\*.ps1`) still name the old `C:\AI-Work\Ai apps & Codebase\FreeCAD\…` (gone): **fix
+  them first** (the new path, or resolve the junction's target and take `..\FreeCAD`). The commands in section 9 below
+  name the old path: read them with the new one.
+- **In hand:** the code now finds the land, BRAIN.md, lane C's pack and the notes beside the repository first, with
+  `C:\Playground` as the fallback (6 Oct save point: organic_export, check_import, check_organic, check_toolbar,
+  check_site, organic_sacred) — **not yet run through the suites**: run `tools\run_suite.ps1` (after fixing its FreeCAD
+  path) before anything else in the kernel.
+- **Done 6 Oct:** FORMAT.md "`WallBand`, every field and the rule — for the map's own maker" (E builds the maker from it;
+  ruling 1). Report `C:\Playground\agents\reports\A\2026-10-06.md`.
+- **The next steps (6 Oct's brief, Done items b and c):** (1) the tools' FreeCAD path, the suites; (2) when E has
+  re-pointed the junction and remade the shortcut: Ctrl+R from the shortcut AND from the real path, FreeCAD closed,
+  timed — NEW.md to E if either fails; (3) forms 107 (the catalogue's leaf roof on ribs) and 102 (the folded dome) built
+  from their own numbers (`godot\ui\ports\patterns.gd` has R's formulas), the kinds table (`docs\plans\engine\KINDS.md`)
+  updated with counts; `Pad` only after E sends it; (4) the round trip on Johny's save the day
+  `exchange\godot\save\edits.sulphur-mountain.geojson` exists (a scratch copy). The map's autosaves of his 5 Oct
+  18:07–18:17 session (`save\autosave\`) hold five small test buildings; they are not his save.
+- **Every session now also ends with one line in my seat's log** `C:\Playground\agents\a-geometer\memory\UPDATES.md`
+  (`YYYY-MM-DD HH:MM · window · <what> · full entry: Architect-editor\agent\memory\UPDATES.md · report:
+  agents\reports\A\<date>.md · commit <sha>`); the seat's `COCKPIT.md` says what the cockpit may do with me.
 
 ## 1. Who you are and what you own
 - **A, the Geometer** (C:\Playground\agents\LANES.md): exact geometry underneath Johny's map — FreeCAD 1.1.4 with no window,

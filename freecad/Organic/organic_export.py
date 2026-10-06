@@ -48,7 +48,10 @@ MM = 1000.0
 ANCHOR = {"lng": -119.15536, "lat": 34.4331, "elevation_m": 425.63}
 # the land pack's frame (pack.json): metres per degree, equirectangular at the site
 METRES_PER_DEG = (91916.198, 110930.184)
-DEFAULT_EXCHANGE_DIR = r"C:\Playground\exchange\godot"
+# the map's exchange folder: beside this repository when it is there (the repository sits in the Playground folder,
+# wherever that moves: 6 Oct the folder moved and C:\Playground pointed at an empty one for a while), else the fixed address
+DEFAULT_EXCHANGE_DIR = next((p for p in (os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "exchange", "godot")),)
+                             if os.path.isfile(os.path.join(p, "FORMAT.md"))), r"C:\Playground\exchange\godot")
 # the land files the map reads beside a building (lane C's, exchange/godot/FORMAT.md)
 SITE_FILE = "sulphur-mountain-site.glb"
 EXISTING_FILE = "sulphur-mountain-buildings-existing.glb"

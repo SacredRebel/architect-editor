@@ -34,7 +34,10 @@ SQRT2, SQRT3, SQRT5 = 2 ** 0.5, 3 ** 0.5, 5 ** 0.5
 FOOT = 0.3048  # the default module: the pack's construction grid is 30 of these (9.144 m)
 # The land pack (lane C's; knowledge\DATA-INVENTORY.md section 3): its own folder on this PC is the
 # dataset of record and is read first; its published copy only where that folder is not there.
-LOCAL_PACK = r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world"
+# (beside this repository when it is there — the repository sits in the Playground folder, wherever that moves — else
+# the fixed address)
+LOCAL_PACK = next((p for p in (os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "Sulphur - Spatial - Map", "sulphur-mountain-world")),)
+                   if os.path.isdir(p)), r"C:\Playground\Sulphur - Spatial - Map\sulphur-mountain-world")
 WEB_PACK = "https://sulphur-mountain-world.vercel.app/"
 
 

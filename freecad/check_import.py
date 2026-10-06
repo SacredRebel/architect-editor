@@ -143,7 +143,8 @@ def tidy():
         else:
             shutil.rmtree(folder, ignore_errors=True)
 
-BRAIN = os.environ.get("PLAYGROUND_BRAIN", r"C:\Playground\BRAIN.md")
+PLAYGROUND = next((p for p in (os.path.normpath(os.path.join(HERE, "..", "..")), r"C:\Playground") if os.path.isfile(os.path.join(p, "BRAIN.md"))), r"C:\Playground")  # the Playground folder (it moved on 6 Oct; C:\Playground is its address)
+BRAIN = os.environ.get("PLAYGROUND_BRAIN", os.path.join(PLAYGROUND, "BRAIN.md"))
 SAMPLE = os.path.join(HERE, "samples", "built-sample.json")
 MM = 1000.0
 GARDEN = [[-2.0, 7.5], [0.25, 8.3], [2.5, 7.5], [4.75, 6.7], [7.0, 7.5]]
@@ -347,7 +348,7 @@ def joint_facts(doc):
     return out
 
 
-PORT_NOTE = os.environ.get("PLAYGROUND_PORT_NOTE", r"C:\Playground\Spatial Map\spatial-map\ports\FROM-ARCHITECT-EDITOR.md")
+PORT_NOTE = os.environ.get("PLAYGROUND_PORT_NOTE", os.path.join(PLAYGROUND, "Spatial Map", "spatial-map", "ports", "FROM-ARCHITECT-EDITOR.md"))
 
 
 def port_note():
@@ -370,7 +371,7 @@ def port_note():
     return out
 
 
-RESEARCH_NOTE = os.environ.get("PLAYGROUND_RESEARCH_NOTE", r"C:\Playground\Spatial Map\spatial-map\ports\FROM-RESEARCH.md")
+RESEARCH_NOTE = os.environ.get("PLAYGROUND_RESEARCH_NOTE", os.path.join(PLAYGROUND, "Spatial Map", "spatial-map", "ports", "FROM-RESEARCH.md"))
 WAVE_THICKNESS = 0.12  # lane R's own record of the wave vault (pattern card P-005): one layer of brick
 WAVE_SPINE = [[0.0, 0.0], [4.0, 1.5], [8.0, 0.0], [12.0, -1.0]]
 WAVE_ON_CURVE = {"Span": 2.4, "Rise": 1.6, "Thickness": 0.15, "Plinth": 0.4, "WaveAmplitude": 0.4, "Waves": 2}
@@ -993,7 +994,7 @@ def petal_points(n=20000):
 
 # ------------------------------------------------------------------ H. tops given as heights along a wall, on lines with corners too
 # E's piece 6 (3 Oct 2026): a wall with corners and TopHeights came back flat at its lowest, 0.023 m under its last height.
-TOP_CASE = os.environ.get("PLAYGROUND_TOP_CASE", r"C:\Playground\Spatial Map\spatial-map\docs\plans\godot-build-6\a-topheights-case.json")
+TOP_CASE = os.environ.get("PLAYGROUND_TOP_CASE", os.path.join(PLAYGROUND, "Spatial Map", "spatial-map", "docs", "plans", "godot-build-6", "a-topheights-case.json"))
 TOP_LINE = 96  # places along each wall's line where its top is read
 TOP_REACH = 0.03  # m: a top's tool reaches this far beyond the wall's faces, and a corner's turn is laid over twice as far as its mitre reaches along the run there
 TOP_AT = 0.0005  # m: how far the top may lie from a height at the height's own place
