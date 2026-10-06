@@ -49,6 +49,9 @@ def _kept(old, new, length, where=""):
     if isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
         out = [_kept(a, b, length, where) for a, b in zip(old, new)]
         return old if all(a is o for a, o in zip(out, old)) else out
+    if isinstance(old, dict) and isinstance(new, dict) and set(old) == set(new):  # a row of a table (a bump)
+        out = {k: _kept(old[k], new[k], length, where) for k in old}
+        return old if all(out[k] is old[k] for k in old) else out
     if _same(old, new, length):
         if length and isinstance(old, (int, float)) and not isinstance(old, bool) and abs(new - old) > WORST["m"]:
             WORST.update(m=abs(new - old), where=where)
@@ -89,6 +92,11 @@ def _value(obj, name, old, scale, made_ids):
     if kind == "App::PropertyFloat":
         return float(value), False
     if kind == "App::PropertyString":
+        if isinstance(old, (list, dict)):  # a table kept as JSON (the leaf's bumps): read back as one, its lengths without the scale
+            try:
+                return oi.scaled_rows(name, json.loads(str(value)) if str(value).strip() else [], 1.0 / scale), False
+            except ValueError:
+                return str(value), False
         return str(value), False
     return None, False
 
@@ -134,10 +142,12 @@ def records_of(result, source):
             continue
         cls = type(obj.Proxy).__name__
         params = rec.get("params") or {}
+        renamed = oi.PARAM_NAMES.get(cls, {})
         for name, old in list(params.items()):
-            if name == "Figure" or name in oi.PASSED_OVER.get(cls, ()) or name not in obj.PropertiesList or "ReadOnly" in obj.getEditorMode(name):
+            held = renamed.get(name, name)  # the property this param set (the leaf's Base is its BaseHeight)
+            if name == "Figure" or name in oi.PASSED_OVER.get(cls, ()) or held not in obj.PropertiesList or "ReadOnly" in obj.getEditorMode(held):
                 continue  # FreeCAD holds nothing of it: as the map gave it
-            new, length = _value(obj, name, old, scale, made_ids)
+            new, length = _value(obj, held, old, scale, made_ids)
             if new is None:
                 continue
             if name == "OpeningPositions" and cls in ("Wall", "CellularWall") and getattr(obj, "Base", None) is not None \

@@ -10,7 +10,8 @@ $env:SPEC_CHECK_WITHOUT = "RS-PAV"
 $env:SPEC_CHECK_ANSWERS = "C:\Playground\exchange\house\models\oak-canopy-s01.answers.json"
 $env:SPEC_CHECK_SELF_TEST = $SelfTest
 $t0 = Get-Date
-$p = Start-Process -FilePath "C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe" -ArgumentList "`"C:\Playground\Architect-editor\freecad\check_spec.py`"" -PassThru -WindowStyle Hidden -RedirectStandardOutput "$Work\$Out.out.txt" -RedirectStandardError "$Work\$Out.err.txt"
+. "$PSScriptRoot\..\paths.ps1"
+$p = Start-Process -FilePath (Get-FreeCADCmd) -ArgumentList "`"C:\Playground\Architect-editor\freecad\check_spec.py`"" -PassThru -WindowStyle Hidden -RedirectStandardOutput "$Work\$Out.out.txt" -RedirectStandardError "$Work\$Out.err.txt"
 $done = $p.WaitForExit($Wait * 1000)
 "check_spec exited: $done code $($p.ExitCode) after $([int]((Get-Date) - $t0).TotalSeconds) s (pid $($p.Id))"
 Get-Content "$Work\$Out.out.txt" | Select-String -Pattern "^FAIL|FAILED|OK \(|self-test|SELF-TEST FAIL|Traceback|Error" | ForEach-Object { if ($_.Line.Length -gt 500) { $_.Line.Substring(0, 500) } else { $_.Line } } | Select-Object -Last 60

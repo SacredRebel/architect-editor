@@ -3,7 +3,8 @@
 #   -Wait   seconds to wait (the probe's own _log limit should be shorter)
 # Prints the probe's log and the last lines of its error stream. Stop a stuck probe by its PID only (never by name).
 param([Parameter(Mandatory = $true)][string]$Script, [int]$Wait = 900)
-$freecad = "C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe"
+. "$PSScriptRoot\paths.ps1"
+$freecad = Get-FreeCADCmd
 $name = [System.IO.Path]::GetFileNameWithoutExtension($Script)
 $dir = Split-Path -Parent $Script
 $t0 = Get-Date

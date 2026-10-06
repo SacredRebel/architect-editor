@@ -34,7 +34,8 @@ MM = og.MM
 FORMATS = ("built/1",)
 # the pieces a built file may hold: the workbench's own classes, by their own names
 TYPES = ("PlanCurve", "Wall", "Slab", "ShellRoof", "LeafShell", "Vault", "Dome", "Steps", "SoapFilm", "MinimalShell", "Conoid", "TranslationShell",
-         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell", "WallBand", "RoofFrame")
+         "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell", "WallBand", "RoofFrame",
+         "LeafRoofOnRibs", "FoldedRevolution")
 # A kind under another name: a step is a slab that is named a step; lane R's groined saddles are
 # the saddle shell of that kind; the wave vault of the map's catalogue is a vault (FORMAT.md,
 # "Lane R's shells and lattices as record kinds").
@@ -46,7 +47,8 @@ LABELS = {"PlanCurve": "Plan curve", "Wall": "Curved wall", "Slab": "Floor slab"
           "SacredSolid": "Regular solid", "GeodesicDome": "Geodesic dome", "Gridshell": "Gridshell", "CellularWall": "Cellular wall",
           "BranchingColumn": "Branching column", "Revolved": "Solid of revolution", "HeightFieldShell": "Height field shell",
           "Conoid": "Conoid roof", "TranslationShell": "Translation shell", "GroinedSaddles": "Groined saddles", "WaveVault": "Wave vault",
-          "WallBand": "Band to the roof", "RoofFrame": "Roof frame"}
+          "WallBand": "Band to the roof", "RoofFrame": "Roof frame", "LeafRoofOnRibs": "Leaf roof on ribs",
+          "FoldedRevolution": "Dome folded from one sheet"}
 # What the map writes on a piece for its own use, which says nothing the piece's other numbers do
 # not say (FORMAT.md, "What the map adds"): the outline a leaf or a dome was fitted over, and how.
 # The leaf's spine, span, ridge and place, the dome's radius, stretch and place are worked out
@@ -54,14 +56,31 @@ LABELS = {"PlanCurve": "Plan curve", "Wall": "Curved wall", "Slab": "Floor slab"
 # And "Supports": the posts and walls the map draws under a roof from its catalogue so that it
 # stands at its height, drawing aids that are not part of the piece (a vault's walls are its Plinth).
 PASSED_OVER = {"LeafShell": ("Base", "Overhang", "Rise"), "Dome": ("Base",), "Conoid": ("Supports",), "TranslationShell": ("Supports",), "Vault": ("Supports",),
-               "MinimalShell": ("Supports",), "GeodesicDome": ("Supports",)}
+               "MinimalShell": ("Supports",), "GeodesicDome": ("Supports",), "LeafRoofOnRibs": ("Supports",), "FoldedRevolution": ("Supports",)}
 # The forms of the map's catalogue that this workbench builds (lane R's pattern cards): on these
 # the map writes "Figure", its own name for the form, which is the type itself. Any other piece
 # with a Figure is one of the catalogue's forms that this workbench does not build (lane C's: a
-# Merkaba, a torus knot; lane R's leaf on ribs, written by its own parameters): named, not made.
-FIGURES = ("GeodesicDome", "Conoid", "TranslationShell", "GroinedSaddles", "WaveVault")
+# Merkaba, a torus knot): named, not made.
+FIGURES = ("GeodesicDome", "Conoid", "TranslationShell", "GroinedSaddles", "WaveVault", "FoldedRevolution", "HeightFieldShell")
+# A catalogue form whose type names another kind here: lane R's leaf on ribs is written as a
+# HeightFieldShell whose Figure is "HeightFieldShell" (a HeightFieldShell the map draws by hand has
+# no Figure: the shell on a grid of heights).
+FIGURE_KINDS = {"HeightFieldShell": "LeafRoofOnRibs"}
+# A param that sets a property of another name: the leaf's Base is a height, where Base is the
+# curve a piece stands on everywhere else.
+PARAM_NAMES = {"LeafRoofOnRibs": {"Base": "BaseHeight"}}
+# A table kept as JSON in a string property (the leaf's bumps), and the keys of its rows that are metres
+METRE_KEYS = {"Bumps": ("A", "Cx", "Cy", "Sx", "Sy")}
 # lists of plain numbers that are metres (a list has no unit of its own)
 METRE_LISTS = ("OpeningPositions", "OpeningWidths", "OpeningHeights", "OpeningSills", "RidgeHeights", "TopHeights", "Heights")
+
+
+def scaled_rows(name, rows, k):
+    """A table's rows (a list of dicts) with their lengths (METRE_KEYS) times k."""
+    keys = METRE_KEYS.get(name, ())
+    if not keys or k == 1.0 or not isinstance(rows, list):
+        return rows
+    return [dict(r, **{key: float(r[key]) * k for key in keys if key in r}) if isinstance(r, dict) else r for r in rows]
 
 
 def built_dir():
@@ -126,9 +145,11 @@ def building_placement(doc, placement, notes):
 def set_params(obj, params, made, scale, notes, where):
     """Set an object's properties from a piece's params: the same names, metres into lengths,
     names into choices, a piece's id into a link. What is not a property of the object is named."""
+    renamed = PARAM_NAMES.get(type(obj.Proxy).__name__, {})
     for name, value in params.items():
         if name in PASSED_OVER.get(type(obj.Proxy).__name__, ()):
             continue
+        name = renamed.get(name, name)
         if name not in obj.PropertiesList:
             notes.append("%s: %s is not a property of a %s; left out" % (where, name, type(obj.Proxy).__name__))
             continue
@@ -181,8 +202,8 @@ def set_params(obj, params, made, scale, notes, where):
                 setattr(obj, name, bool(value))
             elif kind in ("App::PropertyFloat", "App::PropertyAngle"):
                 setattr(obj, name, float(value))
-            elif kind == "App::PropertyString":
-                setattr(obj, name, str(value))
+            elif kind == "App::PropertyString":  # a table (the leaf's bumps) is kept as JSON, its lengths times the scale
+                setattr(obj, name, json.dumps(scaled_rows(name, value, scale)) if isinstance(value, (list, dict)) else str(value))
             else:
                 notes.append("%s: %s is a %s, which a built file cannot set; left out" % (where, name, kind))
         except (TypeError, ValueError, IndexError) as exc:
@@ -277,6 +298,8 @@ def import_built(doc, source, join=True):
             notes.append("%s: it is the form %r of the map's catalogue, which this workbench does not build, and was not made (of the catalogue's forms it builds: %s)"
                          % (where, str(figure), ", ".join(FIGURES)))
             continue
+        if figure is not None and asked in FIGURE_KINDS:  # the catalogue's form, not what the type names when drawn by hand
+            kind = FIGURE_KINDS[asked]
         if kind not in TYPES:
             notes.append("%s: this type is not known here and was not made (known: %s)" % (where, ", ".join(TYPES + tuple(sorted(ALIASES)))))
             continue
@@ -284,7 +307,7 @@ def import_built(doc, source, join=True):
         for name, value in PRESETS.get(asked, {}).items():
             params.setdefault(name, value)
         try:
-            obj = oo.make(cls, kind, str(piece.get("name") or LABELS.get(asked) or LABELS[kind]), doc)
+            obj = oo.make(cls, kind, str(piece.get("name") or (LABELS[kind] if kind in FIGURE_KINDS.values() else LABELS.get(asked)) or LABELS[kind]), doc)
             obj.addProperty("App::PropertyString", "MapPiece", "From the map", "the id of this piece in the built file it was made from")
             obj.MapPiece = key  # carried into what is sent back, so the map can hold each solid against the piece it drew
             if piece.get("land") is not None:  # what the map read of the land at this piece: kept as it is, for the record

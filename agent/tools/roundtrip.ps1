@@ -9,7 +9,8 @@
 # folder to open it in the map).
 param([Parameter(Mandatory = $true)][string]$Save, [string]$Work = "$env:TEMP\lane-a\roundtrip", [string]$Edit = "")
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$freecad = "C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe"
+. "$PSScriptRoot\paths.ps1"
+$freecad = Get-FreeCADCmd
 New-Item -ItemType Directory -Force "$Work\scratch-save", "$Work\out" | Out-Null
 $copy = "$Work\scratch-save\$([System.IO.Path]::GetFileName($Save))"
 Copy-Item $Save $copy -Force

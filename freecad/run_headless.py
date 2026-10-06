@@ -11,7 +11,8 @@ ORGANIC_HEADLESS names the steps, in order, separated by commas (default: check)
     selftest   check_organic and its forgeries
     toolbar    check_toolbar and its forgeries: every button's own code, pressed
     import     check_import and its forgeries: a building drawn in the map, rebuilt here
-    picture    draw the building sent to the map from its own files (draw_placement.py)
+    forms      check_forms and its forgeries: the catalogue's forms 102 and 107 against lane R's cases
+    picture   draw the building sent to the map from its own files (draw_placement.py)
     tools      draw what the Sacred and the Biomimetic toolbars make (draw_tools.py)
     site       build the site template into SITE_FCSTD (SulphurMountainSite.FCMacro): a trial
                only, because colours, line styles and the dimension text need the window
@@ -64,6 +65,8 @@ def step(name):
         return bool(runpy.run_path(os.path.join(HERE, "check_toolbar.py"), run_name="organic_check_toolbar")["run"](self_test=True))
     if name == "import":
         return bool(runpy.run_path(os.path.join(HERE, "check_import.py"), run_name="organic_check_import")["run"](self_test=True))
+    if name == "forms":
+        return bool(runpy.run_path(os.path.join(HERE, "check_forms.py"), run_name="organic_check_forms")["run"](self_test=True))
     if name == "site":
         runpy.run_path(os.path.join(HERE, "SulphurMountainSite.FCMacro"), run_name="site_macro")
         return True

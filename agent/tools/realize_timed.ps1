@@ -7,7 +7,8 @@
 # Prints the time, the files and the result's counts and notes. FreeCAD's window is not needed and not opened.
 param([Parameter(Mandatory = $true)][string]$Records, [Parameter(Mandatory = $true)][string]$Out, [int]$Wait = 600)
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$freecad = "C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe"
+. "$PSScriptRoot\paths.ps1"
+$freecad = Get-FreeCADCmd
 New-Item -ItemType Directory -Force $Out | Out-Null
 "FreeCAD's window running: $([bool](Get-Process FreeCAD -ErrorAction SilentlyContinue))"
 $name = [System.IO.Path]::GetFileNameWithoutExtension($Records)

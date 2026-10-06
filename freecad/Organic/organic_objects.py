@@ -6,6 +6,7 @@ Shape is a closed solid, except a plan curve's. Each solid carries an IfcType, w
 IFC exporter writes as that IFC class.
 """
 
+import json
 import math
 import os
 
@@ -959,6 +960,100 @@ class TranslationShell(Organic):
         if self.fresh(obj):
             return
         set_local(obj, og.translation_shell_shape(m(obj.Span), m(obj.ShellLength), m(obj.RiseX), m(obj.RiseY), m(obj.Eave), m(obj.Thickness)))
+
+
+# the leaf's bumps when none are given: one at its middle, as the map's catalogue writes form 107 (R's: Sx a third of
+# the width, Sy a third of the length)
+LEAF_BUMPS = [{"A": 1.2, "Cx": 0.0, "Cy": 0.0, "Sx": 2.3333, "Sy": 4.0, "P": 2}]
+
+
+class LeafRoofOnRibs(Organic):
+    """Lane R's leaf roof on ribs (card P-007; the map's catalogue form 107, written as a HeightFieldShell whose Figure
+    is "HeightFieldShell"): a skin over a leaf outline, the bumps' surface its underside and its thickness along its
+    upward normal (as R's generator gives it); under it the midrib, the ribs and an edge beam on each side, each hung
+    from the skin's underside. In its own frame: x across, y along the midrib from tip to tip, the origin in the middle
+    of its footprint on the ground. The record's Base (the height of the surface's flat part) is BaseHeight here: Base
+    is the curve a piece stands on everywhere else."""
+
+    ifc_type = "Roof"
+    icon = "OrganicLeaf.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Leaf roof"
+        length(obj, "Length", g, "tip to tip, along the midrib", 12.0)
+        length(obj, "Width", g, "the greatest width", 7.0)
+        prop(obj, "App::PropertyFloat", "Taper", g, "the outline: half-width = Width/2 * sin(pi t)^Taper, t from 0 to 1 tip to tip", 0.6)
+        prop(obj, "App::PropertyFloat", "TipCut", g, "the outline cut blunt this share of the length from each tip", 0.03)
+        distance(obj, "BaseHeight", g, "height of the surface's flat part above the base (the record's Base)", 2.6)
+        prop(obj, "App::PropertyString", "Bumps", g, "the surface: BaseHeight plus, for each bump, A exp(-|(x - Cx)/Sx|^P - |(y - Cy)/Sy|^P), "
+             'metres; as JSON, [{"A", "Cx", "Cy", "Sx", "Sy", "P"}] (none: flat)', json.dumps(LEAF_BUMPS))
+        length(obj, "Thickness", g, "the skin, above the ribs, along its normal", 0.10)
+        prop(obj, "App::PropertyInteger", "RibCount", g, "ribs, half on each side of the midrib", 10)
+        prop(obj, "App::PropertyFloat", "VeinAngle", g, "between a rib and the midrib, toward the tip (degrees)", 65.0)
+        length(obj, "RibWidth", g, "a rib's width", 0.12)
+        length(obj, "RibDepth", g, "a rib's depth under the skin", 0.30)
+        length(obj, "MidribWidth", g, "the midrib's width", 0.16)
+        length(obj, "MidribDepth", g, "the midrib's depth under the skin", 0.45)
+        length(obj, "EdgeWidth", g, "an edge beam's width (just inside the outline)", 0.12)
+        length(obj, "EdgeDepth", g, "an edge beam's depth under the skin", 0.25)
+        prop(obj, "App::PropertyFloat", "PlanArea", "Measures", "the leaf's area in plan (m²)")
+        obj.setEditorMode("PlanArea", 1)
+
+    def bumps(self, obj):
+        """The bumps as a list of dicts (Bumps empty: none, the leaf is flat)."""
+        text = str(obj.Bumps or "").strip()
+        try:
+            rows = json.loads(text) if text else []
+        except ValueError:
+            raise ValueError("Bumps is not a list of bumps written as JSON: %s" % text[:80])
+        if not isinstance(rows, list) or not all(isinstance(b, dict) and float(b.get("Sx", 0)) > 0 and float(b.get("Sy", 0)) > 0 and "A" in b for b in rows):
+            raise ValueError("each bump needs its A, and its Sx and Sy above nought: %s" % text[:80])
+        return rows
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        said = {}
+        shape = og.leaf_roof_shape(m(obj.Length), m(obj.Width), float(obj.Taper), float(obj.TipCut), m(obj.BaseHeight), self.bumps(obj), m(obj.Thickness),
+                                   int(obj.RibCount), float(obj.VeinAngle), m(obj.RibWidth), m(obj.RibDepth), m(obj.MidribWidth), m(obj.MidribDepth),
+                                   m(obj.EdgeWidth), m(obj.EdgeDepth), said)
+        obj.PlanArea = said["plan_area_m2"]
+        self.said = said
+        set_local(obj, shape)
+
+
+class FoldedRevolution(Organic):
+    """Lane R's dome folded from one sheet (card P-002; the map's catalogue form 102): Jun Mitani's ORI-REVO "cylinder
+    with flaps" (MIT), as R ported it. Sides strips of flat four-sided faces from the corner lines to the blades' tips;
+    the meridian a quarter circle of Radius from Oculus degrees off the pole to the ground, in Steps pieces; each face
+    a slab of Thickness, half on each side of it. Its foot ring stands on the base, its axis at the origin."""
+
+    ifc_type = "Roof"
+    icon = "OrganicDome.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Folded dome"
+        length(obj, "Radius", g, "the dome's radius at the ground", 4.0)
+        prop(obj, "App::PropertyInteger", "Sides", g, "sides, each with its blade", 12)
+        prop(obj, "App::PropertyFloat", "Flap", g, "the strip's spare width, as a share of the widest ring's side (folded out as the blade)", 0.25)
+        prop(obj, "App::PropertyFloat", "Oculus", g, "where the meridian starts, in degrees from the pole (0 closes the top)", 12.0)
+        prop(obj, "App::PropertyInteger", "Steps", g, "faces from the opening to the ground", 9)
+        length(obj, "Thickness", g, "the sheet's thickness", 0.03)
+        length(obj, "SheetWidth", "Measures", "the flat sheet it is folded from: its width (all the strips side by side)", 0.0)
+        length(obj, "SheetHeight", "Measures", "the flat sheet: its height (a strip's length)", 0.0)
+        for name in ("SheetWidth", "SheetHeight"):
+            obj.setEditorMode(name, 1)
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        said = {}
+        shape = og.folded_revolution_shape(m(obj.Radius), int(obj.Sides), float(obj.Flap), float(obj.Oculus), int(obj.Steps), m(obj.Thickness), said)
+        obj.SheetWidth, obj.SheetHeight = said["sheet_m"][0] * MM, said["sheet_m"][1] * MM
+        self.said = said
+        set_local(obj, shape)
 
 
 # ---------------------------------------------------------------- the Sacred tab

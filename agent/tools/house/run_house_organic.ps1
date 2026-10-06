@@ -9,7 +9,8 @@ $env:ORGANIC_EXPORT = "C:\Playground\exchange\godot\oak-canopy-s01.glb"
 $env:ORGANIC_EXCHANGE_DIR = "C:\Playground\exchange\godot"
 $env:ORGANIC_LAND_DIR = "C:\Playground\exchange\godot"
 $t0 = Get-Date
-$p = Start-Process -FilePath "C:\AI-Work\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe" -ArgumentList "`"C:\Playground\Architect-editor\freecad\run_headless.py`"" -PassThru -WindowStyle Hidden -RedirectStandardOutput "$Work\house-organic.out.txt" -RedirectStandardError "$Work\house-organic.err.txt"
+. "$PSScriptRoot\..\paths.ps1"
+$p = Start-Process -FilePath (Get-FreeCADCmd) -ArgumentList "`"C:\Playground\Architect-editor\freecad\run_headless.py`"" -PassThru -WindowStyle Hidden -RedirectStandardOutput "$Work\house-organic.out.txt" -RedirectStandardError "$Work\house-organic.err.txt"
 $done = $p.WaitForExit($Wait * 1000)
 "check_organic on the house exited: $done code $($p.ExitCode) after $([int]((Get-Date) - $t0).TotalSeconds) s (pid $($p.Id))"
 Get-Content "$Work\house-organic.log" | Select-String -Pattern "^FAIL|FAILED|OK \(|self-test|SELF-TEST FAIL|Traceback|Error|^OK   D" | ForEach-Object { if ($_.Line.Length -gt 450) { $_.Line.Substring(0, 450) } else { $_.Line } } | Select-Object -Last 60

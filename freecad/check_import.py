@@ -88,9 +88,10 @@ out here from the file's own numbers, not taken from the workbench:
      same file through realize.py, complete.
   N. nothing dropped in silence: the sample's one unknown type and one unknown parameter are
      both named in the notes, and nothing else is; a number that cannot be (a floor's Inset
-     below nought: a length here is never below nought) is named, not changed in silence; and
-     a form of the map's catalogue this workbench does not build (lane C's Merkaba, R's leaf
-     on ribs by its own parameters) is named and not made as something else.
+     below nought: a length here is never below nought) is named, not changed in silence; a
+     form of the map's catalogue this workbench does not build (lane C's Merkaba) is named and
+     not made as something else; and R's leaf on ribs (a HeightFieldShell with its Figure, by
+     its own parameters) is made as the leaf roof on ribs, not as a shell on a grid of heights.
   T. there and back: the imported building sent to the map again says the same longitude,
      latitude, altitude and turn the file said, and names the file it came from.
   Z. realized: the same file through realize.py (what the map calls, FreeCAD without its
@@ -912,16 +913,18 @@ def oo_m(q):
 
 
 def not_built_facts(doc):
-    """N. Forms of the map's catalogue that this workbench does not build, written as the map
-    writes them: a Merkaba (lane C's, a SacredSolid with a Figure), R's leaf on ribs (a
-    HeightFieldShell by R's own parameters)."""
+    """N. Forms of the map's catalogue written as the map writes them: a Merkaba (lane C's, a
+    SacredSolid with a Figure; not built here), R's leaf on ribs (a HeightFieldShell with its
+    Figure, by R's own parameters; built here as a LeafRoofOnRibs since 6 Oct)."""
     data = {"format": "built/1", "name": "Forms not built here", "pieces": [
         {"id": "mk", "type": "SacredSolid", "name": "Merkaba", "params": {"Figure": "Merkaba", "Scale": 2.4}},
         {"id": "lf", "type": "HeightFieldShell", "name": "Leaf roof on ribs", "params": {"Figure": "HeightFieldShell", "Length": 12.0, "Width": 7.0, "Taper": 0.6, "Base": 2.6,
                                                                                          "Thickness": 0.10, "RibCount": 10}},
         {"id": "ok", "type": "Conoid", "name": "A conoid beside them", "params": {"Figure": "Conoid", "Span": 6.0, "ShellLength": 8.0, "Rise": 2.0, "Eave": 2.4, "Thickness": 0.08}}]}
     res = imported(doc, data, "not-built.json")
-    return {"notes": list(res["notes"]), "lost": list(res["lost"]), "made": sorted(res["made"])}
+    return {"notes": list(res["notes"]), "lost": list(res["lost"]), "made": sorted(res["made"]),
+            "kinds": {k: type(o.Proxy).__name__ for k, o in res["made"].items()},
+            "whole": {k: bool(o.Shape.Solids) and o.Shape.isValid() for k, o in res["made"].items()}}
 
 
 def canonical_frame():
@@ -1925,9 +1928,11 @@ def judge(facts):
     # N. nothing dropped in silence
     nb = facts.get("not_built") or {}
     mk = [n for n in nb.get("lost", []) if "'mk'" in n and "Merkaba" in n and "not made" in n]
-    lf = [n for n in nb.get("lost", []) if "'lf'" in n and "HeightFieldShell" in n and "not made" in n]
-    ok(nb.get("made") == ["ok"] and mk and lf and len(nb.get("lost", [])) == 2,
+    ok(nb.get("made") == ["lf", "ok"] and mk and len(nb.get("lost", [])) == 1,
        "N a form of the map's catalogue this workbench does not build is named and not made as something else: %s" % ("; ".join(nb.get("lost", [])) or "NOTHING SAID"))
+    ok(nb.get("kinds", {}).get("lf") == "LeafRoofOnRibs" and nb.get("whole", {}).get("lf"),
+       "N R's leaf on ribs, written as a HeightFieldShell with its Figure, is made as the leaf roof on ribs (%s, whole: %s), not as a shell on a grid of heights"
+       % (nb.get("kinds", {}).get("lf", "NOT MADE"), nb.get("whole", {}).get("lf")))
     notes = facts["notes"]
     pool = [x for x in notes if "x-pool" in x and "not known" in x]
     colour = [x for x in notes if "c-bench" in x and "Colour" in x and "left out" in x]
@@ -2243,7 +2248,8 @@ def forgeries(facts):
         ("a lath node in the air over the conoid", "F laths on conoid A",
          f(lambda g: g["shells"]["pieces"]["laths"]["on"].__setitem__(0, (False, False)))),
         ("the shells' file realized with a piece missing", "F the same file realized", f(lambda g: g["shells"]["realized"]["elements"].pop("wave"))),
-        ("a Merkaba made as a regular solid", "N a form of the map's catalogue", f(lambda g: g["not_built"].update(made=["mk", "ok"], lost=[n for n in g["not_built"]["lost"] if "'mk'" not in n]))),
+        ("a Merkaba made as a regular solid", "N a form of the map's catalogue", f(lambda g: g["not_built"].update(made=["lf", "mk", "ok"], lost=[n for n in g["not_built"]["lost"] if "'mk'" not in n]))),
+        ("R's leaf made as a shell on a grid of heights", "N R's leaf on ribs", f(lambda g: g["not_built"]["kinds"].__setitem__("lf", "HeightFieldShell"))),
     ]
 
 

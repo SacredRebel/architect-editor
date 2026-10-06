@@ -1250,6 +1250,9 @@ def wall_shape(edge, closed, thickness_m, height_m, align="Center", top="Flat", 
 
 BAND_FOLD = 0.8  # no band or hung member where its side on the inside of a turn lies further into it than this share of the turn's radius: it would fold over itself
 BAND_STEP_MM = 100.0  # the lines across a band or a hung member stand no further apart than this along it
+# no member of a building is a kilometre long: a curve that long had its metres taken as millimetres (V() takes metres;
+# on 6 Oct a leaf's midrib given to it in millimetres came out 11.28 km long and held OCCT's ruled faces for 15 minutes)
+MEMBER_LONGEST_MM = 1.0e6
 BAND_LOW_MM = 5.0  # no band where the roof's underside stands less than this over the wall's top (at the band's middle)
 BAND_EDGE_MM = 1.0  # where a band or a member ends or steps, found to this
 BAND_STRIP_MM = 25.0  # what a band or a member must hold is counted in strips no wider than this across it
@@ -1493,6 +1496,8 @@ def hung_member_shape(edge, closed, d1, d2, under, depth_mm, said=None, what="th
     from shapely.geometry import Point
 
     length = edge.Length
+    if length > MEMBER_LONGEST_MM:
+        raise ValueError("%s would be %.0f m long: its curve is not in millimetres" % (what, length / MM))
     folds = _folds(edge, d1, d2)
 
     def there(f):
@@ -3079,3 +3084,156 @@ def groined_saddles_shape(support_r_m, tip_r_m, centre_h_m, tip_h_m, thickness_m
     if not solid.isValid() or len(solid.Solids) != 1:
         raise ValueError("the groined saddles could not be closed into one solid from these numbers")
     return solid
+
+
+# ---------------------------------------------------------------- lane R's leaf roof on ribs and dome folded from one sheet
+# Cards P-007 and P-002 (Spatial Map\spatial-map\ports\FROM-RESEARCH.md, entries 7 and 2; R's generators
+# Research Architect\assets\3d\_generators\build_leaf_roof.py and assets\3d\folded-dome-orirevo-12-01\build_folded_dome.py),
+# the map's catalogue forms 107 and 102. Each in its own frame as R gives it: x across, y along, z up, metres, the origin in
+# the middle of its footprint on the ground.
+LEAF_NU, LEAF_NV = 24, 72  # the skin's grid: across, along (R draws it on 12 x 36; the surface here goes through twice as many)
+
+
+def leaf_half(y_m, length_m, width_m, taper):
+    """The leaf's half-width at y (m): Width/2 * sin(pi t)^Taper, t = 0 to 1 tip to tip along Length."""
+    t = min(1.0, max(0.0, (y_m + length_m / 2.0) / length_m))
+    return width_m / 2.0 * math.sin(math.pi * t) ** taper
+
+
+def bumps_height(x_m, y_m, base_m, bumps):
+    """The height-field family's surface (m): Base + the sum of A exp(-|(x - Cx)/Sx|^P - |(y - Cy)/Sy|^P)."""
+    z = base_m
+    for b in bumps:
+        p = float(b.get("P", 2))
+        z += float(b["A"]) * math.exp(-abs((x_m - float(b.get("Cx", 0.0))) / float(b["Sx"])) ** p - abs((y_m - float(b.get("Cy", 0.0))) / float(b["Sy"])) ** p)
+    return z
+
+
+def leaf_ribs(length_m, width_m, taper, tip_cut, rib_count, vein_deg):
+    """R's ribs on the right of the midrib (the left mirrors them): [(station y, length, end x, end y)], m. Even stations
+    along the midrib; each leaves it at vein_deg toward the tip and runs to the edge, found by sixty halvings (as R's
+    generator and the map's port find it)."""
+    y0, y1 = -length_m / 2.0 + tip_cut * length_m, length_m / 2.0 - tip_cut * length_m
+    each = int(rib_count) // 2
+    ca, sa = math.cos(math.radians(vein_deg)), math.sin(math.radians(vein_deg))
+    out = []
+    for j in range(1, each + 1):
+        ys = y0 + (y1 - y0) * j / (each + 1.0)
+        lo, hi = 0.0, width_m
+        for _ in range(60):
+            mid = (lo + hi) / 2.0
+            if mid * sa < leaf_half(min(y1, ys + mid * ca), length_m, width_m, taper) and ys + mid * ca < y1:
+                lo = mid
+            else:
+                hi = mid
+        out.append((ys, lo, lo * sa, ys + lo * ca))
+    return out
+
+
+def leaf_roof_shape(length_m, width_m, taper, tip_cut, base_m, bumps, thickness_m, rib_count, vein_deg, rib_w_m, rib_d_m,
+                    mid_w_m, mid_d_m, edge_w_m, edge_d_m, said=None):
+    """Lane R's leaf roof on ribs (card P-007, the map's form 107): the skin over a leaf outline (cut blunt tip_cut of the
+    length from each tip), its underside the bumps' surface, its thickness along its upward normal; under it the midrib
+    tip to tip, rib_count ribs (half on each side) from even stations at vein_deg toward the tip to the edge, and an edge
+    beam just inside the outline on each side. Every member hangs under the skin's underside (hung_member_shape: across
+    it, its top straight from side to side, each side on the underside; R's generator keeps a member's top level at the
+    lower of its two sides: the two differ by its width times half the slope across it). The skin is the first solid.
+    said: told the reference numbers R's note prints (heights, half-widths, rib lengths, plan area). Returns a compound."""
+    if length_m <= 0 or width_m <= 0 or thickness_m <= 0 or not (0.0 <= tip_cut < 0.5):
+        raise ValueError("a leaf roof needs a length, a width and a thickness above nought, and its tips cut less than half its length")
+    y0, y1 = -length_m / 2.0 + tip_cut * length_m, length_m / 2.0 - tip_cut * length_m
+
+    def z(x, y):
+        return bumps_height(x, y, base_m, bumps)
+
+    grid = []
+    for j in range(LEAF_NV + 1):
+        y = y0 + (y1 - y0) * j / float(LEAF_NV)
+        h = leaf_half(y, length_m, width_m, taper)
+        grid.append([App.Vector((2.0 * i / LEAF_NU - 1.0) * h * MM, y * MM, z((2.0 * i / LEAF_NU - 1.0) * h, y) * MM) for i in range(LEAF_NU + 1)])
+    skin = thicken_up(surface_through(grid).toShape(), thickness_m * MM)
+
+    def under(x, y):
+        return z(x / MM, y / MM) * MM
+
+    solids = [skin]
+    solids += hung_member_shape(Part.LineSegment(App.Vector(0, y0 * MM, 0), App.Vector(0, y1 * MM, 0)).toShape(), False, -mid_w_m * MM / 2, mid_w_m * MM / 2, under,
+                                mid_d_m * MM, what="the midrib")
+    ribs = leaf_ribs(length_m, width_m, taper, tip_cut, rib_count, vein_deg)
+    for ys, lo, ex, ey in ribs:
+        if lo <= 1e-6:
+            continue
+        for side in (-1.0, 1.0):
+            e = Part.LineSegment(App.Vector(0, ys * MM, 0), App.Vector(side * ex * MM, ey * MM, 0)).toShape()
+            solids += hung_member_shape(e, False, -rib_w_m * MM / 2, rib_w_m * MM / 2, under, rib_d_m * MM, what="a rib")
+    for side in (-1.0, 1.0):
+        pts = [App.Vector(side * max(leaf_half(y, length_m, width_m, taper) - edge_w_m / 2.0, 0.0) * MM, y * MM, 0)
+               for y in (y0 + (y1 - y0) * k / 48.0 for k in range(49))]
+        curve = Part.BSplineCurve()
+        curve.interpolate(pts)
+        solids += hung_member_shape(curve.toShape(), False, -edge_w_m * MM / 2, edge_w_m * MM / 2, under, edge_d_m * MM, what="an edge beam")
+    if said is not None:
+        plan = sum(2 * leaf_half(y0 + (y1 - y0) * (k + 0.5) / 2000.0, length_m, width_m, taper) * (y1 - y0) / 2000.0 for k in range(2000))
+        said.update({"z_centre": z(0.0, 0.0), "z_midrib_quarter": z(0.0, length_m / 4.0), "z_edge_at_widest": z(width_m / 2.0, 0.0), "z_tip": z(0.0, y1),
+                     "half_width_at_quarter": leaf_half(-length_m / 4.0, length_m, width_m, taper), "half_width_at_middle": leaf_half(0.0, length_m, width_m, taper),
+                     "longest_rib_m": max((r[1] for r in ribs), default=0.0), "shortest_rib_m": min((r[1] for r in ribs), default=0.0),
+                     "ribs": [(round(r[0], 4), round(r[1], 4)) for r in ribs], "plan_area_m2": plan, "midrib_length_m": y1 - y0, "solids": len(solids)})
+    return Part.makeCompound(solids)
+
+
+def folded_revolution_shape(radius_m, sides, flap, oculus_deg, steps, thickness_m, said=None):
+    """Lane R's dome folded from one sheet (card P-002, the map's form 102): Jun Mitani's ORI-REVO "cylinder with flaps"
+    (MIT), as R ported it. The meridian is a quarter circle of radius_m from oculus_deg off the pole to the ground in
+    `steps` straight pieces; each of the `sides` strips is a row of flat four-sided faces from the corner line to the
+    blade's tip (the spare width of the strip folded out as a blade along the next side). Each face is a slab of
+    thickness_m, half on each side of it (as R's sheet). The foot ring stands at z = 0 (as the map draws it). said: told the
+    sheet, the strip's width, the blades, the opening and the largest difference between a face on the sheet and in space.
+    Returns a compound of one slab per face."""
+    n, k = int(sides), int(steps)
+    if radius_m <= 0 or thickness_m <= 0 or n < 3 or k < 1 or flap < 0 or not (0.0 <= oculus_deg < 90.0):
+        raise ValueError("a folded dome needs a radius and a thickness above nought, three sides or more, a step, a flap not below nought "
+                         "and an opening of less than 90 degrees")
+    t0, t1 = math.radians(oculus_deg), math.pi / 2.0
+    profile = [(radius_m * math.sin(t0 + (t1 - t0) * i / float(k)), radius_m * math.cos(t0 + (t1 - t0) * i / float(k))) for i in range(k + 1)]
+    s, c = math.sin(math.pi / n), math.cos(math.pi / n)
+    u = 2.0 * max(abs(x) for x, _z in profile) * (1.0 + flap) * s  # one strip's width on the flat sheet
+    h = [0.0]
+    for (xa, za), (xb, zb) in zip(profile, profile[1:]):
+        piece = math.hypot(xb - xa, zb - za)
+        h.append(h[-1] + math.sqrt(piece * piece - ((xb - xa) * s) ** 2))
+
+    def tip(x, zz):
+        long = (u + 2.0 * x * s) / 2.0  # the side of the polygon at this height, and its blade
+        return (x - long * s, long * c, zz)
+
+    worst, slabs, half = 0.0, [], thickness_m / 2.0
+    for j in range(k):
+        (xa, za), (xb, zb) = profile[j], profile[j + 1]
+        quad = [(xa, 0.0, za), tip(xa, za), tip(xb, zb), (xb, 0.0, zb)]
+        flat = [((u - 2 * xa * s) / 2, h[j]), (u, h[j]), (u, h[j + 1]), ((u - 2 * xb * s) / 2, h[j + 1])]
+        for a, b in ((0, 1), (1, 2), (2, 3), (3, 0), (0, 2), (1, 3)):
+            worst = max(worst, abs(math.dist(quad[a], quad[b]) - math.dist(flat[a], flat[b])))
+        for i in range(n):
+            ang = 2.0 * math.pi * i / n
+            ca, sa = math.cos(ang), math.sin(ang)
+            pts = [App.Vector((p[0] * ca - p[1] * sa) * MM, (p[0] * sa + p[1] * ca) * MM, p[2] * MM) for p in quad]
+            normal = (pts[2] - pts[0]).cross(pts[3] - pts[1])
+            if normal.Length < 1e-9:
+                continue
+            normal.normalize()
+            if normal.z < 0:
+                normal = normal * -1.0
+            low = [p - normal * (half * MM) for p in pts]
+            high = [p + normal * (half * MM) for p in pts]
+            faces = [Part.Face(Part.makePolygon(low + low[:1])), Part.Face(Part.makePolygon(high + high[:1]))]
+            for q in range(4):
+                faces.append(Part.Face(Part.makePolygon([low[q], low[(q + 1) % 4], high[(q + 1) % 4], high[q], low[q]])))
+            slab = Part.Solid(Part.Shell(faces))
+            if slab.Volume < 0:
+                slab.reverse()
+            slabs.append(slab)
+    if said is not None:
+        said.update({"sheet_m": [n * u, h[-1]], "strip_width_m": u, "blade_at_ground_m": (u - 2 * profile[-1][0] * s) / 2.0,
+                     "blade_at_opening_m": (u - 2 * profile[0][0] * s) / 2.0, "opening_diameter_m": 2 * profile[0][0], "worst_stretch_m": worst,
+                     "faces": len(slabs), "face_area_m2": sum(sl.Volume for sl in slabs) / 1e9 / thickness_m})
+    return Part.makeCompound(slabs)
