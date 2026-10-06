@@ -3,6 +3,36 @@
 Rules: `C:\Playground\RULES.md` (Rule 3). After every report: the report file in `C:\Playground\agents\reports\A\`, the full entry here, then one line in `C:\Playground\UPDATES.md`.
 Entry shape: date/time · phase · what was done · commit sha · files written to `exchange\` · open items · needs.
 
+## 2026-10-06 01:40 PDT (08:40 UTC) · A (the Geometer) · on call: the 6 Oct block carried on — forms 107 and 102 built; Ctrl+R from both paths
+
+**The brief** (architect, after Johny re-pointed the junction at 00:20): "carry on with your 6 Oct block from where your
+HANDOVER says you stopped; one line in your seat's log at the end." `dir C:\Playground` lists the Playground again
+(checked first).
+
+**Done.**
+- My tools find FreeCAD and the Playground themselves (`agent\tools\paths.ps1`, used by every runner). The suites on this
+  morning's path change: check_organic 66 + 39/39, check_toolbar 194 + 42/42, check_import 71 + 100/100 — all passed.
+- **Forms 107 and 102 built** from lane R's numbers: `LeafRoofOnRibs` (read from a `HeightFieldShell` with a `Figure`; its
+  `Base` is `BaseHeight`, its `Bumps` JSON scaled with the map's scale) and `FoldedRevolution`; the way back writes them
+  under the map's names. `freecad\check_forms.py` (new suite step `forms`): 10 checks against R's cases A–D, 6 of 6
+  forgeries rejected; check_import N +1 check +1 forgery. Realized by hand as Ctrl+R calls it: 8 s, complete, 2 of 2.
+  `docs\plans\engine\KINDS.md`: **18 of 19 types, 7 of 22 forms** (5 Oct: 17, 5).
+- **Ctrl+R, FreeCAD closed** (E's export check from the `.exe`, scratch exchange): from the shortcut (its target is the
+  REAL path, started in its build folder) **realized in 44 s**; through the junction `C:\Playground\…\Sulphur Mountain.exe`
+  **47 s**; both 11 of 11 pieces, 8 of 8 solids within 0.02 m of the map, the check PASS. (5 Oct: 45 s from the real path,
+  FreeCAD "not found" through the junction — E's ruling 6 fixed it: `built.gd` reads `build\freecad.path`.)
+- FORMAT.md "Forms 102 and 107 as A builds them" — with two map defects for E (the leaf's numeric `Base`: refused by
+  `draw_tools.gd _refusal`; its placement dropped by `built.gd records()`). LESSONS.md: lane A, 6 Oct (four, each with
+  its guard). `hung_member_shape` refuses a member over a kilometre (this morning's 15-minute hang: `V()` takes metres).
+- The whole suite, five steps (01:09–01:29): **all passed** — 66 + 39/39, 194 + 42/42, 72 + 101/101, forms 10 + 6/6;
+  check_forms again with the kilometre guard loaded: 10 + 6/6.
+
+**Commit.** `a0136036` (the work) and the save point after it (this entry, NEW.md, HANDOVER) on `eco/organic`, pushed. Report `C:\Playground\agents\reports\A\2026-10-06.md` (part 2 on top).
+
+**Open.** (4) Johny's first Ctrl+S → the round trip on a scratch copy; `Pad` after E sends it; E: the two defects (form 107
+cannot reach FreeCAD from the map until then); R's P-012 asks A (through the architect) for a ribs-and-rings `Gridshell`
+on a `Dome` — not taken up without the architect's word.
+
 ## 2026-10-06 00:20 PDT (07:20 UTC) · A (the Geometer) · on call: the WallBand paragraph; then stopped — C:\Playground comes back empty
 
 **The brief** (architect, 6 Oct, "continue"): (1) WallBand's fields for E, complete, in FORMAT.md — E builds the maker

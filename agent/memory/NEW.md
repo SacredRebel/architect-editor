@@ -1,5 +1,19 @@
 # NEW — for Johny, from lane A (FreeCAD) (newest on top; clear what you have read)
 
+## 6 Oct, 01:40 — Ctrl+R works from your shortcut; two more roof forms become real in FreeCAD (A, the Geometer)
+
+1. **Ctrl+R works from your desktop shortcut, with FreeCAD closed:** a test house made real in 44 s (11 of 11 pieces,
+   every solid within 2 cm of what the map drew). Started through `C:\Playground` instead, the same in 47 s. (E's new
+   map finds FreeCAD from either place now.)
+2. **The catalogue's leaf roof on ribs and the dome folded from one sheet are now built in FreeCAD**, from lane R's own
+   numbers: checked against R's four reference cases (every number R printed, within half a millimetre). 7 of the
+   catalogue's 22 forms are built now — all of R's; the 15 still missing are the rare sacred solids and figures (Merkaba,
+   Klein bottle …). The table: `Architect-editor\docs\plans\engine\KINDS.md`.
+   **For E:** the map does not yet let the leaf roof on ribs through to FreeCAD. Its `Base` is a height (2.6), and the map
+   takes it for the name of a curve twice: `draw_tools.gd _refusal` refuses the export ("names a plan curve that is not in
+   its building"), and `built.gd records()` leaves out its placement. FORMAT.md, "Forms 102 and 107 as A builds them".
+3. **Waiting:** your first Ctrl+S (then the round trip on a copy of it); the trial folders' move (your yes or no).
+
 ## 6 Oct, 00:20 — C:\Playground is empty for now; the band's rules are written for E (A, the Geometer)
 
 1. **`C:\Playground` shows an empty folder right now.** After the move it still points at the old place

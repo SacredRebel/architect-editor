@@ -5,30 +5,32 @@ letter once; then `C:\Playground\STATE.md` → `agents\PLAN.md` §0 → `agents\
 `agents\QUEUE.md` or the architect's message → `agent\brain\PRIORITIES.md`, `agent\memory\NEW.md` →
 `git --no-optional-locks log -5` (the architect's rule set of 6 Oct; the session's end in six steps: `protocols\SESSION.md`).
 
-## 0. First, as of 6 Oct 2026 00:20 PDT (the newest; sections 1–10 are 5 Oct's and still hold)
-- **The folder moved.** Real path: `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\Playground\` (this repository:
-  `…\Playground\Architect-editor`). `C:\Playground` is the junction every file spells — **check it first: `dir
-  C:\Playground` must list the Playground's files.** On 6 Oct 00:10 it still pointed at the old real path
-  `C:\AI-Work\Ai apps & Codebase\Playground`, an EMPTY folder, and the session stopped (the rule: a path that comes
-  back empty → say so and stop). E re-points it (ruling 6). Never write through it while it is empty.
-- **FreeCAD moved too:** `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe`. My tools
-  (`agent\tools\*.ps1`, `tools\house\*.ps1`) still name the old `C:\AI-Work\Ai apps & Codebase\FreeCAD\…` (gone): **fix
-  them first** (the new path, or resolve the junction's target and take `..\FreeCAD`). The commands in section 9 below
-  name the old path: read them with the new one.
-- **In hand:** the code now finds the land, BRAIN.md, lane C's pack and the notes beside the repository first, with
-  `C:\Playground` as the fallback (6 Oct save point: organic_export, check_import, check_organic, check_toolbar,
-  check_site, organic_sacred) — **not yet run through the suites**: run `tools\run_suite.ps1` (after fixing its FreeCAD
-  path) before anything else in the kernel.
-- **Done 6 Oct:** FORMAT.md "`WallBand`, every field and the rule — for the map's own maker" (E builds the maker from it;
-  ruling 1). Report `C:\Playground\agents\reports\A\2026-10-06.md`.
-- **The next steps (6 Oct's brief, Done items b and c):** (1) the tools' FreeCAD path, the suites; (2) when E has
-  re-pointed the junction and remade the shortcut: Ctrl+R from the shortcut AND from the real path, FreeCAD closed,
-  timed — NEW.md to E if either fails; (3) forms 107 (the catalogue's leaf roof on ribs) and 102 (the folded dome) built
-  from their own numbers (`godot\ui\ports\patterns.gd` has R's formulas), the kinds table (`docs\plans\engine\KINDS.md`)
-  updated with counts; `Pad` only after E sends it; (4) the round trip on Johny's save the day
-  `exchange\godot\save\edits.sulphur-mountain.geojson` exists (a scratch copy). The map's autosaves of his 5 Oct
-  18:07–18:17 session (`save\autosave\`) hold five small test buildings; they are not his save.
-- **Every session now also ends with one line in my seat's log** `C:\Playground\agents\a-geometer\memory\UPDATES.md`
+## 0. First, as of 6 Oct 2026 01:40 PDT (the newest; sections 1–10 are 5 Oct's — where they name the old real path `C:\AI-Work\Ai apps & Codebase\…` or say the map finds FreeCAD only from its real path, this section holds)
+- **The folder moved; the junction is right again.** Real path: `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\Playground\`
+  (this repository: `…\Playground\Architect-editor`). `C:\Playground` is the junction every file spells; Johny re-pointed
+  it at 00:20 on 6 Oct. **Check it first: `dir C:\Playground` must list the Playground's files** (the rule: a path that
+  comes back empty → say so and stop). FreeCAD: `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\FreeCAD\bin\freecadcmd.exe`.
+- **My tools find both themselves:** `agent\tools\paths.ps1` (dot-sourced by every runner): `Get-Playground` (the
+  junction's target), `Get-FreeCADCmd` (`$env:FREECADCMD`, else `<Playground>\..\FreeCAD\bin`, else the known places),
+  `Get-MapExe`. The commands in section 9 name the old FreeCAD path: the runners no longer do — use them.
+- **The map finds FreeCAD from either path** (E, ruling 6): `built.gd freecad_cmd()` reads
+  `exchange\godot\build\freecad.path` first. The desktop shortcut (`Playground — Sulphur Mountain.lnk`, remade 00:10)
+  points at the REAL path. Ctrl+R timed today, FreeCAD closed (E's export check, `agent\tools\map_check.ps1 -Check
+  export-check -Extra "" -Exe <the .exe> -Cwd <its folder>`): 44 s from the shortcut, 47 s through the junction (11 of 11
+  pieces, 8 of 8 within 0.02 m).
+- **Built today (6 Oct):** the catalogue's forms 107 (`LeafRoofOnRibs`, read from a `HeightFieldShell` WITH a `Figure`;
+  its `Base` is `BaseHeight`, its `Bumps` JSON) and 102 (`FoldedRevolution`), from lane R's numbers;
+  `freecad\check_forms.py` (suite step `forms`: 10 checks, 6 forgeries); the kinds table 18 of 19 types, 7 of 22 forms
+  (`docs\plans\engine\KINDS.md`). FORMAT.md "Forms 102 and 107 as A builds them" (with two map defects for E: the leaf's
+  numeric `Base` is refused by `draw_tools.gd _refusal`, and drops its placement in `built.gd records()`).
+  `hung_member_shape` refuses a member over 1 km (the kernel's `V()` takes METRES; use `App.Vector` for millimetres).
+- **The suite is five steps now** (`agent\tools\run_suite.ps1`: pavilion, selftest, toolbar, import, forms; about 19
+  min; while it runs, other lanes' timings on this PC are off — E skipped a bench at 01:30 for it). Last run: 6 Oct
+  01:09–01:29, all five passed (66 + 39/39, 194 + 42/42, 72 + 101/101, forms 10 + 6/6).
+- **Open (the 6 Oct block):** (4) the round trip on Johny's save the day `exchange\godot\save\edits.sulphur-mountain.geojson`
+  exists (a scratch copy; `freecad\roundtrip.py`); `Pad` after E sends it. Then, if the architect wants them, lane C's 15
+  sacred forms (a faceted solid from the map's own triangles, named so).
+- **Every session ends** with one line in my seat's log `C:\Playground\agents\a-geometer\memory\UPDATES.md`
   (`YYYY-MM-DD HH:MM · window · <what> · full entry: Architect-editor\agent\memory\UPDATES.md · report:
   agents\reports\A\<date>.md · commit <sha>`); the seat's `COCKPIT.md` says what the cockpit may do with me.
 
