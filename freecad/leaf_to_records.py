@@ -3,7 +3,8 @@
 
 Reads lane C's leaf folder (organic_leaf.read_leaf: refused, with the reason, if anything in it is off), writes the
 records file — format built/1, one piece of type LeafRoofTraced at C's place: the building at the blade's centre,
-turned so that the leaf's +y points at the tip's heading (rotation_y_of_heading: the formula's one copy), standing on
+turned so that the leaf's +y points at the tip's heading (rotation_y_of_heading applies the one formula, lane E's
+importer line), standing on
 the map's own land there (FRAME.md lets A read it there; lane C's ground_m is said beside it); the piece's params are
 FRAME.md's — Length (lane C's DERIVED length, or Johny's given here), length_source ("DERIVED" as C says, or "yours")
 and the files it is built from, with their fingerprints — then realizes it as the map's Ctrl+R does (realize.py's own function): the design, the .glb (the
@@ -39,14 +40,10 @@ def say(text):
 
 
 def rotation_y_of_heading(heading_deg):
-    """THE formula, written here once (exchange\\house\\leaf\\FRAME.md: whoever converts writes it in the file that
-    does it; lanes C and E read it here): leaf-place.json's heading_deg is the compass heading of the leaf's tip
-    (0 = north, clockwise); FORMAT.md's rotation_deg.y is the building's turn seen from above, anticlockwise positive.
-    The leaf's +y (its tip) points north before the turn, so
-
-        rotation_deg.y = -heading_deg            (wrapped to -180 .. 180)
-
-    and back: heading_deg = -rotation_deg.y (mod 360)."""
+    """The record's rotation_deg.y for leaf-place.json's heading_deg, by the one formula — lane E's, written at the
+    importer line that converts it: Spatial Map\\spatial-map\\godot\\scripts\\records_tools.gd, import_records(),
+    the comment "THE ONE FORMULA" (E's commit 88f86a0; FRAME.md "Conversions"). The same arithmetic, applied here and
+    wrapped to -180 .. 180."""
     return (-float(heading_deg) + 180.0) % 360.0 - 180.0
 
 
@@ -73,6 +70,8 @@ def run():
     out = os.environ.get("LEAF_RECORDS_OUT") or os.path.join(ol.playground_dir(), "exchange", "house", "models", NAME + ".json")
     result = {"ok": False, "records": out}
     try:
+        if not os.path.isfile(ol.resolve(folder.rstrip("/\\") + "/README.md")):  # C writes it last: the files are whole then
+            raise ValueError("lane C's leaf folder has no README.md yet (written last): its files may not be whole: %s" % ol.resolve(folder))
         leaf = ol.read_leaf(ol.default_paths(folder))
         place = ol.place_of(leaf)
         given = os.environ.get("LEAF_RECORDS_LENGTH")

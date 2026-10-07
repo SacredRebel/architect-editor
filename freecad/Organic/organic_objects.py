@@ -984,6 +984,8 @@ class LeafRoofTraced(Organic):
         for kind, name in (("outline", "OutlineFile"), ("veins", "VeinsFile"), ("holes", "HolesFile"), ("profile", "ProfileFile"), ("place", "PlaceFile")):
             prop(obj, "App::PropertyString", name, g, "lane C's %s file, relative to the Playground folder" % kind, files[kind])
         distance(obj, "Eave", g, "the height of the curl's zero above the base (the map's lift)", 0.0)
+        prop(obj, "App::PropertyStringList", "Openings", g, "the marks of the leaf cut through, by name (h1 …); empty: lane C's — on Johny's leaf none: "
+             "C found no through-hole (leaf-holes.json cut_by_default false); a mark becomes an opening when Johny says so")
         prop(obj, "App::PropertyFloat", "SkinShare", g, "the skin's thickness along its normal, a share of the length (lane R's 0.10 m at 12 m)", ol.SKIN_SHARE)
         prop(obj, "App::PropertyFloat", "MidribWidthShare", g, "the midrib's width, a share of the length (R's 0.16 m at 12 m); each rank after it 2^(-1/3) of the one before", ol.MIDRIB_WIDTH_SHARE)
         prop(obj, "App::PropertyFloat", "MidribDepthShare", g, "the midrib's depth under the skin, a share of the length (R's 0.45 m at 12 m)", ol.MIDRIB_DEPTH_SHARE)
@@ -995,7 +997,7 @@ class LeafRoofTraced(Organic):
         prop(obj, "App::PropertyFloat", "PlanArea", "Measures", "the leaf's area in plan, less its holes (m²)")
         length(obj, "Width", "Measures", "the blade's width across, at this length", 0.0)
         prop(obj, "App::PropertyInteger", "OutlinePoints", "Measures", "the outline's points, as lane C traced them")
-        prop(obj, "App::PropertyInteger", "HoleCount", "Measures", "the holes cut through")
+        prop(obj, "App::PropertyInteger", "HoleCount", "Measures", "the marks cut through (openings)")
         prop(obj, "App::PropertyStringList", "Members", "Measures", "the solids after the skin, in order: name:how many")
         for name in ("PlanArea", "Width", "OutlinePoints", "HoleCount", "Members"):
             obj.setEditorMode(name, 1)
@@ -1024,7 +1026,7 @@ class LeafRoofTraced(Organic):
             raise ValueError("a traced leaf needs its Length in metres (the record gives lane C's DERIVED one until Johny gives his)")
         said = {}
         shape = ol.leaf_roof_shape(ol.read_leaf(self.paths(obj)), m(obj.Length), m(obj.Eave), obj.SkinShare, obj.MidribWidthShare, obj.MidribDepthShare,
-                                   obj.EdgeWidthShare, obj.EdgeDepthShare, said=said)
+                                   obj.EdgeWidthShare, obj.EdgeDepthShare, openings=list(obj.Openings) or None, said=said)
         obj.PlanArea, obj.Width = said["plan_area_m2"], said["width_m"] * MM
         obj.OutlinePoints, obj.HoleCount = said["outline_points"], said["holes"]
         obj.Members = ["%s:%d" % (name, count) for name, count in said["members"]]

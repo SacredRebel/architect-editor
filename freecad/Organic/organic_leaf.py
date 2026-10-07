@@ -59,6 +59,14 @@ OPEN_GAP_SHARE = 0.02
 # a tooth of the outline (a lobe's tip): standing out at least this share of the length above the outline
 # TOOTH_REACH points either side of it — lane C's own rule: no needle narrower than 0.5 % of the length
 TOOTH_SHARE, TOOTH_REACH = 0.005, 4
+# a vein's line (and the midrib's, the stem's): lane C's traced line taken again every LINE_SPACING_SHARE of the length
+# and eased LINE_PASSES times. The spline through C's own points loops (vein L-B came out 78 m long for 26 m) and kinks
+# (R-C turned 137 times tighter than its member can follow); OCCT's approximation within 0.1 m was worse (166 m off).
+# Eased so, no vein turns tighter than 0.55 of what its member can follow, and none lies more than 0.36 % of the length
+# off C's line (0.18 m at 50.7 m; 6 Oct, Johny's leaf)
+LINE_SPACING_SHARE, LINE_PASSES = 0.01, 4
+# the edge beam's middle line drawn in by this share of its width (see _edge_beam_line)
+EDGE_INSET = 0.7
 # where a member's middle line may stray outside the grid of heights (a spline through the outline's points bulges a
 # little past a sharp tooth), as a share of the length; further out is an error
 GRID_SLACK_SHARE = 0.01
@@ -158,14 +166,18 @@ def signed_area(ring):
     return 0.5 * sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]))
 
 
-def _framed(d, path):
-    """A leaf file as FRAME.md has every one: "frame": "leaf", "unit": a fraction of the blade's length; refused if not."""
+def _framed(d, path, frame_wanted="leaf"):
+    """A leaf file in the frame it says it is in: the four shape files in the leaf frame, a fraction of the blade's
+    length (FRAME.md); the place file in the map's frame, metres (as lane C writes it: a place is on the land).
+    Refused if it says another."""
     if not isinstance(d, dict):
         raise ValueError("the leaf's file is not a table: %s" % resolve(path))
     frame, unit = str(d.get("frame", "")).strip().lower(), str(d.get("unit", "")).strip().lower()
-    if frame != "leaf" or "fraction" not in unit or "length" not in unit:
-        raise ValueError("the leaf's file says frame %r and unit %r: the leaf frame in fractions of the blade's length is wanted (FRAME.md): %s"
-                         % (d.get("frame"), d.get("unit"), resolve(path)))
+    good = (frame == "leaf" and "fraction" in unit and "length" in unit) if frame_wanted == "leaf" else (frame == "map" and unit in ("metres", "meters", "m"))
+    if not good:
+        raise ValueError("the leaf's file says frame %r and unit %r: %s is wanted: %s"
+                         % (d.get("frame"), d.get("unit"), "the leaf frame in fractions of the blade's length" if frame_wanted == "leaf" else "the map's frame in metres",
+                            resolve(path)))
     return d
 
 
@@ -179,12 +191,13 @@ def read_leaf(paths=None):
     leaf = {"paths": paths, "fingerprints": {k: fingerprint(p) for k, p in paths.items() if os.path.isfile(resolve(p))}, "classes": {}}
 
     def load(kind):
-        d = _framed(_load(paths[kind]), paths[kind])
+        d = _framed(_load(paths[kind]), paths[kind], "map" if kind == "place" else "leaf")
         leaf["classes"][kind] = "%s: %s" % (d.get("class", "?"), d.get("method", ""))
         return d
 
     o = load("outline")
     outline = closed_ring(_points(o.get("outline"), "the outline"), "the outline (%s)" % paths["outline"], o.get("closed"))
+    leaf["outline_as_given"] = list(outline)  # C's lobe_vertex numbers count these
     if signed_area(outline) < 0:  # anticlockwise: the inside on the left of the way round
         outline = outline[::-1]
     leaf["outline"] = outline
@@ -202,18 +215,23 @@ def read_leaf(paths=None):
             raise ValueError("vein %s has %d point: a vein needs two or more" % (key, len(pts)))
         if row.get("rank") is None:
             raise ValueError("vein %s has no width rank (%s)" % (key, paths["veins"]))
-        veins.append({"id": key, "points": pts, "rank": int(row["rank"]), "lobe": row.get("lobe")})
+        tip = row.get("lobe_tip")
+        veins.append({"id": key, "points": pts, "rank": int(row["rank"]), "lobe": row.get("lobe"), "lobe_vertex": row.get("lobe_vertex"),
+                      "lobe_tip": _points([tip], "vein %s's lobe_tip" % key)[0] if tip is not None else None})
     if sum(1 for x in veins if x["rank"] == 1) != 1:
         raise ValueError("the veins have %d of rank 1: one midrib is wanted (%s)" % (sum(1 for x in veins if x["rank"] == 1), paths["veins"]))
     leaf["veins"] = sorted(veins, key=lambda x: x["rank"])
 
     h = load("holes")
-    holes, names = [], []
+    holes, names, through = [], [], []
     for i, row in enumerate(h.get("holes") or []):
         name = str(row.get("name", "h%d" % (i + 1))) if isinstance(row, dict) else "h%d" % (i + 1)
         holes.append(closed_ring(_points(row, "hole %s" % name), "hole %s (%s)" % (name, paths["holes"]), row.get("closed") if isinstance(row, dict) else None))
         names.append(name)
-    leaf["holes"], leaf["hole_names"] = holes, names
+        through.append(bool(row.get("through", True)) if isinstance(row, dict) else True)
+    leaf["holes"], leaf["hole_names"], leaf["hole_through"] = holes, names, through
+    # which are openings when nobody says: the ones C found to go through, or all when C's file says cut_by_default
+    leaf["openings_by_default"] = [n for n, t in zip(names, through) if t or h.get("cut_by_default") is True]
 
     p = load("profile")
     try:
@@ -313,6 +331,12 @@ def lobe_point(leaf, lobe):
     return tips[k - 1] if 1 <= k <= len(tips) else None
 
 
+def vein_lobe(leaf, vein):
+    """Where a vein's lobe is (shares of the length): lane C's own lobe_tip when its file gives it, else the label read
+    here (lobe_point)."""
+    return vein["lobe_tip"] if vein.get("lobe_tip") is not None else lobe_point(leaf, vein.get("lobe"))
+
+
 # ---------------------------------------------------------------- the roof
 def height_over(surface, box_mm, slack_mm):
     """z(x, y), mm: the surface's height over a plan point, found by Newton's method on (u, v) (the grid's surface runs
@@ -350,45 +374,112 @@ def skin_of(face, thickness_mm):
     """The skin: the underside face pushed up its normal by the thickness, its rims filled along the normals (OCCT's
     offset) — kept as OCCT makes it. organic_geom.thicken_up makes that solid NURBS (for booleans; this skin meets
     none): on 6 Oct, on the test leaf, the NURBS skin failed OCCT's check under any placement at 50 m ("Unorientable")
-    and was refused outright at 12 m, while the offset solid itself is sound at every length from 6 to 80 m and
-    wherever it is placed. Checked both ways here."""
+    and was refused outright at 12 m. The offset solid itself holds what its thickness says (on Johny's leaf 0.9993 to
+    0.9995 of thickness x area at 12 to 60 m) — but OCCT's check refuses the FIRST offset made over a fresh face at some
+    lengths (45 and 55.7 m on 7 Oct), and passes every one made again over the same face (and fix() mends the first):
+    so it is made again when the check refuses it, then mended, then refused. Checked where it was built and placed."""
     u0, u1, v0, v1 = face.ParameterRange
     sign = 1.0 if face.normalAt((u0 + u1) / 2, (v0 + v1) / 2).z > 0 else -1.0
-    slab = face.makeOffsetShape(sign * thickness_mm, 0.01, fill=True)
-    if not slab.Solids:
-        raise ValueError("the leaf's skin could not be given its thickness")
-    solid = slab.Solids[0]
-    if solid.Volume < 0:
-        solid.reverse()
-    placed = solid.copy()
-    placed.Placement = App.Placement(App.Vector(1000.0, -2000.0, 300.0), App.Rotation(App.Vector(0, 0, 1), 37.0))
-    if not solid.isValid() or not placed.isValid():
-        raise ValueError("the leaf's skin is not a sound solid (OCCT's check, where it was built and placed elsewhere)")
-    return solid
+    placement = App.Placement(App.Vector(1000.0, -2000.0, 300.0), App.Rotation(App.Vector(0, 0, 1), 37.0))
+
+    def sound(s):
+        placed = s.copy()
+        placed.Placement = placement
+        return s.isValid() and placed.isValid()
+
+    last = None
+    for _attempt in range(3):
+        slab = face.makeOffsetShape(sign * thickness_mm, 0.01, fill=True)
+        if not slab.Solids:
+            continue
+        solid = slab.Solids[0]
+        if solid.Volume < 0:
+            solid.reverse()
+        if sound(solid):
+            return solid
+        last = solid
+    if last is not None:
+        mended = last.copy()
+        mended.fix(1e-7, 1e-7, 1e-7)
+        if sound(mended):
+            return mended
+    raise ValueError("the leaf's skin is not a sound solid (OCCT's check, where it was built and placed elsewhere; made three times and mended)")
 
 
-def _edge_through(points_m):
-    """An edge through points (metres): a line through two, else a spline through all of them."""
-    pts = [V(x, y, 0.0) for x, y in points_m]
+def _resampled(pts, spacing):
+    """A polyline's points again, evenly every `spacing` along it (its ends kept)."""
+    seg = [math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(pts, pts[1:])]
+    total = sum(seg)
+    n = max(2, int(math.ceil(total / spacing)))
+    out, acc, i = [], 0.0, 0
+    for k in range(n + 1):
+        s = total * k / n
+        while i < len(seg) - 1 and acc + seg[i] < s:
+            acc += seg[i]
+            i += 1
+        t = min(max((s - acc) / seg[i], 0.0), 1.0) if seg[i] else 0.0
+        out.append((pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t))
+    return out
+
+
+def _eased_line(points_m, spacing_m):
+    """An edge along lane C's traced line (metres): the line taken again every spacing_m along it, eased LINE_PASSES
+    times (each point to a quarter of each neighbour and half itself; the two ends kept), a spline through that — the
+    tracing's own zigzags out, the vein kept. Returns (the edge, the farthest the edge lies off C's polyline, m)."""
+    pts = list(points_m)
     if len(pts) == 2:
-        return Part.LineSegment(pts[0], pts[1]).toShape()
-    return og.spline(pts)
+        return Part.LineSegment(V(pts[0][0], pts[0][1], 0.0), V(pts[1][0], pts[1][1], 0.0)).toShape(), 0.0
+    eased = _resampled(pts, spacing_m)
+    for _ in range(LINE_PASSES):
+        eased = [eased[0]] + [((a[0] + 2 * b[0] + c[0]) / 4.0, (a[1] + 2 * b[1] + c[1]) / 4.0) for a, b, c in zip(eased, eased[1:], eased[2:])] + [eased[-1]]
+    edge = og.spline([V(x, y, 0.0) for x, y in eased])
+    wire = Part.makePolygon([V(x, y, 0.0) for x, y in pts])
+    off = max(wire.distToShape(Part.Vertex(edge.valueAt(edge.FirstParameter + (edge.LastParameter - edge.FirstParameter) * k / 200.0)))[0]
+              for k in range(201))
+    return edge, off / MM
+
+
+def _edge_beam_line(ring_m, width_m, spacing_m):
+    """The edge beam's middle line: the outline drawn in by EDGE_INSET of the beam's width (which rounds every sinus to
+    that radius), then its outer corners rounded to the beam's width (shapely: in by the width, out by the width) — a
+    line the beam follows without folding anywhere (no turn tighter than EDGE_INSET of its width; it folds at 0.625),
+    its outer side EDGE_INSET - 0.5 of its width inside the outline everywhere, cutting across the teeth narrower than
+    itself. Inside by construction: no cut by the outline is needed (OCCT's common of the ring with the plan's prism
+    gave nothing on Johny's leaf, and cutting the outside away instead took 200 s and gave the wrong volume; 6 Oct).
+    Its points taken again every spacing_m."""
+    from shapely.geometry import Polygon
+
+    q = Polygon(ring_m).buffer(-(EDGE_INSET + 1.0) * width_m).buffer(width_m)
+    if q.is_empty:
+        raise ValueError("the leaf is too narrow for its edge beam")
+    if q.geom_type == "MultiPolygon":
+        q = max(q.geoms, key=lambda g: g.area)
+    pts = _resampled(list(q.exterior.coords), spacing_m)[:-1]
+    if signed_area(pts) < 0:
+        pts = pts[::-1]
+    return og.spline([V(x, y, 0.0) for x, y in pts], closed=True)
 
 
 def leaf_roof_shape(leaf, length_m, eave_m=0.0, skin_share=SKIN_SHARE, midrib_width_share=MIDRIB_WIDTH_SHARE,
                     midrib_depth_share=MIDRIB_DEPTH_SHARE, edge_width_share=EDGE_WIDTH_SHARE, edge_depth_share=EDGE_DEPTH_SHARE,
-                    holes_cut=True, said=None):
+                    openings=None, holes_cut=True, said=None):
     """Johny's leaf as a roof at length_m (metres, tip to stem base), in its own frame (C's, times the length): the skin
     first, then the members in the order said["members"] gives ([name, how many solids], the midrib first, the veins by
-    rank, the edge beam, the stem). eave_m lifts the curl's zero. holes_cut False only for a check's forged fault.
-    Returns a compound."""
+    rank, the edge beam, the stem). eave_m lifts the curl's zero. openings: the names of the marks cut through (None:
+    lane C's — the ones it found to go through, or all when its file says cut_by_default; on Johny's leaf none).
+    holes_cut False only for a check's forged fault. Returns a compound."""
     from shapely.geometry import Polygon
 
     L = float(length_m)
     if not (L > 0) or skin_share <= 0:
         raise ValueError("a leaf roof needs a length and a skin above nought")
     ring = [(x * L, y * L) for x, y in leaf["outline"]]
-    holes = [[(x * L, y * L) for x, y in h] for h in leaf["holes"]] if holes_cut else []
+    names = leaf.get("hole_names") or ["h%d" % (i + 1) for i in range(len(leaf["holes"]))]
+    chosen = list(leaf.get("openings_by_default", names) if openings is None else openings)
+    unknown = [n for n in chosen if n not in names]
+    if unknown:
+        raise ValueError("no mark of the leaf is called %s (its marks: %s)" % (", ".join(unknown), ", ".join(names)))
+    holes = [[(x * L, y * L) for x, y in h] for n, h in zip(names, leaf["holes"]) if n in chosen] if holes_cut else []
     g = leaf["profile"]
     rows = len(g["heights"]) // g["columns"]
     origin = (g["origin"][0] * L, g["origin"][1] * L)
@@ -408,11 +499,13 @@ def leaf_roof_shape(leaf, length_m, eave_m=0.0, skin_share=SKIN_SHARE, midrib_wi
     under = height_over(surface, box, GRID_SLACK_SHARE * L * MM)
     zone = Polygon([(x * MM, y * MM) for x, y in ring], [[(x * MM, y * MM) for x, y in h] for h in holes])
 
-    members, names = [], []
+    members, member_names, cover, off = [], [], {}, {}
     step = min(og.BAND_STEP_MM, STEP_SHARE * L * MM)
 
-    def hang(name, edge, closed, d1, d2, depth_mm, where, clip=True):
-        got = og.hung_member_shape(edge, closed, d1, d2, where, depth_mm, what=name, zone=zone if clip else None, step_mm=step)
+    def hang(name, edge, closed, d1, d2, depth_mm, where, clip=True, zoned=True):
+        told = {}
+        got = og.hung_member_shape(edge, closed, d1, d2, where, depth_mm, said=told, what=name, zone=zone if zoned else None, step_mm=step)
+        cover[name] = sum(b - a for a, b in told.get("stretches", []))  # the share of its line the member runs along
         if clip:  # the outline and the holes cut it too
             kept = []
             for s in got:
@@ -420,26 +513,30 @@ def leaf_roof_shape(leaf, length_m, eave_m=0.0, skin_share=SKIN_SHARE, midrib_wi
                 kept += [x for x in c.Solids if x.Volume > 1.0]
             got = kept
         members.extend(got)
-        names.append([name, len(got)])
+        member_names.append([name, len(got)])
 
     for v in leaf["veins"]:
         w = midrib_width_share * L * MURRAY ** (v["rank"] - 1) * MM
         d = midrib_depth_share * L * MURRAY ** (v["rank"] - 1) * MM
-        hang("midrib" if v["rank"] == 1 else "vein %s" % v["id"], _edge_through([(x * L, y * L) for x, y in v["points"]]), False, -w / 2, w / 2, d, under)
+        name = "midrib" if v["rank"] == 1 else "vein %s" % v["id"]
+        edge, off[name] = _eased_line([(x * L, y * L) for x, y in v["points"]], LINE_SPACING_SHARE * L)
+        hang(name, edge, False, -w / 2, w / 2, d, under)
     ew, ed = edge_width_share * L * MM, edge_depth_share * L * MM
-    hang("edge beam", og.spline([V(x, y, 0.0) for x, y in ring], closed=True), True, 0.0, ew, ed, under)
+    hang("edge beam", _edge_beam_line(ring, ew / MM, 0.5 * LINE_SPACING_SHARE * L), True, -ew / 2, ew / 2, ed, under, clip=False)
     if len(leaf["stem"]) >= 2:
         mid = next(v for v in leaf["veins"] if v["rank"] == 1)["points"]
         base = (mid[0][0] * L * MM, mid[0][1] * L * MM)
         top = under(*base)
         w, d = midrib_width_share * L * MM, midrib_depth_share * L * MM
-        hang("stem", _edge_through([(x * L, y * L) for x, y in leaf["stem"]]), False, -w / 2, w / 2, d, lambda x, y: top, clip=False)
+        edge, off["stem"] = _eased_line([(x * L, y * L) for x, y in leaf["stem"]], LINE_SPACING_SHARE * L)
+        hang("stem", edge, False, -w / 2, w / 2, d, lambda x, y: top, clip=False, zoned=False)
 
     if said is not None:
         blade = Polygon(ring, holes)
         xs, ys = [p[0] for p in ring], [p[1] for p in ring]
         said.update({"length_m": L, "width_m": max(xs) - min(xs), "blade_extent_m": max(ys) - min(ys), "plan_area_m2": blade.area,
-                     "outline_points": len(ring), "holes": len(holes), "veins": len(leaf["veins"]), "members": names,
+                     "outline_points": len(ring), "holes": len(holes), "openings": chosen, "marks": len(leaf["holes"]), "veins": len(leaf["veins"]),
+                     "members": member_names, "coverage": cover, "line_off_m": off,
                      "skin_m": skin_share * L, "midrib_m": [midrib_width_share * L, midrib_depth_share * L],
                      "edge_beam_m": [edge_width_share * L, edge_depth_share * L],
                      "under_face_vertices": len(under_face.Faces[0].OuterWire.Vertexes)})
