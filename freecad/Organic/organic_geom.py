@@ -1283,12 +1283,12 @@ def _folds(edge, d1, d2):
     return folds
 
 
-def _stretches(length, closed, state):
+def _stretches(length, closed, state, step_mm=None):
     """Where a thing along a curve `length` mm long is, and in which state: [(from, to, state, ring)] as fractions of the
     curve (on a closed one they may run past 1), from state(f), None where it is not there: places at even steps (no
     further apart than BAND_STEP_MM, 96 at least), each change found to BAND_EDGE_MM by halving. A closed curve in one
     state all round is one ring; a stretch shorter than ten times BAND_EDGE_MM is left out."""
-    count = max(96, int(math.ceil(length / BAND_STEP_MM)))
+    count = max(96, int(math.ceil(length / (step_mm or BAND_STEP_MM))))
     steps = [i / float(count) for i in range(count + (0 if closed else 1))]
     states = [state(f) for f in steps]
     if all(s is None for s in states):
@@ -1369,7 +1369,7 @@ def _lined_solid(made, ring, length):
     return solid, want
 
 
-def _lined_runs(runs, line, steps_of, length, what):
+def _lined_runs(runs, line, steps_of, length, what, step_mm=None):
     """The solids of a band or a member from its stretches: runs = [(from, to, state, ring)], line(f, state) the line across
     at f; each stretch's lines no further apart than BAND_STEP_MM (on a ring: steps_of, its even places). Returns (the
     solids, what their strips say, the lines made), and raises when a solid is not valid or does not hold what its strips
@@ -1379,7 +1379,7 @@ def _lined_runs(runs, line, steps_of, length, what):
         if ring:
             made = [line(f, st) for f in steps_of]
         else:
-            k = max(2, int(math.ceil((fb - fa) * length / BAND_STEP_MM)))
+            k = max(2, int(math.ceil((fb - fa) * length / (step_mm or BAND_STEP_MM))))
             made = [line(fa + (fb - fa) * j / k, st) for j in range(k + 1)]
         lines_made += len(made)
         solid, holds = _lined_solid(made, ring, length)
@@ -1484,7 +1484,7 @@ def wall_band_shape(edge, closed, d1, d2, z0, top, height_m, rise_m, waves, roof
     return solids[0] if len(solids) == 1 else Part.makeCompound(solids)
 
 
-def hung_member_shape(edge, closed, d1, d2, under, depth_mm, said=None, what="the member", zone=None):
+def hung_member_shape(edge, closed, d1, d2, under, depth_mm, said=None, what="the member", zone=None, step_mm=None):
     """A member hung under a roof's underside along a plan curve (a rib, an edge beam, a ring:
     RoofFrame): between d1 and d2 (mm to the left of `edge`), its top on the underside at its
     two sides (under(x, y), mm; straight across), its bottom depth_mm under its top, straight
@@ -1492,6 +1492,8 @@ def hung_member_shape(edge, closed, d1, d2, under, depth_mm, said=None, what="th
     where the curve turns tighter than it can follow it leaves a gap, and where its middle line
     lies outside `zone` (a shapely polygon, when given) there is none of it; all round a closed
     curve it is one ring. said: told its stretches, lines, what its strips say and what it holds.
+    step_mm: its lines across no further apart than this (BAND_STEP_MM when not given; a small
+    leaf's toothed edge needs them closer, its teeth being as small as the leaf).
     Returns its solids (a list, empty where there is none)."""
     from shapely.geometry import Point
 
@@ -1518,9 +1520,9 @@ def hung_member_shape(edge, closed, d1, d2, under, depth_mm, said=None, what="th
             heads.append(App.Vector(q.x, q.y, under(q.x, q.y)))
         return f, [h - App.Vector(0, 0, depth_mm) for h in heads], heads
 
-    runs = _stretches(length, closed, there)
-    count = max(96, int(math.ceil(length / BAND_STEP_MM)))
-    solids, want, holds, lines_made = _lined_runs(runs, line, [i / float(count) for i in range(count)], length, what)
+    runs = _stretches(length, closed, there, step_mm)
+    count = max(96, int(math.ceil(length / (step_mm or BAND_STEP_MM))))
+    solids, want, holds, lines_made = _lined_runs(runs, line, [i / float(count) for i in range(count)], length, what, step_mm)
     if said is not None:
         said.update({"stretches": [(round(a, 4), round(b, 4)) for a, b, _s, _ring in runs], "lines": lines_made,
                      "want_m3": round(want / 1e9, 6), "holds_m3": round(holds / 1e9, 6), "solids": len(solids)})

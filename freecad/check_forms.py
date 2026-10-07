@@ -44,6 +44,7 @@ if os.path.join(HERE, "Organic") not in sys.path:
     sys.path.insert(0, os.path.join(HERE, "Organic"))
 import organic_geom as og  # noqa: E402  (its volume_of only: OCCT's adaptive measure, as check_import measures)
 import organic_import as oi  # noqa: E402
+import organic_leaf as ol  # noqa: E402  (the leaf's files read, and what they say)
 
 OUT = sys.stdout
 MM = 1000.0
@@ -58,6 +59,9 @@ SKIN_M = 0.10  # the leaf's skin in the records written here (R's cases)
 # formula and its offset is approximated as a NURBS surface; +0.001 % on both of R's cases (6 Oct). 0.02 % of the skin
 # is 0.02 mm of thickness over the whole of it
 VOLUME_CLOSE = 0.0002
+LOBE_CLOSE = 0.01  # every vein ends within 1 % of the length of its lobe (the architect, 6 Oct: THE LEAF, part 2)
+CORNER_CLOSE = 0.001  # metres: one of lane C's outline points and a corner of the skin are the same point
+LEAF_FORGE_LENGTH = 12.0  # the forgeries build the leaf this long (every test of the leaf is a share of its length)
 
 
 def say(text):
@@ -379,6 +383,296 @@ def measure(cases, shapes):
     return out
 
 
+# ------------------------------------------------------------------ T. Johny's leaf, as lane C traced it
+def test_leaf_files(folder):
+    """A TEST leaf — lane A's, NOT Johny's — in lane C's frame and keys (exchange\\house\\leaf\\FRAME.md), for while C's
+    files are not there: lane R's sin^0.6 outline with sharp teeth, a vein from the midrib to each tooth organic_leaf
+    finds (labelled as FRAME.md labels a lobe: "right 1" … counted from the stem; the midrib's "tip"), four round
+    holes, a cupped curl. Written into folder; returns the five paths."""
+    teeth_per_side, width = 7, 0.70
+
+    def side(sign, n=150):
+        pts = []
+        for k in range(n + 1):
+            t = k / float(n)
+            phase = (t * (teeth_per_side + 0.5)) % 1.0
+            bump = 0.10 * (phase if phase < 0.85 else (1.0 - phase) / 0.15 * 0.85)
+            h = width / 2.0 * math.sin(math.pi * t) ** 0.6
+            pts.append((sign * (h * (1.0 + bump) if 0.04 < t < 0.97 else h), t - 0.5))
+        return pts
+
+    outline = side(1.0) + side(-1.0)[::-1][1:-1]  # the first point not repeated (FRAME.md)
+    tips = ol.teeth({"outline": outline})
+    veins = [{"name": "midrib", "rank": 1, "lobe": "tip", "points": [[0.0, -0.5 + 0.125 * i] for i in range(9)]}]
+    for side_name in ("right", "left"):
+        for k, tip in enumerate(tips[side_name]):
+            start = (0.0, max(-0.45, tip[1] - 0.18))
+            veins.append({"name": "%s%d" % (side_name[0].upper(), k + 1), "rank": 2, "lobe": "%s %d" % (side_name, k + 1),
+                          "points": [list(start), [(start[0] + tip[0]) / 2.0, (start[1] + tip[1]) / 2.0 + 0.01], [tip[0] * 0.995, tip[1]]]})
+    holes = [{"name": "h%d" % (j + 1), "points": [[cx + 0.012 * math.cos(2 * math.pi * i / 12), cy + 0.012 * math.sin(2 * math.pi * i / 12)] for i in range(12)]}
+             for j, (cx, cy) in enumerate(((0.12, 0.05), (-0.10, -0.12), (0.07, -0.25), (-0.15, 0.22)))]
+    cols, rows, step, x0, y0 = 21, 27, 0.04, -0.40, -0.52
+    heights = [0.06 * (1 - ((x0 + i * step) / 0.40) ** 2) + 0.04 * (1 - ((y0 + j * step) / 0.52) ** 2) for j in range(rows) for i in range(cols)]
+    head = {"frame": "leaf", "unit": "fraction of blade length", "source": ["none: made by check_forms"], "class": "TEST",
+            "method": "a TEST leaf of lane A's check_forms, not Johny's"}
+    files = {"outline": dict(head, outline=[list(p) for p in outline], stem=[[0.0, -0.5], [0.01, -0.56], [0.03, -0.62]]),
+             "veins": dict(head, veins=veins), "holes": dict(head, holes=holes),
+             "profile": dict(head, origin=[x0, y0], step=step, columns=cols, rows=rows, heights=heights),
+             "place": dict(head, centre={"easting_m": 0.0, "northing_m": 0.0, "lng": -119.15536, "lat": 34.4331, "crs": "TEST"}, heading_deg=112.0,
+                           length_m=50.0, width_m=35.0, length_source="DERIVED", length_method="TEST", matched_to="TEST", ground_m=425.63)}
+    paths = {}
+    for kind, data in files.items():
+        paths[kind] = os.path.join(folder, ol.FILES[kind])
+        with open(paths[kind], "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+    return paths
+
+
+def leaf_source():
+    """(what it is, the five paths, a scratch folder or None): lane C's files when all five are there, else the test leaf."""
+    real = ol.default_paths()
+    if all(os.path.isfile(ol.resolve(p)) for p in real.values()):
+        return "Johny's leaf (lane C's files)", real, None
+    folder = tempfile.mkdtemp(prefix="organic-test-leaf-")
+    return "lane A's TEST leaf, not Johny's (lane C's files are not there yet: %s)" % ol.resolve(ol.LEAF_DIR), test_leaf_files(folder), folder
+
+
+def forged_copy(paths, kind, change):
+    """The five files copied into a scratch folder, the one of `kind` changed by change(its JSON) -> its JSON."""
+    folder = tempfile.mkdtemp(prefix="organic-leaf-forged-")
+    out = {}
+    for k, p in paths.items():
+        out[k] = os.path.join(folder, os.path.basename(ol.resolve(p)))
+        with open(ol.resolve(p), encoding="utf-8") as fh:
+            data = json.load(fh)
+        if k == kind:
+            data = change(data)
+        with open(out[k], "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+    return out, folder
+
+
+def _ring_of(data):
+    """The outline file's ring (the list itself, to change in place) and the table that holds a closed flag."""
+    ring = ol._first(data, "outline", "blade", "ring", "points")
+    if isinstance(ring, dict):
+        return ol._first(ring, "points", "ring", "polyline", "line", "coordinates"), ring
+    return ring, data
+
+
+def forge_open(data):
+    """The outline's last tenth of points gone: a trace that stopped short of coming round."""
+    ring, holder = _ring_of(data)
+    if math.hypot(ring[0][0] - ring[-1][0], ring[0][1] - ring[-1][1]) <= 1e-12:
+        ring.pop()
+    del ring[-max(3, len(ring) // 10):]
+    for d in (data, holder):
+        if isinstance(d, dict) and "closed" in d:
+            d["closed"] = False
+    return data
+
+
+def forge_crossing(data):
+    ring, _holder = _ring_of(data)
+    n = len(ring) - 1
+    ring[n // 4], ring[n // 2] = ring[n // 2], ring[n // 4]
+    return data
+
+
+def forge_thinned(data):
+    """The outline missing one of its points: the one most in line with its neighbours (the leaf hardly changes)."""
+    ring, _holder = _ring_of(data)
+    closed = math.hypot(ring[0][0] - ring[-1][0], ring[0][1] - ring[-1][1]) <= 1e-12
+    n = len(ring) - (1 if closed else 0)
+
+    def bend(i):
+        (ax, ay), (bx, by), (cx, cy) = ring[(i - 1) % n], ring[i], ring[(i + 1) % n]
+        return abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax))
+
+    drop = min(range(1, n - 1), key=bend)
+    del ring[drop]
+    return data
+
+
+def forge_short_veins(data):
+    rows = ol._first(data, "veins", "chains", "lines")
+    for row in rows:
+        if isinstance(row, dict) and int(row.get("rank", 1)) > 1:
+            pts = ol._first(row, "points", "polyline", "line")
+            (ax, ay), (bx, by) = pts[-2], pts[-1]
+            seg = math.hypot(bx - ax, by - ay) or 1.0
+            pull = min(0.03, 0.9 * seg) / seg  # 3 % of the length shorter at its end
+            pts[-1] = [bx - (bx - ax) * pull, by - (by - ay) * pull]
+    return data
+
+
+def leaf_column(solid, x, y, reach):
+    line = Part.makeLine(App.Vector(x * MM, y * MM, -reach * MM), App.Vector(x * MM, y * MM, reach * MM))
+    zs = sorted(v.Point.z / MM for v in solid.common(line).Vertexes)
+    return (zs[0], zs[-1]) if len(zs) >= 2 else None
+
+
+def leaf_case(paths, length_m=None, holes_cut=True, back=False, realize=False, truth=None):
+    """T. The leaf's records as leaf_to_records writes them, built by the import (as realize.py runs it), measured
+    against lane C's own files (read here, independently of what the build says of itself). truth: the files the
+    measures hold it against when it is built from forged ones (the self-test)."""
+    from shapely.geometry import Polygon
+
+    l2r = runpy.run_path(os.path.join(HERE, "leaf_to_records.py"), run_name="organic_leaf_records")
+    leaf = ol.read_leaf(paths)
+    place = ol.place_of(leaf)
+    L = float(length_m or place["length_m"])
+    built_from, leaf = leaf, ol.read_leaf(truth) if truth else leaf
+    data = l2r["records"](built_from, place, L, place["length_source"], 0.0, "0 (check_forms: where it stands is not checked here)")
+    orig = ol.leaf_roof_shape
+    if not holes_cut:
+        ol.leaf_roof_shape = lambda *a, **k: orig(*a, **dict(k, holes_cut=False))
+    t0 = time.time()
+    try:
+        shapes, res = built(data)
+    finally:
+        ol.leaf_roof_shape = orig
+    out = {"length": L, "seconds": time.time() - t0, "lost": list(res["lost"]), "c_points": leaf["outline_count"], "holes_given": len(leaf["holes"])}
+    shape, obj = shapes.get("oak-leaf"), res["made"].get("oak-leaf")
+    if shape is None or obj is None or not shape.Solids:
+        return dict(out, made=False)
+    skin = shape.Solids[0]
+    ring = [(x * L, y * L) for x, y in leaf["outline"]]
+    holes = [[(x * L, y * L) for x, y in h] for h in leaf["holes"]]
+    corners = [(v.Point.x / MM, v.Point.y / MM) for v in skin.Vertexes]
+    matched = sum(1 for x, y in ring if min(math.hypot(x - a, y - b) for a, b in corners) <= CORNER_CLOSE)
+    reach = 2.0 * L + 100.0
+    holes_seen = []
+    for h in holes:
+        poly = Polygon(h)
+        inner = poly.representative_point()
+        through = any(leaf_column(s, inner.x, inner.y, reach) for s in shape.Solids)
+        c = poly.centroid
+        (vx, vy) = h[0]
+        d = math.hypot(vx - c.x, vy - c.y) or 1.0
+        beside = leaf_column(skin, vx + (vx - c.x) / d * 0.005 * L, vy + (vy - c.y) / d * 0.005 * L, reach) is not None
+        holes_seen.append((not through, beside))
+    members, by_name, k = shape.Solids[1:], {}, 0
+    for row in obj.Members:
+        name, count = row.rsplit(":", 1)
+        by_name[name] = members[k:k + int(count)]
+        k += int(count)
+    ends = []
+    for v in leaf["veins"]:
+        lobe = ol.lobe_point(leaf, v["lobe"])
+        if lobe is None and v["rank"] == 1:
+            lobe = max(leaf["outline"], key=lambda p: p[1])  # the midrib's lobe: the blade's tip
+        sols = by_name.get("midrib" if v["rank"] == 1 else "vein %s" % v["id"]) or []
+        if lobe is None or not sols:
+            ends.append((v["id"], None if lobe is None else float("inf")))
+            continue
+        line = Part.makeLine(App.Vector(lobe[0] * L * MM, lobe[1] * L * MM, -reach * MM), App.Vector(lobe[0] * L * MM, lobe[1] * L * MM, reach * MM))
+        ends.append((v["id"], min(line.distToShape(s)[0] for s in sols) / MM))
+    out.update({"made": True, "valid": all(s.isValid() for s in shape.Solids), "solids": len(shape.Solids), "matched": matched,
+                "faces": len(skin.Faces), "want_faces": 2 + len(ring) + sum(len(h) for h in holes), "holes": holes_seen, "ends": ends,
+                "plan_area": Polygon(ring, holes).area, "said_area": float(obj.PlanArea), "members": list(obj.Members),
+                "width": float(obj.Width.Value) / MM})
+    if back:
+        import organic_records as orc
+
+        same, said = orc.records_of(res, data)
+        obj.Length = obj.Length.Value + 5000.0
+        obj.Document.recompute()
+        edited, told = orc.records_of(res, data)
+        want = json.loads(json.dumps(data["pieces"]))
+        want[0]["params"]["Length"] = L + 5.0
+        out["back"] = {"same": same["pieces"] == data["pieces"] and not said, "edited_only": close(want, edited["pieces"]), "told": told,
+                       "length": edited["pieces"][0]["params"]["Length"], "valid_after": obj.Shape.isValid() and bool(obj.Shape.Solids)}
+    if realize:
+        out["realized"] = realized(data)
+    return out
+
+
+def leaf_refusals(paths):
+    """A forged outline must be refused by the reader: open, and crossing itself. {"open": its words, "crossing": …}."""
+    out = {}
+    for name, change, want in (("open", forge_open, "is open"), ("crossing", forge_crossing, "crosses itself")):
+        forged, folder = forged_copy(paths, "outline", change)
+        try:
+            ol.read_leaf(forged)
+            out[name] = (False, "ACCEPTED")
+        except ValueError as exc:
+            out[name] = (want in str(exc), str(exc)[:140])
+        except Exception as exc:  # stopped further on, not by the reader's own test
+            out[name] = (False, "not refused by the reader; it broke later: %s: %s" % (type(exc).__name__, str(exc)[:100]))
+        finally:
+            shutil.rmtree(folder, ignore_errors=True)
+    return out
+
+
+def leaf_judge(t, what, ok):
+    """The T lines (the leaf), into ok(cond, msg)."""
+    if not t.get("made"):
+        ok(False, "T %s: NOT MADE (%s)" % (what, "; ".join(t.get("lost", [])) or "no shape"))
+        return
+    L = t["length"]
+    ok(t["valid"] and t["matched"] == t["c_points"] and t["faces"] == t["want_faces"] and not t["lost"],
+       "T %s at %.3f m: the outline file's %d points are the skin's own corners (%d within %.3f m); its rim %d faces "
+       "(2 + the outline's and the holes' points: %d); %d solids, all valid; built in %.1f s; the plan area %.3f m² (the outline file's less its holes, "
+       "worked out here; the object says %.3f), %.3f m across"
+       % (what, L, t["c_points"], t["matched"], CORNER_CLOSE, t["faces"], t["want_faces"], t["solids"], t["seconds"], t["plan_area"], t["said_area"], t["width"]))
+    holes = t["holes"]
+    ok(holes and all(a and b for a, b in holes) or (not holes and t["holes_given"] == 0),
+       "T %s: the %d holes are cut through — a line down each meets no solid of the roof (%s), and %.3f m outside each the skin is there (%s)"
+       % (what, len(holes), ", ".join("yes" if a else "NO" for a, _b in holes), 0.005 * L, ", ".join("yes" if b else "NO" for _a, b in holes)))
+    given = [(k, d) for k, d in t["ends"] if d is not None]
+    worst = max((d for _k, d in given), default=float("inf"))
+    ok(given and worst <= LOBE_CLOSE * L,
+       "T %s: every vein ends within 1 %% of the length (%.3f m) of its lobe — %d veins, the farthest %.3f m (%s)%s"
+       % (what, LOBE_CLOSE * L, len(given), worst, ", ".join("%s %.3f" % kd for kd in given[:30]),
+          "; no lobe given for %s" % ", ".join(k for k, d in t["ends"] if d is None) if any(d is None for _k, d in t["ends"]) else ""))
+    b = t.get("back")
+    if b is not None:
+        ok(b["same"] and b["edited_only"] and len(b["told"]) == 1 and b["valid_after"],
+           "T %s there and back: the records come back as they went (%s); its Length 5 m longer in FreeCAD comes back as %.3f m and nothing else (%s), "
+           "the leaf built again at it (%s); said: %s"
+           % (what, b["same"], b["length"], b["edited_only"], b["valid_after"], "; ".join(b["told"]) or "nothing"))
+    x = t.get("realized")
+    if x is not None:
+        els = x.get("elements") or {}
+        ok(x.get("ok") is True and x.get("complete") is True and list(els) == ["oak-leaf"] and els["oak-leaf"]["ifcType"] == "Roof",
+           "T %s realized as the map's Ctrl+R calls for it (realize.py's own function): complete (%s), %d element (%s), %.1f s inside%s"
+           % (what, x.get("complete"), len(els), ", ".join("%s %s %.3f m³" % (k, e["ifcType"], e["volume_m3"]) for k, e in els.items()), x.get("seconds") or 0.0,
+              "; error: %s" % x["error"] if x.get("error") else ""))
+    r = t.get("refused")
+    if r is not None:
+        ok(all(v[0] for v in r.values()), "T a forged outline is refused: open (%s); crossing itself (%s)" % (r["open"][1], r["crossing"][1]))
+
+
+def leaf_forged(forge, paths, what):
+    """One of the leaf's forged faults, built (at LEAF_FORGE_LENGTH) and judged: the failures it gets."""
+    oks, fails = [], []
+
+    def ok(cond, msg):
+        (oks if cond else fails).append(msg)
+
+    if forge == "leaf-lax":  # the reader takes any ring: no test for an open or crossing one
+        strict = ol.closed_ring
+        ol.closed_ring = lambda pts, name, flag=None: list(pts)[:-1] if len(pts) > 1 and tuple(pts[0]) == tuple(pts[-1]) else list(pts)
+        try:
+            leaf_judge({"made": True, "length": LEAF_FORGE_LENGTH, "valid": True, "matched": 0, "c_points": 0, "faces": 0, "want_faces": 0, "lost": [],
+                        "holes": [], "holes_given": 0, "ends": [("x", 0.0)], "seconds": 0.0, "plan_area": 0.0, "said_area": 0.0, "width": 0.0, "solids": 0,
+                        "refused": leaf_refusals(paths)}, what, ok)
+        finally:
+            ol.closed_ring = strict
+        return fails
+    if forge == "leaf-holes":
+        t = leaf_case(paths, LEAF_FORGE_LENGTH, holes_cut=False)
+    else:
+        forged, folder = forged_copy(paths, "outline" if forge == "leaf-thinned" else "veins", forge_thinned if forge == "leaf-thinned" else forge_short_veins)
+        try:
+            t = leaf_case(forged, LEAF_FORGE_LENGTH, truth=paths)
+        finally:
+            shutil.rmtree(folder, ignore_errors=True)
+    leaf_judge(t, what, ok)
+    return fails
+
+
 def judge(facts):
     oks, fails = [], []
 
@@ -438,6 +732,8 @@ def judge(facts):
            "class its record asks (%s); the domes' elements hold the faces' area here times 0.03 within %.1e; %.1f s inside%s"
            % (x.get("complete"), len(els), len(asked), ", ".join("%s %s" % (k, els[k]["ifcType"]) for k in sorted(els)), worst, x.get("seconds") or 0.0,
               "; error: %s" % x["error"] if x.get("error") else ""))
+    if facts.get("traced") is not None:
+        leaf_judge(facts["traced"], facts.get("traced_what", "the leaf"), ok)
     return oks, fails
 
 
@@ -454,6 +750,13 @@ def run(self_test=None):
     facts = measure(cases, shapes)
     facts["back"] = there_and_back(res, data)
     facts["realized"] = realized(data)
+    what, leaf_paths, leaf_scratch = leaf_source()
+    try:
+        facts["traced"] = leaf_case(leaf_paths, back=True, realize=True)
+        facts["traced"]["refused"] = leaf_refusals(leaf_paths)
+    except ValueError as exc:  # lane C's files refused by the reader: said, as a failure
+        facts["traced"] = {"made": False, "lost": ["the leaf's files were refused: %s" % exc]}
+    facts["traced_what"] = what
     oks, fails = judge(facts)
     for m in oks:
         say("OK   " + m)
@@ -469,9 +772,15 @@ def run(self_test=None):
     caught = 0
     forged = [("the dome's flap 0.05 more", "flap", "D folded dome A ("), ("the ribs at 60 degrees", "angle", "L leaf roof C ("),
               ("a skin of 0.15", "skin", "L leaf roof C ("), ("the leaf's Base not read (case D's 2.4 left at the default 2.6)", "base", "L leaf roof D ("),
-              ("the leaf's Base not read back (the import's renaming forgotten on the way)", "back", "R "), ("a piece missing from the realized file", "lost", "X ")]
+              ("the leaf's Base not read back (the import's renaming forgotten on the way)", "back", "R "), ("a piece missing from the realized file", "lost", "X "),
+              ("Johny's leaf built with its holes not cut", "leaf-holes", "~holes are cut through"),
+              ("Johny's leaf built from its outline missing one point", "leaf-thinned", "~the outline's"),
+              ("Johny's leaf built from veins 3 % of the length short of their lobes", "leaf-short", "~every vein ends within"),
+              ("a crossing or open outline let through by the reader", "leaf-lax", "~a forged outline is refused")]
     for name, forge, expect in forged:
-        if forge == "back":
+        if forge.startswith("leaf-"):
+            f = leaf_forged(forge, leaf_paths, what)
+        elif forge == "back":
             _shapes, again = built(data)
             _o, f = judge({"fold": {}, "leaf": {}, "back": there_and_back(again, data, forge)})
         elif forge == "lost":
@@ -479,10 +788,12 @@ def run(self_test=None):
         else:
             shapes, _res = built(records(cases, forge))
             _o, f = judge(measure(cases, shapes))
-        hit = next((m for m in f if m.startswith(expect)), None)
+        hit = next((m for m in f if (expect[1:] in m if expect.startswith("~") else m.startswith(expect))), None)
         say("SELF-TEST %s %s%s" % ("OK  " if hit else "FAIL", name, " is rejected (%s)" % hit[:160] if hit else " PASSED the check meant for it (%s)" % expect))
         caught += bool(hit)
     say("check_forms --self-test %s (%d/%d forgeries rejected)" % ("OK" if caught == len(forged) else "FAILED", caught, len(forged)))
+    if leaf_scratch:
+        shutil.rmtree(leaf_scratch, ignore_errors=True)
     return caught == len(forged)
 
 

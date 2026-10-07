@@ -15,6 +15,7 @@ import Part
 
 import organic_biomimetic as ob
 import organic_geom as og
+import organic_leaf as ol
 import organic_sacred as sacred
 
 MM = og.MM
@@ -960,6 +961,79 @@ class TranslationShell(Organic):
         if self.fresh(obj):
             return
         set_local(obj, og.translation_shell_shape(m(obj.Span), m(obj.ShellLength), m(obj.RiseX), m(obj.RiseY), m(obj.Eave), m(obj.Thickness)))
+
+
+class LeafRoofTraced(Organic):
+    """Johny's oak leaf as a roof (the architect's THE LEAF, part 2, 6 Oct 2026): the leaf lane C traced from his
+    photos into exchange\\house\\leaf\\ — its outline and stem, veins, holes and curl, each a share of the blade's
+    length — built at Length (metres, tip to stem base; everything scales with it) by organic_leaf.leaf_roof_shape:
+    the skin (its underside the curl, cut to the outline with the holes through, its thickness along its normal), the
+    midrib and the veins hung under it along C's lines (each rank 2^(-1/3) of the one before: Murray's law), an edge
+    beam just inside the outline, the stem continuing the midrib. In C's frame times the length: the origin at the
+    middle of the blade's bounding box, +y toward the tip; the curl's zero Eave above the base."""
+
+    ifc_type = "Roof"
+    icon = "OrganicLeaf.svg"
+
+    def setup(self, obj):
+        super().setup(obj)
+        g = "Traced leaf"
+        length(obj, "Length", g, "the blade's length, tip to stem base: every number of the leaf's files is a share of it", 0.0)
+        prop(obj, "App::PropertyString", "LengthSource", g, "the record's length_source (FRAME.md): \"DERIVED\" as lane C says it, or \"yours\" once Johny gives his own", "")
+        files = ol.default_paths()
+        for kind, name in (("outline", "OutlineFile"), ("veins", "VeinsFile"), ("holes", "HolesFile"), ("profile", "ProfileFile"), ("place", "PlaceFile")):
+            prop(obj, "App::PropertyString", name, g, "lane C's %s file, relative to the Playground folder" % kind, files[kind])
+        distance(obj, "Eave", g, "the height of the curl's zero above the base (the map's lift)", 0.0)
+        prop(obj, "App::PropertyFloat", "SkinShare", g, "the skin's thickness along its normal, a share of the length (lane R's 0.10 m at 12 m)", ol.SKIN_SHARE)
+        prop(obj, "App::PropertyFloat", "MidribWidthShare", g, "the midrib's width, a share of the length (R's 0.16 m at 12 m); each rank after it 2^(-1/3) of the one before", ol.MIDRIB_WIDTH_SHARE)
+        prop(obj, "App::PropertyFloat", "MidribDepthShare", g, "the midrib's depth under the skin, a share of the length (R's 0.45 m at 12 m)", ol.MIDRIB_DEPTH_SHARE)
+        prop(obj, "App::PropertyFloat", "EdgeWidthShare", g, "the edge beam's width, a share of the length (R's 0.12 m at 12 m)", ol.EDGE_WIDTH_SHARE)
+        prop(obj, "App::PropertyFloat", "EdgeDepthShare", g, "the edge beam's depth, a share of the length (R's 0.25 m at 12 m)", ol.EDGE_DEPTH_SHARE)
+        # what the record said it was built from: kept with the record, not part of the solid's numbers (a file's own
+        # change is found by reading it), and written back as the files are when it was built
+        prop(obj, "App::PropertyStringList", "Fingerprints", "From the map", "the leaf's files' SHA-256 (16 digits) as kind=digits")
+        prop(obj, "App::PropertyFloat", "PlanArea", "Measures", "the leaf's area in plan, less its holes (m²)")
+        length(obj, "Width", "Measures", "the blade's width across, at this length", 0.0)
+        prop(obj, "App::PropertyInteger", "OutlinePoints", "Measures", "the outline's points, as lane C traced them")
+        prop(obj, "App::PropertyInteger", "HoleCount", "Measures", "the holes cut through")
+        prop(obj, "App::PropertyStringList", "Members", "Measures", "the solids after the skin, in order: name:how many")
+        for name in ("PlanArea", "Width", "OutlinePoints", "HoleCount", "Members"):
+            obj.setEditorMode(name, 1)
+
+    def paths(self, obj):
+        return {"outline": obj.OutlineFile, "veins": obj.VeinsFile, "holes": obj.HolesFile, "profile": obj.ProfileFile, "place": obj.PlaceFile}
+
+    def fresh(self, obj):
+        """As every Organic object, and the files read as they are now: a file lane C changes builds the leaf again."""
+        self._pending = (shape_key(obj), tuple(sorted(self.files_now(obj).items())))
+        return getattr(self, "_key", None) == self._pending and not obj.Shape.isNull()
+
+    def files_now(self, obj):
+        out = {}
+        for kind, path in self.paths(obj).items():
+            try:
+                out[kind] = ol.fingerprint(path)
+            except OSError:
+                out[kind] = "missing"
+        return out
+
+    def execute(self, obj):
+        if self.fresh(obj):
+            return
+        if m(obj.Length) <= 0:
+            raise ValueError("a traced leaf needs its Length in metres (the record gives lane C's DERIVED one until Johny gives his)")
+        said = {}
+        shape = ol.leaf_roof_shape(ol.read_leaf(self.paths(obj)), m(obj.Length), m(obj.Eave), obj.SkinShare, obj.MidribWidthShare, obj.MidribDepthShare,
+                                   obj.EdgeWidthShare, obj.EdgeDepthShare, said=said)
+        obj.PlanArea, obj.Width = said["plan_area_m2"], said["width_m"] * MM
+        obj.OutlinePoints, obj.HoleCount = said["outline_points"], said["holes"]
+        obj.Members = ["%s:%d" % (name, count) for name, count in said["members"]]
+        now = self.files_now(obj)
+        given = dict(s.split("=", 1) for s in obj.Fingerprints if "=" in s)
+        self.files_changed = [(k, given[k], now.get(k)) for k in sorted(given) if given[k] != now.get(k)]
+        obj.Fingerprints = ["%s=%s" % kv for kv in sorted(now.items())]
+        self.said = said
+        set_local(obj, shape)
 
 
 # the leaf's bumps when none are given: one at its middle, as the map's catalogue writes form 107 (R's: Sx a third of

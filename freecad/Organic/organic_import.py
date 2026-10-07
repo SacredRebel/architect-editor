@@ -35,7 +35,7 @@ FORMATS = ("built/1",)
 # the pieces a built file may hold: the workbench's own classes, by their own names
 TYPES = ("PlanCurve", "Wall", "Slab", "ShellRoof", "LeafShell", "Vault", "Dome", "Steps", "SoapFilm", "MinimalShell", "Conoid", "TranslationShell",
          "SacredFigure", "SacredSolid", "GeodesicDome", "Gridshell", "CellularWall", "BranchingColumn", "Revolved", "HeightFieldShell", "WallBand", "RoofFrame",
-         "LeafRoofOnRibs", "FoldedRevolution")
+         "LeafRoofOnRibs", "FoldedRevolution", "LeafRoofTraced")
 # A kind under another name: a step is a slab that is named a step; lane R's groined saddles are
 # the saddle shell of that kind; the wave vault of the map's catalogue is a vault (FORMAT.md,
 # "Lane R's shells and lattices as record kinds").
@@ -48,7 +48,7 @@ LABELS = {"PlanCurve": "Plan curve", "Wall": "Curved wall", "Slab": "Floor slab"
           "BranchingColumn": "Branching column", "Revolved": "Solid of revolution", "HeightFieldShell": "Height field shell",
           "Conoid": "Conoid roof", "TranslationShell": "Translation shell", "GroinedSaddles": "Groined saddles", "WaveVault": "Wave vault",
           "WallBand": "Band to the roof", "RoofFrame": "Roof frame", "LeafRoofOnRibs": "Leaf roof on ribs",
-          "FoldedRevolution": "Dome folded from one sheet"}
+          "FoldedRevolution": "Dome folded from one sheet", "LeafRoofTraced": "Leaf roof (traced)"}
 # What the map writes on a piece for its own use, which says nothing the piece's other numbers do
 # not say (FORMAT.md, "What the map adds"): the outline a leaf or a dome was fitted over, and how.
 # The leaf's spine, span, ridge and place, the dome's radius, stretch and place are worked out
@@ -68,7 +68,9 @@ FIGURES = ("GeodesicDome", "Conoid", "TranslationShell", "GroinedSaddles", "Wave
 FIGURE_KINDS = {"HeightFieldShell": "LeafRoofOnRibs"}
 # A param that sets a property of another name: the leaf's Base is a height, where Base is the
 # curve a piece stands on everywhere else.
-PARAM_NAMES = {"LeafRoofOnRibs": {"Base": "BaseHeight"}}
+PARAM_NAMES = {"LeafRoofOnRibs": {"Base": "BaseHeight"},
+               # Johny's leaf: FRAME.md (exchange\house\leaf\) names it length_source
+               "LeafRoofTraced": {"length_source": "LengthSource"}}
 # A table kept as JSON in a string property (the leaf's bumps), and the keys of its rows that are metres
 METRE_KEYS = {"Bumps": ("A", "Cx", "Cy", "Sx", "Sy")}
 # lists of plain numbers that are metres (a list has no unit of its own)
@@ -391,6 +393,9 @@ def import_built(doc, source, join=True):
             notes.info("%s %r (%s): at its %s its curve turns on a radius of %.2f m over %.2f m, and the vault reaches %.2f m to either side of it: its sections there "
                        "are turned up to %.1f° off square to the curve, so that its inner edge keeps running forward and does not fold over itself (the map draws them square)"
                        % (kind, key, obj.Label, row["end"], row["radius_m"], row["length_m"], row["reach_m"], row["angle_deg"]))
+        for what, was, now in getattr(obj.Proxy, "files_changed", None) or []:  # a traced leaf: lane C changed a file since the record
+            notes.info("%s %r (%s): its %s file is not the one the record was written from (%s, now %s): built from the file as it is now"
+                       % (kind, key, obj.Label, what, was, now))
     return {"building": b, "made": made, "notes": list(notes), "lost": notes.lost(), "name": name, "format": fmt, "path": path, "scale": scale}
 
 
