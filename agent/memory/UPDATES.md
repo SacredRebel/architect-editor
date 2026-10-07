@@ -3,6 +3,45 @@
 Rules: `C:\Playground\RULES.md` (Rule 3). After every report: the report file in `C:\Playground\agents\reports\A\`, the full entry here, then one line in `C:\Playground\UPDATES.md`.
 Entry shape: date/time · phase · what was done · commit sha · files written to `exchange\` · open items · needs.
 
+## 2026-10-07 01:30 PDT · A (the Geometer) · THE LEAF, part 2 — Johny's oak leaf in FreeCAD, from lane C's files
+
+**The brief** (the architect's queue, 6 Oct: THE LEAF, part 2; then 18:00 "C's keys are locked in FRAME.md; wait for C's
+files; no suite runs until the leaf record exists"; 19:10 "wait on C's README.md; the one formula is E's importer line";
+00:10 "go: the record and its .glb from C's final files; the four marks are not holes, don't cut them; the 4 % plan
+correction is held; only your leaf checks, the suite once at the end").
+
+**Done.**
+- **The form: `LeafRoofTraced`** (`freecad\Organic\organic_leaf.py` + the class in `organic_objects.py`), a sibling of R's
+  formula leaf (`LeafRoofOnRibs`, form 107, unchanged): Johny's leaf is data — C's outline, traced veins with their lobes,
+  marks, heights grid — and none of R's parameters means anything for it. One number sets the size (`Length`); every size
+  a share of it (R's P-007 proportions; Murray by rank).
+- **The record and the .glb in the exchange** (7 Oct 00:07): `exchange\house\models\oak-leaf-roof-01.json` (the building
+  at C's centre, `rotation_deg.y` −104 by E's one formula, `altitude_m` −0.523 on the map's own land; `Length` 50.7,
+  `length_source` "DERIVED", C's five files by path with their fingerprints) and `realized\oak-leaf-roof-01.glb` (+ .json,
+  .ifc, .FCStd, .result.json): complete, 1 of 1, 767.0 m³, 150 s.
+- **Johny's leaf at C's DERIVED 50.7 m:** 12 solids, all valid; C's 316 outline points the skin's corners; the four
+  marks not cut (C: no through-hole); every vein's member ending within 1 mm of C's `lobe_tip`; every member along ≥ 99.96 %
+  of its line; the plan correction not applied (held by the architect until Johny's ruler numbers).
+- **check_forms T on C's files:** 8 checks and 4 forgeries, all as they should be (the leaf part alone, 7 Oct 00:51-00:57).
+- **C's drop-check: PASS** (the map's own `--drop-check` on a scratch copy; as built only E's `turn (E)` step fails by its
+  own 15° assumption, with the sidecar at 105° a full PASS); by stored points the corners within 1.09 mm, the underside C's
+  profile to 1.9 mm median.
+- **E's Ctrl+R on the map's leaf: reproduced** — the map opened my records, realized them: every element field identical
+  to mine (767.003347 m³, 227,879 triangles, the box).
+- **Found and guarded:** the spline through C's traced points loops and kinks (the members follow eased lines, within
+  0.36 % of C's points); the edge beam's cut by the outline gave back nothing (built inside by construction); OCCT's first
+  offset over a fresh face fails its check at some lengths (made again; fix() as the last resort); a failed rebuild keeps
+  the old shape and looked valid (the check holds the rebuilt width to the new length). Four lessons in LESSONS.md, the
+  OCCT note in `knowledge\tools\occt-offset-skin-placed.md`.
+- **The suite once at the end:** all five steps passed (7 Oct 00:58–01:26, once, at the end): check_organic 66 + 39/39, check_toolbar 194 + 42/42,
+  check_import 72 + 101/101, check_forms 18 + 10/10.
+
+**Commit.** `9c5d7b68` (prepared on a test leaf), `831a436d` (Johny's leaf), on `eco/organic`, pushed. Report
+`C:\Playground\agents\reports\A\2026-10-06-leaf.md`.
+
+**Open.** Johny: the real length, the lift, which marks (if any) are openings; then the plan correction with his ruler
+numbers. E: the drop-check's `turn (E)` 15° expectation (E has it).
+
 ## 2026-10-06 01:40 PDT (08:40 UTC) · A (the Geometer) · on call: the 6 Oct block carried on — forms 107 and 102 built; Ctrl+R from both paths
 
 **The brief** (architect, after Johny re-pointed the junction at 00:20): "carry on with your 6 Oct block from where your

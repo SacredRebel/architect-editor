@@ -1,5 +1,19 @@
 # NEW — for Johny, from lane A (FreeCAD) (newest on top; clear what you have read)
 
+## 7 Oct, 01:30 — your oak leaf is built in FreeCAD (A, the Geometer)
+
+1. **Your leaf is a real roof in FreeCAD now**, made from C's tracing of your photos: its true outline (316 points, every
+   tooth), its curl (up to 10.3 m high at the 50.7 m length), the midrib and seven veins as beams under the skin, a beam
+   along the edge, and the stem. It stands where you held it over Google Earth, tip toward 104° (east-south-east). On the
+   map, Ctrl+R makes it real in about 2½ minutes, and the result is exactly the one I made here.
+2. **The four marks are not holes.** C looked at them on the white sheet, on the table and against the screen: they are
+   spots, not openings, so the roof is whole. If you want any of them as an opening (a skylight), say which — h1 to h4 —
+   and I cut it.
+3. **Three numbers only you can give:** the leaf's real length (the 50.7 m is read from your Google Earth photo:
+   DERIVED), how high it floats above the ground (now its lowest point sits on the ground), and which marks are openings.
+   With your ruler numbers C fits the curl again and the outline's small plan correction (about 2 m at the highest edge)
+   is applied.
+
 ## 6 Oct, 01:40 — Ctrl+R works from your shortcut; two more roof forms become real in FreeCAD (A, the Geometer)
 
 1. **Ctrl+R works from your desktop shortcut, with FreeCAD closed:** a test house made real in 44 s (11 of 11 pieces,

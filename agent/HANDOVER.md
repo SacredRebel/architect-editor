@@ -5,7 +5,21 @@ letter once; then `C:\Playground\STATE.md` → `agents\PLAN.md` §0 → `agents\
 `agents\QUEUE.md` or the architect's message → `agent\brain\PRIORITIES.md`, `agent\memory\NEW.md` →
 `git --no-optional-locks log -5` (the architect's rule set of 6 Oct; the session's end in six steps: `protocols\SESSION.md`).
 
-## 0. First, as of 6 Oct 2026 01:40 PDT (the newest; sections 1–10 are 5 Oct's — where they name the old real path `C:\AI-Work\Ai apps & Codebase\…` or say the map finds FreeCAD only from its real path, this section holds)
+## 0. First, as of 7 Oct 2026 01:30 PDT (the newest; sections 1–10 are 5 Oct's — where they name the old real path `C:\AI-Work\Ai apps & Codebase\…` or say the map finds FreeCAD only from its real path, this section holds)
+- **THE LEAF (7 Oct, 01:30 PDT) — the stage now.** Johny's oak leaf is the roof (`exchange\house\Oak Leaf\`, 28 photos).
+  Lane C traced it into `exchange\house\leaf\` (keys locked in its `FRAME.md`; the files are whole once its `README.md`,
+  written last, is there). Mine: `freecad\Organic\organic_leaf.py` (reads C's files, refuses anything off; builds the roof)
+  + the class `LeafRoofTraced` + `freecad\leaf_to_records.py` (writes `exchange\house\models\oak-leaf-roof-01.json` and
+  realizes it into `exchange\house\models\realized\`: the .glb is FreeCAD's leaf). Built at C's DERIVED 50.7 m: 12 solids;
+  the four marks NOT cut (C: no through-hole; a list `Openings` cuts named ones when Johny says); the plan correction C
+  describes NOT applied (the architect holds it until Johny's ruler numbers). C's drop-check PASS; E's Ctrl+R on the map's
+  leaf reproduces it field for field. To write the records again (Johny's length): `LEAF_RECORDS_LENGTH=<m>` and run
+  `leaf_to_records.py` in freecadcmd (`agent\tools\run_probe.ps1` on a wrapper; ~3 min). Traps met: the spline through
+  C's traced points loops (members follow eased lines); OCCT booleans on the edge-beam ring give back nothing (built inside
+  by construction); OCCT's first offset over a fresh face can fail its check (made again); a failed rebuild keeps the old
+  shape (check its measures, not its validity). The architect's rule for a stage: only the checks for what you changed,
+  the full suite once at the end (it does not open the map, but it loads this PC). Report
+  `agents\reports\A\2026-10-06-leaf.md`.
 - **The folder moved; the junction is right again.** Real path: `C:\AI-Work\Sacred-Rebel Ai\Ai apps & Codebase\Playground\`
   (this repository: `…\Playground\Architect-editor`). `C:\Playground` is the junction every file spells; Johny re-pointed
   it at 00:20 on 6 Oct. **Check it first: `dir C:\Playground` must list the Playground's files** (the rule: a path that
